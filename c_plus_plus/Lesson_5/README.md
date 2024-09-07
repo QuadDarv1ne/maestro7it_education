@@ -9,7 +9,7 @@
 
 ▶️ **Пример объявления и инициализации массива:**
 
-```
+```cpp
 #include <iostream>
 
 int main() {
@@ -31,7 +31,7 @@ int main() {
 
 ▶️ **Пример доступа к элементам массива:**
 
-```
+```cpp
 #include <iostream>
 
 int main() {
@@ -53,7 +53,7 @@ int main() {
 
 ▶️ **Пример функции, работающей с массивами:**
 
-```
+```cpp
 #include <iostream>
 
 void printArray(int arr[], int size) {
@@ -80,7 +80,7 @@ int main() {
 
 ▶️ **Пример строки как массива символов:**
 
-```
+```cpp
 #include <iostream>
 
 int main() {
@@ -98,7 +98,7 @@ int main() {
 
 ▶️ **Пример использования функций для работы со строками:**
 
-```
+```cpp
 #include <iostream>
 #include <cstring> // Для работы со строками C-style
 
@@ -125,7 +125,7 @@ int main() {
 
 ▶️ **Пример использования std::string:**
 
-```
+```cpp
 #include <iostream>
 #include <string> // Для работы с классом std::string
 

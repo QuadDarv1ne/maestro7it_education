@@ -18,7 +18,7 @@
 
 **Пример:**
 
-```
+```cpp
 #include <iostream>
 
 int main() {
@@ -55,7 +55,7 @@ int main() {
 
 **Пример использования std::unique_ptr:**
 
-```
+```cpp
 #include <iostream>
 #include <memory>
 
@@ -87,7 +87,7 @@ int main() {
 
 - Используйте `std::vector` вместо массива, если нужно динамическое изменение размера.
 
-```
+```cpp
 #include <iostream>
 #include <vector>
 
@@ -110,7 +110,7 @@ int main() {
 
 **Пример:**
 
-```
+```cpp
 #include <iostream>
 #include <vector>
 
@@ -135,7 +135,7 @@ int main() {
 
 **Пример:**
 
-```
+```cpp
 #include <iostream>
 
 int main() {

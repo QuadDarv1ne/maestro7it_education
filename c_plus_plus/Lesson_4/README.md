@@ -17,7 +17,7 @@
 
 ▶️ **Пример объявления и определения функции:**
 
-```
+```cpp
 #include <iostream>
 
 // Объявление функции
@@ -41,7 +41,7 @@ int add(int a, int b) {
 
 ▶️ **Пример функции с параметрами:**
 
-```
+```cpp
 #include <iostream>
 
 void greet(std::string name) {
@@ -64,7 +64,7 @@ int main() {
 
 ▶️ **Пример функции с возвращаемым значением:**
 
-```
+```cpp
 #include <iostream>
 
 double multiply(double x, double y) {
@@ -85,7 +85,7 @@ int main() {
 
 ▶️ **Пример функции без возвращаемого значения:**
 
-```
+```cpp
 #include <iostream>
 
 void printMessage() {
@@ -106,7 +106,7 @@ int main() {
 
 ▶️ **Пример параметров по умолчанию:**
 
-```
+```cpp
 #include <iostream>
 
 void display(int x, int y = 10) {
@@ -127,7 +127,7 @@ int main() {
 
 ▶️ **Пример перегрузки функций:**
 
-```
+```cpp
 #include <iostream>
 
 int add(int a, int b) {

@@ -27,7 +27,7 @@
 
 **Вставьте следующий код в ваш файл:**
 
-```
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>

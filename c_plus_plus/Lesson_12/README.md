@@ -17,7 +17,7 @@
 
 **Пример использования стандартных потоков:**
 
-```
+```cpp
 #include <iostream>
 
 int main() {
@@ -39,7 +39,7 @@ int main() {
 
 **Пример записи в файл:**
 
-```
+```cpp
 #include <iostream>
 #include <fstream>
 
@@ -59,7 +59,7 @@ int main() {
 
 **Пример чтения из файла:**
 
-```
+```cpp
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -83,7 +83,7 @@ int main() {
 
 **Пример чтения и записи в один файл с помощью `std::fstream`:**
 
-```
+```cpp
 #include <iostream>
 #include <fstream>
 
@@ -117,7 +117,7 @@ int main() {
 
 **Пример:**
 
-```
+```cpp
 #include <iostream>
 #include <iomanip>
 
@@ -142,7 +142,7 @@ int main() {
 
 **Пример:**
 
-```
+```cpp
 #include <iostream>
 
 int main() {
@@ -159,7 +159,7 @@ int main() {
 
 **Пример использования `std::stringstream`:**
 
-```
+```cpp
 #include <iostream>
 #include <sstream>
 #include <string>

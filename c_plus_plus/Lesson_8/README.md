@@ -14,7 +14,7 @@
 
 **Определение класса**
 
-```
+```cpp
 #include <iostream>
 #include <string>
 
@@ -64,7 +64,7 @@ int main() {
 
 Он освобождает ресурсы, если это необходимо.
 
-```
+```cpp
 #include <iostream>
 
 class Example {
@@ -93,7 +93,7 @@ int main() {
 
 **Создание и использование объектов**
 
-```
+```cpp
 #include <iostream>
 
 class Car {
@@ -129,7 +129,7 @@ int main() {
 - private: члены класса доступны только внутри класса.
 - protected: члены класса доступны внутри класса и его производных классов.
 
-```
+```cpp
 #include <iostream>
 
 class Account {
@@ -174,7 +174,7 @@ int main() {
 
 **Определение класса-наследника**
 
-```
+```cpp
 #include <iostream>
 
 class Animal {
@@ -208,7 +208,7 @@ int main() {
 
 **Виртуальные функции**
 
-```
+```cpp
 #include <iostream>
 
 class Base {

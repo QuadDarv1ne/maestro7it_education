@@ -10,7 +10,7 @@
 
 **Определение шаблона функции**
 
-```
+```cpp
 #include <iostream>
 
 // Определение шаблона функции
@@ -33,7 +33,7 @@ int main() {
 
 Функциональные шаблоны могут иметь несколько параметров.
 
-```
+```cpp
 #include <iostream>
 
 template <typename T1, typename T2>
@@ -57,7 +57,7 @@ int main() {
 
 **Определение шаблона класса**
 
-```
+```cpp
 #include <iostream>
 
 template <typename T>
@@ -91,7 +91,7 @@ int main() {
 
 Шаблоны классов могут иметь несколько параметров.
 
-```
+```cpp
 #include <iostream>
 
 template <typename T1, typename T2>
@@ -129,7 +129,7 @@ int main() {
 
 **Шаблоны методов класса**
 
-```
+```cpp
 #include <iostream>
 
 template <typename T>
@@ -161,7 +161,7 @@ int main() {
 
 **Пример частичной специализации**
 
-```
+```cpp
 #include <iostream>
 
 // Шаблон класса
@@ -197,7 +197,7 @@ int main() {
 
 Полная специализация позволяет создавать специальную реализацию для конкретного типа данных.
 
-```
+```cpp
 #include <iostream>
 
 // Полный шаблон
