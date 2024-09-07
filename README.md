@@ -2,6 +2,8 @@
 
 ![maestro7it](img/logo_maestro7it.jpg)
 
+![courses_booklet](img/courses_booklet.png)
+
 ## [🌐 Программирование на С++ для начинающих </>](https://github.com/QuadDarv1ne/maestro7it_education/tree/main/c_plus_plus)
 
 ![c_plus_plus](img/c_plus_plus.png)
