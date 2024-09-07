@@ -2,19 +2,19 @@
 
 ![maestro7it](img/logo_maestro7it.jpg)
 
-## 🌐 Программирование на С++ для начинающих </>
+## [🌐 Программирование на С++ для начинающих </>](https://github.com/QuadDarv1ne/maestro7it_education/tree/main/c_plus_plus)
 
 ![c_plus_plus](img/c_plus_plus.png)
 
-## 🌐 Программирование на СSharp для начинающих </>
+## [🌐 Программирование на СSharp для начинающих </>](https://github.com/QuadDarv1ne/maestro7it_education/tree/main/c_sharp)
 
 ![c_sharp](img/c_sharp.png)
 
-## 🌐 Программирование на JavaScript для начинающих </>
+## [🌐 Программирование на JavaScript для начинающих </>](https://github.com/QuadDarv1ne/maestro7it_education/tree/main/javascript)
 
 ![javascript](img/javascript.png)
 
-## 🌐 Программирование на Python для начинающих </>
+## [🌐 Программирование на Python для начинающих </>](https://github.com/QuadDarv1ne/maestro7it_education/tree/main/python)
 
 ![python](img/python.png)
 
