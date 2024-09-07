@@ -1,6 +1,6 @@
 # Школа программирования Maestro7IT
 
-![maestro7it](img/logo_maestro7it.jpg)
+<!-- ![maestro7it](img/logo_maestro7it.jpg) -->
 
 ![courses_booklet](img/courses_booklet.png)
 
