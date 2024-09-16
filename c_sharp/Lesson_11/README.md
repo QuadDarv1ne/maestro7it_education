@@ -179,4 +179,4 @@ string sql = "DELETE FROM Employees WHERE Name = 'Alice Smith'";
 
 **Дата:** 11.09.2024
 
-**Версия 1.0**
+**Версия:** 1.0
