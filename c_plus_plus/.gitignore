@@ -1,4 +1,45 @@
-.vscode
-.env
+# Базовые исключения для C++ проектов
 
-venv
+# Операционные системы
+*.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Каталоги сборки
+build/
+bin/
+obj/
+debug/
+release/
+*.dSYM/
+
+# Файлы среды разработки
+.vscode/
+.idea/
+
+# Инструменты сборки
+CMakeLists.txt.user
+CMakeCache.txt
+Makefile.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Файлы временной компиляции
+*.o
+*.a
+*.so
+*.exe
+*.out
+*.d
+
+# Файлы отладки
+*.log
+*.trace
+*.bak
+
+# Другие временные файлы
+*.swp
+*.swo
+*.stackdump
