@@ -56,18 +56,37 @@
 
 **Для Windows (через MinGW или MSYS2):**
 
-- MinGW:
+- **MinGW:**
 1. [Загрузите и установите MinGW с официального сайта](https://osdn.net/projects/mingw/)
 2. Во время установки выберите компоненты `g++` и `mingw32-make`
 3. После установки добавьте путь к MinGW (например, `C:\MinGW\bin`) в переменную окружения `PATH`
 
-- MSYS2:
+- **MSYS2:**
 1. [Скачайте MSYS2 с сайта](https://www.msys2.org/)
 2. **После установки выполните команду в терминале MSYS2:**
 ```bash
 pacman -S mingw-w64-x86_64-gcc
 ```
 3. Добавьте путь к `MSYS2\mingw64\bin` в `PATH`
+
+**Для Linux:**
+
+- Откройте терминал и выполните:
+```bash
+sudo apt update
+sudo apt install g++
+```
+**Или для других дистрибутивов используйте пакетный менеджер, например:**
+```bash
+sudo yum install gcc-c++  # Для CentOS/Red Hat
+```
+
+**Для macOS:**
+
+**Установите GCC через Homebrew:**
+```bash
+brew install gcc
+```
 
 ### Первоначальная настройка проекта
 
