@@ -10,6 +10,8 @@
 #include <fstream>
 #include <iostream>
 
+using namespace std;
+
 int main() {
     std::ofstream outFile("example.txt"); // Открытие файла для записи
     if (outFile.is_open()) {
