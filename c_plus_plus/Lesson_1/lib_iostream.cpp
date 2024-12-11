@@ -6,9 +6,14 @@
     2️⃣ std::cout: стандартный вывод (например, на экран)
     3️⃣ std::cerr: стандартный вывод для сообщений об ошибках
     4️⃣ std::clog: стандартный вывод для сообщений журнала
+
+    cin -> input()  // ввод информации
+    cout -> print() // вывод информации
 */
 
 #include <iostream>
+
+using namespace std;
 
 int main() {
     int number;
