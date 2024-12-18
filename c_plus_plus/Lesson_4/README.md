@@ -149,6 +149,59 @@ int main() {
 
 Эти базовые концепции позволяют эффективно использовать функции для структурирования кода, упрощения отладки и улучшения читаемости программ.
 
+**Заголовочный файл `functions.h` (объявления)**
+```cpp
+#ifndef FUNCTIONS_H
+#define FUNCTIONS_H
+
+// Функция для сложения двух чисел
+int add(int a, int b);
+
+// Функция для вычисления разности двух чисел
+int subtract(int a, int b);
+
+// Функция для умножения двух чисел
+int multiply(int a, int b);
+
+#endif // FUNCTIONS_H
+```
+
+**Исходный файл `functions.cpp` (определения)**
+```cpp
+#include "functions.h"
+
+// Реализация функции сложения
+int add(int a, int b) {
+    return a + b;
+}
+
+// Реализация функции вычитания
+int subtract(int a, int b) {
+    return a - b;
+}
+
+// Реализация функции умножения
+int multiply(int a, int b) {
+    return a * b;
+}
+```
+
+**Главный файл `main.cpp`**
+```cpp
+#include <iostream>
+#include "functions.h"
+
+int main() {
+    int x = 5, y = 3;
+
+    std::cout << "Сумма: " << add(x, y) << std::endl;
+    std::cout << "Разность: " << subtract(x, y) << std::endl;
+    std::cout << "Произведение: " << multiply(x, y) << std::endl;
+
+    return 0;
+}
+```
+
 
 
 **_Автор:_** Дуплей Максим Игоревич
