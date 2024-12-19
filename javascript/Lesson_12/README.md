@@ -1,5 +1,7 @@
 # Работа с LocalStorage и SessionStorage
 
+![Работа с LocalStorage и SessionStorage](https://github.com/user-attachments/assets/6edaf569-0020-44fc-aaf6-8a912be42323)
+
 `LocalStorage` и `SessionStorage` — это две встроенные технологии для хранения данных в браузере.
 
 Они позволяют сохранять данные в веб-приложениях без необходимости обращения к серверу.
