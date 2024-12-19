@@ -1,5 +1,7 @@
 # Работа с веб-API: AJAX и Fetch
 
+![Работа с веб-API: AJAX и Fetch](https://github.com/user-attachments/assets/7d702894-e17e-457a-835e-b107c2ba608e)
+
 Работа с веб-API в JavaScript позволяет взаимодействовать с внешними сервисами и получать или отправлять данные на сервер.
 
 **В JavaScript для этого можно использовать два основных подхода:** `XMLHttpRequest` и `fetch`.
