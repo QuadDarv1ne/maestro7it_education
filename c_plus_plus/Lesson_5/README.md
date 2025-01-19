@@ -155,8 +155,8 @@ int main() {
 #include <cstring> // Для работы со строками C-style
 
 int main() {
-    char str1[] = "Hello";
-    char str2[] = "World";
+    char str1[] = "Мороз и солнце; день чудесный!\nЕще ты дремлешь, друг прелестный —\nПора, красавица, проснись:\nОткрой сомкнуты негой взоры\nНавстречу северной Авроры,\nЗвездою севера явись!";
+    char str2[] = "Hello World";
     char result[20];
 
     std::strcpy(result, str1); // Копирование строки
