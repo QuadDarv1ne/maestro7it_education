@@ -16,17 +16,20 @@
 #include <iostream>
 #include <string>
 
+using namespace std;
+
 struct Person {
     std::string name;
     int age;
     double height;
+
+    // Конструктор для инициализации
+    Person(const std::string& n, int a, double h) : name(n), age(a), height(h) {}
 };
 
 int main() {
-    Person person1;
-    person1.name = "Иван";
-    person1.age = 30;
-    person1.height = 1.80;
+    // Использование конструктора
+    Person person1("Иван", 30, 1.80);
 
     std::cout << "Имя: " << person1.name << std::endl;
     std::cout << "Возраст: " << person1.age << std::endl;
@@ -53,6 +56,52 @@ int main() {
 
     std::cout << "Ширина: " << rect.width << std::endl;
     std::cout << "Высота: " << rect.height << std::endl;
+
+    return 0;
+}
+```
+
+```cpp
+#include <iostream>
+#include <string>
+#include <iomanip> // Для форматирования вывода
+
+// Структура для представления человека
+struct Person {
+    std::string name;   // Имя
+    int age;            // Возраст
+    double height;      // Рост в метрах
+
+    // Конструктор для инициализации
+    Person(const std::string& n, int a, double h) : name(n), age(a), height(h) {
+        if (age < 0) {
+            throw std::invalid_argument("Возраст не может быть отрицательным!");
+        }
+        if (height < 0) {
+            throw std::invalid_argument("Рост не может быть отрицательным!");
+        }
+    }
+
+    // Метод для вывода информации
+    void printInfo() const {
+        std::cout << "Имя: " << name << std::endl;
+        std::cout << "Возраст: " << age << std::endl;
+        std::cout << std::fixed << std::setprecision(2)
+                  << "Рост: " << height << " м" << std::endl;
+    }
+};
+
+int main() {
+    try {
+        // Создание объекта Person
+        Person person1("Иван", 30, 1.80);
+
+        // Вывод информации о человеке
+        person1.printInfo();
+    } catch (const std::exception& e) {
+        // Обработка исключений
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+    }
 
     return 0;
 }
@@ -193,7 +242,6 @@ int main() {
 Они удобны для ситуаций, когда нужно работать с различными типами данных, но не одновременно.
 
 Оба этих типа данных являются мощными инструментами для создания сложных и эффективных программ в C++.
-
 
 
 **Автор:** Дуплей Максим Игоревич
