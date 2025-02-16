@@ -220,6 +220,138 @@ int main() {
 }
 ```
 
+#### Вот несколько ключевых причин, для чего нужны чисто виртуальные функции:
+
+1. Определение интерфейсов
+
+Чисто виртуальные функции позволяют определить интерфейсы, которые должны быть реализованы в производных классах.
+
+Это обеспечивает единообразие и гарантирует, что все производные классы будут иметь определенные методы.
+
+```CPP
+class Shape {
+public:
+    virtual void draw() = 0; // Чисто виртуальная функция
+};
+
+class Circle : public Shape {
+public:
+    void draw() override {
+        std::cout << "Drawing a circle" << std::endl;
+    }
+};
+
+class Rectangle : public Shape {
+public:
+    void draw() override {
+        std::cout << "Drawing a rectangle" << std::endl;
+    }
+};
+```
+
+2. Полиморфизм
+
+Чисто виртуальные функции позволяют использовать полиморфизм.
+
+Вы можете создать указатель или ссылку на базовый класс и использовать их для работы с объектами производных классов.
+
+```CPP
+void renderShape(Shape* shape) {
+    shape->draw();
+}
+
+int main() {
+    Circle circle;
+    Rectangle rectangle;
+
+    renderShape(&circle);      // Вывод: Drawing a circle
+    renderShape(&rectangle);   // Вывод: Drawing a rectangle
+
+    return 0;
+}
+```
+
+3. Проектирование программного обеспечения
+
+Абстрактные классы с чисто виртуальными функциями помогают в проектировании программного обеспечения.
+
+Они позволяют определить общие интерфейсы и поведение, которые должны быть реализованы в производных классах.
+
+Это упрощает поддержку и расширение кода.
+
+4. Предотвращение создания объектов базового класса
+
+Чисто виртуальные функции предотвращают создание объектов базового класса, что может быть полезно, если базовый класс предназначен только для наследования и не должен использоваться напрямую.
+
+```CPP
+class Animal {
+public:
+    virtual void makeSound() = 0; // Чисто виртуальная функция
+};
+
+// Animal animal; // Ошибка: нельзя создать объект абстрактного класса
+```
+
+5. Документирование намерений
+
+Чисто виртуальные функции также служат для документирования намерений разработчика.
+
+Они ясно показывают, что данный метод должен быть реализован в производных классах, что улучшает читаемость и понимание кода.
+
+```CPP
+class Vehicle {
+public:
+    virtual void startEngine() = 0; // Чисто виртуальная функция
+    virtual void stopEngine() = 0;  // Чисто виртуальная функция
+};
+
+class Car : public Vehicle {
+public:
+    void startEngine() override {
+        std::cout << "Car engine started" << std::endl;
+    }
+
+    void stopEngine() override {
+        std::cout << "Car engine stopped" << std::endl;
+    }
+};
+
+class Motorcycle : public Vehicle {
+public:
+    void startEngine() override {
+        std::cout << "Motorcycle engine started" << std::endl;
+    }
+
+    void stopEngine() override {
+        std::cout << "Motorcycle engine stopped" << std::endl;
+    }
+};
+
+int main() {
+    Car car;
+    Motorcycle motorcycle;
+
+    Vehicle* vehicle1 = &car;
+    Vehicle* vehicle2 = &motorcycle;
+
+    vehicle1->startEngine(); // Вывод: Car engine started
+    vehicle1->stopEngine();  // Вывод: Car engine stopped
+
+    vehicle2->startEngine(); // Вывод: Motorcycle engine started
+    vehicle2->stopEngine();  // Вывод: Motorcycle engine stopped
+
+    return 0;
+}
+```
+
+В этом примере `Vehicle` — это абстрактный класс с чисто виртуальными функциями `startEngine` и `stopEngine`
+
+Классы `Car` и `Motorcycle` наследуются от `Vehicle` и реализуют эти функции.
+
+Это позволяет использовать полиморфизм для работы с объектами `Car` и `Motorcycle` через указатели на базовый класс `Vehicle`
+
+Таким образом, чисто виртуальные функции являются мощным инструментом для создания гибких и расширяемых программных архитектур.
+
 ### Выводы
 
 Наследование позволяет создавать новые классы на основе существующих, повторно использовать код и расширять функциональность.
