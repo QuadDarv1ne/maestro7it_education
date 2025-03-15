@@ -22,6 +22,10 @@ FROM Team
 WHERE year_founded > 2000;
 ```
 
+---
+
+[Ссылка на официальную базу данных в Kaggle](https://www.kaggle.com/datasets/wyattowalsh/basketball)
+
 **Преподаватель:** Дуплей Максим Игоревич
 
 **Дата:** 14.03.2025
