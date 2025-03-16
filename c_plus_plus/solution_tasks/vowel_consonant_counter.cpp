@@ -1,12 +1,13 @@
 #include <iostream>
 #include <string>
-#include <clocale>    // Для работы с setlocale
-#include <limits>     // Для numeric_limits
-#include <algorithm>  // Для std::transform
-#include <cwctype>    // Для iswalpha
+#include <clocale>       // Для работы с setlocale
+#include <limits>        // Для numeric_limits
+#include <algorithm>     // Для std::transform   
+#include <unordered_set> 
+#include <cwctype>       // Для iswalpha
 
 #ifdef _WIN32
-#include <windows.h>  // Для SetConsoleOutputCP (только Windows)
+#include <windows.h>     // Для SetConsoleOutputCP (только Windows)
 #endif
 
 using namespace std;
@@ -14,7 +15,9 @@ using namespace std;
 /**
  * Константа с гласными для русского и английского языков.
  */
-const wstring VOWELS = L"aeiouAEIOUаеёиоуыэюяАЕЁИОУЫЭЮЯ";
+const unordered_set<wchar_t> VOWELS = {L'a', L'e', L'i', L'o', L'u', L'A', L'E', L'I', L'O', L'U',
+                                       L'а', L'е', L'ё', L'и', L'о', L'у', L'ы', L'э', L'ю', L'я',
+                                       L'А', L'Е', L'Ё', L'И', L'О', L'У', L'Ы', L'Э', L'Ю', L'Я'};
 
 /**
  * Функция для подсчета количества гласных и согласных букв в строке.
@@ -28,10 +31,9 @@ void countLetters(const wstring &str, int &vowels, int &consonants) {
     consonants = 0;
 
     for (wchar_t ch : str) {
-        if (VOWELS.find(ch) != wstring::npos) {
+        if (VOWELS.find(ch) != VOWELS.end()) {
             vowels++;
-        }
-        else if (iswalpha(ch)) {
+        } else if (iswalpha(ch)) {
             consonants++;
         }
     }
@@ -116,4 +118,16 @@ void testCountLetters() {
 
     countLetters(L"123! @#", vowels, consonants);
     wcout << L"Test 3 - Vowels: " << vowels << L", Consonants: " << consonants << endl;
+
+    // Дополнительные тесты
+    countLetters(L"", vowels, consonants);
+    wcout << L"Test 4 - Vowels: " << vowels << L", Consonants: " << consonants << endl;
+
+    countLetters(L"AEIOUaeiouАЕЁИОУЫЭЮЯаеёиоуыэюя", vowels, consonants);
+    wcout << L"Test 5 - Vowels: " << vowels << L", Consonants: " << consonants << endl;
 }
+
+/*
+* Преподаватель: Дуплей Максим Игоревич
+* Дата: 16.03.2025
+*/
