@@ -1,0 +1,14 @@
+# Основные зависимости
+pandas
+numpy
+matplotlib
+seaborn
+plotly
+requests
+jupyter
+geopandas
+openpyxl
+
+# Тестирование
+pytest
+ipywidgets
