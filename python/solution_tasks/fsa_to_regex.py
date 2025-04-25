@@ -1,5 +1,9 @@
 '''
 FSA to RegExp Translator
+
+fsa - сокращение от Finite State Automaton (Конечный Автомат)
+to_regex - указывает на преобразование в регулярное выражение
+.py - стандартное расширение для Python-файлов
 '''
 
 import sys
