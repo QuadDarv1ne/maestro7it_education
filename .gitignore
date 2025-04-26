@@ -2,3 +2,6 @@
 .env
 
 venv
+
+kernel32.dll
+msvcrt.dll
