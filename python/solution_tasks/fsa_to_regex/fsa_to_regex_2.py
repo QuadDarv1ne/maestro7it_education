@@ -41,7 +41,7 @@ def main():
         if not all(k in parsed for k in required_keys):
             print("Input is malformed.")
             return
-
+        
         # Разбор типа автомата
         fsa_type = parsed['type'].strip('[]')
         if fsa_type not in ['deterministic', 'non-deterministic']:
@@ -252,10 +252,10 @@ def kleenes_algorithm(states, initial, accepting, transitions):
     for k in range(1, n+1):
         for i in range(n):
             for j in range(n):
-                part1 = R[k-1][i][k-1]  # Пути из i в k-1
+                part1 = R[k-1][i][k-1]   # Пути из i в k-1
                 part2 = R[k-1][k-1][k-1] # Циклы в k-1
-                part3 = R[k-1][k-1][j]  # Пути из k-1 в j
-                part4 = R[k-1][i][j]    # Прямые пути из i в j
+                part3 = R[k-1][k-1][j]   # Пути из k-1 в j
+                part4 = R[k-1][i][j]     # Прямые пути из i в j
 
                 # Построение нового выражения по формуле Клини
                 if part2 == "∅":
