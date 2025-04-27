@@ -1,0 +1,26 @@
+# Run this command to always ignore formatting commits in `git blame`
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Added project-wide .clang-format and reformatted everything
+483f3eb285ac8545d9ff7fdba66e0057407bed4b
+
+# Fixed access modifier offset
+9150f682444f8f45c02bf858b767c1a0db81e548
+
+# Put all tests in anonymous namespaces and reformat
+5d6b265c3b7ebcf49a725ce17c399b1e9666118d
+
+# Reformat everything with clang-format-17
+ab2a3baef655db23fb7ec11ce7ec49575bbd2807
+
+# replace all C-style casts with C++ casts; reformat
+4410452fed3acda19d7b75b20ec2d3a3c92c9c38
+
+# clang-modernize
+3eaba4111bc8e8516ed1a4f516d753503b87e504
+
+# Reformat everything with clang-format-18
+413749037ac3cd2f66a476fdd593e54e3b4b60b7
+
+# Reformat everything with clang-format-20
+aee392a046a26ae2340849fe98e38332d9537397

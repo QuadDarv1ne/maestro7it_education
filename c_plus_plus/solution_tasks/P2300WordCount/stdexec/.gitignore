@@ -1,0 +1,17 @@
+build*/
+.build*/
+.cache
+.vscode/*
+!.vscode/launch.json
+.gitattributes
+compile_commands.json
+/*.cpp
+/*.patch
+/*.diff
+/include/execpools/asio/asio_config.hpp
+callgrind.*
+*.pbf
+*.o
+a.out
+*.code-workspace
+sanitizer-ignorelist.txt
