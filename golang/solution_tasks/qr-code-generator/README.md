@@ -1,10 +1,10 @@
 # Написание программы для генератора QR-кодов с настройкой цвета
 
-## 🔐 Реализация генератора QR-кодов с настройкой цвета
+## 🔳 Реализация генератора QR-кодов с настройкой цвета
 
 ### Файлы
 
-- `qrgen.go` — основной код
+- `qr-code-gen.go` — основной код
 
 ### 🎯 Требования
 
@@ -62,13 +62,13 @@ go run qr-code-gen.go -content "https://school-maestro7it.ru/" -output school-ma
 1. **Визитка:**
 
 ```bash
-go run qrgen.go -content "BEGIN:VCARD...END:VCARD" -output contact.png
+go run qr-code-gen.go -content "BEGIN:VCARD...END:VCARD" -output contact.png
 ```
 
 2. **Wi-Fi доступ:**
 
 ```bash
-go run qrgen.go -content "WIFI:S:MyNetwork;T:WPA;P:Password;;" -fg "#0000FF"
+go run qr-code-gen.go -content "WIFI:S:MyNetwork;T:WPA;P:Password;;" -fg "#0000FF"
 ```
 
 ### 🔧 Возможные улучшения
