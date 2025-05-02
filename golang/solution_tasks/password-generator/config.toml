@@ -1,0 +1,8 @@
+# Конфигурация генератора паролей
+length = 16        # Длина пароля
+upper = true       # Заглавные буквы
+lower = true       # Строчные буквы
+numbers = true     # Цифры
+symbols = true     # Спецсимволы
+exclude = "0OoIl"  # Исключить эти символы
+output = "my_password.txt" # Сохранить в файл
