@@ -1,137 +1,202 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Game2048 extends ChangeNotifier {
-  List<List<int>> grid = List.generate(4, (_) => List.filled(4, 0));
-  int score = 0;
-  int bestScore = 0;
-  bool isGameOver = false;
+  static const int _gridSize = 4;
+  static const double _newTile2Probability = 0.9;
+
+  List<List<int>> _grid = List.generate(
+    _gridSize,
+    (_) => List.filled(_gridSize, 0),
+  );
+  int _score = 0;
+  int _bestScore = 0;
+  bool _isGameOver = false;
+  bool _hasWon = false;
+
+  List<List<int>> get grid => _grid;
+  int get score => _score;
+  int get bestScore => _bestScore;
+  bool get isGameOver => _isGameOver;
+  bool get hasWon => _hasWon;
 
   Game2048() {
-    _loadBestScore();
-    _addNewTile();
-    _addNewTile();
+    _loadGame();
   }
 
-  // Загрузка рекорда
-  Future<void> _loadBestScore() async {
+  Future<void> _loadGame() async {
     final prefs = await SharedPreferences.getInstance();
-    bestScore = prefs.getInt('bestScore') ?? 0;
+    _bestScore = prefs.getInt('bestScore') ?? 0;
+    _score = prefs.getInt('currentScore') ?? 0;
+
+    final gridData = prefs.getString('grid');
+    if (gridData != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(gridData);
+        _grid = List.generate(
+          _gridSize,
+          (i) => List.generate(_gridSize, (j) => decoded[i][j] as int),
+        );
+      } catch (e) {
+        _resetGrid();
+      }
+    } else {
+      _resetGrid();
+    }
+    _checkGameState();
     notifyListeners();
   }
 
-  // Сохранение рекорда
-  Future<void> _saveBestScore() async {
+  Future<void> _saveGame() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('bestScore', bestScore);
+    await prefs.setInt('bestScore', _bestScore);
+    await prefs.setInt('currentScore', _score);
+    await prefs.setString('grid', jsonEncode(_grid));
   }
 
-  // Добавление новой плитки
+  void _resetGrid() {
+    _grid = List.generate(_gridSize, (_) => List.filled(_gridSize, 0));
+    _addNewTile();
+    _addNewTile();
+  }
+
   void _addNewTile() {
-    List<Point> emptyCells = [];
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        if (grid[i][j] == 0) emptyCells.add(Point(i, j));
+    final emptyCells = <Point>[];
+    for (int i = 0; i < _gridSize; i++) {
+      for (int j = 0; j < _gridSize; j++) {
+        if (_grid[i][j] == 0) emptyCells.add(Point(i, j));
       }
     }
+
     if (emptyCells.isNotEmpty) {
       final cell = emptyCells[Random().nextInt(emptyCells.length)];
-      grid[cell.x][cell.y] = Random().nextDouble() < 0.9 ? 2 : 4;
+      _grid[cell.x][cell.y] =
+          Random().nextDouble() < _newTile2Probability ? 2 : 4;
+      _saveGame();
     }
     notifyListeners();
   }
 
-  // Проверка на конец игры
-  void _checkGameOver() {
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        if (grid[i][j] == 0) return;
-        if (i < 3 && grid[i][j] == grid[i + 1][j]) return;
-        if (j < 3 && grid[i][j] == grid[i][j + 1]) return;
+  void _checkGameState() {
+    bool hasEmpty = false;
+    bool hasPossibleMoves = false;
+    _hasWon = false;
+
+    for (int i = 0; i < _gridSize; i++) {
+      for (int j = 0; j < _gridSize; j++) {
+        if (_grid[i][j] == 2048) _hasWon = true;
+        if (_grid[i][j] == 0) hasEmpty = true;
+
+        if (i < _gridSize - 1 && _grid[i][j] == _grid[i + 1][j]) {
+          hasPossibleMoves = true;
+        }
+        if (j < _gridSize - 1 && _grid[i][j] == _grid[i][j + 1]) {
+          hasPossibleMoves = true;
+        }
       }
     }
-    isGameOver = true;
-    if (score > bestScore) {
-      bestScore = score;
-      _saveBestScore();
+
+    _isGameOver = !hasEmpty && !hasPossibleMoves;
+    if (_score > _bestScore) {
+      _bestScore = _score;
+      _saveGame();
     }
     notifyListeners();
   }
 
-  // Обработка свайпа
   void move(Direction direction) {
-    if (isGameOver) return;
+    if (_isGameOver || _hasWon) return;
 
-    List<List<int>> newGrid = List.generate(4, (_) => List.filled(4, 0));
+    final newGrid = List.generate(_gridSize, (_) => List.filled(_gridSize, 0));
     bool moved = false;
 
-    for (int i = 0; i < 4; i++) {
-      List<int> row = [];
-      for (int j = 0; j < 4; j++) {
-        switch (direction) {
-          case Direction.up:
-            row.add(grid[j][i]);
-            break;
-          case Direction.down:
-            row.add(grid[3 - j][i]);
-            break;
-          case Direction.left:
-            row.add(grid[i][j]);
-            break;
-          case Direction.right:
-            row.add(grid[i][3 - j]);
-            break;
-        }
+    for (int i = 0; i < _gridSize; i++) {
+      final List<int> row = _getRow(direction, i);
+      final List<int> mergedRow = _mergeRow(row);
+
+      if (row.toString() != mergedRow.toString()) {
+        moved = true;
       }
 
-      List<int> merged = _merge(row);
-      for (int j = 0; j < 4; j++) {
-        int val = (j < merged.length) ? merged[j] : 0;
-        switch (direction) {
-          case Direction.up:
-            newGrid[j][i] = val;
-            break;
-          case Direction.down:
-            newGrid[3 - j][i] = val;
-            break;
-          case Direction.left:
-            newGrid[i][j] = val;
-            break;
-          case Direction.right:
-            newGrid[i][3 - j] = val;
-            break;
-        }
-      }
-
-      if (row.toString() != merged.toString()) moved = true;
+      _updateGrid(direction, i, mergedRow, newGrid);
     }
 
     if (moved) {
-      grid = newGrid;
+      _grid = newGrid;
       _addNewTile();
-      _checkGameOver();
+      _checkGameState();
     }
   }
 
-  // Логика слияния плиток
-  List<int> _merge(List<int> row) {
-    List<int> nonZero = row.where((num) => num != 0).toList();
-    for (int i = 0; i < nonZero.length - 1; i++) {
-      if (nonZero[i] == nonZero[i + 1]) {
-        nonZero[i] *= 2;
-        score += nonZero[i];
-        nonZero.removeAt(i + 1);
-        nonZero.add(0);
+  List<int> _getRow(Direction direction, int index) {
+    switch (direction) {
+      case Direction.up:
+        return [for (int j = 0; j < _gridSize; j++) _grid[j][index]];
+      case Direction.down:
+        return [for (int j = _gridSize - 1; j >= 0; j--) _grid[j][index]];
+      case Direction.left:
+        return _grid[index];
+      case Direction.right:
+        return _grid[index].reversed.toList();
+    }
+  }
+
+  void _updateGrid(
+    Direction direction,
+    int index,
+    List<int> mergedRow,
+    List<List<int>> newGrid,
+  ) {
+    switch (direction) {
+      case Direction.up:
+        for (int j = 0; j < _gridSize; j++) {
+          newGrid[j][index] = mergedRow[j];
+        }
+        break;
+      case Direction.down:
+        for (int j = 0; j < _gridSize; j++) {
+          newGrid[_gridSize - 1 - j][index] = mergedRow[j];
+        }
+        break;
+      case Direction.left:
+        newGrid[index] = mergedRow;
+        break;
+      case Direction.right:
+        newGrid[index] = mergedRow.reversed.toList();
+        break;
+    }
+  }
+
+  List<int> _mergeRow(List<int> row) {
+    final nonZero = row.where((num) => num != 0).toList();
+    final merged = <int>[];
+    bool skipNext = false;
+
+    for (int i = 0; i < nonZero.length; i++) {
+      if (skipNext) {
+        skipNext = false;
+        continue;
+      }
+
+      if (i < nonZero.length - 1 && nonZero[i] == nonZero[i + 1]) {
+        merged.add(nonZero[i] * 2);
+        _score += nonZero[i] * 2;
+        skipNext = true;
+      } else {
+        merged.add(nonZero[i]);
       }
     }
-    return nonZero..addAll(List.filled(4 - nonZero.length, 0));
+
+    return merged..addAll(List.filled(_gridSize - merged.length, 0));
   }
 
-  // Сброс игры
   void reset() {
-    grid = List.generate(4, (_) => List.filled(4, 0));
-    score = 0;
-    isGameOver = false;
+    _grid = List.generate(_gridSize, (_) => List.filled(_gridSize, 0));
+    _score = 0;
+    _isGameOver = false;
+    _hasWon = false;
     _addNewTile();
     _addNewTile();
     notifyListeners();
@@ -141,20 +206,8 @@ class Game2048 extends ChangeNotifier {
 enum Direction { up, down, left, right }
 
 class Point {
-  int x, y;
-  Point(this.x, this.y);
-}
+  final int x;
+  final int y;
 
-Future<void> saveGame() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setInt('score', score);
-  await prefs.setString('grid', jsonEncode(grid));
-}
-
-Future<void> loadGame() async {
-  final prefs = await SharedPreferences.getInstance();
-  score = prefs.getInt('score') ?? 0;
-  final gridData = jsonDecode(prefs.getString('grid') ?? '[]');
-  grid = List.generate(4, (i) => List.generate(4, (j) => gridData[i][j]));
-  notifyListeners();
+  const Point(this.x, this.y);
 }
