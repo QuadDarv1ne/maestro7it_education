@@ -1,0 +1,7 @@
+colorama
+flask
+nltk
+sqlalchemy
+fastapi
+django
+customtkinter
