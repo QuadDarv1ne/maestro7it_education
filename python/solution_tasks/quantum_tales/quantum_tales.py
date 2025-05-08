@@ -29,7 +29,7 @@ class StoryParser:
             lines = [line.strip() for line in block.split('\n') if line.strip()]
             if not lines:
                 continue
-
+                
             header_match = re.match(r'scene (\w+):', lines[0])
             if not header_match:
                 continue
@@ -225,6 +225,14 @@ class StoryRunner:
             event, effect = random.choice(events)
             self._slow_print(event)
             self._process_effects([effect])
+    
+    def _show_status(self):
+        print(f"\n{Fore.BLUE} СТАТУС {'':<60}")
+        print(f"{Fore.CYAN}❤️ Здоровье: {self.state.stats['health']}")
+        print(f"{Fore.YELLOW}⚔️ Смелость: {self.state.stats['courage']}")
+        print(f"{Fore.GREEN}📚 Интеллект: {self.state.stats['intelligence']}")
+        print(f"{Fore.MAGENTA}💰 Золото: {self.state.stats['gold']}")
+        print("-" * 70)
 
     def save_game(self, filename: str):
         with open(filename, 'wb') as f:
@@ -267,11 +275,15 @@ scene start:
         Вы стоите на площади средневекового города. 
         Куда отправитесь?
     art:
-          /\\/\\/\\
-         /      \\
-        |  o  o  |
-        \\   ∆   /
-          -----
+            .........／フ   フ    💕
+            ........(  _  _ )   💕
+            ......／` ミ_x_ノ мур
+            ...../         |
+            ..../   ヽ     ﾉ
+            ...│    | |  |
+            ..／￣| | |  |
+            ..| (￣ヽ_ヽ_)__)
+            ..＼二つ
     effects:
         set courage+5
     on_enter:
