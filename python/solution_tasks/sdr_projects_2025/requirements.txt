@@ -1,0 +1,7 @@
+numpy
+matplotlib
+pyrtlsdr
+jax
+requests
+hackrf
+scipy
