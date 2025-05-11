@@ -1,0 +1,20 @@
+# Основные библиотеки
+pandas
+numpy
+jupyter
+plotly
+ipywidgets
+cachetools
+scikit-learn
+sqlalchemy   # Для работы с SQL через pandas
+nbformat     # Для Jupyter интеграции
+
+# Генерация данных
+faker
+
+# Визуализация
+matplotlib
+seaborn
+
+# Дополнительные утилиты
+python-dateutil
