@@ -30,3 +30,21 @@ decompressed = coder.decompress(compressed)
 
 print(f"Коэффициент сжатия: {compression_ratio(data, compressed):.1f}%")
 ```
+
+## Для запуска каждого алгоритма:
+```bash
+# C++
+g++ -std=c++17 -O2 -o rle cpp/rle.cpp && ./rle "AAAABBBCCD"
+
+# Python
+python python/rle.py "AAAABBBCCD"
+
+# Go
+go run go/rle.go "AAAABBBCCD"
+```
+
+---
+
+**Преподаватель:** Дуплей Максим Игоревич
+
+**Дата:** 04.06.2025
