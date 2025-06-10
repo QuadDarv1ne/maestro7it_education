@@ -274,12 +274,12 @@ class WashingMachine:
 ```python
 my_wm = WashingMachine("Bosch", 7.5)
 
-print(my_wm.power_on())           # Стиральная машина включена
-print(my_wm.select_program("Хлопок"))  # Выбрана программа: Хлопок
-print(my_wm.start_wash())         # Старт программы Хлопок. Осталось: 120 мин
-print(my_wm.check_status())       # Статус: Включена
-                                 # Идет стирка (Хлопок)
-                                 # Осталось времени: 120 мин
+print(my_wm.power_on())               # Стиральная машина включена
+print(my_wm.select_program("Хлопок")) # Выбрана программа: Хлопок
+print(my_wm.start_wash())             # Старт программы Хлопок. Осталось: 120 мин
+print(my_wm.check_status())           # Статус: Включена
+                                      # Идет стирка (Хлопок)
+                                      # Осталось времени: 120 мин
 
 # Вызов методов с заглушками
 my_wm.set_delayed_start(3)
