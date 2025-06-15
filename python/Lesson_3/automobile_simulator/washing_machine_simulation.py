@@ -1,5 +1,7 @@
+import os
 import time
 import sys
+
 try:
     from colorama import init, Fore, Back, Style
     init(autoreset=True)
