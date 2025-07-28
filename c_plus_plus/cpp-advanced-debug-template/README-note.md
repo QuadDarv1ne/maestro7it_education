@@ -55,10 +55,13 @@ cpp-advanced-debug-template/
 
 ## Горячие клавиши
 
-- **`F5`:** Запуск отладки
-- **`Ctrl+Shift+B`:** Сборка проекта
-- **`Ctrl+Shift+D`:** Показать Debug панель
-- **`Ctrl+Shift+Y`:** Открыть консоль отладчика
+| Команда                | Горячие клавиши    | Описание                          |
+ |------------------------|-------------------|-----------------------------------|
+ | Запуск отладки         | `F5`             | Запуск основной конфигурации      |
+ | Сборка проекта         | `Ctrl+Shift+B`   | Компиляция текущего файла         |
+ | Показать точки останова| `Ctrl+Shift+D`   | Открыть панель отладки            |
+ | Открыть консоль GDB    | `Ctrl+Shift+Y`   | Показать консоль отладчика        |
+ | Генерация ассемблера   | `Ctrl+Shift+P → Tasks: Run Task → Generate Assembly` | Создать .asm файл |
 
 ## Расширенные функции GDB
 
@@ -86,7 +89,8 @@ cpp-advanced-debug-template/
 4. **В `settings.json` укажите полный путь:**
 
    ```json
-   "cpp.compilerPath": "C:/mingw64/bin/g++.exe"
+   "cpp.compilerPath": "C:/mingw64/bin/g++.exe",
+   "cpp.debuggerPath": "C:/mingw64/bin/gdb.exe"
    ```
 
 ### Если cl.exe недоступен
@@ -95,12 +99,61 @@ cpp-advanced-debug-template/
 2. Проверьте установку `C++` компонентов в `Visual Studio`
 3. **Вручную вызовите:** `cl /?`
 
+### Проблемы с кириллицей
+
+Добавьте в `tasks.json`:
+
+```json
+"options": {
+    "env": {
+        "PYTHONIOENCODING": "utf8",
+        "LANG": "C.UTF-8"
+    }
+}
+```
+
+### Отладка многопоточных приложений
+
+В `.gdbinit` добавьте:
+
+```textline
+set non-stop on
+set target-async on
+```
+
+## Расширенные возможности
+
+1. **Сетевая отладка**:
+
+   ```bash
+   # На удаленной машине:
+   gdbserver :1234 ./program
+
+   # В launch.json:
+   "debugServerPath": "gdbserver",
+   "debugServerArgs": "localhost:1234"
+   ```
+
+2. **Визуализация структур**:
+   Создайте файл `.natvis`:
+
+   ```xml
+   <AutoVisualizer>
+     <Type Name="MyStruct">
+       <DisplayString>{{x={x}, y={y}}}</DisplayString>
+     </Type>
+   </AutoVisualizer>
+   ```
+
+3. **Анализ памяти**:
+   Используйте встроенную Memory View (Ctrl+Shift+Y → View Memory)
+
 ## Рекомендуемые расширения
 
-- `C/C++ (Microsoft)`
-- `CMake Tools`
-- `GDB Debug (WebFreak)`
-- `Memory View`
+- [C/C++ (Microsoft)](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
+- [GDB Debug (WebFreak)](https://marketplace.visualstudio.com/items?itemName=webfreak.debug)
+- [Memory View](https://marketplace.visualstudio.com/items?itemName=VisualStudioExptTeam.vscodeintellicode)
+- [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)
 
 ---
 
