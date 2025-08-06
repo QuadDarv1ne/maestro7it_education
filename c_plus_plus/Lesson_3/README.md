@@ -17,11 +17,14 @@
 ```cpp
 #include <iostream>
 
+using namespace std; // упрощаем дальнейшую запись кода
+
 int main() {
     int number = 10;
     
     if (number > 0) {
-        std::cout << "Число положительное." << std::endl;
+        // std::cout << "Число положительное." << std::endl;
+        cout << "Число положительное." << endl;
     }
     
     return 0;
@@ -35,13 +38,17 @@ int main() {
 ```cpp
 #include <iostream>
 
+using namespace std; // упрощаем дальнейшую запись кода
+
 int main() {
     int number = -5;
     
     if (number >= 0) {
-        std::cout << "Число неотрицательное." << std::endl;
+        // std::cout << "Число неотрицательное." << std::endl;
+        cout << "Число неотрицательное." << endl;
     } else {
-        std::cout << "Число отрицательное." << std::endl;
+        // std::cout << "Число отрицательное." << std::endl;
+        cout << "Число отрицательное." << endl;
     }
     
     return 0;
@@ -55,15 +62,18 @@ int main() {
 ```cpp
 #include <iostream>
 
+using namespace std; // упрощаем дальнейшую запись кода
+
 int main() {
     int number = 0;
     
     if (number > 0) {
-        std::cout << "Число положительное." << std::endl;
+        // std::cout << "Число положительное." << std::endl;
+        cout << "Число положительное." << endl;
     } else if (number < 0) {
-        std::cout << "Число отрицательное." << std::endl;
+        cout << "Число отрицательное." << endl;
     } else {
-        std::cout << "Число равно нулю." << std::endl;
+        cout << "Число равно нулю." << endl;
     }
     
     return 0;
