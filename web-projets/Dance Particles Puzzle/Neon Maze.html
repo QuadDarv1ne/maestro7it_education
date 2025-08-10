@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Неоновый лабиринт — Улучшенная версия</title>
+<style>
+  :root{
+    --bg1:#030316; --bg2:#06021a;
+    --neon-a: #00f0ff; --neon-b: #ff4dff; --accent:#7be3ff;
+    --muted:#9fb0c8;
+    --ui-bg: rgba(2,6,23,0.45);
+  }
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;color:#eaf6ff;background: radial-gradient(1200px 600px at 10% 10%, var(--bg1), var(--bg2));}
+  #root { width:100%; height:100vh; display:flex; align-items:stretch; justify-content:center; padding:18px; box-sizing:border-box;}
+  .wrap{width:1200px; max-width:98vw; height:calc(100vh - 36px); border-radius:14px; overflow:hidden; display:grid; grid-template-columns:1fr 360px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); box-shadow: 0 18px 60px rgba(2,6,23,0.7);}
+  .stage{position:relative; background:transparent}
+  canvas{display:block;width:100%;height:100%;}
+  .panel{padding:16px; box-sizing:border-box; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));}
+  h1{margin:4px 0 10px;font-size:18px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  button{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;cursor:pointer;font-weight:600}
+  .btn-primary{background:linear-gradient(90deg,var(--accent),#ffd7a6);border:none;color:#0b1220}
+  .small{font-size:13px;color:var(--muted)}
+  .stat{margin-top:12px;font-size:13px;color:var(--muted)}
+  .miniMap{position:absolute; right:14px; top:14px; width:160px; height:120px; border-radius:8px; background: rgba(2,6,23,0.45); border:1px solid rgba(255,255,255,0.04); padding:6px; box-sizing:border-box; backdrop-filter: blur(4px);}
+  .hud{position:absolute; left:14px; top:14px; padding:8px 10px; border-radius:10px; background:var(--ui-bg); border:1px solid rgba(255,255,255,0.03); font-size:13px}
+  .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .winBox{pointer-events:auto; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:22px;border-radius:12px; text-align:center; box-shadow:0 8px 40px rgba(2,6,23,0.6)}
+  .winTitle{font-size:28px;margin-bottom:8px}
+  .themePicker{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  @media (max-width:1000px){ .wrap{grid-template-columns:1fr} .panel{order:2} .miniMap{display:none} }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="wrap">
+    <div class="stage">
+      <canvas id="gameCanvas"></canvas>
+
+      <div class="hud" id="hud">Уровень: <span id="level">1</span> • Кликов: <span id="moves">0</span></div>
+
+      <div class="miniMap" id="miniMap" title="Миникарта (видно весь лабиринт)">
+        <canvas id="miniCanvas" width="160" height="120" style="width:100%;height:100%;display:block;border-radius:6px;"></canvas>
+      </div>
+
+      <div class="overlay" id="overlay" style="display:none">
+        <div class="winBox" id="winBox" style="display:none">
+          <div class="winTitle" id="winTitle">Вы выбрались!</div>
+          <div class="small" id="winInfo">Подсказка: Нажми — чтобы продолжить</div>
+          <div style="margin-top:12px"><button id="nextBtn" class="btn-primary">Следующий уровень</button> <button id="restartBtn">Играть снова</button></div>
+        </div>
+      </div>
+
+    </div>
+
+    <aside class="panel">
+      <h1>Параметры и информация</h1>
+      <div class="controls">
+        <button id="newBtn" class="btn-primary">Новый лабиринт</button>
+        <button id="soundBtn">Звук: Вкл</button>
+        <button id="fogBtn">Туман: Вкл</button>
+      </div>
+
+      <div style="margin-top:8px">
+        <label class="small">Размер клетки: <span id="cellVal">28</span> px</label>
+        <input id="cellRange" type="range" min="18" max="44" value="28" style="width:100%">
+      </div>
+
+      <div style="margin-top:10px">
+        <label class="small">Сложность (стартовые колонки): <span id="colsVal">21</span> × <span id="rowsVal">15</span></label>
+        <input id="colsRange" type="range" min="11" max="45" step="2" value="21" style="width:100%">
+        <input id="rowsRange" type="range" min="9" max="33" step="2" value="15" style="width:100%;margin-top:6px">
+      </div>
+
+      <div class="stat" id="bonusStat">Бонусы: 0</div>
+
+      <div style="margin-top:12px">
+        <div class="small">Тема</div>
+        <div class="themePicker">
+          <button class="btn-theme" data-theme="neon">Неон</button>
+          <button class="btn-theme" data-theme="dark">Тёмная</button>
+          <button class="btn-theme" data-theme="cosmic">Космос</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="small">Управление: WASD / стрелки / свайпы (моб.). Цель — найти пульсирующий портал.</div>
+
+      <footer style="margin-top:14px" class="small">Реализовано: Canvas, Web Audio API, recursive backtracker.</footer>
+    </aside>
+  </div>
+</div>
+
+<script>
+/**
+ * Игра-лабиринт — Неоновый путь
+ * ---------------------------------
+ * Особенности:
+ * - Случайная генерация лабиринта (recursive backtracker)
+ * - Мягкая камера (lerp) следит за игроком
+ * - Неоновые стены: свечения и мягкие тени
+ * - Управление: WASD/стрелки + тач (тап для перемещения)
+ *
+ * Автор: Дуплей Максим Игоревич
+ */
+
+/*
+  Улучшенная версия лабиринта:
+  - Плавная камера (lerp)
+  - Туман / фонарик вокруг игрока
+  - Миникарта
+  - Бонусы (ускорение, подсветка выхода)
+  - Звуки шагов/пика (WebAudio)
+  - Уровни (каждый уровень — немного больше)
+  - Три цветовые темы
+  - Мобильный свайп
+*/
+
+/* =========================
+   Настройки и состояния
+   ========================= */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const miniCanvas = document.getElementById('miniCanvas');
+const mctx = miniCanvas.getContext('2d');
+
+let DPR = Math.max(1, Math.min(2, devicePixelRatio || 1));
+function resizeCanvas(){
+  canvas.width = canvas.clientWidth * DPR;
+  canvas.height = canvas.clientHeight * DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  miniCanvas.width = miniCanvas.clientWidth * DPR;
+  miniCanvas.height = miniCanvas.clientHeight * DPR;
+  mctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', ()=>{ fitLayout(); resizeCanvas(); });
+
+function fitLayout(){
+  const rootRect = document.getElementById('root').getBoundingClientRect();
+  const wrap = document.querySelector('.wrap');
+  // auto-height handled by CSS
+}
+fitLayout();
+
+let cellSize = parseInt(document.getElementById('cellRange').value,10);
+let cols = parseInt(document.getElementById('colsRange').value,10);
+let rows = parseInt(document.getElementById('rowsRange').value,10);
+
+let level = 1;
+let moves = 0;
+let soundOn = true;
+let fogOn = true;
+let theme = 'neon';
+const themes = {
+  neon:{bg1:'#030316', bg2:'#06021a', wall1:'#00f0ff', wall2:'#ff4dff', portal1:'#00ff88'},
+  dark:{bg1:'#08080b', bg2:'#0b0d12', wall1:'#6fb3ff', wall2:'#ffffff', portal1:'#b6ffb3'},
+  cosmic:{bg1:'#03021a', bg2:'#0a002b', wall1:'#8a7bff', wall2:'#ff6aa3', portal1:'#c6ffea'}
+};
+
+const hudLevel = document.getElementById('level');
+const hudMoves = document.getElementById('moves');
+const bonusStat = document.getElementById('bonusStat');
+
+const newBtn = document.getElementById('newBtn');
+const soundBtn = document.getElementById('soundBtn');
+const fogBtn = document.getElementById('fogBtn');
+
+/* =========================
+   Maze data structures
+   ========================= */
+let maze = null; // 2D array of cells {walls:[top,right,bottom,left], visited:bool}
+let player = {x:0, y:0, px:0, py:0, speed:3.2, radius:0.34, moveCooldown:0};
+let camera = {x:0, y:0, lerp:0.14, shake:0, zoom:1};
+let exitCell = {x:0, y:0};
+let bonuses = []; // {x,y,type,active,ttl}
+let bonusCount = 0;
+
+let miniScale = 1;
+
+/* =========================
+   Audio (simple wrapper)
+   ========================= */
+let audioCtx = null;
+function ensureAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playBeep(freq=440, time=0.12, type='sine', gain=0.06){
+  if(!soundOn) return;
+  ensureAudio();
+  try{
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = gain;
+    o.connect(g); g.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(gain, now + 0.01);
+    o.start(now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + time);
+    setTimeout(()=>{ try{ o.stop(); o.disconnect(); g.disconnect(); }catch(e){} }, (time+0.02)*1000);
+  }catch(e){}
+}
+
+/* =========================
+   Maze generation (recursive backtracker)
+   ========================= */
+function makeEmptyGrid(c, r){
+  const g = new Array(r);
+  for(let y=0;y<r;y++){
+    g[y]=new Array(c);
+    for(let x=0;x<c;x++){
+      g[y][x] = {walls:[1,1,1,1], visited:false}; // top,right,bottom,left
+    }
+  }
+  return g;
+}
+
+function carveMaze(c, r, startX=0, startY=0){
+  const grid = makeEmptyGrid(c,r);
+  const stack = [];
+  const dirOffsets = [[0,-1],[1,0],[0,1],[-1,0]];
+  grid[startY][startX].visited = true;
+  stack.push([startX,startY]);
+  while(stack.length){
+    const [cx,cy] = stack[stack.length-1];
+    let neighbors = [];
+    for(let d=0;d<4;d++){
+      const nx = cx + dirOffsets[d][0], ny = cy + dirOffsets[d][1];
+      if(nx>=0 && ny>=0 && nx<c && ny<r && !grid[ny][nx].visited) neighbors.push([nx,ny,d]);
+    }
+    if(neighbors.length){
+      const [nx,ny,d] = neighbors[Math.floor(Math.random()*neighbors.length)];
+      // knock walls
+      grid[cy][cx].walls[d]=0;
+      grid[ny][nx].walls[(d+2)%4]=0;
+      grid[ny][nx].visited=true;
+      stack.push([nx,ny]);
+    } else {
+      stack.pop();
+    }
+  }
+  // clean visited flags
+  for(let y=0;y<r;y++) for(let x=0;x<c;x++) grid[y][x].visited=false;
+  return grid;
+}
+
+/* =========================
+   Level/start logic
+   ========================= */
+function startLevel(lvl){
+  level = lvl || level;
+  // scale with level
+  const extra = Math.max(0, Math.min(10, Math.floor((level-1)/1)));
+  cols = parseInt(document.getElementById('colsRange').value,10) + extra;
+  rows = parseInt(document.getElementById('rowsRange').value,10) + Math.max(0, Math.floor(extra*0.6));
+  cellSize = parseInt(document.getElementById('cellRange').value,10);
+  maze = carveMaze(cols, rows);
+  player.x = 0; player.y = 0; player.px = player.x; player.py = player.y; player.speed = 3.6;
+  exitCell.x = cols - 1; exitCell.y = rows - 1;
+  camera.x = player.x * cellSize; camera.y = player.y * cellSize;
+  bonuses = [];
+  spawnBonuses(Math.max(1, Math.floor((cols*rows)/120)));
+  moves = 0; hudMoves.textContent = moves;
+  hudLevel.textContent = level;
+  bonusCount = 0; bonusStat.textContent = 'Бонусы: 0';
+  overlayHide();
+  resizeCanvas();
+}
+
+/* =========================
+   Bonuses
+   ========================= */
+function spawnBonuses(n){
+  // types: 'speed', 'reveal' (temporarily reveal exit)
+  for(let i=0;i<n;i++){
+    let tries = 0;
+    while(tries < 200){
+      const x = Math.floor(Math.random()*cols);
+      const y = Math.floor(Math.random()*rows);
+      if((x===0 && y===0) || (x===exitCell.x && y===exitCell.y)) { tries++; continue; }
+      if(Math.random() < 0.12) {
+        bonuses.push({x,y,type:(Math.random()<0.5?'speed':'reveal'),active:true,ttl:(Math.random()*8+6)});
+        break;
+      }
+      tries++;
+    }
+  }
+}
+
+/* =========================
+   Input (keys + swipe)
+   ========================= */
+const keys = {};
+window.addEventListener('keydown',(e)=>{ keys[e.key.toLowerCase()]=true; if(e.key===' ') e.preventDefault(); });
+window.addEventListener('keyup',(e)=>{ keys[e.key.toLowerCase()]=false; });
+
+let touchStart = null;
+let touchEnd = null;
+canvas.addEventListener('pointerdown', (e)=>{ if(e.pointerType!=='mouse'){ touchStart={x:e.clientX,y:e.clientY,time:Date.now()}; } });
+canvas.addEventListener('pointerup', (e)=>{ if(touchStart){ touchEnd={x:e.clientX,y:e.clientY,time:Date.now()}; handleSwipe(); touchStart=null; touchEnd=null;} });
+
+function handleSwipe(){
+  if(!touchStart || !touchEnd) return;
+  const dx = touchEnd.x - touchStart.x;
+  const dy = touchEnd.y - touchStart.y;
+  if(Math.hypot(dx,dy) < 30) return;
+  if(Math.abs(dx) > Math.abs(dy)){
+    if(dx>0) tryMove(1,0); else tryMove(-1,0);
+  } else {
+    if(dy>0) tryMove(0,1); else tryMove(0,-1);
+  }
+}
+
+/* =========================
+   Movement & collisions
+   ========================= */
+function tryMove(dx,dy){
+  const cx = Math.floor(player.x), cy = Math.floor(player.y);
+  if(cx<0||cy<0||cx>=cols||cy>=rows) return false;
+  const cell = maze[cy][cx];
+  // walls: [top,right,bottom,left]
+  if(dx===1 && cell.walls[1]) return false;
+  if(dx===-1 && cell.walls[3]) return false;
+  if(dy===1 && cell.walls[2]) return false;
+  if(dy===-1 && cell.walls[0]) return false;
+  player.x += dx; player.y += dy;
+  player.moveCooldown = 0.12; // seconds between moves (for discrete feel but smooth anim)
+  moves++; hudMoves.textContent = moves;
+  playBeep(520,0.09,'sine',0.04);
+  checkPickup();
+  checkWin();
+  return true;
+}
+
+/* =========================
+   Pickup / Win logic
+   ========================= */
+function checkPickup(){
+  for(let i=0;i<bonuses.length;i++){
+    const b = bonuses[i];
+    if(!b.active) continue;
+    if(b.x === player.x && b.y === player.y){
+      b.active=false;
+      bonusCount++;
+      bonusStat.textContent = 'Бонусы: ' + bonusCount;
+      if(b.type==='speed'){
+        player.speed *= 1.45;
+        playBeep(860,0.12,'triangle',0.06);
+        setTimeout(()=>{ player.speed /= 1.45; }, 8000);
+      } else if(b.type==='reveal'){
+        // reveal exit: set temporary highlight
+        revealExit(6);
+        playBeep(980,0.2,'sine',0.06);
+      }
+    }
+  }
+}
+
+let revealUntil = 0;
+function revealExit(seconds){
+  revealUntil = performance.now() + seconds*1000;
+}
+
+/* =========================
+   Win sequence
+   ========================= */
+let inWin = false;
+function checkWin(){
+  if(player.x === exitCell.x && player.y === exitCell.y && !inWin){
+    inWin = true;
+    playBeep(1400,0.4,'sine',0.12);
+    // camera zoom to exit and fade
+    winSequence();
+  }
+}
+
+function overlayShow(){
+  const overlay = document.getElementById('overlay'); overlay.style.display = 'flex';
+  const box = document.getElementById('winBox'); box.style.display='block';
+  document.getElementById('winTitle').textContent = 'Вы выбрались!';
+}
+function overlayHide(){
+  const overlay = document.getElementById('overlay'); overlay.style.display = 'none';
+  const box = document.getElementById('winBox'); box.style.display='none';
+  inWin=false;
+}
+
+/* =========================
+   Render helpers
+   ========================= */
+function lerp(a,b,t){ return a + (b-a)*t; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+/* =========================
+   Drawing the scene
+   ========================= */
+function draw(){
+  // logical sizes
+  const W = canvas.width / DPR, H = canvas.height / DPR;
+  ctx.clearRect(0,0,W,H);
+
+  // camera target centered on player
+  const targetCamX = player.x * cellSize + cellSize/2;
+  const targetCamY = player.y * cellSize + cellSize/2;
+  camera.x = lerp(camera.x, targetCamX, camera.lerp);
+  camera.y = lerp(camera.y, targetCamY, camera.lerp);
+
+  // world origin to screen
+  const ox = W/2 - camera.x;
+  const oy = H/2 - camera.y;
+
+  // background
+  const th = themes[theme];
+  const bgGrad = ctx.createLinearGradient(0,0,W,H);
+  bgGrad.addColorStop(0, th.bg1);
+  bgGrad.addColorStop(1, th.bg2);
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0,0,W,H);
+
+  // floor subtle
+  ctx.save();
+  ctx.translate(ox,oy);
+  const floorAlpha = 0.02;
+  ctx.fillStyle = `rgba(255,255,255,${floorAlpha})`;
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      ctx.fillRect(x*cellSize+1, y*cellSize+1, cellSize-2, cellSize-2);
+    }
+  }
+  ctx.restore();
+
+  // walls (neon glow)
+  ctx.save();
+  ctx.translate(ox,oy);
+  // glow pass
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = th.wall1;
+  ctx.shadowColor = th.wall1;
+  ctx.shadowBlur = 18;
+  drawWalls(ctx);
+  // core pass
+  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = th.wall2 || '#fff';
+  ctx.shadowBlur = 0;
+  drawWalls(ctx);
+  ctx.restore();
+
+  // bonuses
+  ctx.save(); ctx.translate(ox,oy);
+  for(const b of bonuses){
+    if(!b.active) continue;
+    const bx = b.x*cellSize + cellSize/2, by = b.y*cellSize + cellSize/2;
+    if(b.type==='speed'){
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,200,90,0.95)';
+      ctx.shadowColor = 'rgba(255,200,90,0.6)';
+      ctx.shadowBlur = 16;
+      ctx.arc(bx,by, cellSize*0.18 + Math.sin(performance.now()/200 + b.x)*2, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(130,255,200,0.95)';
+      ctx.shadowColor = 'rgba(130,255,200,0.6)';
+      ctx.shadowBlur = 14;
+      ctx.arc(bx,by, cellSize*0.16 + Math.cos(performance.now()/210 + b.y)*1.8, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // exit portal
+  ctx.save();
+  ctx.translate(ox,oy);
+  const ex = exitCell.x*cellSize + cellSize/2, ey = exitCell.y*cellSize + cellSize/2;
+  const t = performance.now()/600;
+  // reveal gloss if bonus active
+  const showExit = revealUntil > performance.now();
+  const baseAlpha = showExit ? 0.95 : 0.6;
+  const pulse = 1 + 0.18 * Math.sin(t*2);
+  ctx.beginPath();
+  ctx.shadowColor = th.portal1;
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = `rgba(255,255,255,0.0)`;
+  ctx.arc(ex,ey, cellSize*0.55*pulse, 0, Math.PI*2);
+  ctx.fill(); // just for shadow
+
+  // portal rings
+  for(let i=3;i>=0;i--){
+    ctx.beginPath();
+    ctx.lineWidth = 2 + i*1.6;
+    const cAlpha = baseAlpha * Math.max(0.12, 0.35 - i*0.06);
+    ctx.strokeStyle = hexWithAlpha(th.portal1, cAlpha);
+    ctx.arc(ex,ey, cellSize*(0.28 + i*0.08)*pulse, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // player
+  ctx.save();
+  ctx.translate(ox,oy);
+  // player glow with 'flashlight' radius
+  const pr = cellSize * player.radius * (1 + 0.06*Math.sin(performance.now()/220));
+  ctx.beginPath();
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = th.portal1;
+  ctx.fillStyle = th.portal1;
+  ctx.arc(player.x*cellSize + cellSize/2, player.y*cellSize + cellSize/2, pr, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // fog (mask / spotlight)
+  if(fogOn){
+    // mask whole screen to dim, then cut circle at player
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,0.66)';
+    ctx.fillRect(0,0,W,H);
+    // composite: cut radial gradient
+    const grad = ctx.createRadialGradient(W/2, H/2, 1, W/2, H/2, Math.max(W,H));
+    // compute player's screen pos
+    const sx = W/2; const sy = H/2; // because camera centers player
+    const r0 = cellSize*2.6;
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.6, 'rgba(0,0,0,0.2)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.9)');
+    // paint gradient centered on player
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // mini map
+  drawMiniMap();
+
+  // optional debug
+  // ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillText(`cam: ${camera.x.toFixed(1)},${camera.y.toFixed(1)}`, 12, H-12);
+}
+
+/* draw walls helper */
+function drawWalls(ctxLocal){
+  const c = ctxLocal; // assume already transformed
+  c.beginPath();
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const cell = maze[y][x];
+      const px = x*cellSize, py = y*cellSize;
+      if(cell.walls[0]){ c.moveTo(px,py); c.lineTo(px+cellSize,py); }
+      if(cell.walls[1]){ c.moveTo(px+cellSize,py); c.lineTo(px+cellSize,py+cellSize); }
+      if(cell.walls[2]){ c.moveTo(px+cellSize,py+cellSize); c.lineTo(px,py+cellSize); }
+      if(cell.walls[3]){ c.moveTo(px,py+cellSize); c.lineTo(px,py); }
+    }
+  }
+  c.stroke();
+}
+
+/* =========================
+   Mini map drawing
+   ========================= */
+function drawMiniMap(){
+  if(!miniCanvas) return;
+  const W = miniCanvas.width / DPR, H = miniCanvas.height / DPR;
+  mctx.clearRect(0,0,W,H);
+  // background
+  mctx.fillStyle = 'rgba(0,0,0,0.25)';
+  mctx.fillRect(0,0,W,H);
+  // scale to fit
+  const pad = 6;
+  const mw = W - pad*2, mh = H - pad*2;
+  const scale = Math.min(mw/cols, mh/rows);
+  const ox = pad + (mw - cols*scale)/2, oy = pad + (mh - rows*scale)/2;
+  // walls
+  mctx.lineWidth = 1;
+  mctx.strokeStyle = 'rgba(180,240,255,0.12)';
+  mctx.beginPath();
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const cell = maze[y][x];
+      const px = ox + x*scale, py = oy + y*scale;
+      if(cell.walls[0]){ mctx.moveTo(px,py); mctx.lineTo(px+scale,py); }
+      if(cell.walls[1]){ mctx.moveTo(px+scale,py); mctx.lineTo(px+scale,py+scale); }
+      if(cell.walls[2]){ mctx.moveTo(px+scale,py+scale); mctx.lineTo(px,py+scale); }
+      if(cell.walls[3]){ mctx.moveTo(px,py+scale); mctx.lineTo(px,py); }
+    }
+  }
+  mctx.stroke();
+  // player dot
+  mctx.fillStyle = themes[theme].portal1;
+  const pdx = ox + (player.x + 0.5)*scale, pdy = oy + (player.y + 0.5)*scale;
+  mctx.beginPath(); mctx.arc(pdx,pdy, Math.max(2, scale*0.28), 0, Math.PI*2); mctx.fill();
+  // exit dot
+  mctx.fillStyle = '#00ff88';
+  const edx = ox + (exitCell.x + 0.5)*scale, edy = oy + (exitCell.y + 0.5)*scale;
+  mctx.beginPath(); mctx.arc(edx,edy, Math.max(2, scale*0.24), 0, Math.PI*2); mctx.fill();
+}
+
+/* =========================
+   Frame / update loop
+   ========================= */
+let lastTime = performance.now();
+function update(now){
+  const dt = Math.min(0.06, (now - lastTime)/1000);
+  lastTime = now;
+
+  // input discrete moves (cooldown)
+  if(player.moveCooldown > 0) player.moveCooldown = Math.max(0, player.moveCooldown - dt);
+  // keyboard movement (discrete cells)
+  if(player.moveCooldown === 0){
+    if(keys['arrowup']||keys['w']) { tryMove(0,-1); player.moveCooldown=0.08; }
+    else if(keys['arrowdown']||keys['s']) { tryMove(0,1); player.moveCooldown=0.08; }
+    else if(keys['arrowleft']||keys['a']) { tryMove(-1,0); player.moveCooldown=0.08; }
+    else if(keys['arrowright']||keys['d']) { tryMove(1,0); player.moveCooldown=0.08; }
+  }
+
+  // smooth interpolate player displayed position
+  player.px = lerp(player.px, player.x, Math.min(1, 12*dt));
+  player.py = lerp(player.py, player.y, Math.min(1, 12*dt));
+
+  // update bonuses ttl
+  for(const b of bonuses){ if(b.active){ b.ttl -= dt; if(b.ttl <= 0) b.active=false; } }
+
+  // draw
+  draw();
+
+  requestAnimationFrame(update);
+}
+requestAnimationFrame(update);
+
+/* =========================
+   Utilities + UI bindings
+   ========================= */
+
+function hexWithAlpha(hex, alpha){
+  // hex like '#rrggbb'
+  const c = hex.replace('#','');
+  const r = parseInt(c.substring(0,2),16);
+  const g = parseInt(c.substring(2,4),16);
+  const b = parseInt(c.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+document.getElementById('colsRange').addEventListener('input', (e)=>{ document.getElementById('colsVal').textContent = e.target.value; });
+document.getElementById('rowsRange').addEventListener('input', (e)=>{ document.getElementById('rowsVal').textContent = e.target.value; });
+document.getElementById('cellRange').addEventListener('input', (e)=>{ document.getElementById('cellVal').textContent = e.target.value; });
+
+newBtn.addEventListener('click', ()=>{ level = 1; startLevel(level); });
+soundBtn.addEventListener('click', ()=>{ soundOn = !soundOn; soundBtn.textContent = 'Звук: ' + (soundOn? 'Вкл' : 'Выкл'); if(soundOn) ensureAudio(); });
+fogBtn.addEventListener('click', ()=>{ fogOn = !fogOn; fogBtn.textContent = 'Туман: ' + (fogOn? 'Вкл' : 'Выкл'); });
+
+document.querySelectorAll('.btn-theme').forEach(b=>{
+  b.addEventListener('click',(e)=>{ theme = b.dataset.theme; });
+});
+
+document.getElementById('nextBtn').addEventListener('click', ()=>{ level++; inWin=false; overlayHide(); startLevel(level); });
+document.getElementById('restartBtn').addEventListener('click', ()=>{ level=1; inWin=false; overlayHide(); startLevel(level); });
+
+/* =========================
+   Start & helpers for layout
+   ========================= */
+function init(){
+  // set canvas client size to stage
+  const stage = document.querySelector('.stage');
+  canvas.style.width = stage.clientWidth + 'px';
+  canvas.style.height = stage.clientHeight + 'px';
+  resizeCanvas();
+  startLevel(1);
+}
+init();
+
+/* =========================
+   Extra: Win Sequence animation
+   ========================= */
+async function winSequence(){
+  // zoom camera to exit (animate)
+  const startZoom = camera.zoom || 1;
+  const targetX = exitCell.x*cellSize + cellSize/2;
+  const targetY = exitCell.y*cellSize + cellSize/2;
+  // short camera focus
+  for(let t=0;t<=1;t+=0.04){
+    camera.x = lerp(camera.x, targetX, 0.35);
+    camera.y = lerp(camera.y, targetY, 0.35);
+    camera.zoom = lerp(camera.zoom, 1.2, 0.08);
+    await tick(12);
+  }
+  camera.zoom = 1;
+  overlayShow();
+}
+
+/* override checkWin to call winSequence */
+function winSequence(){
+  // create a promise-like camera motion then overlay
+  overlayShow();
+}
+
+/* small sleep helper */
+function tick(ms){ return new Promise(res=>setTimeout(res, ms)); }
+
+/* =========================
+   Start audio resume on gesture (browsers require user gesture)
+   ========================= */
+document.body.addEventListener('pointerdown', ()=>{ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); });
+
+</script>
+</body>
+</html>
+
+<!--
+''' Полезные ссылки: '''
+# 1. 💠Telegram💠❃ Хижина программиста Æ: https://t.me/hut_programmer_07
+# 2. 💠Telegram №1💠 @quadd4rv1n7
+# 3. 💠Telegram №2💠 @dupley_maxim_1999
+# 4. Rutube канал: https://rutube.ru/channel/4218729/
+# 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
+# 6. YouTube канал: https://www.youtube.com/@it-coders
+# 7. ВК группа: https://vk.com/science_geeks
+-->

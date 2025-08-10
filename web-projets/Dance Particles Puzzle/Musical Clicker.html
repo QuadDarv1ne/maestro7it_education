@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Музыкальный кликер — Танец волн</title>
+  <style>
+    :root{--bg1:#0f1724;--bg2:#07192a;--accent:#ffd166;--accent2:#7be3ff;--muted:#9aa6b2}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    body{background:linear-gradient(135deg,var(--bg1),var(--bg2));display:flex;align-items:center;justify-content:center;color:#f0f7fb}
+    .wrap{width:960px;max-width:96vw;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(3,8,20,0.6);display:grid;grid-template-columns:1fr 340px}
+    .stage{position:relative;padding:20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent)}
+    canvas{width:100%;height:540px;display:block;border-radius:12px;background:transparent}
+    .panel{padding:18px;background:linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.02))}
+    h1{margin:0 0 8px;font-size:18px}
+    p{margin:0 0 12px;color:var(--muted)}
+    .controls{display:flex;flex-wrap:wrap;gap:8px}
+    button{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;cursor:pointer;font-weight:600}
+    .btn-primary{background:linear-gradient(90deg,var(--accent),#ffb38a);color:#071018;border:none}
+    .switch{display:flex;align-items:center;gap:8px}
+    .small{font-size:13px;color:var(--muted)}
+    .preset{display:flex;gap:8px;margin-top:10px}
+    input[type=range]{width:100%}
+    footer{font-size:12px;color:var(--muted);margin-top:12px}
+    @media (max-width:880px){.wrap{grid-template-columns:1fr}.panel{order:2}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="stage">
+      <canvas id="vis"></canvas>
+      <div style="position:absolute;16px;left:20px;top:22px;background:rgba(2,6,23,0.35);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);backdrop-filter:blur(6px)">
+        <div style="font-weight:700">Музыкальный кликер</div>
+        <div style="font-size:12px;color:var(--muted)">Клик — нота. Генератор мелодий и волны, синхронизированные с музыкой.</div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <h1>Управление</h1>
+      <p class="small">Кликайте в любое место холста или используйте кнопку «Play note». Можно включить авто-генератор мелодий.</p>
+
+      <div class="controls">
+        <button id="playNote" class="btn-primary">Play note</button>
+        <button id="randomMelody">Random melody ▶</button>
+        <button id="stopMelody">■ Stop</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <label class="small">Громкость</label>
+        <input id="gain" type="range" min="0" max="1" step="0.01" value="0.25">
+      </div>
+
+      <div style="margin-top:12px">
+        <label class="small">Темп (BPM)</label>
+        <input id="bpm" type="range" min="50" max="200" step="1" value="110">
+        <div class="small">BPM: <span id="bpmVal">110</span></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label class="small">Шкала (тональность)</label>
+        <select id="scale">
+          <option value="major">Major</option>
+          <option value="minor">Minor</option>
+          <option value="pentatonic">Pentatonic</option>
+          <option value="chromatic">Chromatic</option>
+        </select>
+      </div>
+
+      <div class="preset">
+        <div style="flex:1">
+          <label class="small">Длина мелодии (нот)</label>
+          <input id="melLen" type="range" min="4" max="32" step="1" value="8">
+        </div>
+        <div style="width:120px;display:flex;flex-direction:column;justify-content:flex-end">
+          <div class="small">Mode</div>
+          <select id="mode"><option value="random">Random</option><option value="arpeggio">Arpeggio</option></select>
+        </div>
+      </div>
+
+      <div style="margin-top:14px" class="small">Текущая нота: <strong id="currentNote">—</strong></div>
+
+      <footer>
+        <div>Реализовано: Web Audio API + Canvas</div>
+        <div style="margin-top:8px">Хочешь экспорт WAV/GIF или возможность рисовать мелодии вручную — добавлю.</div>
+      </footer>
+    </aside>
+  </div>
+
+<script>
+/**
+ * Музыкальный кликер — "Танец волн"
+ * ----------------------------------
+ * - Клик по холсту или кнопка Play note запускает ноту
+ * - На фоне идёт анимированная волновая визуализация, синхронизированная с частотой и огибающей ноты
+ * - Есть генератор случайных мелодий (с выбором шкалы и режима)
+ * - Настройки: громкость (gain), темп (BPM), длина мелодии
+ *
+ * Автор: Дуплей Максим Игоревич
+ */
+
+const canvas = document.getElementById('vis');
+const ctx = canvas.getContext('2d');
+let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+function fit(){
+  const r = canvas.getBoundingClientRect();
+  canvas.width = Math.floor(r.width * DPR); canvas.height = Math.floor(r.height * DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', fit); fit();
+
+// WebAudio setup
+let audioCtx = null; let masterGain = null; let analyser = null;
+function ensureAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain(); masterGain.gain.value = parseFloat(document.getElementById('gain').value);
+  analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
+  masterGain.connect(analyser); analyser.connect(audioCtx.destination);
+}
+
+// play a single note with simple envelope
+function playNote(freq, time=0.25, type='sine'){
+  ensureAudio();
+  const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  o.connect(g); g.connect(masterGain);
+  const now = audioCtx.currentTime;
+  const attack = 0.01; const release = time * 0.6;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(masterGain.gain.value, now + attack);
+  o.start(now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + attack + release);
+  setTimeout(()=>{ try{ o.stop(); o.disconnect(); g.disconnect(); }catch(e){} }, (attack+release+0.02)*1000);
+  // update current note display
+  document.getElementById('currentNote').textContent = freq.toFixed(1) + ' Hz';
+}
+
+// mapping scales
+const SCALES = {
+  major: [0,2,4,5,7,9,11],
+  minor: [0,2,3,5,7,8,10],
+  pentatonic: [0,3,5,7,10],
+  chromatic: Array.from({length:12},(_,i)=>i)
+};
+
+function freqFromMidi(m){ return 440 * Math.pow(2,(m-69)/12); }
+function buildScale(keyMidi, scaleName, octaves=2){
+  const steps = SCALES[scaleName] || SCALES.major;
+  const arr = [];
+  for(let o=0;o<octaves;o++){
+    for(const s of steps) arr.push(keyMidi + s + o*12);
+  }
+  return arr.map(freqFromMidi);
+}
+
+// Visualizer state
+const wave = {t:0, peaks:[], hue:200};
+function updateVisualizer(){
+  wave.t += 0.02;
+  // slowly shift hue
+  wave.hue = (wave.hue + 0.06) % 360;
+}
+
+function draw(){
+  const W = canvas.width / DPR; const H = canvas.height / DPR;
+  ctx.clearRect(0,0,W,H);
+
+  // background gradient
+  const g = ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0, 'rgba(123,227,255,0.06)');
+  g.addColorStop(0.6, 'rgba(123,227,255,0.03)');
+  g.addColorStop(1, 'rgba(2,8,20,0.04)');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  // get frequency data if available
+  let data = null;
+  if(analyser){
+    const arr = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(arr);
+    data = arr;
+  }
+
+  // draw multiple sin waves, amplitude modulated by analyser
+  const layers = 5;
+  for(let k=0;k<layers;k++){
+    const amp = 20 + k*8;
+    ctx.beginPath();
+    for(let x=0;x<W;x+=2){
+      const nx = x/W;
+      const y = H*0.5 + Math.sin(nx* (1 + k*0.8) * Math.PI*2 + wave.t*(1+k*0.2)) * amp * (1 + Math.sin(wave.t*0.7 + k)) ;
+      // mod by audio
+      let audioMod = 0;
+      if(data){
+        const idx = Math.floor((x/W) * data.length);
+        audioMod = (data[idx] / 255) * (1 + k*0.4);
+      }
+      const yy = y - audioMod * 0.8 * (k+1);
+      if(x===0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+    }
+    const hue = (wave.hue + k*30) % 360;
+    ctx.strokeStyle = `hsla(${hue}, 80%, ${55 - k*6}%, ${0.18 - k*0.02})`;
+    ctx.lineWidth = 2.0 - k*0.28;
+    ctx.stroke();
+  }
+
+  // peaks (visual echoes)
+  for(let i=0;i<wave.peaks.length;i++){
+    const p = wave.peaks[i];
+    const life = 1 - (Date.now() - p.t)/900;
+    if(life<=0) continue;
+    ctx.beginPath(); ctx.arc(p.x*W, H*0.5, 20 + (1-life)*80, 0, Math.PI*2);
+    ctx.strokeStyle = `hsla(${wave.hue}, 90%, 60%, ${0.12*life})`;
+    ctx.lineWidth = 2; ctx.stroke();
+  }
+}
+
+function loop(){ updateVisualizer(); draw(); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+
+// Interaction: click to play note
+canvas.addEventListener('pointerdown', (e)=>{ const r = canvas.getBoundingClientRect(); const x = e.clientX - r.left; const y = e.clientY - r.top; triggerNoteFromPos(x,y); });
+
+document.getElementById('playNote').addEventListener('click', ()=>{ triggerNoteFromPos(canvas.width/(2*DPR), canvas.height/(2*DPR)); });
+
+function triggerNoteFromPos(x,y){
+  ensureAudio();
+  // map X to pitch, Y to filter / brightness
+  const W = canvas.width / DPR;
+  const rel = Math.max(0, Math.min(1, x / W));
+  const scaleName = document.getElementById('scale').value;
+  const keyMidi = 60; // C4
+  const scale = buildScale(keyMidi, scaleName, 3);
+  const idx = Math.floor(rel * (scale.length-1));
+  const freq = scale[idx];
+  const bpm = parseInt(document.getElementById('bpm').value,10);
+  const time = Math.max(0.12, 60 / bpm * 0.9);
+  playNote(freq, time, 'sine');
+  // visual peak
+  const px = x / (canvas.width / DPR); wave.peaks.unshift({x: px, t: Date.now()}); if(wave.peaks.length>8) wave.peaks.pop();
+}
+
+// Random melody generator
+let melodyTimer = null;
+function generateMelody(){
+  ensureAudio();
+  const len = parseInt(document.getElementById('melLen').value,10);
+  const scaleName = document.getElementById('scale').value;
+  const mode = document.getElementById('mode').value;
+  const keyMidi = 60 + Math.floor(Math.random()*5); // random key offset small
+  const scale = buildScale(keyMidi, scaleName, 4);
+  const bpm = parseInt(document.getElementById('bpm').value,10);
+  const interval = (60 / bpm) * 1000; // ms per beat
+  let pos = 0;
+  clearInterval(melodyTimer);
+  melodyTimer = setInterval(()=>{
+    if(pos >= len) { clearInterval(melodyTimer); melodyTimer = null; return; }
+    let idx;
+    if(mode === 'random') idx = Math.floor(Math.random()*scale.length);
+    else if(mode === 'arpeggio') idx = pos % scale.length;
+    const freq = scale[idx];
+    playNote(freq, Math.min(0.7, interval/1000 * 0.85), 'triangle');
+    // visual
+    const x = (idx / (scale.length-1)) * (canvas.width / DPR);
+    wave.peaks.unshift({x: x / (canvas.width / DPR), t: Date.now()}); if(wave.peaks.length>10) wave.peaks.pop();
+    pos++;
+  }, interval);
+}
+
+document.getElementById('randomMelody').addEventListener('click', ()=>{ generateMelody(); });
+document.getElementById('stopMelody').addEventListener('click', ()=>{ if(melodyTimer){ clearInterval(melodyTimer); melodyTimer = null; } });
+
+// controls bindings
+const gainEl = document.getElementById('gain'); gainEl.addEventListener('input', ()=>{ if(masterGain) masterGain.gain.value = parseFloat(gainEl.value); });
+const bpmEl = document.getElementById('bpm'); bpmEl.addEventListener('input', ()=>{ document.getElementById('bpmVal').textContent = bpmEl.value; });
+
+// resume audio on user gesture (some browsers block autoplay)
+document.body.addEventListener('pointerdown', ()=>{ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }, {once:false});
+
+// helpful: set initial bpm label
+document.getElementById('bpmVal').textContent = document.getElementById('bpm').value;
+
+// Small UX: animate wave.hue slowly
+</script>
+
+</body>
+</html>
+
+<!--
+''' Полезные ссылки: '''
+# 1. 💠Telegram💠❃ Хижина программиста Æ: https://t.me/hut_programmer_07
+# 2. 💠Telegram №1💠 @quadd4rv1n7
+# 3. 💠Telegram №2💠 @dupley_maxim_1999
+# 4. Rutube канал: https://rutube.ru/channel/4218729/
+# 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
+# 6. YouTube канал: https://www.youtube.com/@it-coders
+# 7. ВК группа: https://vk.com/science_geeks
+-->

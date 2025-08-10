@@ -1,0 +1,404 @@
+<!--
+Игра-пазл «Танец частиц»
+---------------------------------
+В этой игре игрок управляет частицами, соединяя их в правильный рисунок.
+Используются HTML, CSS и JavaScript для создания плавной анимации, интерактивности и красоты.
+-->
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Игра-пазл — Танец частиц</title>
+  <style>
+    :root{--bg:#0b1020;--panel:#0f1724;--accent:#7be3ff;--muted:#9aa6b2}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    body{background:radial-gradient(1200px 600px at 10% 10%, #0f1940 0%, transparent 10%), radial-gradient(900px 400px at 90% 90%, #042028 0%, transparent 10%), var(--bg); color:#dce6ef;display:flex;align-items:center;justify-content:center}
+    .wrap{width:1100px;max-width:96vw;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);box-shadow:0 10px 30px rgba(2,6,23,0.7);border-radius:16px;overflow:hidden;display:grid;grid-template-columns:1fr 360px}
+    .stage{position:relative}
+    canvas{display:block;width:100%;height:640px;background:transparent}
+    .sidebar{padding:18px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(6px)}
+    h1{font-size:18px;margin:6px 0 12px}
+    p{color:var(--muted);margin:0 0 12px;font-size:13px}
+    .controls{display:flex;gap:8px;margin-bottom:10px}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:10px;color:inherit;cursor:pointer;font-weight:600}
+    .btn-accent{background:linear-gradient(90deg,var(--accent),#8ef1d6);color:#042024;border:none}
+    .level{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;margin:8px 0;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+    .muted{color:var(--muted);font-size:13px}
+    .hint{font-size:13px;color:var(--muted);margin-top:8px}
+    footer{font-size:12px;color:var(--muted);margin-top:14px}
+    .small{font-size:12px;color:var(--muted)}
+    @media (max-width:880px){.wrap{grid-template-columns:1fr;}.sidebar{order:2}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="stage">
+      <canvas id="c"></canvas>
+      <div style="position:absolute;left:14px;top:14px;background:rgba(2,6,23,0.45);padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);backdrop-filter:blur(4px);">
+        <div style="font-weight:700">Танец частиц</div>
+        <div style="font-size:12px;color:var(--muted)">Соединяй узлы, чтобы вызвать ритм частиц</div>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <h1>Инструкции</h1>
+      <p>Соединяй точки мышью (или сенсорным вводом) — линия ведёт частицы. Цель уровня — активировать все целевые узлы и замкнуть контур. Чем чище контур — тем выше оценка.</p>
+
+      <div class="controls">
+        <button id="restart">Перезапустить</button>
+        <button id="shuffle">Новый узор</button>
+        <button id="prevLevel">◀</button>
+        <button id="nextLevel">▶</button>
+        <button id="toggleSound" class="btn-accent">Звук: вкл</button>
+      </div>
+
+      <div class="level">
+        <div>
+          <div style="font-weight:700">Уровень: <span id="levelNum">1</span></div>
+          <div class="muted">Узел(ов) активировано: <span id="activated">0</span>/<span id="total">0</span></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700" id="score">0</div>
+          <div class="muted">Очки</div>
+        </div>
+      </div>
+
+      <div class="hint">Подсказка: замыкай линию, чтобы склонить систему частиц к стабильному танцу. Небольшая неровность — нормально: она придаёт характер.</div>
+
+      <footer>
+        <div>Реализовано на Canvas + vanilla JS</div>
+        <div style="margin-top:8px">Хотите редактор уровней, экспорт GIF или мобильную адаптацию — скажите, добавлю.</div>
+      </footer>
+    </aside>
+  </div>
+
+<script>
+/**
+ * Игра-пазл «Танец частиц» — улучшенная версия
+ * -------------------------------------------------
+ * Описание:
+ * Игрок рисует линию, которая притягивает и направляет частицы.
+ * При прохождении контура рядом с узлами они активируются и светятся.
+ * Цель уровня — активировать все узлы и замкнуть путь.
+ *
+ * Улучшения в этой версии:
+ * - Переиспользование AudioContext для кратких звуков (экономия ресурсов)
+ * - Простая система уровней (увеличение числа узлов и частиц)
+ * - Чуть улучшенная физика частиц и отрисовка для более плавного вида
+ * - Управление уровнями и плавные win-анимации
+ *
+ * Управление:
+ * - Мышь/тач: зажмите и тяните для рисования пути
+ * - Кнопки: перезапуск, новый узор, переключение уровней, звук
+ *
+ * Автор: Дуплей Максим Игоревич (Хижина программиста)
+ */
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', {alpha:true});
+let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+function fitCanvas(){
+  // заставляем canvas соответствовать своему стилевому размеру
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(1, Math.floor(rect.width * DPR));
+  canvas.height = Math.max(1, Math.floor(rect.height * DPR));
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+window.addEventListener('resize', ()=>{ fitCanvas(); layoutBounds(); });
+
+// --- Конфигурация ---
+const BASE = {
+  nodeCount: 9,
+  particleCount: 700,
+  nodeRadius: 10,
+  attractRadius: 36,
+  lineWidth: 3,
+  particleSize: 1.6,
+  friction: 0.975,
+  attractStrength: 0.016
+};
+
+let audioOn = true;
+const btnSound = document.getElementById('toggleSound');
+btnSound.addEventListener('click', ()=>{ audioOn = !audioOn; btnSound.textContent = 'Звук: ' + (audioOn? 'вкл' : 'выкл'); });
+
+// Audio: экономное использование AudioContext
+let audioCtx = null;
+function playBeep(freq=440, dur=0.06){
+  if(!audioOn) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.value = 0.06;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    setTimeout(()=>{ try{ o.stop(); o.disconnect(); g.disconnect(); }catch(e){} }, (dur+0.02)*1000);
+  }catch(e){/* silent */}
+}
+
+// Уровни
+let level = 1;
+const elLevel = document.getElementById('levelNum');
+const elActivated = document.getElementById('activated');
+const elTotal = document.getElementById('total');
+const elScore = document.getElementById('score');
+
+function levelConfig(l){
+  // прогрессия: с уровнем растёт число узлов и частиц
+  return {
+    nodeCount: Math.min(14, BASE.nodeCount + Math.floor((l-1)/1)),
+    particleCount: Math.min(1800, BASE.particleCount + (l-1)*80),
+    attractRadius: BASE.attractRadius + Math.min(20, Math.floor((l-1)/2))
+  };
+}
+
+// Состояние игры
+let nodes = [];
+let particles = [];
+let path = []; // точки, рисуемые игроком
+let activatedCount = 0;
+let score = 0;
+let isDown = false;
+
+// layout bounds
+let bounds = {w:800,h:640};
+function layoutBounds(){ bounds.w = canvas.width / DPR; bounds.h = canvas.height / DPR; }
+
+// --- Генерация ---
+function createNodes(count){
+  nodes = [];
+  const W = bounds.w, H = bounds.h;
+  const cx = W*0.5, cy = H*0.52, r = Math.min(W,H)*0.28;
+  for(let i=0;i<count;i++){
+    const ang = (i/count)*Math.PI*2 + (Math.random()-0.5)*0.35;
+    const nx = cx + Math.cos(ang)*r + (Math.random()-0.5)*60;
+    const ny = cy + Math.sin(ang)*r + (Math.random()-0.5)*40;
+    nodes.push({x:nx,y:ny,rx:nx,ry:ny,activated:false,winGlow:0});
+  }
+  elTotal.textContent = nodes.length;
+}
+
+function createParticles(count){
+  particles = [];
+  const W = bounds.w, H = bounds.h;
+  for(let i=0;i<count;i++){
+    particles.push({x:Math.random()*W,y:Math.random()*H,vx:0,vy:0});
+  }
+}
+
+function resetGame(){
+  path = [];
+  activatedCount = 0;
+  score = 0;
+  nodes.forEach(n=>{ n.activated=false; n.winGlow=0; });
+  elActivated.textContent = activatedCount;
+  elScore.textContent = score;
+}
+
+// --- Input ---
+function getPointer(e){
+  const rect = canvas.getBoundingClientRect();
+  const clientX = (e.touches? e.touches[0].clientX : e.clientX);
+  const clientY = (e.touches? e.touches[0].clientY : e.clientY);
+  return {x: (clientX - rect.left), y: (clientY - rect.top)};
+}
+
+canvas.addEventListener('pointerdown', (e)=>{ e.preventDefault(); isDown = true; const p = getPointer(e); path.push(p); });
+window.addEventListener('pointerup', ()=>{ if(isDown){ tryClose(); } isDown = false; });
+canvas.addEventListener('pointermove', (e)=>{ if(!isDown) return; const p = getPointer(e); const lp = path[path.length-1]; if(!lp || Math.hypot(p.x-lp.x,p.y-lp.y)>6){ path.push(p); checkActivation(p); } });
+
+// --- Проверки ---
+function checkActivation(p){
+  nodes.forEach(n=>{
+    if(!n.activated){
+      const d = Math.hypot(n.x - p.x, n.y - p.y);
+      if(d < CONFIG.attractRadius){ n.activated = true; activatedCount++; elActivated.textContent = activatedCount; playBeep(240 + activatedCount*22, 0.04); }
+    }
+  });
+}
+
+function tryClose(){
+  if(path.length < 3) return;
+  const first = path[0]; const last = path[path.length-1];
+  if(Math.hypot(first.x - last.x, first.y - last.y) < 36){ path[path.length-1] = first; playBeep(540,0.06); evaluatePath(true); }
+  else evaluatePath(false);
+}
+
+// --- Оценка пути ---
+function evaluatePath(closed){
+  const nodeScore = activatedCount / nodes.length;
+  const smoothness = Math.max(0, 1 - (path.length / 260));
+  const closedBonus = closed ? 0.12 : 0;
+  const total = Math.round((nodeScore*0.72 + smoothness*0.28 + closedBonus) * 1000);
+  score = total;
+  elScore.textContent = score;
+  if(score > 650){ winSequence(); }
+}
+
+function winSequence(){
+  // подсветка узлов и лёгкий выброс частиц
+  nodes.forEach(n=> n.winGlow = 1.2);
+  playBeep(820,0.18);
+  setTimeout(()=>{
+    level = Math.min(12, level + 1);
+    elLevel.textContent = level;
+    startLevel(level);
+  }, 900);
+}
+
+// --- Физика частиц ---
+function findClosestProjection(p){
+  if(path.length < 2) return null;
+  let minD = Infinity, proj = null;
+  for(let i=1;i<path.length;i++){
+    const a = path[i-1], b = path[i];
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const wx = p.x - a.x, wy = p.y - a.y;
+    const len = vx*vx + vy*vy; if(len === 0) continue;
+    let t = (wx*vx + wy*vy) / len; t = Math.max(0, Math.min(1, t));
+    const px = a.x + vx*t, py = a.y + vy*t;
+    const d = Math.hypot(p.x - px, p.y - py);
+    if(d < minD){ minD = d; proj = {x: px, y: py, d}; }
+  }
+  return proj;
+}
+
+function updateParticles(dt){
+  const W = bounds.w, H = bounds.h;
+  for(const p of particles){
+    // gentle noise
+    p.vx += (Math.sin((p.y+p.x)*0.001 + performance.now()*0.0002) * 0.02);
+    p.vy += (Math.cos((p.x+p.y)*0.001 + performance.now()*0.00015) * 0.02);
+
+    const proj = findClosestProjection(p);
+    if(proj && proj.d < CONFIG.attractRadius*2){
+      const ax = (proj.x - p.x) * CONFIG.attractStrength;
+      const ay = (proj.y - p.y) * CONFIG.attractStrength;
+      p.vx += ax; p.vy += ay;
+    }
+
+    p.vx *= CONFIG.friction; p.vy *= CONFIG.friction;
+    p.x += p.vx; p.y += p.vy;
+
+    // wrap
+    if(p.x < -10) p.x = W + 10; if(p.x > W + 10) p.x = -10;
+    if(p.y < -10) p.y = H + 10; if(p.y > H + 10) p.y = -10;
+  }
+}
+
+// --- Отрисовка ---
+function render(){
+  const W = bounds.w, H = bounds.h;
+  ctx.clearRect(0,0,W,H);
+
+  // background subtle
+  ctx.save();
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(255,255,255,0.01)'); g.addColorStop(1,'rgba(255,255,255,0.00)');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  ctx.restore();
+
+  // particles (trail effect)
+  ctx.save();
+  for(const p of particles){
+    ctx.beginPath(); ctx.arc(p.x, p.y, CONFIG.particleSize, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(123,227,255,0.06)'; ctx.fill();
+  }
+  ctx.restore();
+
+  // path
+  if(path.length > 0){
+    ctx.save();
+    ctx.lineWidth = CONFIG.lineWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // glow layer
+    ctx.strokeStyle = 'rgba(123,227,255,0.14)'; ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+    for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x, path[i].y);
+    ctx.stroke();
+    // core
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+    for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x, path[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // nodes
+  for(const n of nodes){
+    // halo
+    if(n.activated || n.winGlow){
+      ctx.beginPath(); ctx.arc(n.x, n.y, BASE.nodeRadius*1.8 + (n.winGlow||0)*6, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(123,227,255,0.06)'; ctx.fill();
+    }
+    // outer
+    ctx.beginPath(); ctx.arc(n.x, n.y, BASE.nodeRadius, 0, Math.PI*2);
+    ctx.fillStyle = n.activated? 'rgba(123,227,255,0.96)' : 'rgba(255,255,255,0.06)'; ctx.fill();
+    // inner
+    ctx.beginPath(); ctx.arc(n.x, n.y, BASE.nodeRadius*0.44, 0, Math.PI*2);
+    ctx.fillStyle = n.activated? 'rgba(2,6,23,0.98)' : 'rgba(255,255,255,0.14)'; ctx.fill();
+  }
+
+  // small HUD: path points count
+  ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.font = '12px system-ui'; ctx.fillText(`Points: ${path.length}`, 12, bounds.h - 12); ctx.restore();
+}
+
+// --- Game loop ---
+let last = performance.now();
+function loop(t){
+  const dt = (t - last) / 1000; last = t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+function update(dt){
+  // particles
+  updateParticles(dt);
+  // nodes relax
+  for(const n of nodes){ n.x += (n.rx - n.x) * 0.02; n.y += (n.ry - n.y) * 0.02; if(n.winGlow) n.winGlow = Math.max(0, n.winGlow - 0.02); }
+}
+
+// --- Start / Level handling ---
+let CONFIG = Object.assign({}, BASE);
+function startLevel(l){
+  const cfg = levelConfig(l);
+  CONFIG.nodeCount = cfg.nodeCount; CONFIG.particleCount = cfg.particleCount; CONFIG.attractRadius = cfg.attractRadius;
+  fitCanvas(); layoutBounds();
+  createNodes(CONFIG.nodeCount);
+  createParticles(CONFIG.particleCount);
+  resetGame();
+}
+
+// UI buttons
+document.getElementById('restart').addEventListener('click', ()=>{ resetGame(); createParticles(CONFIG.particleCount); });
+document.getElementById('shuffle').addEventListener('click', ()=>{ createNodes(CONFIG.nodeCount); resetGame(); });
+document.getElementById('prevLevel').addEventListener('click', ()=>{ level = Math.max(1, level-1); elLevel.textContent = level; startLevel(level); });
+document.getElementById('nextLevel').addEventListener('click', ()=>{ level = Math.min(12, level+1); elLevel.textContent = level; startLevel(level); });
+
+// Init
+fitCanvas(); layoutBounds(); elLevel.textContent = level;
+createNodes(CONFIG.nodeCount); createParticles(CONFIG.particleCount); resetGame();
+requestAnimationFrame(loop);
+
+// expose for debug
+window.__dance = { nodes, particles, startLevel };
+</script>
+
+</body>
+</html>
+
+<!--
+''' Полезные ссылки: '''
+# 1. 💠Telegram💠❃ Хижина программиста Æ: https://t.me/hut_programmer_07
+# 2. 💠Telegram №1💠 @quadd4rv1n7
+# 3. 💠Telegram №2💠 @dupley_maxim_1999
+# 4. Rutube канал: https://rutube.ru/channel/4218729/
+# 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
+# 6. YouTube канал: https://www.youtube.com/@it-coders
+# 7. ВК группа: https://vk.com/science_geeks
+-->
