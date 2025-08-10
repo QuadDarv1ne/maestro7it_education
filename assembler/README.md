@@ -38,6 +38,8 @@
 
 **Преподаватель:** Дуплей Максим Игоревич
 
-**TG:** @quadd4rv1n7
+📲 **Telegram №1:** [@quadd4rv1n7](https://t.me/quadd4rv1n7)
+
+📲 **Telegram №2:** [@dupley_maxim_1999](https://t.me/dupley_maxim_1999)
 
 **Дата:** 14.03.2025

@@ -213,7 +213,7 @@ a. Данные (значение)
 b. Ссылки на связанные узлы
 ```
 
-![dupley_maxim_igorevich](img/DupleyMI.jpg)
+![dupley_maxim_igorevich](../img/DupleyMI.jpg)
 
 ---
 
