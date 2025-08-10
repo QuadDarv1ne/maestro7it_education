@@ -1,4 +1,8 @@
 /**
+ * https://leetcode.com/problems/merge-k-sorted-lists/description/
+ */
+
+/**
  * @class Solution
  * @brief Класс, содержащий метод для слияния k отсортированных связных списков.
  */
