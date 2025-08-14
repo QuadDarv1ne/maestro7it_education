@@ -51,6 +51,64 @@ char grade = 'A';
 bool isGraduated = true;
 ```
 
+```cpp
+/**
+ * @file main.cpp
+ * @brief Демонстрация работы с различными типами данных в C++ и конвертация единиц измерения
+ * 
+ * Программа инициализирует переменные разных типов, выводит их значения,
+ * а также демонстрирует преобразование между имперской и метрической системами измерений.
+ * 
+ * Переменные:
+ *   age - возраст (целое число)
+ *   height - рост в футах (число с плавающей точкой)
+ *   weight - вес в килограммах (число с плавающей точкой двойной точности)
+ *   grade - буквенная оценка (символ)
+ *   isGraduated - флаг окончания обучения (логическое значение)
+ * 
+ * Метрические преобразования:
+ *   1 фут = 0.3048 метра
+ *   1 килограмм = 1000 грамм
+ */
+
+#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    // Инициализация переменных
+    int age = 30;               ///< Возраст в годах
+    float height = 5.9f;         ///< Рост в футах (имперская система)
+    double weight = 65.75;       ///< Вес в килограммах (метрическая система)
+    char grade = 'A';            ///< Буквенная оценка
+    bool isGraduated = true;     ///< Статус окончания обучения
+
+    // Конвертация в метрическую систему
+    const float FEET_TO_METERS = 0.3048f;
+    const int KG_TO_GRAMS = 1000;
+    
+    double height_m = height * FEET_TO_METERS;           ///< Рост в метрах
+    double height_cm = height_m * 100;                   ///< Рост в сантиметрах
+    double weight_grams = weight * KG_TO_GRAMS;          ///< Вес в граммах
+
+    // Вывод исходных значений
+    cout << "=== Исходные значения ===" << endl;
+    cout << "Age: " << age << " years" << endl;
+    cout << fixed << setprecision(1) << "Height: " << height << " feet" << endl;
+    cout << fixed << setprecision(2) << "Weight: " << weight << " kg" << endl;
+    cout << "Grade: " << grade << endl;
+    cout << boolalpha << "Graduated: " << isGraduated << endl;
+    
+    // Вывод значений в метрической системе
+    cout << "\n=== Метрическая система ===" << endl;
+    cout << fixed << setprecision(2) 
+         << "Height: " << height_m << " m (" << height_cm << " cm)" << endl;
+    cout << fixed << setprecision(0) 
+         << "Weight: " << weight_grams << " g" << endl;
+
+    return 0;
+}
+```
+
 ### 3. Операторы
 
 Операторы в C++ используются для выполнения операций над переменными и значениями.
