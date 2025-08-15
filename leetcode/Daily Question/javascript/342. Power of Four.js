@@ -2,21 +2,20 @@
  * https://leetcode.com/problems/power-of-four/description/?envType=daily-question&envId=2025-08-15
  */
 
-class Solution {
-    /**
-     * Проверяет, является ли n степенью четырёх:
-     * 1. n > 0
-     * 2. n & (n - 1) == 0 — степень двойки
-     * 3. n & 0x55555555 == n — бит в чётной позиции
-     *
-     * @param n проверяемое число
-     * @return true, если n является степенью четырёх, иначе false
-     */
-    public boolean isPowerOfFour(int n) {
-        return n > 0
-            && (n & (n - 1)) == 0
-            && (n & 0x55555555) == n;
-    }
+/**
+ * Проверяет, является ли число n степенью четырёх.
+ * Условия:
+ * 1. n > 0
+ * 2. (n & (n - 1)) === 0 — только один бит
+ * 3. (n & 0x55555555) === n — бит в чётной позиции
+ *
+ * @param {number} n — исходное целое число
+ * @return {boolean} — true, если n == 4^k, иначе false
+ */
+function isPowerOfFour(n) {
+    return n > 0
+        && (n & (n - 1)) === 0
+        && (n & 0x55555555) === n;
 }
 
 /*
