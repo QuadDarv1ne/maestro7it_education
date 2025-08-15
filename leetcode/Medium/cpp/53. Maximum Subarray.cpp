@@ -4,9 +4,13 @@
 
 class Solution {
 public:
+    /**
+     * Находит максимальную сумму непрерывного подмассива с помощью Кадане.
+     */
     int maxSubArray(vector<int>& nums) {
-        int current_sum = max_sum = nums[0];
-        for (int i = 1; i < nums.size(); ++i) {
+        int current_sum = nums[0];
+        int max_sum = nums[0];
+        for (int i = 1; i < nums.size(); i++) {
             current_sum = max(nums[i], current_sum + nums[i]);
             max_sum = max(max_sum, current_sum);
         }
