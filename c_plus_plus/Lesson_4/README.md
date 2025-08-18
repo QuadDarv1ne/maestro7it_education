@@ -250,6 +250,8 @@ int main() {
 }
 ```
 
+<img width="1900" height="903" alt="image" src="https://github.com/user-attachments/assets/a95ea1be-07ce-4105-af0b-8a1e39a36a5c" />
+
 **_Автор:_** Дуплей Максим Игоревич
 
 **_Дата:_** 07.09.2024
