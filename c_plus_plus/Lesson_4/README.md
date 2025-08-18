@@ -210,7 +210,45 @@ int main() {
 
 `main.cpp`: Основной файл программы, который вызывает функции.
 
+---
 
+▶️ **Интересный пример описания навыков сотрудника:**
+```cpp
+#include <iostream>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+void greet(string name, string surname, string patronomic, 
+           string profession, int start_year, vector<string> skills) {
+    // Вычисляем стаж работы (текущий год 2025)
+    int experience = 2025 - start_year;
+    
+    cout << "Приветствую вас, " << surname << " " << name << " " << patronomic << " ...\n";
+    cout << "Профессия: " << profession << endl;
+    cout << "Стаж работы: " << experience << " лет" << endl;
+    
+    cout << "Навыки: ";
+    for (size_t i = 0; i < skills.size(); ++i) {
+        cout << skills[i];
+        if (i < skills.size() - 1) {
+            cout << ", ";
+        }
+    }
+    cout << endl;
+}
+
+int main() {
+    // Вызов функции с дополнительными параметрами
+    greet("Максим", "Дуплей", "Игоревич", 
+          "DevOps-инженер и преподаватель", 
+          2019, 
+          {"C++", "Python", "Алгоритмы", "ООП", "Java", "JavaScript", "C#", "Assembler", "Database", "SQL", "Figma", "Video-maker"});
+    
+    return 0;
+}
+```
 
 **_Автор:_** Дуплей Максим Игоревич
 
