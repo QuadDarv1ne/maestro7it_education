@@ -1,5 +1,37 @@
 /**
- * https://leetcode.com/contest/weekly-contest-463/problems/xor-after-range-multiplication-queries-i/
+ * Решение задачи "XOR After Range Multiplication Queries I"
+ * 
+ * Задача: https://leetcode.com/contest/weekly-contest-463/problems/xor-after-range-multiplication-queries-i/
+ * 
+ * Описание:
+ * Дано:
+ * - массив чисел `nums`,
+ * - массив запросов `queries`, каждый запрос состоит из четырех целых чисел [l, r, k, v].
+ * 
+ * Для каждого запроса:
+ * 1. Проходим по подотрезку nums[l..r] с шагом k.
+ * 2. Умножаем каждый элемент подотрезка на v и берём результат по модулю MOD = 10^9 + 7.
+ * 
+ * После выполнения всех запросов необходимо вернуть XOR всех элементов массива `nums`.
+ * 
+ * Алгоритм:
+ * 1. Обрабатываем каждый запрос поочередно.
+ * 2. Для каждого индекса подотрезка применяем операцию умножения с модулем.
+ * 3. После всех запросов вычисляем XOR всех элементов массива.
+ *
+ * Временная сложность: O(Q * ((R-L)/K)), где Q — количество запросов, 
+ * R-L — длина подотрезка, K — шаг.
+ * Пространственная сложность: O(1) дополнительной памяти.
+ *
+ * Пример использования:
+ * vector<int> nums = {1, 2, 3};
+ * vector<vector<int>> queries = {{0, 2, 1, 2}};
+ * Solution sol;
+ * int result = sol.xorAfterQueries(nums, queries);
+ * 
+ * @param nums — вектор чисел.
+ * @param queries — вектор запросов, каждый запрос [l, r, k, v].
+ * @return Результат XOR после всех операций.
  */
 
 #define LL long long
