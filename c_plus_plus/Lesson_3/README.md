@@ -80,6 +80,46 @@ int main() {
 }
 ```
 
+---
+
+```cpp
+#include <iostream>
+#include <cmath> // для round()
+using namespace std;
+
+int main() {
+    double number;
+    
+    cout << "Введите число: ";
+    cin >> number;
+    
+    // Округляем число до ближайшего целого
+    int rounded = round(number);
+    
+    if (rounded > 0) {
+        cout << "Округленное число: " << rounded << " (положительное";
+        if (rounded % 2 == 0) {
+            cout << " четное)." << endl;
+        } else {
+            cout << " нечетное)." << endl;
+        }
+    } else if (rounded < 0) {
+        cout << "Округленное число " << rounded << " (отрицательное";
+        if (rounded % 2 == 0) {
+            cout << " четное)." << endl;
+        } else {
+            cout << " нечетное)." << endl;
+        }
+    } else {
+        cout << "Округленное число: 0 (ноль)." << endl;
+    }
+    
+    return 0;
+}
+```
+
+---
+
 **Оператор switch**
 
 Оператор `switch` используется для выбора одного из нескольких блоков кода в зависимости от значения переменной.
