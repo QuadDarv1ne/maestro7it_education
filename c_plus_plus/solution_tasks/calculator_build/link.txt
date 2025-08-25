@@ -1,0 +1,6 @@
+# Компиляция отдельных файлов
+g++ -c main.cpp -o main.o
+g++ -c calculator.cpp -o calculator.o
+
+# Линковка объектных файлов
+g++ main.o calculator.o -o main.exe
