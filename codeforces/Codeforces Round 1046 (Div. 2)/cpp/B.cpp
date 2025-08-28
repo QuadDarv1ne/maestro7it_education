@@ -2,79 +2,84 @@
  * https://codeforces.com/contest/2136/problem/B
  */
 
-// B_like_the_bitset.cpp
-/*
-B. Like the Bitset
-Конструктивное решение: строим перестановку p[1..n] по колонкам i % k,
-сначала заполняем '0' самыми большими числами, затем '1'. Затем верификация.
-*/
+/**
+ * @brief Решение задачи Codeforces 2136B.
+ *
+ * Условие:
+ * Дана строка s длины n из символов '0' и '1', а также число k.
+ * Нужно построить перестановку p из чисел 1..n такую, что:
+ *  - для любой подстроки длины k хотя бы одна позиция с s[i] = '0'
+ *    имеет значение p[i], строго большее, чем все значения p[j] в позициях,
+ *    где s[j] = '1' внутри этого окна.
+ *
+ * Иначе говоря, ни одна позиция с символом '1' не должна быть максимумом
+ * в своём окне длины k.
+ *
+ * Алгоритм:
+ * 1. Проверяем, есть ли в строке подстрока из k подряд идущих '1'.
+ *    Если такая есть, ответ "NO" (невозможно построить перестановку).
+ * 2. Если нет, то:
+ *    - всем позициям с '0' назначаем самые большие числа (n, n-1, ...);
+ *    - всем позициям с '1' — оставшиеся меньшие числа.
+ *    Тогда в каждом окне длины k найдётся хотя бы один '0' с большим числом,
+ *    что гарантирует выполнение условия.
+ *
+ * Сложность:
+ *  - Время: O(n) на один тест.
+ *  - Память: O(n).
+ *
+ * Пример:
+ * Вход:
+ *  n = 5, k = 3, s = "10101"
+ * Выход:
+ *  YES
+ *  5 2 4 1 3
+ */
 #include <bits/stdc++.h>
 using namespace std;
-using vi = vector<int>;
+using ll = long long;
 
-int main(){
+int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
     int t;
-    if(!(cin >> t)) return 0;
-    while(t--){
-        int n,k;
+    if (!(cin >> t)) return 0;
+    while (t--) {
+        int n, k;
         string s;
         cin >> n >> k >> s;
-        if(k == 1 && s.find('1') != string::npos){
+        bool bad = false;
+        // check any k consecutive '1'
+        int cnt = 0;
+        for (int i = 0; i < n; ++i) {
+            if (s[i] == '1') ++cnt;
+            else cnt = 0;
+            if (cnt >= k) { bad = true; break; }
+        }
+        if (bad) {
             cout << "NO\n";
             continue;
         }
-        vector<vector<int>> cols(k);
-        for(int i=0;i<n;i++){
-            cols[i % k].push_back(i);
-        }
         vector<int> p(n, 0);
         int cur = n;
-        for(int r=0;r<k;r++){
-            vector<int> zeros, ones;
-            for(int idx: cols[r]){
-                if(s[idx] == '0') zeros.push_back(idx);
-                else ones.push_back(idx);
-            }
-            for(int idx: zeros) p[idx] = cur-- ;
-            for(int idx: ones) p[idx] = cur-- ;
-        }
-        // Верификация: для каждого окна дли k вычислим максимум
-        bool valid = true;
-        if(k <= n){
-            deque<int> dq;
-            vector<int> winmax(n - k + 1);
-            for(int i=0;i<n;i++){
-                while(!dq.empty() && p[dq.back()] <= p[i]) dq.pop_back();
-                dq.push_back(i);
-                if(dq.front() <= i - k) dq.pop_front();
-                if(i >= k-1) winmax[i - k + 1] = p[dq.front()];
-            }
-            for(int i=0;i<n;i++){
-                if(s[i] == '1'){
-                    int L = max(0, i - k + 1);
-                    int R = min(i, n - k);
-                    for(int st = L; st <= R; ++st){
-                        if(winmax[st] == p[i]){
-                            valid = false;
-                            break;
-                        }
-                    }
-                    if(!valid) break;
-                }
+        // assign largest numbers to zeros
+        for (int i = 0; i < n; ++i) {
+            if (s[i] == '0') {
+                p[i] = cur--;
             }
         }
-        if(!valid){
-            cout << "NO\n";
-        } else {
-            cout << "YES\n";
-            for(int i=0;i<n;i++){
-                if(i) cout << ' ';
-                cout << p[i];
+        // assign remaining numbers to ones
+        for (int i = 0; i < n; ++i) {
+            if (s[i] == '1') {
+                p[i] = cur--;
             }
-            cout << '\n';
         }
+        cout << "YES\n";
+        for (int i = 0; i < n; ++i) {
+            if (i) cout << ' ';
+            cout << p[i];
+        }
+        cout << '\n';
     }
     return 0;
 }

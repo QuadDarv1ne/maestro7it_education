@@ -2,36 +2,43 @@
  * https://codeforces.com/contest/2136/problem/C
  */
 
-// C_against_the_difference.cpp
-/*
-C. Against the Difference
-Для каждого значения v можно взять floor(cnt[v] / v) полных блоков длины v.
-Суммируем v * (cnt[v] / v).
-*/
 #include <bits/stdc++.h>
 using namespace std;
-using ll = long long;
 
-int main(){
+/**
+ * @brief Решение задачи Codeforces 2136C – Against the Difference.
+ *
+ * Идея:
+ *   - Посчитаем количество вхождений каждого числа (cnt_x).
+ *   - Для каждого числа x ответ += min(cnt_x, x).
+ *   - Это и будет максимальная длина аккуратной (neat) подпоследовательности.
+ *
+ * Сложность:
+ *   - Время: O(n) на тест
+ *   - Память: O(n)
+ */
+
+int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
+
     int t;
-    if(!(cin >> t)) return 0;
-    while(t--){
-        int n; cin >> n;
-        unordered_map<int,int> cnt;
-        cnt.reserve(n*2);
-        for(int i=0;i<n;i++){
-            int x; cin >> x;
-            cnt[x]++;
-        }
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        vector<int> a(n);
+        for (int i = 0; i < n; i++) cin >> a[i];
+
+        unordered_map<int, int> freq;
+        for (int x : a) freq[x]++;
+
         long long ans = 0;
-        for(auto &kv: cnt){
-            long long v = kv.first;
-            long long c = kv.second;
-            ans += v * (c / v);
+        for (auto [x, cnt] : freq) {
+            ans += min(cnt, x);
         }
-        cout << ans << '\n';
+
+        cout << ans << "\n";
     }
     return 0;
 }
