@@ -486,6 +486,45 @@ int main() {
 
 ---
 
+```cpp
+#include <bits/stdc++.h>
+#include <iostream>
+#include <iomanip> // Для форматирования вывода
+
+using namespace std;
+
+int main() {
+    std::cout << "Таблица умножения:\n\n";
+    
+    // Заголовок с номерами столбцов
+    std::cout << "     ";
+    for (int col = 1; col <= 10; ++col) {
+        std::cout << std::setw(4) << col;
+    }
+    std::cout << "\n";
+
+    // Разделительная линия
+    std::cout << "     ";
+    for (int col = 1; col <= 10; ++col) {
+        std::cout << "─ ─ "; // ----
+    }
+    std::cout << "\n";
+    
+    // Генерация строк таблицы
+    for (int row = 1; row <= 10; ++row) {
+        std::cout << std::setw(2) << row << " |"; // Номер строки
+        for (int col = 1; col <= 10; ++col) {
+            std::cout << std::setw(4) << row * col;
+        }
+        std::cout << "\n";
+    }
+    
+    return 0;
+}
+```
+
+---
+
 **Автор:** Дуплей Максим Игоревич
 
 **Дата:** 07.09.2024
