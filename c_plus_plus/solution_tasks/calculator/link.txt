@@ -2,10 +2,7 @@
 # $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 
 # Компиляция отдельных файлов
-# g++ -copy main.cpp -o main.object
-
-g++ -c main.cpp -o main.o
 g++ -c calculator.cpp -o calculator.o
 
 # Линковка объектных файлов
-g++ main.o calculator.o -o main.exe
+g++ calculator.o -o calculator.exe
