@@ -305,6 +305,9 @@ int main() {
 ---
 
 ```cpp
+/**
+ * Таблица умножения чисел 1-9 (Версия №1)
+ */
 #include <iostream>
 #include <iomanip> // Для std::setw
 using namespace std;
@@ -324,6 +327,10 @@ int main() {
 ---
 
 ```cpp
+/**
+ * Таблица умножения чисел 1-9 (Версия №2)
+ */
+
 #include <iostream>
 #include <iomanip> // Для форматирования вывода
 using namespace std;
