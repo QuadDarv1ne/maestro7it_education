@@ -380,6 +380,80 @@ int main() {
 }
 ```
 
+---
+
+```cpp
+#include <iostream>
+#include <iomanip>
+#include <vector>
+#include <string>
+#include <algorithm>
+using namespace std;
+
+vector<long long> generateFibonacci(int n) {
+    vector<long long> fib;
+    if (n >= 1) fib.push_back(0);
+    if (n >= 2) fib.push_back(1);
+    
+    for (int i = 2; i < n; i++) {
+        fib.push_back(fib[i-1] + fib[i-2]);
+    }
+    
+    return fib;
+}
+
+int main() {
+    const int SIZE = 10;
+    vector<long long> fibonacci = generateFibonacci(SIZE * SIZE);
+    
+    // Преобразуем числа в строки и находим максимальную длину для каждого столбца
+    vector<vector<string>> table(SIZE, vector<string>(SIZE));
+    vector<int> colWidths(SIZE, 0);
+    
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            int index = i * SIZE + j;
+            if (index < fibonacci.size()) {
+                table[i][j] = to_string(fibonacci[index]);
+            } else {
+                table[i][j] = "overflow";
+            }
+            // Обновляем ширину столбца, если текущее значение длиннее
+            if (table[i][j].length() > colWidths[j]) {
+                colWidths[j] = table[i][j].length();
+            }
+        }
+    }
+    
+    // Добавляем дополнительный пробел к ширине каждого столбца для отступов
+    for (int j = 0; j < SIZE; j++) {
+        colWidths[j] += 1;
+    }
+    
+    // Вывод заголовка таблицы
+    cout << "   |";
+    for (int j = 0; j < SIZE; j++) {
+        cout << setw(colWidths[j]) << j;
+    }
+    cout << "\n---+";
+    for (int j = 0; j < SIZE; j++) {
+        cout << setfill('-') << setw(colWidths[j]) << "" << setfill(' ');
+    }
+    cout << endl;
+    
+    // Вывод основной таблицы
+    for (int i = 0; i < SIZE; i++) {
+        cout << setw(2) << i << " |";
+        for (int j = 0; j < SIZE; j++) {
+            cout << setw(colWidths[j]) << table[i][j];
+        }
+        cout << endl;
+    }
+    
+    return 0;
+}
+```
+
 <img width="1900" height="903" alt="image" src="https://github.com/user-attachments/assets/a95ea1be-07ce-4105-af0b-8a1e39a36a5c" />
 
 **_Автор:_** Дуплей Максим Игоревич
