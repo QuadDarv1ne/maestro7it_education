@@ -302,6 +302,25 @@ int main() {
 }
 ```
 
+---
+
+```cpp
+#include <iostream>
+#include <iomanip> // Для std::setw
+using namespace std;
+
+int main() {
+    for (int i = 1; i < 10; i++) {
+        for (int j = 1; j < 10; j++) {
+            // Выравниваем каждое число по ширине в 4 символа
+            cout << setw(4) << i * j;
+        }
+        cout << endl; // Переход на новую строку после каждой строки таблицы
+    }
+    return 0;
+}
+```
+
 <img width="1900" height="903" alt="image" src="https://github.com/user-attachments/assets/a95ea1be-07ce-4105-af0b-8a1e39a36a5c" />
 
 **_Автор:_** Дуплей Максим Игоревич
