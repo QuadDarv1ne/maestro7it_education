@@ -20,27 +20,13 @@
  * Память — O(1) дополнительная.
  */
 
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import kotlin.text.StringBuilder
-
 fun main() {
-    val br = BufferedReader(InputStreamReader(System.`in`))
-    val t = br.readLine()?.toIntOrNull() ?: return
-    val out = StringBuilder()
-
+    val t = readLine()!!.toInt()
     repeat(t) {
-        val n = br.readLine()?.toIntOrNull() ?: return
-        val s = br.readLine()?.trim() ?: return
-        val hasZero = '0' in s
-        val hasOne = '1' in s
-        if (hasZero && hasOne) {
-            out.append(s).append('\n')
-        } else {
-            out.append("IMPOSSIBLE\n")
-        }
+        val n = readLine()!!.toInt()
+        val s = readLine()!!.trim()
+        println(s)
     }
-    print(out.toString())
 }
 
 /**
