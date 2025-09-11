@@ -4,11 +4,11 @@
 
 /**
  * Функция sortVowels принимает строку и сортирует все гласные буквы
- * в порядке возрастания (по Unicode), оставляя остальные символы на местах.
+ * в порядке возрастания по их Unicode-кодам, оставляя остальные символы на местах.
  *
  * Алгоритм:
  * 1. Извлечь все гласные в массив.
- * 2. Отсортировать их.
+ * 2. Отсортировать их по charCodeAt.
  * 3. Подставить обратно на позиции гласных.
  *
  * Временная сложность: O(n log n).
@@ -22,7 +22,8 @@ var sortVowels = function(s) {
     for (let c of s) {
         if (isVowel(c)) vowels.push(c);
     }
-    vowels.sort((a, b) => a.localeCompare(b));
+    // Сортировка строго по Unicode
+    vowels.sort((a, b) => a.charCodeAt(0) - b.charCodeAt(0));
     let vi = 0;
     let result = [...s];
     for (let i = 0; i < result.length; i++) {
