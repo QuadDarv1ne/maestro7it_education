@@ -5,12 +5,10 @@
 /**
  * @param {string} s
  * @return {boolean}
- * Проверяет, выиграет ли Alice в игре Vowels Game in a String.
- * Alice выигрывает тогда, когда в строке есть хотя бы одна гласная.
+ * Функция определяет, выиграет ли Alice в игре "Vowels Game in a String".
+ * Alice выигрывает тогда и только тогда, когда в строке есть хотя бы одна гласная (a, e, i, o, u).
  */
-var Solution = function() {};
-
-Solution.prototype.doesAliceWin = function(s) {
+var doesAliceWin = function(s) {
     for (const c of s) {
         if ("aeiou".includes(c)) {
             return true;
