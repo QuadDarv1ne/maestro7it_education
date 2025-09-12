@@ -2,7 +2,28 @@
  * https://leetcode.com/problems/vowels-game-in-a-string/description/?envType=daily-question&envId=2025-09-12
  */
 
+class Solution {
+    /**
+     * Метод doesAliceWin возвращает true, если Alice выиграет при оптимальной игре,
+     * иначе false.
+     * Alice выигрывает тогда и только тогда, когда в строке есть хотя бы одна гласная.
+     *
+     * @param s - входная строка
+     * @return булево значение: true если Alice выигрывает, иначе false
+     */
+    public boolean doesAliceWin(String s) {
+        for (char c : s.toCharArray()) {
+            if (isVowel(c)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
+    private boolean isVowel(char c) {
+        return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u';
+    }
+}
 
 /*
 ''' Полезные ссылки: '''

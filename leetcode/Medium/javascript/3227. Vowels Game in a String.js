@@ -2,7 +2,22 @@
  * https://leetcode.com/problems/vowels-game-in-a-string/description/?envType=daily-question&envId=2025-09-12
  */
 
+/**
+ * @param {string} s
+ * @return {boolean}
+ * Проверяет, выиграет ли Alice в игре Vowels Game in a String.
+ * Alice выигрывает тогда, когда в строке есть хотя бы одна гласная.
+ */
+var Solution = function() {};
 
+Solution.prototype.doesAliceWin = function(s) {
+    for (const c of s) {
+        if ("aeiou".includes(c)) {
+            return true;
+        }
+    }
+    return false;
+};
 
 /*
 ''' Полезные ссылки: '''
