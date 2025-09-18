@@ -25,6 +25,9 @@ using System.Collections.Generic;
 ///  - Собственная реализация binary heap (max-heap);
 ///  - Словарь active для ленивой проверки актуальности записей.
 /// </summary>
+using System;
+using System.Collections.Generic;
+
 public class TaskManager {
     class Node {
         public int pr;
@@ -34,15 +37,13 @@ public class TaskManager {
     }
 
     List<Node> heap = new List<Node>();
+    // taskId -> (priority, userId)
     Dictionary<int, (int priority, int userId)> active = new Dictionary<int, (int,int)>();
 
-    /// <summary>
-    /// Конструктор: принимает массив задач (каждая запись: [userId, taskId, priority]).
-    /// </summary>
-    public TaskManager(int[][] tasks) {
+    // Конструктор: принимает IList<IList<int>> tasks (каждая запись: [userId, taskId, priority])
+    public TaskManager(IList<IList<int>> tasks) {
         if (tasks != null) {
             foreach (var t in tasks) {
-                // t: [userId, taskId, priority]
                 Add(t[0], t[1], t[2]);
             }
         }
@@ -79,9 +80,7 @@ public class TaskManager {
         }
     }
 
-    /// <summary>
-    /// Добавить задачу.
-    /// </summary>
+    // Добавить задачу.
     public void Add(int userId, int taskId, int priority) {
         active[taskId] = (priority, userId);
         var node = new Node(priority, taskId, userId);
@@ -89,9 +88,7 @@ public class TaskManager {
         SiftUp(heap.Count - 1);
     }
 
-    /// <summary>
-    /// Изменить приоритет задачи, если она существует.
-    /// </summary>
+    // Изменить приоритет задачи.
     public void Edit(int taskId, int newPriority) {
         if (active.ContainsKey(taskId)) {
             var pair = active[taskId];
@@ -103,20 +100,16 @@ public class TaskManager {
         }
     }
 
-    /// <summary>
-    /// Удалить задачу (из active — ленивое удаление).
-    /// </summary>
+    // Удалить задачу (ленивое удаление).
     public void Rmv(int taskId) {
         active.Remove(taskId);
     }
 
-    /// <summary>
-    /// Выполнить и удалить задачу с наивысшим приоритетом; вернуть userId или -1.
-    /// </summary>
+    // Выполнить и вернуть userId задачи с наивысшим приоритетом.
     public int ExecTop() {
         while (heap.Count > 0) {
             var top = heap[0];
-            // извлечём вершину
+            // извлечём вершину: заменим корень последним и опустим
             heap[0] = heap[heap.Count - 1];
             heap.RemoveAt(heap.Count - 1);
             if (heap.Count > 0) SiftDown(0);

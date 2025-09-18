@@ -8,14 +8,14 @@ import java.util.*;
  * Менеджер задач.
  *
  * Описание:
- *  - Конструктор принимает массив задач int[][] tasks, каждая запись:
+ *  - Конструктор принимает список задач List<List<Integer>>, каждая запись:
  *    [userId, taskId, priority].
  *  - add(userId, taskId, priority) — добавить задачу.
  *  - edit(taskId, newPriority) — изменить приоритет.
  *  - rmv(taskId) — удалить задачу.
  *  - execTop() — выполнить и удалить задачу с наивысшим приоритетом и вернуть userId.
  *
- * Порядок выбора:
+ * Правила выбора:
  *  - Сначала по большему priority;
  *  - при равных priority — по большему taskId.
  *
@@ -28,19 +28,19 @@ public class TaskManager {
 
     /**
      * Конструктор.
-     * @param tasks массив задач (каждая запись: [userId, taskId, priority])
+     * @param tasks список задач (каждая запись: [userId, taskId, priority])
      */
-    public TaskManager(int[][] tasks) {
+    public TaskManager(List<List<Integer>> tasks) {
         pq = new PriorityQueue<>((a,b) -> {
             if (a[0] != b[0]) return Integer.compare(b[0], a[0]); // больший priority раньше
             if (a[1] != b[1]) return Integer.compare(b[1], a[1]); // больший taskId раньше
-            return Integer.compare(a[2], b[2]); // финальный tie-break
+            return Integer.compare(a[2], b[2]); // финальный tie-break (userId)
         });
         active = new HashMap<>();
         if (tasks != null) {
-            for (int[] t : tasks) {
-                // t = [userId, taskId, priority]
-                add(t[0], t[1], t[2]);
+            for (List<Integer> t : tasks) {
+                if (t == null || t.size() < 3) continue;
+                add(t.get(0), t.get(1), t.get(2));
             }
         }
     }
