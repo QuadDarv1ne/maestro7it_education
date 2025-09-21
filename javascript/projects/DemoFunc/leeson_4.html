@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вебинар №3: PHP - Массивы, циклы, функции и формы</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            margin-top: 20px;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .code-example {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Вебинар №3: Массивы, циклы, функции и работа с формами в PHP</h1>
+    
+    <div class="container">
+        <div class="section">
+            <h2>Работа с формами</h2>
+            <form method="POST" action="">
+                <div class="form-group">
+                    <label for="numbers">Введите числа через запятую:</label>
+                    <input type="text" id="numbers" name="numbers" placeholder="Например: 5, 2, 8, 10, 3" 
+                           value="<?php echo isset($_POST['numbers']) ? htmlspecialchars($_POST['numbers']) : ''; ?>" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="operation">Выберите операцию:</label>
+                    <select id="operation" name="operation">
+                        <option value="sum" <?php echo (isset($_POST['operation']) && $_POST['operation'] == 'sum') ? 'selected' : ''; ?>>Сумма</option>
+                        <option value="average" <?php echo (isset($_POST['operation']) && $_POST['operation'] == 'average') ? 'selected' : ''; ?>>Среднее значение</option>
+                        <option value="max" <?php echo (isset($_POST['operation']) && $_POST['operation'] == 'max') ? 'selected' : ''; ?>>Максимальное значение</option>
+                        <option value="min" <?php echo (isset($_POST['operation']) && $_POST['operation'] == 'min') ? 'selected' : ''; ?>>Минимальное значение</option>
+                        <option value="sort" <?php echo (isset($_POST['operation']) && $_POST['operation'] == 'sort') ? 'selected' : ''; ?>>Сортировка</option>
+                    </select>
+                </div>
+                
+                <button type="submit" name="submit">Выполнить</button>
+            </form>
+        </div>
+
+        <?php
+        // Функции для работы с массивами
+        function calculateSum($array) {
+            return array_sum($array);
+        }
+        
+        function calculateAverage($array) {
+            return count($array) > 0 ? array_sum($array) / count($array) : 0;
+        }
+        
+        function findMax($array) {
+            return count($array) > 0 ? max($array) : 'Массив пуст';
+        }
+        
+        function findMin($array) {
+            return count($array) > 0 ? min($array) : 'Массив пуст';
+        }
+        
+        function sortArray($array) {
+            sort($array);
+            return $array;
+        }
+        
+        // Обработка формы
+        if (isset($_POST['submit'])) {
+            $input = trim($_POST['numbers']);
+            $operation = $_POST['operation'];
+            
+            // Проверяем, что введены данные
+            if (empty($input)) {
+                echo '<div class="result error">';
+                echo '<h3>Ошибка:</h3>';
+                echo '<p>Пожалуйста, введите числа для обработки.</p>';
+                echo '</div>';
+            } else {
+                // Преобразуем введенные данные в массив чисел
+                $inputArray = explode(',', $input);
+                $numbersArray = [];
+                $hasErrors = false;
+                
+                foreach ($inputArray as $value) {
+                    $trimmedValue = trim($value);
+                    if (is_numeric($trimmedValue)) {
+                        $numbersArray[] = (float)$trimmedValue;
+                    } else if (!empty($trimmedValue)) {
+                        $hasErrors = true;
+                    }
+                }
+                
+                echo '<div class="result">';
+                
+                if ($hasErrors) {
+                    echo '<p class="error">Некоторые введенные значения не являются числами и были проигнорированы.</p>';
+                }
+                
+                if (empty($numbersArray)) {
+                    echo '<p class="error">Не было введено ни одного допустимого числа.</p>';
+                } else {
+                    echo '<h3>Результат:</h3>';
+                    echo '<p><strong>Введенные числа:</strong> ' . implode(', ', $numbersArray) . '</p>';
+                    
+                    // Выполняем выбранную операцию
+                    switch ($operation) {
+                        case 'sum':
+                            $result = calculateSum($numbersArray);
+                            echo '<p><strong>Сумма:</strong> ' . $result . '</p>';
+                            break;
+                        case 'average':
+                            $result = calculateAverage($numbersArray);
+                            echo '<p><strong>Среднее значение:</strong> ' . round($result, 2) . '</p>';
+                            break;
+                        case 'max':
+                            $result = findMax($numbersArray);
+                            echo '<p><strong>Максимальное значение:</strong> ' . $result . '</p>';
+                            break;
+                        case 'min':
+                            $result = findMin($numbersArray);
+                            echo '<p><strong>Минимальное значение:</strong> ' . $result . '</p>';
+                            break;
+                        case 'sort':
+                            $result = sortArray($numbersArray);
+                            echo '<p><strong>Отсортированный массив:</strong> ' . implode(', ', $result) . '</p>';
+                            break;
+                    }
+                }
+                
+                echo '</div>';
+            }
+        }
+        ?>
+        
+        <div class="section">
+            <h2>Примеры кода PHP</h2>
+            
+            <h3>1. Работа с массивами</h3>
+            <div class="code-example">
+                <pre><code>// Индексированный массив
+$fruits = array("Яблоко", "Апельсин", "Банан");
+// или
+$fruits = ["Яблоко", "Апельсин", "Банан"];
+
+// Ассоциативный массив
+$age = array("Иван" => 25, "Мария" => 30, "Петр" => 35);
+
+// Многомерный массив
+$users = array(
+    array("name" => "Иван", "age" => 25),
+    array("name" => "Мария", "age" => 30),
+    array("name" => "Петр", "age" => 35)
+);</code></pre>
+            </div>
+            
+            <h3>2. Циклы</h3>
+            <div class="code-example">
+                <pre><code>// Цикл for
+for ($i = 0; $i < 5; $i++) {
+    echo "Номер: " . $i . "&lt;br&gt;";
+}
+
+// Цикл foreach для индексированного массива
+foreach ($fruits as $fruit) {
+    echo $fruit . "&lt;br&gt;";
+}
+
+// Цикл foreach для ассоциативного массива
+foreach ($age as $name => $value) {
+    echo $name . " - " . $value . " лет&lt;br&gt;";
+}
+
+// Цикл while
+$i = 0;
+while ($i < count($fruits)) {
+    echo $fruits[$i] . "&lt;br&gt;";
+    $i++;
+}</code></pre>
+            </div>
+            
+            <h3>3. Функции</h3>
+            <div class="code-example">
+                <pre><code>// Объявление функции
+function greet($name) {
+    return "Привет, " . $name . "!";
+}
+
+// Вызов функции
+echo greet("Иван"); // Выведет: Привет, Иван!
+
+// Функция с параметром по умолчанию
+function introduce($name, $city = "Москва") {
+    return "Меня зовут " . $name . ", я из " . $city;
+}
+
+echo introduce("Анна"); // Выведет: Меня зовут Анна, я из Москва
+echo introduce("Алексей", "Санкт-Петербург"); // Выведет: Меня зовут Алексей, я из Санкт-Петербург</code></pre>
+            </div>
+            
+            <h3>4. Работа с формами</h3>
+            <div class="code-example">
+                <pre><code>// HTML форма
+&lt;form method="POST" action=""&gt;
+    Имя: &lt;input type="text" name="name"&gt;
+    Email: &lt;input type="email" name="email"&gt;
+    &lt;button type="submit" name="submit"&gt;Отправить&lt;/button&gt;
+&lt;/form&gt;
+
+// Обработка формы в PHP
+if (isset($_POST['submit'])) {
+    $name = htmlspecialchars($_POST['name']);
+    $email = htmlspecialchars($_POST['email']);
+    
+    // Валидация и обработка данных
+    if (!empty($name) && !empty($email)) {
+        echo "Привет, " . $name . "! Ваш email: " . $email;
+    } else {
+        echo "Пожалуйста, заполните все поля";
+    }
+}</code></pre>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Демонстрация работы с массивами и циклами</h2>
+            <?php
+            // Создаем массив для демонстрации
+            $demoArray = [10, 5, 8, 3, 12, 7];
+            
+            echo "<p><strong>Исходный массив:</strong> ";
+            echo implode(", ", $demoArray) . "</p>";
+            
+            echo "<h3>Цикл for:</h3>";
+            echo "<p>";
+            for ($i = 0; $i < count($demoArray); $i++) {
+                echo "Элемент [$i] = " . $demoArray[$i] . "<br>";
+            }
+            echo "</p>";
+            
+            echo "<h3>Цикл foreach:</h3>";
+            echo "<p>";
+            foreach ($demoArray as $index => $value) {
+                echo "Элемент [$index] = $value<br>";
+            }
+            echo "</p>";
+            
+            echo "<h3>Ассоциативный массив:</h3>";
+            $assocArray = [
+                "Январь" => 31,
+                "Февраль" => 28,
+                "Март" => 31,
+                "Апрель" => 30
+            ];
+            
+            echo "<p>";
+            foreach ($assocArray as $month => $days) {
+                echo "$month: $days дней<br>";
+            }
+            echo "</p>";
+            ?>
+        </div>
+    </div>
+</body>
+</html>
