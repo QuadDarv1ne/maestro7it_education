@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тетрис</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+            background-color: #111;
+        }
+        #control-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #score-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .score-item {
+            margin: 5px;
+            font-size: 18px;
+        }
+        #high-scores {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тетрис</h1>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+        <div id="control-panel">
+            <button id="start-btn">Начать игру</button>
+            <button id="pause-btn">Пауза</button>
+            <button id="reset-btn">Сброс</button>
+        </div>
+    </div>
+    <div id="score-panel">
+        <div class="score-item">Счет: <span id="score">0</span></div>
+        <div class="score-item">Уровень: <span id="level">Начинающий</span></div>
+        <div class="score-item">Скорость: <span id="speed">1</span></div>
+    </div>
+    <div id="high-scores">
+        <h2>Таблица лидеров</h2>
+        <ol id="high-scores-list"></ol>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const box = 30;
+        let score = 0;
+        let level = 'beginner';
+        let speed = 500;
+        let gameInterval;
+        let isPaused = false;
+
+        // Цвета для разных типов блоков
+        const colors = [
+            'cyan', // I
+            'yellow', // O
+            'purple', // T
+            'orange', // L
+            'blue', // J
+            'green', // S
+            'red' // Z
+        ];
+
+        // Создаем игровое поле
+        const grid = [];
+        for (let i = 0; i < 20; i++) {
+            grid[i] = new Array(10).fill(0);
+        }
+
+        // Создаем фигуры
+        const shapes = [
+            [[1, 1, 1, 1]], // I
+            [[1, 1], [1, 1]], // O
+            [[1, 1, 1], [0, 1, 0]], // T
+            [[1, 1, 1], [1, 0, 0]], // L
+            [[1, 1, 1], [0, 0, 1]], // J
+            [[0, 1, 1], [1, 1, 0]], // S
+            [[1, 1, 0], [0, 1, 1]]  // Z
+        ];
+
+        let currentShape = null;
+        let currentColor = null;
+        let currentX = 0;
+        let currentY = 0;
+
+        // Функция для создания новой фигуры
+        function newShape() {
+            const randomShape = Math.floor(Math.random() * shapes.length);
+            currentShape = shapes[randomShape];
+            currentColor = colors[randomShape];
+            currentX = Math.floor((10 - currentShape[0].length) / 2);
+            currentY = 0;
+        }
+
+        // Функция для рисования игрового поля
+        function drawGrid() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#333';
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < grid.length; i++) {
+                for (let j = 0; j < grid[i].length; j++) {
+                    if (grid[i][j]) {
+                        ctx.fillStyle = colors[grid[i][j] - 1];
+                        ctx.fillRect(j * box, i * box, box, box);
+                        ctx.strokeStyle = '#000';
+                        ctx.strokeRect(j * box, i * box, box, box);
+                    }
+                }
+            }
+        }
+
+        // Функция для рисования текущей фигуры
+        function drawShape() {
+            ctx.fillStyle = currentColor;
+            for (let i = 0; i < currentShape.length; i++) {
+                for (let j = 0; j < currentShape[i].length; j++) {
+                    if (currentShape[i][j]) {
+                        ctx.fillRect((currentX + j) * box, (currentY + i) * box, box, box);
+                        ctx.strokeStyle = '#000';
+                        ctx.strokeRect((currentX + j) * box, (currentY + i) * box, box, box);
+                    }
+                }
+            }
+        }
+
+        // Функция для движения фигуры вниз
+        function moveDown() {
+            if (currentY + currentShape.length < 20 && !collision(currentX, currentY + 1, currentShape)) {
+                currentY++;
+            } else {
+                // Добавляем фигуру в сетку
+                for (let i = 0; i < currentShape.length; i++) {
+                    for (let j = 0; j < currentShape[i].length; j++) {
+                        if (currentShape[i][j]) {
+                            grid[currentY + i][currentX + j] = shapes.indexOf(currentShape) + 1;
+                        }
+                    }
+                }
+                // Проверяем завершенные линии
+                checkLines();
+                // Создаем новую фигуру
+                newShape();
+                // Проверяем конец игры
+                if (collision(currentX, currentY, currentShape)) {
+                    gameOver();
+                }
+            }
+        }
+
+        // Функция для проверки столкновений
+        function collision(x, y, shape) {
+            for (let i = 0; i < shape.length; i++) {
+                for (let j = 0; j < shape[i].length; j++) {
+                    if (shape[i][j]) {
+                        if (y + i >= 20 || x + j < 0 || x + j >= 10 || grid[y + i][x + j]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Функция для проверки завершенных линий
+        function checkLines() {
+            for (let i = grid.length - 1; i >= 0; i--) {
+                if (grid[i].every(cell => cell !== 0)) {
+                    grid.splice(i, 1);
+                    grid.unshift(new Array(10).fill(0));
+                    score += 10;
+                    document.getElementById('score').textContent = score;
+                    // Увеличиваем скорость каждые 100 очков
+                    if (score % 100 === 0) {
+                        speed = Math.max(100, speed - 50);
+                        document.getElementById('speed').textContent = (600 / speed).toFixed(1);
+                    }
+                }
+            }
+        }
+
+        // Функция для вращения фигуры
+        function rotate() {
+            const newShape = [];
+            for (let j = 0; j < currentShape[0].length; j++) {
+                newShape[j] = [];
+                for (let i = currentShape.length - 1; i >= 0; i--) {
+                    newShape[j].push(currentShape[i][j]);
+                }
+            }
+            if (!collision(currentX, currentY, newShape)) {
+                currentShape = newShape;
+            }
+        }
+
+        // Функция для движения фигуры влево
+        function moveLeft() {
+            if (currentX > 0 && !collision(currentX - 1, currentY, currentShape)) {
+                currentX--;
+            }
+        }
+
+        // Функция для движения фигуры вправо
+        function moveRight() {
+            if (currentX + currentShape[0].length < 10 && !collision(currentX + 1, currentY, currentShape)) {
+                currentX++;
+            }
+        }
+
+        // Функция для рисования игры
+        function draw() {
+            drawGrid();
+            drawShape();
+        }
+
+        // Функция для обновления игры
+        function update() {
+            if (!isPaused) {
+                moveDown();
+                draw();
+            }
+        }
+
+        // Функция для начала игры
+        function startGame() {
+            grid.forEach(row => row.fill(0));
+            score = 0;
+            document.getElementById('score').textContent = score;
+            document.getElementById('speed').textContent = '1';
+            speed = 500;
+            newShape();
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+            gameInterval = setInterval(update, speed);
+            isPaused = false;
+        }
+
+        // Функция для паузы игры
+        function pauseGame() {
+            isPaused = !isPaused;
+            document.getElementById('pause-btn').textContent = isPaused ? 'Продолжить' : 'Пауза';
+        }
+
+        // Функция для окончания игры
+        function gameOver() {
+            clearInterval(gameInterval);
+            alert(`Игра окончена! Ваш счет: ${score}`);
+            saveHighScore(score);
+        }
+
+        // Функция для сохранения лучшего результата
+        function saveHighScore(score) {
+            let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+            highScores.push(score);
+            highScores.sort((a, b) => b - a);
+            if (highScores.length > 10) {
+                highScores.pop();
+            }
+            localStorage.setItem('highScores', JSON.stringify(highScores));
+            updateHighScores();
+        }
+
+        // Функция для обновления таблицы лидеров
+        function updateHighScores() {
+            let highScores = JSON.parse(localStorage.getItem('highScores')) || [];
+            const highScoresList = document.getElementById('high-scores-list');
+            highScoresList.innerHTML = '';
+            highScores.forEach(score => {
+                const li = document.createElement('li');
+                li.textContent = score;
+                highScoresList.appendChild(li);
+            });
+        }
+
+        // Обработчики событий для кнопок
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('pause-btn').addEventListener('click', pauseGame);
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            clearInterval(gameInterval);
+            grid.forEach(row => row.fill(0));
+            score = 0;
+            document.getElementById('score').textContent = score;
+            document.getElementById('speed').textContent = '1';
+            speed = 500;
+            newShape();
+            draw();
+        });
+
+        // Обработчики событий для клавиш
+        document.addEventListener('keydown', event => {
+            if (event.key === 'ArrowLeft') {
+                moveLeft();
+            } else if (event.key === 'ArrowRight') {
+                moveRight();
+            } else if (event.key === 'ArrowUp') {
+                rotate();
+            } else if (event.key === 'ArrowDown') {
+                moveDown();
+            }
+        });
+
+        // Инициализация игры
+        startGame();
+        updateHighScores();
+    </script>
+</body>
+</html>
