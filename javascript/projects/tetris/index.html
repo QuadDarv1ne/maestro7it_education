@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Тетрис — улучшенная версия</title>
+<style>
+  :root{
+    --bg:#071126; --panel:#071726; --accent:#10b981; --muted:#94a3b8;
+  }
+  html,body{height:100%;margin:0;font-family:Inter, Roboto, Arial, sans-serif;background:linear-gradient(180deg,#071126 0%,#081226 60%);color:#e6eef6}
+  .container{display:flex;gap:20px;align-items:flex-start;justify-content:center;padding:18px;max-width:1200px;margin:0 auto}
+  .board{background:var(--panel);padding:14px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);position:relative}
+  canvas{display:block;background:#061016;border-radius:6px}
+  .controls{width:360px;display:flex;flex-direction:column;gap:12px}
+  .panel{background:rgba(255,255,255,.03);padding:12px;border-radius:10px}
+  h1{margin:0 0 6px 0;font-size:20px}
+  button{cursor:pointer;border:0;padding:8px 10px;border-radius:8px;background:var(--accent);color:#042018;font-weight:600}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,.06);color:var(--muted)}
+  .small{font-size:13px;color:var(--muted)}
+  #next,#hold{display:grid;grid-template-columns:repeat(5,40px);gap:6px}
+  .preview{width:40px;height:80px;background:rgba(255,255,255,.02);display:flex;align-items:center;justify-content:center;border-radius:6px}
+  .touch-row{display:flex;gap:8px;flex-wrap:wrap}
+  .touch-btn{padding:12px 10px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04);color:#fff}
+  .overlay{position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center}
+  .overlay .box{background:rgba(2,6,23,.92);padding:18px;border-radius:10px;text-align:center}
+  footer{color:var(--muted);font-size:12px;text-align:center;margin-top:14px}
+  input[type=number]{width:80px}
+  .label-button{background:transparent;border:1px solid rgba(255,255,255,.04);padding:6px;border-radius:6px;color:var(--muted);cursor:pointer}
+  @media(max-width:900px){ .container{flex-direction:column;align-items:center} .controls{width:94%} }
+</style>
+</head>
+<body>
+<header style="text-align:center;padding:14px;">
+  <h1>Тетрис — улучшенная версия</h1>
+  <div class="small">Управление: ← → (движение) • ↑ / X / Z (вращение) • ↓ (soft) • Space (hard) • Shift (hold) • P (пауза) • F (fullscreen)</div>
+</header>
+
+<div class="container">
+  <div class="board" id="game-area" style="min-width:360px;">
+    <canvas id="gameCanvas" aria-label="Tetris game board"></canvas>
+
+    <div id="pauseOverlay" class="overlay" style="display:none;">
+      <div class="box"><h2>Пауза</h2><div class="small">Нажмите P или кнопку «Пауза» чтобы продолжить</div></div>
+    </div>
+
+    <div id="gameOverOverlay" class="overlay" style="display:none;">
+      <div class="box">
+        <h2 id="go-title">Игра окончена</h2>
+        <div class="small" id="go-score"></div>
+        <div style="margin-top:10px;">
+          <button id="go-restart" class="ghost">Играть снова</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:18px;font-weight:700" id="score">0</div>
+          <div class="small muted">Счет</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700" id="level">1</div>
+          <div class="small muted">Уровень</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="startBtn">Начать</button>
+        <button id="pauseBtn" class="ghost">Пауза</button>
+        <button id="resetBtn" class="ghost">Сброс</button>
+        <button id="fullscreenBtn" class="ghost">Полноэкранный</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="small muted">Hold</div><div id="hold"></div>
+      </div>
+      <hr style="opacity:.04;margin:10px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="small muted">Next</div><div id="next"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="small muted">Таблица лидеров</div>
+      <ol id="high-scores-list"></ol>
+    </div>
+
+    <div class="panel">
+      <div class="small muted">Управление и настройки</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <div>Left: <button id="rebind-left" class="label-button">ArrowLeft</button></div>
+        <div>Right: <button id="rebind-right" class="label-button">ArrowRight</button></div>
+        <div>Rotate: <button id="rebind-rotate" class="label-button">ArrowUp</button></div>
+        <div>Drop: <button id="rebind-drop" class="label-button">Space</button></div>
+        <div>Hold: <button id="rebind-hold" class="label-button">Shift</button></div>
+        <div>SoftDrop: <button id="rebind-soft" class="label-button">ArrowDown</button></div>
+      </div>
+      <hr style="opacity:.04;margin:10px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="small muted">DAS (ms)</div><input id="dasInput" type="number" value="150" min="0">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+        <div class="small muted">ARR (ms)</div><input id="arrInput" type="number" value="40" min="0">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <div class="small muted">Музыка</div><button id="musicBtn" class="ghost">Вкл. музыку</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="small muted">Мобильное управление</div>
+      <div class="touch-row" style="margin-top:8px">
+        <button class="touch-btn" id="t-left">←</button>
+        <button class="touch-btn" id="t-rotate">⤾</button>
+        <button class="touch-btn" id="t-right">→</button>
+        <button class="touch-btn" id="t-down">↓</button>
+        <button class="touch-btn" id="t-drop">Drop</button>
+        <button class="touch-btn" id="t-hold">Hold</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer style="text-align:center;padding:14px;">
+  <div class="small muted">Автор: Дуплей Максим Игоревич • GitHub: <a href="https://github.com/QuadDarv1ne/" target="_blank">QuadDarv1ne</a> • ORCID: <a href="https://orcid.org/0009-0007-7605-539X" target="_blank">0009-0007-7605-539X</a> • Дата: 22.09.2025</div>
+</footer>
+
+<script>
+/**
+ * 🎮 Tetris — улучшенная версия
+ *
+ * Автор: Дуплей Максим Игоревич
+ * GitHub: https://github.com/QuadDarv1ne/
+ * ORCID:  https://orcid.org/0009-0007-7605-539X
+ * Дата:   22.09.2025
+ *
+ * Это единый HTML-файл с реализацией игры:
+ * - адаптивный canvas, полноэкранный режим
+ * - 7-bag randomizer, preview next(5), hold
+ * - DAS/ARR и переназначение клавиш (key remap)
+ * - procedural music (Korobeiniki) + SFX (WebAudio)
+ * - touch управление (свайпы + удержание)
+ *
+ * Открой файл в браузере. Для звука требуется пользовательский жест (клик/нажатие).
+ */
+
+/* ===========================
+   Константы и состояние
+   =========================== */
+const cvs = document.getElementById('gameCanvas');
+const ctx = cvs.getContext('2d');
+
+const COLS = 10;
+const ROWS = 20;
+
+let BLOCK = 30; // размер клетки, пересчитывается в resizeCanvas()
+
+// палитра (I,O,T,L,J,S,Z)
+const COLORS = ['#00FFFF','#FFD500','#A000F0','#FF8C00','#0000FF','#00C853','#D50000'];
+
+/* Игровое состояние */
+let grid = createEmptyGrid();
+let bag = [];
+let queue = [];
+let holdPiece = null;
+let holdLocked = false;
+let current = null; // {idx, shape, x, y}
+let nextCount = 5;
+
+let score = 0;
+let level = 1;
+let linesCleared = 0;
+
+let dropInterval = 1000; // ms
+let lastDrop = 0;
+
+let isPaused = false;
+let isGameOver = false;
+
+/* Keymap и DAS/ARR */
+const defaultKeymap = { left:'ArrowLeft', right:'ArrowRight', rotate:'ArrowUp', drop:' ', hold:'Shift', soft:'ArrowDown' };
+let keymap = JSON.parse(localStorage.getItem('tetris_keymap') || 'null') || defaultKeymap;
+let DAS = Number(localStorage.getItem('tetris_das')) || 150;
+let ARR = Number(localStorage.getItem('tetris_arr')) || 40;
+
+/* DAS state (separate timers for left/right) */
+let dasTimeoutLeft = null, arrIntervalLeft = null;
+let dasTimeoutRight = null, arrIntervalRight = null;
+
+/* Shapes */
+const SHAPES = [
+  [[1,1,1,1]], // I
+  [[1,1],[1,1]], // O
+  [[1,1,1],[0,1,0]], // T
+  [[1,1,1],[1,0,0]], // L
+  [[1,1,1],[0,0,1]], // J
+  [[0,1,1],[1,1,0]], // S
+  [[1,1,0],[0,1,1]]  // Z
+];
+
+/* ===========================
+   Canvas resize & rendering
+   =========================== */
+
+/**
+ * resizeCanvas()
+ * Меняет размеры canvas так, чтобы игровое поле занимало доступную область
+ * контейнера #game-area (работает корректно в полноэкранном режиме).
+ */
+function resizeCanvas(){
+  const parent = document.getElementById('game-area');
+  const rect = parent.getBoundingClientRect();
+  const availW = rect.width || window.innerWidth;
+  const availH = rect.height || window.innerHeight;
+  const idealBlock = Math.floor(Math.min(availW / COLS, availH / ROWS));
+  BLOCK = Math.max(14, Math.min(48, idealBlock));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cvs.width = COLS * BLOCK * dpr;
+  cvs.height = ROWS * BLOCK * dpr;
+  cvs.style.width = (COLS * BLOCK) + 'px';
+  cvs.style.height = (ROWS * BLOCK) + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+resizeCanvas();
+window.addEventListener('resize', ()=>{ resizeCanvas(); draw(); });
+
+/**
+ * draw()
+ * Отрисовывает фон, сетку, зафиксированные блоки, ghost и текущую фигуру.
+ */
+function draw(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  ctx.fillStyle = '#061016';
+  ctx.fillRect(0,0,COLS*BLOCK,ROWS*BLOCK);
+
+  // тонкая сетка
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+  ctx.lineWidth = 1;
+  for(let x=0;x<=COLS;x++){
+    ctx.beginPath(); ctx.moveTo(x*BLOCK,0); ctx.lineTo(x*BLOCK,ROWS*BLOCK); ctx.stroke();
+  }
+  for(let y=0;y<=ROWS;y++){
+    ctx.beginPath(); ctx.moveTo(0,y*BLOCK); ctx.lineTo(COLS*BLOCK,y*BLOCK); ctx.stroke();
+  }
+
+  // зафиксированные блоки
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const v = grid[r][c];
+      if(v){
+        const color = COLORS[v-1];
+        const x = c*BLOCK, y = r*BLOCK;
+        const g = ctx.createLinearGradient(x,y,x+BLOCK,y+BLOCK);
+        g.addColorStop(0, lighten(color,0.15));
+        g.addColorStop(1, color);
+        ctx.fillStyle = g;
+        ctx.fillRect(x+1,y+1,BLOCK-2,BLOCK-2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.strokeRect(x+1,y+1,BLOCK-2,BLOCK-2);
+        // блик
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(x+3,y+3,BLOCK-6,Math.max(2,BLOCK/6));
+      }
+    }
+  }
+
+  if(current){
+    // ghost
+    let gy = current.y;
+    while(!collision(current.x, gy+1, current.shape)) gy++;
+    ctx.globalAlpha = 0.22;
+    for(let i=0;i<current.shape.length;i++){
+      for(let j=0;j<current.shape[i].length;j++){
+        if(current.shape[i][j]){
+          const px = (current.x + j)*BLOCK, py = (gy + i)*BLOCK;
+          const color = COLORS[current.idx];
+          const g = ctx.createLinearGradient(px,py,px+BLOCK,py+BLOCK);
+          g.addColorStop(0, lighten(color,0.15));
+          g.addColorStop(1, color);
+          ctx.fillStyle = g;
+          ctx.fillRect(px+1,py+1,BLOCK-2,BLOCK-2);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // current piece
+    for(let i=0;i<current.shape.length;i++){
+      for(let j=0;j<current.shape[i].length;j++){
+        if(current.shape[i][j]){
+          const px = (current.x + j)*BLOCK, py = (current.y + i)*BLOCK;
+          const color = COLORS[current.idx];
+          const g2 = ctx.createLinearGradient(px,py,px+BLOCK,py+BLOCK);
+          g2.addColorStop(0, lighten(color,0.15));
+          g2.addColorStop(1, color);
+          ctx.fillStyle = g2;
+          ctx.fillRect(px+1,py+1,BLOCK-2,BLOCK-2);
+          ctx.strokeStyle='rgba(0,0,0,0.4)';
+          ctx.strokeRect(px+1,py+1,BLOCK-2,BLOCK-2);
+          ctx.fillStyle='rgba(255,255,255,0.06)';
+          ctx.fillRect(px+3,py+3,BLOCK-6,Math.max(2,BLOCK/6));
+        }
+      }
+    }
+  }
+}
+
+/* ===========================
+   Игровая логика
+   =========================== */
+
+/** createEmptyGrid() -> Array */
+function createEmptyGrid(){ return Array.from({length:ROWS}, ()=>new Array(COLS).fill(0)); }
+
+function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
+function refillBag(){ const arr=[0,1,2,3,4,5,6]; shuffle(arr); bag = bag.concat(arr); }
+function fillQueue(){ while(queue.length < nextCount){ if(bag.length===0) refillBag(); queue.push(bag.shift()); } }
+
+/**
+ * spawnPiece()
+ * Берёт следующую фигуру из очереди и размещает её сверху. Если сразу коллизия — конец игры.
+ */
+function spawnPiece(){
+  fillQueue();
+  const idx = queue.shift();
+  fillQueue();
+  const shape = cloneShape(SHAPES[idx]);
+  current = { idx, shape, x: Math.floor((COLS - shape[0].length)/2), y: 0 };
+  holdLocked = false;
+  if(collision(current.x, current.y, current.shape)){
+    endGame();
+  }
+}
+function cloneShape(s){ return s.map(r=>r.slice()); }
+
+function rotateMatrix(m){
+  const h = m.length, w = m[0].length;
+  const res = Array.from({length:w}, ()=>new Array(h));
+  for(let i=0;i<w;i++) for(let j=0;j<h;j++) res[i][j] = m[h-1-j][i];
+  return res;
+}
+
+/**
+ * collision(x,y,shape) -> boolean
+ * Проверяет столкновения фигуры с границами/сеткой.
+ */
+function collision(x,y,shape){
+  for(let i=0;i<shape.length;i++){
+    for(let j=0;j<shape[i].length;j++){
+      if(shape[i][j]){
+        const gx = x + j, gy = y + i;
+        if(gx < 0 || gx >= COLS || gy >= ROWS) return true;
+        if(gy >= 0 && grid[gy][gx]) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * lockPiece()
+ * Фиксирует текущую фигуру в сетке, затем проверяет и удаляет заполненные линии.
+ */
+function lockPiece(){
+  const s = current.shape, idx = current.idx + 1;
+  for(let i=0;i<s.length;i++) for(let j=0;j<s[i].length;j++) if(s[i][j]){
+    const gx = current.x + j, gy = current.y + i;
+    if(gy >= 0) grid[gy][gx] = idx;
+  }
+  playBeep(220 + Math.random()*200, 0.06, 'square', 0.03);
+  clearLines();
+  spawnPiece();
+}
+
+/**
+ * clearLines()
+ * Удаляет заполненные строки, смещает верх, обновляет счёт/уровень.
+ */
+function clearLines(){
+  const newGrid = grid.filter(row => row.some(c => c === 0));
+  const cleared = ROWS - newGrid.length;
+  if(cleared > 0){
+    for(let i=0;i<cleared;i++) newGrid.unshift(new Array(COLS).fill(0));
+    grid = newGrid;
+    const scoring = {1:100,2:300,3:500,4:800};
+    score += (scoring[cleared] || 0) * level;
+    linesCleared += cleared;
+    level = Math.floor(linesCleared / 10) + 1;
+    dropInterval = Math.max(80, 1000 - (level - 1) * 80);
+    updateUI();
+    // jingle
+    const base = 330;
+    for(let i=0;i<cleared;i++){ setTimeout(()=>playBeep(base + i*60, 0.12, 'square', 0.09), i*120); }
+  }
+}
+
+/**
+ * hardDrop()
+ * Жёсткое опускание: опускает фигуру до упора, начисляет очки и фиксирует.
+ */
+function hardDrop(){
+  let drop = 0;
+  while(!collision(current.x, current.y+1, current.shape)){
+    current.y++; drop++;
+  }
+  score += drop * 2;
+  playBeep(900, 0.04, 'square', 0.06);
+  lockPiece();
+}
+
+/**
+ * softDrop()
+ * Мягкое опускание: движение вниз на одну клетку, даёт 1 очко.
+ */
+function softDrop(){
+  if(!collision(current.x, current.y+1, current.shape)){
+    current.y++; score += 1; updateUI();
+  } else {
+    lockPiece();
+  }
+}
+
+/**
+ * rotateCW()
+ * Поворот по часовой стрелке с простым wall-kick: пробует сдвиг по X.
+ */
+function rotateCW(){
+  const rotated = rotateMatrix(current.shape);
+  const kicks = [0,1,-1,2,-2];
+  for(const dx of kicks){
+    if(!collision(current.x + dx, current.y, rotated)){
+      current.shape = rotated;
+      current.x += dx;
+      playBeep(880, 0.05, 'sawtooth', 0.06);
+      return;
+    }
+  }
+}
+function rotateCCW(){ rotateCW(); rotateCW(); rotateCW(); }
+
+/**
+ * move(dx)
+ * Передвинуть фигуру влево/вправо, если возможно.
+ * @param {number} dx
+ */
+function move(dx){
+  if(!collision(current.x + dx, current.y, current.shape)){
+    current.x += dx;
+    playBeep(300, 0.02, 'square', 0.02);
+  }
+}
+
+/**
+ * hold()
+ * Поместить текущую фигуру в hold (или заменить ею текущую).
+ */
+function hold(){
+  if(holdLocked) return;
+  if(holdPiece === null){
+    holdPiece = current.idx;
+    spawnPiece();
+  } else {
+    const tmp = holdPiece;
+    holdPiece = current.idx;
+    current = { idx: tmp, shape: cloneShape(SHAPES[tmp]), x: Math.floor((COLS - SHAPES[tmp][0].length)/2), y: 0 };
+    if(collision(current.x, current.y, current.shape)) endGame();
+  }
+  holdLocked = true;
+  playBeep(440, 0.06, 'triangle', 0.05);
+}
+
+/* ===========================
+   Game loop
+   =========================== */
+let lastTime = 0;
+function loop(time = 0){
+  if(isPaused || isGameOver){
+    lastTime = time;
+    requestAnimationFrame(loop);
+    return;
+  }
+  const delta = time - lastTime;
+  lastTime = time;
+  lastDrop += delta;
+  if(lastDrop > dropInterval){
+    if(!collision(current.x, current.y+1, current.shape)){
+      current.y++;
+    } else {
+      lockPiece();
+    }
+    lastDrop = 0;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ===========================
+   UI & helpers
+   =========================== */
+
+/** updateUI() — обновляет видимые элементы интерфейса */
+function updateUI(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('level').textContent = level;
+  renderPreviews();
+  renderHighScores();
+}
+
+/** renderPreviews() — мини-превью next и hold */
+function renderPreviews(){
+  const nextEl = document.getElementById('next'); nextEl.innerHTML = '';
+  for(let i=0;i<nextCount;i++){
+    const idx = queue[i] ?? null;
+    const el = document.createElement('div'); el.className = 'preview';
+    if(idx !== null) drawMini(el, SHAPES[idx], COLORS[idx]);
+    nextEl.appendChild(el);
+  }
+  const holdEl = document.getElementById('hold'); holdEl.innerHTML = '';
+  const holdBox = document.createElement('div'); holdBox.className = 'preview';
+  if(holdPiece !== null) drawMini(holdBox, SHAPES[holdPiece], COLORS[holdPiece]);
+  holdEl.appendChild(holdBox);
+}
+
+/** drawMini(el, shape, color) — рисует мини-превью фигуры */
+function drawMini(container, shape, color){
+  const mini = document.createElement('canvas'); mini.width = 40; mini.height = 80;
+  container.appendChild(mini);
+  const mctx = mini.getContext('2d');
+  mctx.fillStyle = 'rgba(255,255,255,0.02)'; mctx.fillRect(0,0,mini.width,mini.height);
+  const cell = Math.floor(Math.min(14, Math.max(6, 40 / shape[0].length)));
+  mctx.translate(6,6);
+  for(let i=0;i<shape.length;i++) for(let j=0;j<shape[i].length;j++) if(shape[i][j]){
+    const x = j*cell, y = i*cell;
+    const g = mctx.createLinearGradient(x,y,x+cell,y+cell);
+    g.addColorStop(0, lighten(color,0.18)); g.addColorStop(1, color);
+    mctx.fillStyle = g; mctx.fillRect(x,y,cell-2,cell-2);
+    mctx.strokeStyle = 'rgba(0,0,0,0.35)'; mctx.strokeRect(x,y,cell-2,cell-2);
+  }
+}
+
+/** lighten(hex, amt) -> string */
+function lighten(hex, amt){
+  const c = hex.replace('#','');
+  const num = parseInt(c,16);
+  let r = (num>>16) + Math.round(255*amt);
+  let g = ((num>>8)&0x00FF) + Math.round(255*amt);
+  let b = (num & 0x0000FF) + Math.round(255*amt);
+  r = Math.min(255, r); g = Math.min(255, g); b = Math.min(255, b);
+  return '#' + ((1<<24) + (r<<16) + (g<<8) + b).toString(16).slice(1);
+}
+
+/* ===========================
+   Audio: WebAudio + Korobeiniki
+   =========================== */
+
+let audioCtx = null;
+let musicPlaying = false;
+let korTimeout = null;
+const MUSIC_BPM = 140;
+
+/** ensureAudio() — создаёт AudioContext при необходимости */
+function ensureAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+/**
+ * playBeep(freq, duration=0.1, type='square', gain=0.08)
+ * Проигрывает короткий звук (SFX).
+ */
+function playBeep(freq, duration=0.1, type='square', gain=0.08){
+  try{
+    ensureAudio();
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume().catch(()=>{});
+    }
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = 0.0001;
+    o.connect(g); g.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(gain, now + 0.002);
+    o.start(now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    setTimeout(()=>{ try{ o.stop(); o.disconnect(); g.disconnect(); }catch(e){} }, duration*1000 + 60);
+  }catch(e){}
+}
+
+/* Note utilities */
+const SEMITONE_RATIO = Math.pow(2,1/12);
+function noteToFreq(note){
+  const noteRegex = /^([A-G])(#|b)?([0-9])$/;
+  const m = noteRegex.exec(note);
+  if(!m) return 440;
+  const names = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  let n = names[m[1]];
+  if(m[2] === '#') n += 1;
+  if(m[2] === 'b') n -= 1;
+  const octave = parseInt(m[3],10);
+  const keyNumber = n + (octave - 4) * 12;
+  const semitonesFromA4 = keyNumber - 9;
+  return 440 * Math.pow(SEMITONE_RATIO, semitonesFromA4);
+}
+
+/* Simple Korobeiniki melody (simplified) as [note, quarterLength] */
+const KOROBEINIKI = [
+  ['E5',0.5],['B4',0.5],['C5',0.5],['D5',1],
+  ['C5',0.5],['B4',0.5],['A4',1],
+  ['A4',0.5],['C5',0.5],['E5',1],
+  ['D5',0.5],['C5',0.5],['B4',1],
+  ['E5',0.5],['B4',0.5],['C5',0.5],['D5',1],
+  ['C5',0.5],['B4',0.5],['A4',1]
+];
+
+let korIndex = 0;
+function playKorStep(){
+  if(!musicPlaying) return;
+  const step = KOROBEINIKI[korIndex];
+  if(!step){
+    korIndex = 0;
+    return playKorStep();
+  }
+  const note = step[0];
+  const quarterLen = 60 / MUSIC_BPM;
+  const dur = quarterLen * step[1];
+  playBeep(noteToFreq(note), dur*0.95, 'square', 0.06);
+  korIndex = (korIndex + 1) % KOROBEINIKI.length;
+  korTimeout = setTimeout(playKorStep, dur*1000);
+}
+
+/**
+ * startMusic()
+ * Запускает музыку (после пользовательского жеста).
+ */
+function startMusic(){
+  ensureAudio();
+  if(audioCtx.state === 'suspended'){
+    audioCtx.resume().then(()=>{
+      musicPlaying = true; korIndex = 0; playKorStep();
+      document.getElementById('musicBtn').textContent = 'Выкл. музыку';
+    }).catch(()=>{
+      musicPlaying = true; korIndex = 0; playKorStep();
+      document.getElementById('musicBtn').textContent = 'Выкл. музыку';
+    });
+  } else {
+    musicPlaying = true; korIndex = 0; playKorStep();
+    document.getElementById('musicBtn').textContent = 'Выкл. музыку';
+  }
+}
+function stopMusic(){
+  musicPlaying = false;
+  if(korTimeout){ clearTimeout(korTimeout); korTimeout = null; }
+  document.getElementById('musicBtn').textContent = 'Вкл. музыку';
+}
+
+/* Resume audio on first gesture (best-effort) */
+function attachOneTimeAudioResume(){
+  function resume(){
+    try{ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }catch(e){}
+    window.removeEventListener('pointerdown', resume);
+    window.removeEventListener('keydown', resume);
+  }
+  window.addEventListener('pointerdown', resume);
+  window.addEventListener('keydown', resume);
+}
+attachOneTimeAudioResume();
+
+/* ===========================
+   Input: keyboard + DAS/ARR + touch + remap
+   =========================== */
+
+/**
+ * handleKeyDownForDAS(key)
+ * Обрабатывает удержание влево/вправо с DAS/ARR.
+ */
+function handleKeyDownForDAS(key){
+  if(key === keymap.left){
+    if(dasTimeoutLeft || arrIntervalLeft) return;
+    move(-1);
+    dasTimeoutLeft = setTimeout(()=>{
+      arrIntervalLeft = setInterval(()=>move(-1), Math.max(1, ARR));
+    }, DAS);
+  }
+  if(key === keymap.right){
+    if(dasTimeoutRight || arrIntervalRight) return;
+    move(1);
+    dasTimeoutRight = setTimeout(()=>{
+      arrIntervalRight = setInterval(()=>move(1), Math.max(1, ARR));
+    }, DAS);
+  }
+}
+function handleKeyUpForDAS(key){
+  if(key === keymap.left){
+    if(dasTimeoutLeft){ clearTimeout(dasTimeoutLeft); dasTimeoutLeft = null; }
+    if(arrIntervalLeft){ clearInterval(arrIntervalLeft); arrIntervalLeft = null; }
+  }
+  if(key === keymap.right){
+    if(dasTimeoutRight){ clearTimeout(dasTimeoutRight); dasTimeoutRight = null; }
+    if(arrIntervalRight){ clearInterval(arrIntervalRight); arrIntervalRight = null; }
+  }
+}
+
+/* Keyboard events */
+window.addEventListener('keydown', (e)=>{
+  if(isGameOver) return;
+  if(e.key === 'p' || e.key === 'P'){ pauseGame(); return; }
+  // DAS/ARR
+  handleKeyDownForDAS(e.key);
+
+  if(isPaused) return;
+
+  if(e.key === keymap.rotate || e.key.toLowerCase() === 'x'){ rotateCW(); draw(); }
+  else if(e.key.toLowerCase() === 'z'){ rotateCCW(); draw(); }
+  else if(e.key === keymap.soft){ softDrop(); draw(); }
+  else if(e.key === keymap.drop){ e.preventDefault(); hardDrop(); draw(); }
+  else if(e.key === keymap.hold){ hold(); draw(); }
+});
+window.addEventListener('keyup', (e)=>{ handleKeyUpForDAS(e.key); });
+
+/* Touch controls: buttons already exist; also add swipe on canvas */
+['t-left','t-right','t-rotate','t-down','t-drop','t-hold'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('click', ()=>{
+    if(isGameOver) return;
+    if(id === 't-left') move(-1);
+    if(id === 't-right') move(1);
+    if(id === 't-rotate') rotateCW();
+    if(id === 't-down') softDrop();
+    if(id === 't-drop') hardDrop();
+    if(id === 't-hold') hold();
+    draw();
+  });
+});
+
+/* Canvas touch swipe & hold for soft drop */
+let touchStartX = 0, touchStartY = 0, touchStartT = 0, touchHoldTimer = null;
+cvs.addEventListener('touchstart', (e)=>{
+  const t = e.touches[0];
+  touchStartX = t.clientX; touchStartY = t.clientY; touchStartT = Date.now();
+  touchHoldTimer = setTimeout(()=>{ touchHoldTimer = setInterval(()=>softDrop(), 120); }, 350);
+});
+cvs.addEventListener('touchmove', (e)=>{
+  const t = e.touches[0];
+  const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
+  if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)){
+    if(dx < 0) move(-1); else move(1);
+    if(touchHoldTimer){ clearTimeout(touchHoldTimer); clearInterval(touchHoldTimer); touchHoldTimer = null; }
+    touchStartX = t.clientX;
+  }
+});
+cvs.addEventListener('touchend', (e)=>{
+  const dt = Date.now() - touchStartT;
+  if(touchHoldTimer){ clearTimeout(touchHoldTimer); clearInterval(touchHoldTimer); touchHoldTimer = null; }
+  if(dt < 200) rotateCW();
+});
+
+/* Key remap UI */
+function startRebind(buttonId, action){
+  const btn = document.getElementById(buttonId);
+  btn.textContent = 'Нажмите клавишу...';
+  function onKey(e){
+    e.preventDefault();
+    keymap[action] = e.key;
+    localStorage.setItem('tetris_keymap', JSON.stringify(keymap));
+    btn.textContent = e.key;
+    window.removeEventListener('keydown', onKey);
+  }
+  window.addEventListener('keydown', onKey);
+}
+function initKeymapUI(){
+  const mapping = { 'rebind-left':'left','rebind-right':'right','rebind-rotate':'rotate','rebind-drop':'drop','rebind-hold':'hold','rebind-soft':'soft' };
+  Object.keys(mapping).forEach(id=>{
+    const action = mapping[id];
+    const btn = document.getElementById(id);
+    btn.textContent = keymap[action];
+    btn.addEventListener('click', ()=>startRebind(id, action));
+  });
+  const dasInput = document.getElementById('dasInput'), arrInput = document.getElementById('arrInput');
+  dasInput.value = DAS; arrInput.value = ARR;
+  dasInput.addEventListener('change', ()=>{ DAS = Number(dasInput.value); localStorage.setItem('tetris_das', DAS); });
+  arrInput.addEventListener('change', ()=>{ ARR = Number(arrInput.value); localStorage.setItem('tetris_arr', ARR); });
+  const musicBtn = document.getElementById('musicBtn');
+  musicBtn.textContent = musicPlaying ? 'Выкл. музыку' : 'Вкл. музыку';
+  musicBtn.addEventListener('click', ()=>{ if(musicPlaying) stopMusic(); else startMusic(); });
+}
+
+/* ===========================
+   Fullscreen support
+   =========================== */
+function isFullscreen(){
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+}
+function toggleFullscreen(){
+  const el = document.getElementById('game-area');
+  if(!isFullscreen()){
+    if(el.requestFullscreen) el.requestFullscreen();
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if(el.mozRequestFullScreen) el.mozRequestFullScreen();
+    else if(el.msRequestFullscreen) el.msRequestFullscreen();
+  } else {
+    if(document.exitFullscreen) document.exitFullscreen();
+    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    else if(document.mozCancelFullScreen) document.mozCancelFullScreen();
+    else if(document.msExitFullscreen) document.msExitFullscreen();
+  }
+}
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','msfullscreenchange'].forEach(evt=>{
+  document.addEventListener(evt, ()=>{
+    setTimeout(()=>{ resizeCanvas(); draw(); }, 50);
+    const btn = document.getElementById('fullscreenBtn'); if(btn) btn.textContent = isFullscreen() ? 'Выйти из полноэкрана' : 'Полноэкранный';
+  });
+});
+const fsBtn = document.getElementById('fullscreenBtn'); if(fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
+window.addEventListener('keydown', (e)=>{ if(e.key && e.key.toLowerCase() === 'f'){ e.preventDefault(); toggleFullscreen(); } });
+
+/* ===========================
+   Highscores (localStorage)
+   =========================== */
+function loadHighScores(){ try{ return JSON.parse(localStorage.getItem('tetris_high_scores') || '[]'); }catch(e){ return []; } }
+function storeHighScore(record){ const hs = loadHighScores(); hs.push(record); hs.sort((a,b)=>b.score - a.score); if(hs.length > 10) hs.length = 10; localStorage.setItem('tetris_high_scores', JSON.stringify(hs)); }
+function renderHighScores(){ const el = document.getElementById('high-scores-list'); el.innerHTML = ''; const hs = loadHighScores(); if(hs.length === 0){ el.innerHTML = '<li class="muted">Нет рекордов</li>'; return; } hs.forEach(r=>{ const li = document.createElement('li'); li.textContent = `${r.name} — ${r.score}`; el.appendChild(li); }); }
+
+/* ===========================
+   Controls bindings + UI
+   =========================== */
+document.getElementById('startBtn').addEventListener('click', ()=>{ startGame(); document.getElementById('gameOverOverlay').style.display = 'none'; });
+document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+const goRestart = document.getElementById('go-restart'); if(goRestart) goRestart.addEventListener('click', ()=>{ document.getElementById('gameOverOverlay').style.display='none'; startGame(); });
+
+/* ===========================
+   Game state control (start/pause/reset/end)
+   =========================== */
+
+/**
+ * startGame()
+ * Начинает новую партию: сбрасывает состояние и стартует цикл.
+ */
+function startGame(){
+  grid = createEmptyGrid(); bag = []; queue = []; holdPiece = null; holdLocked = false;
+  score = 0; level = 1; linesCleared = 0; dropInterval = 1000; lastDrop = 0;
+  isPaused = false; isGameOver = false;
+  fillQueue(); spawnPiece();
+  updateUI();
+  lastTime = performance.now();
+  requestAnimationFrame(loop);
+}
+
+/** pauseGame() */
+function pauseGame(){
+  isPaused = !isPaused;
+  document.getElementById('pauseOverlay').style.display = isPaused ? 'flex' : 'none';
+  document.getElementById('pauseBtn').textContent = isPaused ? 'Продолжить' : 'Пауза';
+}
+
+/** endGame() */
+function endGame(){
+  isGameOver = true;
+  document.getElementById('gameOverOverlay').style.display = 'flex';
+  document.getElementById('go-score').textContent = 'Ваш счет: ' + score;
+  // prompt name
+  setTimeout(()=>{ // small delay so overlay renders
+    const name = prompt('Игра окончена! Введите имя для таблицы лидеров:', 'Игрок');
+    if(name) storeHighScore({name, score, date: (new Date()).toISOString()});
+    updateUI();
+  }, 60);
+}
+
+/** resetGame() */
+function resetGame(){
+  grid = createEmptyGrid();
+  score = 0; level = 1; linesCleared = 0;
+  dropInterval = 1000; bag = []; queue = []; holdPiece = null; isGameOver = false;
+  document.getElementById('gameOverOverlay').style.display='none';
+  startGame();
+}
+
+/* ===========================
+   Init
+   =========================== */
+function init(){
+  initKeymapUI();
+  fillQueue();
+  spawnPiece();
+  updateUI();
+  draw();
+  renderHighScores();
+}
+init();
+
+</script>
+</body>
+</html>
