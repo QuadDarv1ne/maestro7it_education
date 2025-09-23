@@ -770,6 +770,10 @@
                     <span>Уровень:</span>
                     <span id="level" class="value">1</span>
                 </div>
+                <div class="score-item">
+                    <span>Жизни:</span>
+                    <span id="lives" class="value">3</span>
+                </div>
             </div>
             <div class="status-indicator">
                 <span id="game-status" class="value">Игра активна</span>
@@ -932,19 +936,50 @@
                     eatInterval: 150 // Минимальное время между звуками поедания
                 };
                 
-                this.ghost = {
-                    x: 10,
-                    y: 8,
-                    direction: 'left',
-                    mode: 'wandering', // wandering, chasing, fleeing
-                    speed: 0.8,
-                    color: 'red',
-                    fearTimer: null
-                };
+                // Инициализация привидений
+                this.ghosts = [
+                    {
+                        x: 10,
+                        y: 8,
+                        direction: 'left',
+                        mode: 'wandering', // wandering, chasing, fleeing
+                        speed: 0.8,
+                        color: 'red',
+                        fearTimer: null
+                    },
+                    {
+                        x: 9,
+                        y: 9,
+                        direction: 'up',
+                        mode: 'wandering',
+                        speed: 0.7,
+                        color: 'pink',
+                        fearTimer: null
+                    },
+                    {
+                        x: 11,
+                        y: 9,
+                        direction: 'down',
+                        mode: 'wandering',
+                        speed: 0.6,
+                        color: 'cyan',
+                        fearTimer: null
+                    },
+                    {
+                        x: 10,
+                        y: 10,
+                        direction: 'right',
+                        mode: 'wandering',
+                        speed: 0.5,
+                        color: 'orange',
+                        fearTimer: null
+                    }
+                ];
                 
                 // Инициализация игрового состояния
                 this.score = 0;
                 this.highScore = parseInt(localStorage.getItem('pacmanHighScore') || '0', 10);
+                this.lives = 3; // Количество жизней
                 this.powerMode = false;
                 this.powerModeTimer = null;
                 this.powerModeStart = 0;
@@ -1346,6 +1381,168 @@
                         [0,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,1,0],
                         [0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,1,0],
                         [0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,0]
+                    ],
+                    // Уровень 5: Звездный лабиринт
+                    // Особенности:
+                    // - Симметричная звездообразная структура
+                    // - Центральная зона с множеством супер-еды
+                    // - Множество коротких тупиковых путей
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,1,1,0,1,1,1,1,1,1,0,1,1,1,0,1,0],
+                        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,1,0,1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1,0],
+                        [0,1,0,0,0,1,0,0,2,3,3,2,0,0,1,0,0,0,1,0],
+                        [0,1,0,0,0,1,0,0,3,2,2,3,0,0,1,0,0,0,1,0],
+                        [0,1,0,1,0,1,0,0,2,3,3,2,0,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0],
+                        [0,1,0,1,1,1,0,1,1,1,1,1,1,0,1,1,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0]
+                    ],
+                    // Уровень 6: Спиральный лабиринт
+                    // Особенности:
+                    // - Спиральная структура с постепенным сужением
+                    // - Супер-еда расположена в центре
+                    // - Требует точного планирования маршрута
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+                        [0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0],
+                        [0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0],
+                        [0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,3,3,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,3,3,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,1,1,1,1,1,1,1,0,1,0,1,0,1,0],
+                        [0,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,0],
+                        [0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0]
+                    ],
+                    // Уровень 7: Лабиринт с островами
+                    // Особенности:
+                    // - Несколько изолированных зон с едой
+                    // - Требуется тщательное планирование маршрута
+                    // - Много тупиков для привидений
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,0,0,1,1,0,0,1,1,0,1,1,1,0],
+                        [0,1,0,0,0,1,0,0,2,3,3,2,0,0,1,0,0,0,1,0],
+                        [0,1,0,0,0,1,0,0,3,2,2,3,0,0,1,0,0,0,1,0],
+                        [0,1,0,1,0,1,0,0,2,3,3,2,0,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,0,0,1,1,0,0,1,1,0,1,1,1,0],
+                        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0]
+                    ],
+                    // Уровень 8: Клетчатый лабиринт
+                    // Особенности:
+                    // - Регулярная клетчатая структура
+                    // - Много коротких путей
+                    // - Сложная навигация из-за симметрии
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,3,0,1,0,3,0,1,0,3,0,1,0,2,0,0],
+                        [0,2,0,1,0,3,0,1,0,3,0,1,0,3,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Уровень 7: Лабиринт с островами
+                    // Особенности:
+                    // - Несколько изолированных зон с едой
+                    // - Требуется тщательное планирование маршрута
+                    // - Много тупиков для привидений
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,0,0,1,1,0,0,1,1,0,1,1,1,0],
+                        [0,1,0,0,0,1,0,0,2,3,3,2,0,0,1,0,0,0,1,0],
+                        [0,1,0,0,0,1,0,0,3,2,2,3,0,0,1,0,0,0,1,0],
+                        [0,1,0,1,0,1,0,0,2,3,3,2,0,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,0,0,1,1,0,0,1,1,0,1,1,1,0],
+                        [0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0],
+                        [0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0],
+                        [0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0]
+                    ],
+                    // Уровень 8: Клетчатый лабиринт
+                    // Особенности:
+                    // - Регулярная клетчатая структура
+                    // - Много коротких путей
+                    // - Сложная навигация из-за симметрии
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,3,0,1,0,3,0,1,0,3,0,1,0,2,0,0],
+                        [0,2,0,1,0,3,0,1,0,3,0,1,0,3,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+                        [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0],
+                        [0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0,2,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
                     ]
                 ];
             }
@@ -1549,14 +1746,13 @@
                      */
                     addGhost: () => {
                         // Создаем новое привидение
-                        this.ghosts = this.ghosts || [this.ghost];
                         this.ghosts.push({
                             x: 10,
                             y: 8,
-                            direction: 'left',
+                            direction: ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)],
                             mode: 'wandering',
-                            speed: 0.8,
-                            color: this.ghosts.length % 2 === 0 ? 'pink' : 'purple'
+                            speed: 0.5 + Math.random() * 0.5,
+                            color: ['red', 'pink', 'cyan', 'orange', 'purple', 'green'][Math.floor(Math.random() * 6)]
                         });
                         
                         this.codeModified = true;
@@ -2087,6 +2283,7 @@
              */
             restartGame() {
                 this.currentLevel = 1;
+                this.lives = 3;
                 this.resetLevel();
                 document.getElementById('game-over').style.display = 'none';
             }
@@ -2105,16 +2302,45 @@
                     lastEatTime: 0,
                     eatInterval: 150
                 };
-                this.ghost = { 
-                    x: 10, 
-                    y: 8, 
-                    direction: 'left', 
-                    mode: 'wandering', 
-                    speed: 0.8, 
-                    color: 'red',
-                    fearTimer: null
-                };
-                this.ghosts = null; // Сбрасываем дополнительные привидения
+                // Сброс всех привидений
+                this.ghosts = [
+                    {
+                        x: 10,
+                        y: 8,
+                        direction: 'left',
+                        mode: 'wandering',
+                        speed: 0.8,
+                        color: 'red',
+                        fearTimer: null
+                    },
+                    {
+                        x: 9,
+                        y: 9,
+                        direction: 'up',
+                        mode: 'wandering',
+                        speed: 0.7,
+                        color: 'pink',
+                        fearTimer: null
+                    },
+                    {
+                        x: 11,
+                        y: 9,
+                        direction: 'down',
+                        mode: 'wandering',
+                        speed: 0.6,
+                        color: 'cyan',
+                        fearTimer: null
+                    },
+                    {
+                        x: 10,
+                        y: 10,
+                        direction: 'right',
+                        mode: 'wandering',
+                        speed: 0.5,
+                        color: 'orange',
+                        fearTimer: null
+                    }
+                ];
                 this.score = 0;
                 this.powerMode = false;
                 this.gameSpeed = 200;
@@ -2129,6 +2355,7 @@
                 document.getElementById('score').textContent = this.score;
                 document.getElementById('high-score').textContent = this.highScore;
                 document.getElementById('level').textContent = this.currentLevel;
+                document.getElementById('lives').textContent = this.lives;
                 
                 // Обновление рекорда в localStorage
                 if (this.score > this.highScore) {
@@ -2196,89 +2423,79 @@
             }
             
             /**
-             * Двигает привидение в соответствии с его текущим режимом
+             * Двигает привидения в соответствии с их текущим режимом
              */
             moveGhost() {
-                // Обновление режима привидения
-                this.updateGhostMode();
-                
-                // Вычисление следующего направления
-                const nextDirection = this.calculateGhostDirection();
-                this.ghost.direction = nextDirection;
-                
-                // Движение привидения
-                const nextPos = this.getFuturePosition(this.ghost.x, this.ghost.y, this.ghost.direction);
-                
-                // Проверка на порталы
-                if (nextPos.x < 0 || nextPos.x >= this.currentMap[0].length) {
-                    this.ghost.x = (nextPos.x + this.currentMap[0].length) % this.currentMap[0].length;
-                    return;
-                }
-                
-                if (this.isValidMove(nextPos.x, nextPos.y, 'ghost')) {
-                    this.ghost.x = nextPos.x;
-                    this.ghost.y = nextPos.y;
-                }
-                
-                // Движение дополнительных привидений
-                if (this.ghosts) {
-                    this.ghosts.forEach(ghost => {
-                        // Обновление режима привидения
-                        this.updateGhostModeForGhost(ghost);
-                        
-                        // Вычисление следующего направления
-                        const nextDirection = this.calculateGhostDirectionForGhost(ghost);
-                        ghost.direction = nextDirection;
-                        
-                        // Движение привидения
-                        const nextPos = this.getFuturePosition(ghost.x, ghost.y, ghost.direction);
-                        
-                        // Проверка на порталы
-                        if (nextPos.x < 0 || nextPos.x >= this.currentMap[0].length) {
-                            ghost.x = (nextPos.x + this.currentMap[0].length) % this.currentMap[0].length;
-                            return;
-                        }
-                        
-                        if (this.isValidMove(nextPos.x, nextPos.y, 'ghost')) {
-                            ghost.x = nextPos.x;
-                            ghost.y = nextPos.y;
-                        }
-                    });
-                }
+                // Движение всех привидений
+                this.ghosts.forEach(ghost => {
+                    // Обновление режима привидения
+                    this.updateGhostModeForGhost(ghost);
+                    
+                    // Вычисление следующего направления
+                    const nextDirection = this.calculateGhostDirectionForGhost(ghost);
+                    ghost.direction = nextDirection;
+                    
+                    // Движение привидения
+                    const nextPos = this.getFuturePosition(ghost.x, ghost.y, ghost.direction);
+                    
+                    // Проверка на порталы
+                    if (nextPos.x < 0 || nextPos.x >= this.currentMap[0].length) {
+                        ghost.x = (nextPos.x + this.currentMap[0].length) % this.currentMap[0].length;
+                        return;
+                    }
+                    
+                    if (this.isValidMove(nextPos.x, nextPos.y, 'ghost')) {
+                        ghost.x = nextPos.x;
+                        ghost.y = nextPos.y;
+                    }
+                });
             }
             
             /**
              * Обновляет режим привидения на основе текущего состояния игры
              */
             updateGhostMode() {
-                const dx = this.pacman.x - this.ghost.x;
-                const dy = this.pacman.y - this.ghost.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                // Режим супер-еды активен
-                if (this.powerMode) {
-                    this.ghost.mode = 'fleeing';
-                    this.ghost.color = 'blue';
+                this.ghosts.forEach(ghost => {
+                    const dx = this.pacman.x - ghost.x;
+                    const dy = this.pacman.y - ghost.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
                     
-                    // Таймер супер-еды
-                    if (Date.now() - this.powerModeStart > 10000) {
-                        this.powerMode = false;
-                        this.ghost.color = 'red';
-                        if (this.ghost.fearTimer) {
-                            clearTimeout(this.ghost.fearTimer);
-                            this.ghost.fearTimer = null;
+                    // Режим супер-еды активен
+                    if (this.powerMode) {
+                        ghost.mode = 'fleeing';
+                        ghost.color = 'blue';
+                    } 
+                    // Близко к Пакману
+                    else if (distance < 5) {
+                        ghost.mode = 'chasing';
+                        // Сохраняем оригинальный цвет для возврата после powerMode
+                        if (!ghost.originalColor) {
+                            ghost.originalColor = ghost.color;
+                        }
+                    } 
+                    // Далеко от Пакмана
+                    else {
+                        ghost.mode = 'wandering';
+                        // Сохраняем оригинальный цвет для возврата после powerMode
+                        if (!ghost.originalColor) {
+                            ghost.originalColor = ghost.color;
                         }
                     }
-                } 
-                // Близко к Пакману
-                else if (distance < 5) {
-                    this.ghost.mode = 'chasing';
-                    this.ghost.color = 'red';
-                } 
-                // Далеко от Пакмана
-                else {
-                    this.ghost.mode = 'wandering';
-                    this.ghost.color = 'pink';
+                });
+                
+                // Проверка окончания режима супер-еды
+                if (this.powerMode && Date.now() - this.powerModeStart > 10000) {
+                    this.powerMode = false;
+                    // Возвращаем оригинальные цвета
+                    this.ghosts.forEach(ghost => {
+                        if (ghost.originalColor) {
+                            ghost.color = ghost.originalColor;
+                        }
+                    });
+                    if (this.ghost.fearTimer) {
+                        clearTimeout(this.ghost.fearTimer);
+                        this.ghost.fearTimer = null;
+                    }
                 }
             }
             
@@ -2412,54 +2629,50 @@
             }
             
             /**
-             * Проверяет столкновения Пакмана с едой и привидением
+             * Проверяет столкновения Пакмана с едой и привидениями
              */
             checkCollisions() {
                 // Проверка на выход за границы карты
-                if (!this.currentMap[this.pacman.y] || !this.currentMap[this.pacman.y][this.pacman.x]) {
+                if (!this.isPositionInBounds(this.pacman.x, this.pacman.y)) {
                     return;
                 }
                 
                 // Сбор еды
-                const cell = this.currentMap[this.pacman.y][this.pacman.x];
-                if (cell === 2 || cell === 3) {
-                    if (cell === 2) {
-                        this.collectFood(10);
-                    } else if (cell === 3) {
+                if (this.hasFood(this.pacman.x, this.pacman.y)) {
+                    if (this.hasPowerFood(this.pacman.x, this.pacman.y)) {
                         this.activatePowerMode();
-                    }
-                }
-                
-                // Столкновение с привидением
-                if (this.pacman.x === this.ghost.x && this.pacman.y === this.ghost.y) {
-                    if (this.powerMode) {
-                        // В режиме супер-еды привидение уничтожается
-                        this.playSound('eat');
-                        this.resetGhost();
-                        this.score += 200;
-                        this.updateUI();
                     } else {
-                        // Обычное столкновение - конец игры
-                        this.gameOver();
+                        this.collectFood(10);
                     }
                 }
                 
-                // Столкновение с дополнительными привидениями
-                if (this.ghosts) {
-                    for (let i = 0; i < this.ghosts.length; i++) {
-                        const ghost = this.ghosts[i];
-                        if (this.pacman.x === ghost.x && this.pacman.y === ghost.y) {
-                            if (this.powerMode) {
-                                // В режиме супер-еды привидение уничтожается
-                                this.playSound('eat');
-                                this.ghosts.splice(i, 1);
-                                this.score += 200;
-                                this.updateUI();
-                            } else {
-                                // Обычное столкновение - конец игры
-                                this.gameOver();
-                                break;
-                            }
+                // Столкновение с привидениями
+                for (let i = this.ghosts.length - 1; i >= 0; i--) {
+                    const ghost = this.ghosts[i];
+                    if (this.isPacmanCollidingWithGhost(ghost)) {
+                        if (this.powerMode && ghost.mode === 'fleeing') {
+                            // В режиме супер-еды привидение уничтожается
+                            this.playSound('eat');
+                            // Удаляем привидение из массива
+                            this.ghosts.splice(i, 1);
+                            this.score += 200;
+                            this.updateUI();
+                            // Создаем новое привидение через некоторое время
+                            setTimeout(() => {
+                                this.ghosts.push({
+                                    x: 10,
+                                    y: 8,
+                                    direction: ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)],
+                                    mode: 'wandering',
+                                    speed: 0.5 + Math.random() * 0.5,
+                                    color: ['red', 'pink', 'cyan', 'orange'][Math.floor(Math.random() * 4)],
+                                    fearTimer: null
+                                });
+                            }, 5000);
+                        } else {
+                            // Обычное столкновение - конец игры
+                            this.gameOver();
+                            return;
                         }
                     }
                 }
@@ -2471,10 +2684,7 @@
              */
             collectFood(points) {
                 // Проверяем, что ячейка содержит еду
-                if (this.currentMap[this.pacman.y] && 
-                    (this.currentMap[this.pacman.y][this.pacman.x] === 2 || 
-                     this.currentMap[this.pacman.y][this.pacman.x] === 3)) {
-                    
+                if (this.hasFood(this.pacman.x, this.pacman.y)) {
                     this.currentMap[this.pacman.y][this.pacman.x] = 1;
                     this.score += points;
                     this.foodCount--;
@@ -2551,12 +2761,21 @@
              * Обрабатывает окончание игры
              */
             gameOver() {
-                this.pauseGame();
-                document.getElementById('game-status').textContent = 'Игра окончена';
-                document.getElementById('final-score').textContent = this.score;
-                document.getElementById('game-over').style.display = 'block';
-                this.playSound('death');
-                this.createConfetti();
+                this.lives--;
+                
+                if (this.lives <= 0) {
+                    // Игра действительно окончена
+                    this.pauseGame();
+                    document.getElementById('game-status').textContent = 'Игра окончена';
+                    document.getElementById('final-score').textContent = this.score;
+                    document.getElementById('game-over').style.display = 'block';
+                    this.playSound('death');
+                    this.createConfetti();
+                } else {
+                    // У игрока еще есть жизни, перезапускаем уровень
+                    this.showNotification(`Осталось жизней: ${this.lives}`, 'error');
+                    this.resetLevel();
+                }
             }
             
             /**
@@ -2633,6 +2852,60 @@
             }
             
             /**
+             * Проверяет, находится ли позиция в пределах карты
+             * @param {number} x - Координата X
+             * @param {number} y - Координата Y
+             * @returns {boolean} Находится ли позиция в пределах карты
+             */
+            isPositionInBounds(x, y) {
+                return y >= 0 && y < this.currentMap.length && 
+                       x >= 0 && x < this.currentMap[0].length;
+            }
+            
+            /**
+             * Проверяет, является ли ячейка стеной
+             * @param {number} x - Координата X
+             * @param {number} y - Координата Y
+             * @returns {boolean} Является ли ячейка стеной
+             */
+            isWall(x, y) {
+                if (!this.isPositionInBounds(x, y)) return true;
+                return this.currentMap[y][x] === 0;
+            }
+            
+            /**
+             * Проверяет, содержит ли ячейка еду
+             * @param {number} x - Координата X
+             * @param {number} y - Координата Y
+             * @returns {boolean} Содержит ли ячейка еду
+             */
+            hasFood(x, y) {
+                if (!this.isPositionInBounds(x, y)) return false;
+                const cell = this.currentMap[y][x];
+                return cell === 2 || cell === 3;
+            }
+            
+            /**
+             * Проверяет, содержит ли ячейка супер-еду
+             * @param {number} x - Координата X
+             * @param {number} y - Координата Y
+             * @returns {boolean} Содержит ли ячейка супер-еду
+             */
+            hasPowerFood(x, y) {
+                if (!this.isPositionInBounds(x, y)) return false;
+                return this.currentMap[y][x] === 3;
+            }
+            
+            /**
+             * Проверяет, столкнулся ли Пакман с привидением
+             * @param {Object} ghost - Объект привидения
+             * @returns {boolean} Столкнулся ли Пакман с привидением
+             */
+            isPacmanCollidingWithGhost(ghost) {
+                return this.pacman.x === ghost.x && this.pacman.y === ghost.y;
+            }
+            
+            /**
              * Проверяет, можно ли переместиться в указанную ячейку
              * @param {number} x - Координата X в ячейках
              * @param {number} y - Координата Y в ячейках
@@ -2641,20 +2914,17 @@
              */
             isValidMove(x, y, entity = 'pacman') {
                 // Проверка границ
-                if (y < 0 || y >= this.currentMap.length || 
-                    x < 0 || x >= this.currentMap[0].length) {
+                if (!this.isPositionInBounds(x, y)) {
                     return false;
                 }
                 
-                const cell = this.currentMap[y][x];
-                
                 // Стены блокируют движение
-                if (cell === 0) {
+                if (this.isWall(x, y)) {
                     return false;
                 }
                 
                 // Привидение проходит через точки
-                if (entity === 'ghost' && (cell === 2 || cell === 3)) {
+                if (entity === 'ghost' && this.hasFood(x, y)) {
                     return true;
                 }
                 
@@ -2695,15 +2965,10 @@
                 // Рисуем Пакмана
                 this.drawPacman();
                 
-                // Рисуем привидение
-                this.drawGhost();
-                
-                // Рисуем дополнительные привидения
-                if (this.ghosts) {
-                    this.ghosts.forEach(ghost => {
-                        this.drawGhostFor(ghost);
-                    });
-                }
+                // Рисуем все привидения
+                this.ghosts.forEach(ghost => {
+                    this.drawGhostFor(ghost);
+                });
                 
                 // Обновляем мини-карту
                 this.updateMiniMap();
@@ -2950,33 +3215,19 @@
                 );
                 this.miniMapCtx.fill();
                 
-                // Позиция привидения
-                this.miniMapCtx.fillStyle = this.ghost.color;
-                this.miniMapCtx.beginPath();
-                this.miniMapCtx.arc(
-                    offsetX + this.ghost.x * cellSize + cellSize/2,
-                    offsetY + this.ghost.y * cellSize + cellSize/2,
-                    cellSize/2.5,
-                    0,
-                    Math.PI * 2
-                );
-                this.miniMapCtx.fill();
-                
-                // Позиции дополнительных привидений
-                if (this.ghosts) {
-                    this.ghosts.forEach(ghost => {
-                        this.miniMapCtx.fillStyle = ghost.color;
-                        this.miniMapCtx.beginPath();
-                        this.miniMapCtx.arc(
-                            offsetX + ghost.x * cellSize + cellSize/2,
-                            offsetY + ghost.y * cellSize + cellSize/2,
-                            cellSize/2.5,
-                            0,
-                            Math.PI * 2
-                        );
-                        this.miniMapCtx.fill();
-                    });
-                }
+                // Позиции всех привидений
+                this.ghosts.forEach(ghost => {
+                    this.miniMapCtx.fillStyle = ghost.color;
+                    this.miniMapCtx.beginPath();
+                    this.miniMapCtx.arc(
+                        offsetX + ghost.x * cellSize + cellSize/2,
+                        offsetY + ghost.y * cellSize + cellSize/2,
+                        cellSize/2.5,
+                        0,
+                        Math.PI * 2
+                    );
+                    this.miniMapCtx.fill();
+                });
             }
             
             /**
@@ -3007,6 +3258,9 @@
         }
         
         this.draw();
+        this.animateMouth();
+        this.updateParticles();
+        
         this.animationFrameId = requestAnimationFrame(gameLoop);
     };
     
