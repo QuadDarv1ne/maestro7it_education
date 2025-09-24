@@ -3,11 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Тетрис — улучшенная версия</title>
+<title>Тетрис — улучшенная версия (Финальная, для скачивания)</title>
 <style>
-  :root{
-    --bg:#071126; --panel:#071726; --accent:#10b981; --muted:#94a3b8;
-  }
+  :root{ --bg:#071126; --panel:#071726; --accent:#10b981; --muted:#94a3b8; }
   html,body{height:100%;margin:0;font-family:Inter, Roboto, Arial, sans-serif;background:linear-gradient(180deg,#071126 0%,#081226 60%);color:#e6eef6}
   .container{display:flex;gap:20px;align-items:flex-start;justify-content:center;padding:18px;max-width:1200px;margin:0 auto}
   .board{background:var(--panel);padding:14px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,.6);position:relative}
@@ -27,13 +25,15 @@
   footer{color:var(--muted);font-size:12px;text-align:center;margin-top:14px}
   input[type=number]{width:80px}
   .label-button{background:transparent;border:1px solid rgba(255,255,255,.04);padding:6px;border-radius:6px;color:var(--muted);cursor:pointer}
+  .row{display:flex;gap:8px;align-items:center}
+  .muted{color:var(--muted)}
   @media(max-width:900px){ .container{flex-direction:column;align-items:center} .controls{width:94%} }
 </style>
 </head>
 <body>
 <header style="text-align:center;padding:14px;">
-  <h1>Тетрис — улучшенная версия</h1>
-  <div class="small">Управление: ← → (движение) • ↑ / X / Z (вращение) • ↓ (soft) • Space (hard) • Shift (hold) • P (пауза) • F (fullscreen)</div>
+  <h1>Тетрис — улучшенная версия (Финальная)</h1>
+  <div class="small">Управление: ← → (движение) • X / ↑ (CW) • Z (CCW) • ↓ (soft) • Space (hard) • Shift (hold) • P (пауза) • F (fullscreen)</div>
 </header>
 
 <div class="container">
@@ -97,18 +97,22 @@
         <div>Right: <button id="rebind-right" class="label-button">ArrowRight</button></div>
         <div>Rotate: <button id="rebind-rotate" class="label-button">ArrowUp</button></div>
         <div>Drop: <button id="rebind-drop" class="label-button">Space</button></div>
-        <div>Hold: <button id="rebind-hold" class="label-button">Shift</button></div>
+        <div>Hold: <button id="rebind-hold" class="label-button">ShiftLeft</button></div>
         <div>SoftDrop: <button id="rebind-soft" class="label-button">ArrowDown</button></div>
       </div>
       <hr style="opacity:.04;margin:10px 0">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="small muted">DAS (ms)</div><input id="dasInput" type="number" value="150" min="0">
+        <div class="small muted">DAS (ms)</div><input id="dasInput" type="number" value="170" min="0">
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-        <div class="small muted">ARR (ms)</div><input id="arrInput" type="number" value="40" min="0">
+        <div class="small muted">ARR (ms)</div><input id="arrInput" type="number" value="80" min="0">
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-        <div class="small muted">Музыка</div><button id="musicBtn" class="ghost">Вкл. музыку</button>
+        <div class="small muted">Музыка</div>
+        <div class="row">
+          <button id="musicBtn" class="ghost">Вкл. музыку</button>
+          <input id="vol" type="range" min="0" max="1" step="0.01" value="0.12" title="Громкость">
+        </div>
       </div>
     </div>
 
@@ -132,421 +136,35 @@
 
 <script>
 /**
- * 🎮 Tetris — улучшенная версия
+ * Финальная версия Tetris для скачивания
+ * Все описания и DocString — на русском языке.
  *
- * Автор: Дуплей Максим Игоревич
- * GitHub: https://github.com/QuadDarv1ne/
- * ORCID:  https://orcid.org/0009-0007-7605-539X
- * Дата:   22.09.2025
- *
- * Это единый HTML-файл с реализацией игры:
- * - адаптивный canvas, полноэкранный режим
- * - 7-bag randomizer, preview next(5), hold
- * - DAS/ARR и переназначение клавиш (key remap)
- * - procedural music (Korobeiniki) + SFX (WebAudio)
- * - touch управление (свайпы + удержание)
- *
- * Открой файл в браузере. Для звука требуется пользовательский жест (клик/нажатие).
+ * Исправления:
+ * - Музыка: AudioContext resume по жесту, безопасная загрузка и запуск
+ * - Fullscreen: requestFullscreen на document.documentElement
+ * - DAS/ARR значения по умолчанию: DAS=170, ARR=80
+ * - Обработка повторов (e.repeat) для одноразовых действий
  */
 
-/* ===========================
-   Константы и состояние
-   =========================== */
-const cvs = document.getElementById('gameCanvas');
-const ctx = cvs.getContext('2d');
-
-const COLS = 10;
-const ROWS = 20;
-
-let BLOCK = 30; // размер клетки, пересчитывается в resizeCanvas()
-
-// палитра (I,O,T,L,J,S,Z)
+/* ======= Константы и формы ======= */
+const COLS = 10, ROWS = 20, NEXT_COUNT = 5;
 const COLORS = ['#00FFFF','#FFD500','#A000F0','#FF8C00','#0000FF','#00C853','#D50000'];
-
-/* Игровое состояние */
-let grid = createEmptyGrid();
-let bag = [];
-let queue = [];
-let holdPiece = null;
-let holdLocked = false;
-let current = null; // {idx, shape, x, y}
-let nextCount = 5;
-
-let score = 0;
-let level = 1;
-let linesCleared = 0;
-
-let dropInterval = 1000; // ms
-let lastDrop = 0;
-
-let isPaused = false;
-let isGameOver = false;
-
-/* Keymap и DAS/ARR */
-const defaultKeymap = { left:'ArrowLeft', right:'ArrowRight', rotate:'ArrowUp', drop:' ', hold:'Shift', soft:'ArrowDown' };
-let keymap = JSON.parse(localStorage.getItem('tetris_keymap') || 'null') || defaultKeymap;
-let DAS = Number(localStorage.getItem('tetris_das')) || 150;
-let ARR = Number(localStorage.getItem('tetris_arr')) || 40;
-
-/* DAS state (separate timers for left/right) */
-let dasTimeoutLeft = null, arrIntervalLeft = null;
-let dasTimeoutRight = null, arrIntervalRight = null;
-
-/* Shapes */
 const SHAPES = [
-  [[1,1,1,1]], // I
-  [[1,1],[1,1]], // O
-  [[1,1,1],[0,1,0]], // T
-  [[1,1,1],[1,0,0]], // L
-  [[1,1,1],[0,0,1]], // J
-  [[0,1,1],[1,1,0]], // S
-  [[1,1,0],[0,1,1]]  // Z
+  [[1,1,1,1]], [[1,1],[1,1]], [[1,1,1],[0,1,0]], [[1,1,1],[1,0,0]],
+  [[1,1,1],[0,0,1]], [[0,1,1],[1,1,0]], [[1,1,0],[0,1,1]]
 ];
 
-/* ===========================
-   Canvas resize & rendering
-   =========================== */
-
-/**
- * resizeCanvas()
- * Меняет размеры canvas так, чтобы игровое поле занимало доступную область
- * контейнера #game-area (работает корректно в полноэкранном режиме).
- */
-function resizeCanvas(){
-  const parent = document.getElementById('game-area');
-  const rect = parent.getBoundingClientRect();
-  const availW = rect.width || window.innerWidth;
-  const availH = rect.height || window.innerHeight;
-  const idealBlock = Math.floor(Math.min(availW / COLS, availH / ROWS));
-  BLOCK = Math.max(14, Math.min(48, idealBlock));
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  cvs.width = COLS * BLOCK * dpr;
-  cvs.height = ROWS * BLOCK * dpr;
-  cvs.style.width = (COLS * BLOCK) + 'px';
-  cvs.style.height = (ROWS * BLOCK) + 'px';
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-resizeCanvas();
-window.addEventListener('resize', ()=>{ resizeCanvas(); draw(); });
-
-/**
- * draw()
- * Отрисовывает фон, сетку, зафиксированные блоки, ghost и текущую фигуру.
- */
-function draw(){
-  ctx.clearRect(0,0,cvs.width,cvs.height);
-  ctx.fillStyle = '#061016';
-  ctx.fillRect(0,0,COLS*BLOCK,ROWS*BLOCK);
-
-  // тонкая сетка
-  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
-  ctx.lineWidth = 1;
-  for(let x=0;x<=COLS;x++){
-    ctx.beginPath(); ctx.moveTo(x*BLOCK,0); ctx.lineTo(x*BLOCK,ROWS*BLOCK); ctx.stroke();
-  }
-  for(let y=0;y<=ROWS;y++){
-    ctx.beginPath(); ctx.moveTo(0,y*BLOCK); ctx.lineTo(COLS*BLOCK,y*BLOCK); ctx.stroke();
-  }
-
-  // зафиксированные блоки
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const v = grid[r][c];
-      if(v){
-        const color = COLORS[v-1];
-        const x = c*BLOCK, y = r*BLOCK;
-        const g = ctx.createLinearGradient(x,y,x+BLOCK,y+BLOCK);
-        g.addColorStop(0, lighten(color,0.15));
-        g.addColorStop(1, color);
-        ctx.fillStyle = g;
-        ctx.fillRect(x+1,y+1,BLOCK-2,BLOCK-2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-        ctx.strokeRect(x+1,y+1,BLOCK-2,BLOCK-2);
-        // блик
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        ctx.fillRect(x+3,y+3,BLOCK-6,Math.max(2,BLOCK/6));
-      }
-    }
-  }
-
-  if(current){
-    // ghost
-    let gy = current.y;
-    while(!collision(current.x, gy+1, current.shape)) gy++;
-    ctx.globalAlpha = 0.22;
-    for(let i=0;i<current.shape.length;i++){
-      for(let j=0;j<current.shape[i].length;j++){
-        if(current.shape[i][j]){
-          const px = (current.x + j)*BLOCK, py = (gy + i)*BLOCK;
-          const color = COLORS[current.idx];
-          const g = ctx.createLinearGradient(px,py,px+BLOCK,py+BLOCK);
-          g.addColorStop(0, lighten(color,0.15));
-          g.addColorStop(1, color);
-          ctx.fillStyle = g;
-          ctx.fillRect(px+1,py+1,BLOCK-2,BLOCK-2);
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    // current piece
-    for(let i=0;i<current.shape.length;i++){
-      for(let j=0;j<current.shape[i].length;j++){
-        if(current.shape[i][j]){
-          const px = (current.x + j)*BLOCK, py = (current.y + i)*BLOCK;
-          const color = COLORS[current.idx];
-          const g2 = ctx.createLinearGradient(px,py,px+BLOCK,py+BLOCK);
-          g2.addColorStop(0, lighten(color,0.15));
-          g2.addColorStop(1, color);
-          ctx.fillStyle = g2;
-          ctx.fillRect(px+1,py+1,BLOCK-2,BLOCK-2);
-          ctx.strokeStyle='rgba(0,0,0,0.4)';
-          ctx.strokeRect(px+1,py+1,BLOCK-2,BLOCK-2);
-          ctx.fillStyle='rgba(255,255,255,0.06)';
-          ctx.fillRect(px+3,py+3,BLOCK-6,Math.max(2,BLOCK/6));
-        }
-      }
-    }
-  }
-}
-
-/* ===========================
-   Игровая логика
-   =========================== */
-
-/** createEmptyGrid() -> Array */
-function createEmptyGrid(){ return Array.from({length:ROWS}, ()=>new Array(COLS).fill(0)); }
-
-function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
-function refillBag(){ const arr=[0,1,2,3,4,5,6]; shuffle(arr); bag = bag.concat(arr); }
-function fillQueue(){ while(queue.length < nextCount){ if(bag.length===0) refillBag(); queue.push(bag.shift()); } }
-
-/**
- * spawnPiece()
- * Берёт следующую фигуру из очереди и размещает её сверху. Если сразу коллизия — конец игры.
- */
-function spawnPiece(){
-  fillQueue();
-  const idx = queue.shift();
-  fillQueue();
-  const shape = cloneShape(SHAPES[idx]);
-  current = { idx, shape, x: Math.floor((COLS - shape[0].length)/2), y: 0 };
-  holdLocked = false;
-  if(collision(current.x, current.y, current.shape)){
-    endGame();
-  }
-}
-function cloneShape(s){ return s.map(r=>r.slice()); }
-
-function rotateMatrix(m){
+function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function rotateMatrixCW(m){
   const h = m.length, w = m[0].length;
-  const res = Array.from({length:w}, ()=>new Array(h));
+  const res = Array.from({length:w}, ()=>Array(h).fill(0));
   for(let i=0;i<w;i++) for(let j=0;j<h;j++) res[i][j] = m[h-1-j][i];
   return res;
 }
-
-/**
- * collision(x,y,shape) -> boolean
- * Проверяет столкновения фигуры с границами/сеткой.
- */
-function collision(x,y,shape){
-  for(let i=0;i<shape.length;i++){
-    for(let j=0;j<shape[i].length;j++){
-      if(shape[i][j]){
-        const gx = x + j, gy = y + i;
-        if(gx < 0 || gx >= COLS || gy >= ROWS) return true;
-        if(gy >= 0 && grid[gy][gx]) return true;
-      }
-    }
-  }
-  return false;
-}
-
-/**
- * lockPiece()
- * Фиксирует текущую фигуру в сетке, затем проверяет и удаляет заполненные линии.
- */
-function lockPiece(){
-  const s = current.shape, idx = current.idx + 1;
-  for(let i=0;i<s.length;i++) for(let j=0;j<s[i].length;j++) if(s[i][j]){
-    const gx = current.x + j, gy = current.y + i;
-    if(gy >= 0) grid[gy][gx] = idx;
-  }
-  playBeep(220 + Math.random()*200, 0.06, 'square', 0.03);
-  clearLines();
-  spawnPiece();
-}
-
-/**
- * clearLines()
- * Удаляет заполненные строки, смещает верх, обновляет счёт/уровень.
- */
-function clearLines(){
-  const newGrid = grid.filter(row => row.some(c => c === 0));
-  const cleared = ROWS - newGrid.length;
-  if(cleared > 0){
-    for(let i=0;i<cleared;i++) newGrid.unshift(new Array(COLS).fill(0));
-    grid = newGrid;
-    const scoring = {1:100,2:300,3:500,4:800};
-    score += (scoring[cleared] || 0) * level;
-    linesCleared += cleared;
-    level = Math.floor(linesCleared / 10) + 1;
-    dropInterval = Math.max(80, 1000 - (level - 1) * 80);
-    updateUI();
-    // jingle
-    const base = 330;
-    for(let i=0;i<cleared;i++){ setTimeout(()=>playBeep(base + i*60, 0.12, 'square', 0.09), i*120); }
-  }
-}
-
-/**
- * hardDrop()
- * Жёсткое опускание: опускает фигуру до упора, начисляет очки и фиксирует.
- */
-function hardDrop(){
-  let drop = 0;
-  while(!collision(current.x, current.y+1, current.shape)){
-    current.y++; drop++;
-  }
-  score += drop * 2;
-  playBeep(900, 0.04, 'square', 0.06);
-  lockPiece();
-}
-
-/**
- * softDrop()
- * Мягкое опускание: движение вниз на одну клетку, даёт 1 очко.
- */
-function softDrop(){
-  if(!collision(current.x, current.y+1, current.shape)){
-    current.y++; score += 1; updateUI();
-  } else {
-    lockPiece();
-  }
-}
-
-/**
- * rotateCW()
- * Поворот по часовой стрелке с простым wall-kick: пробует сдвиг по X.
- */
-function rotateCW(){
-  const rotated = rotateMatrix(current.shape);
-  const kicks = [0,1,-1,2,-2];
-  for(const dx of kicks){
-    if(!collision(current.x + dx, current.y, rotated)){
-      current.shape = rotated;
-      current.x += dx;
-      playBeep(880, 0.05, 'sawtooth', 0.06);
-      return;
-    }
-  }
-}
-function rotateCCW(){ rotateCW(); rotateCW(); rotateCW(); }
-
-/**
- * move(dx)
- * Передвинуть фигуру влево/вправо, если возможно.
- * @param {number} dx
- */
-function move(dx){
-  if(!collision(current.x + dx, current.y, current.shape)){
-    current.x += dx;
-    playBeep(300, 0.02, 'square', 0.02);
-  }
-}
-
-/**
- * hold()
- * Поместить текущую фигуру в hold (или заменить ею текущую).
- */
-function hold(){
-  if(holdLocked) return;
-  if(holdPiece === null){
-    holdPiece = current.idx;
-    spawnPiece();
-  } else {
-    const tmp = holdPiece;
-    holdPiece = current.idx;
-    current = { idx: tmp, shape: cloneShape(SHAPES[tmp]), x: Math.floor((COLS - SHAPES[tmp][0].length)/2), y: 0 };
-    if(collision(current.x, current.y, current.shape)) endGame();
-  }
-  holdLocked = true;
-  playBeep(440, 0.06, 'triangle', 0.05);
-}
-
-/* ===========================
-   Game loop
-   =========================== */
-let lastTime = 0;
-function loop(time = 0){
-  if(isPaused || isGameOver){
-    lastTime = time;
-    requestAnimationFrame(loop);
-    return;
-  }
-  const delta = time - lastTime;
-  lastTime = time;
-  lastDrop += delta;
-  if(lastDrop > dropInterval){
-    if(!collision(current.x, current.y+1, current.shape)){
-      current.y++;
-    } else {
-      lockPiece();
-    }
-    lastDrop = 0;
-  }
-  draw();
-  requestAnimationFrame(loop);
-}
-
-/* ===========================
-   UI & helpers
-   =========================== */
-
-/** updateUI() — обновляет видимые элементы интерфейса */
-function updateUI(){
-  document.getElementById('score').textContent = score;
-  document.getElementById('level').textContent = level;
-  renderPreviews();
-  renderHighScores();
-}
-
-/** renderPreviews() — мини-превью next и hold */
-function renderPreviews(){
-  const nextEl = document.getElementById('next'); nextEl.innerHTML = '';
-  for(let i=0;i<nextCount;i++){
-    const idx = queue[i] ?? null;
-    const el = document.createElement('div'); el.className = 'preview';
-    if(idx !== null) drawMini(el, SHAPES[idx], COLORS[idx]);
-    nextEl.appendChild(el);
-  }
-  const holdEl = document.getElementById('hold'); holdEl.innerHTML = '';
-  const holdBox = document.createElement('div'); holdBox.className = 'preview';
-  if(holdPiece !== null) drawMini(holdBox, SHAPES[holdPiece], COLORS[holdPiece]);
-  holdEl.appendChild(holdBox);
-}
-
-/** drawMini(el, shape, color) — рисует мини-превью фигуры */
-function drawMini(container, shape, color){
-  const mini = document.createElement('canvas'); mini.width = 40; mini.height = 80;
-  container.appendChild(mini);
-  const mctx = mini.getContext('2d');
-  mctx.fillStyle = 'rgba(255,255,255,0.02)'; mctx.fillRect(0,0,mini.width,mini.height);
-  const cell = Math.floor(Math.min(14, Math.max(6, 40 / shape[0].length)));
-  mctx.translate(6,6);
-  for(let i=0;i<shape.length;i++) for(let j=0;j<shape[i].length;j++) if(shape[i][j]){
-    const x = j*cell, y = i*cell;
-    const g = mctx.createLinearGradient(x,y,x+cell,y+cell);
-    g.addColorStop(0, lighten(color,0.18)); g.addColorStop(1, color);
-    mctx.fillStyle = g; mctx.fillRect(x,y,cell-2,cell-2);
-    mctx.strokeStyle = 'rgba(0,0,0,0.35)'; mctx.strokeRect(x,y,cell-2,cell-2);
-  }
-}
-
-/** lighten(hex, amt) -> string */
+function rotateMatrixCCW(m){ return rotateMatrixCW(rotateMatrixCW(rotateMatrixCW(m))); }
 function lighten(hex, amt){
-  const c = hex.replace('#','');
-  const num = parseInt(c,16);
+  const c = hex.replace('#',''); const num = parseInt(c,16);
   let r = (num>>16) + Math.round(255*amt);
   let g = ((num>>8)&0x00FF) + Math.round(255*amt);
   let b = (num & 0x0000FF) + Math.round(255*amt);
@@ -554,347 +172,173 @@ function lighten(hex, amt){
   return '#' + ((1<<24) + (r<<16) + (g<<8) + b).toString(16).slice(1);
 }
 
-/* ===========================
-   Audio: WebAudio + Korobeiniki
-   =========================== */
-
-let audioCtx = null;
-let musicPlaying = false;
-let korTimeout = null;
-const MUSIC_BPM = 140;
-
-/** ensureAudio() — создаёт AudioContext при необходимости */
-function ensureAudio(){
-  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}
-
-/**
- * playBeep(freq, duration=0.1, type='square', gain=0.08)
- * Проигрывает короткий звук (SFX).
- */
-function playBeep(freq, duration=0.1, type='square', gain=0.08){
-  try{
-    ensureAudio();
-    if(audioCtx.state === 'suspended'){
-      audioCtx.resume().catch(()=>{});
+/* ======= SoundManager (обновлённый) ======= */
+class SoundManager {
+  constructor(){
+    this.ctx = null; this.master = null;
+    this.musicBuffer = null; this.musicSource = null; this.musicGainNode = null;
+    this.musicGainVal = 0.12; this.sfxGain = 0.08; this.musicPlaying = false;
+    this._attachResumeOnGesture();
+  }
+  ensure(){ if(!this.ctx){ this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.master = this.ctx.createGain(); this.master.gain.value=1; this.master.connect(this.ctx.destination); } }
+  _attachResumeOnGesture(){
+    const resumeOnce = async ()=>{ try{ if(!this.ctx) this.ensure(); if(this.ctx.state === 'suspended') await this.ctx.resume(); }catch(e){} finally { window.removeEventListener('pointerdown', resumeOnce); window.removeEventListener('keydown', resumeOnce); } };
+    window.addEventListener('pointerdown', resumeOnce); window.addEventListener('keydown', resumeOnce);
+  }
+  async loadMusic(url){
+    try{
+      this.ensure();
+      const resp = await fetch(url);
+      if(!resp.ok) throw new Error('Fetch failed: ' + resp.status);
+      const ab = await resp.arrayBuffer();
+      this.musicBuffer = await this.ctx.decodeAudioData(ab);
+      console.log('Music loaded:', url);
+    }catch(e){
+      console.warn('Music load failed:', e);
+      this.musicBuffer = null;
     }
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.type = type; o.frequency.value = freq;
-    g.gain.value = 0.0001;
-    o.connect(g); g.connect(audioCtx.destination);
-    const now = audioCtx.currentTime;
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(gain, now + 0.002);
-    o.start(now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    setTimeout(()=>{ try{ o.stop(); o.disconnect(); g.disconnect(); }catch(e){} }, duration*1000 + 60);
-  }catch(e){}
-}
-
-/* Note utilities */
-const SEMITONE_RATIO = Math.pow(2,1/12);
-function noteToFreq(note){
-  const noteRegex = /^([A-G])(#|b)?([0-9])$/;
-  const m = noteRegex.exec(note);
-  if(!m) return 440;
-  const names = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
-  let n = names[m[1]];
-  if(m[2] === '#') n += 1;
-  if(m[2] === 'b') n -= 1;
-  const octave = parseInt(m[3],10);
-  const keyNumber = n + (octave - 4) * 12;
-  const semitonesFromA4 = keyNumber - 9;
-  return 440 * Math.pow(SEMITONE_RATIO, semitonesFromA4);
-}
-
-/* Simple Korobeiniki melody (simplified) as [note, quarterLength] */
-const KOROBEINIKI = [
-  ['E5',0.5],['B4',0.5],['C5',0.5],['D5',1],
-  ['C5',0.5],['B4',0.5],['A4',1],
-  ['A4',0.5],['C5',0.5],['E5',1],
-  ['D5',0.5],['C5',0.5],['B4',1],
-  ['E5',0.5],['B4',0.5],['C5',0.5],['D5',1],
-  ['C5',0.5],['B4',0.5],['A4',1]
-];
-
-let korIndex = 0;
-function playKorStep(){
-  if(!musicPlaying) return;
-  const step = KOROBEINIKI[korIndex];
-  if(!step){
-    korIndex = 0;
-    return playKorStep();
   }
-  const note = step[0];
-  const quarterLen = 60 / MUSIC_BPM;
-  const dur = quarterLen * step[1];
-  playBeep(noteToFreq(note), dur*0.95, 'square', 0.06);
-  korIndex = (korIndex + 1) % KOROBEINIKI.length;
-  korTimeout = setTimeout(playKorStep, dur*1000);
-}
-
-/**
- * startMusic()
- * Запускает музыку (после пользовательского жеста).
- */
-function startMusic(){
-  ensureAudio();
-  if(audioCtx.state === 'suspended'){
-    audioCtx.resume().then(()=>{
-      musicPlaying = true; korIndex = 0; playKorStep();
-      document.getElementById('musicBtn').textContent = 'Выкл. музыку';
-    }).catch(()=>{
-      musicPlaying = true; korIndex = 0; playKorStep();
-      document.getElementById('musicBtn').textContent = 'Выкл. музыку';
-    });
-  } else {
-    musicPlaying = true; korIndex = 0; playKorStep();
-    document.getElementById('musicBtn').textContent = 'Выкл. музыку';
+  playMusic(loop=true){
+    if(!this.musicBuffer){ console.warn('Music buffer empty'); return; }
+    this.ensure();
+    this.stopMusic(0.02);
+    this.musicSource = this.ctx.createBufferSource();
+    this.musicSource.buffer = this.musicBuffer; this.musicSource.loop = loop;
+    this.musicGainNode = this.ctx.createGain(); this.musicGainNode.gain.value = 0.0001;
+    this.musicSource.connect(this.musicGainNode); this.musicGainNode.connect(this.master);
+    const now = this.ctx.currentTime;
+    try{ this.musicSource.start(now); this.musicGainNode.gain.exponentialRampToValueAtTime(this.musicGainVal, now+0.06); this.musicPlaying = true; }catch(e){ console.warn('start failed', e); }
+  }
+  stopMusic(fade=0.06){
+    if(this.musicSource && this.musicGainNode){
+      const now = this.ctx.currentTime;
+      try{
+        this.musicGainNode.gain.cancelScheduledValues(now);
+        this.musicGainNode.gain.setValueAtTime(this.musicGainNode.gain.value, now);
+        this.musicGainNode.gain.exponentialRampToValueAtTime(0.0001, now+fade);
+        setTimeout(()=>{ try{ this.musicSource.stop(); }catch(e){} this.musicSource=null; this.musicGainNode=null; }, (fade+0.05)*1000);
+      }catch(e){}
+    }
+    this.musicPlaying = false;
+  }
+  setMusicVolume(v){ this.musicGainVal = clamp(v,0,1); if(this.musicGainNode) this.musicGainNode.gain.setValueAtTime(this.musicGainVal, this.ctx.currentTime); }
+  beep(freq=440,dur=0.08,type='square',gain=this.sfxGain){
+    try{
+      this.ensure();
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = type; o.frequency.value = freq; g.gain.value = 0.0001;
+      o.connect(g); g.connect(this.master);
+      const now = this.ctx.currentTime;
+      g.gain.exponentialRampToValueAtTime(gain, now+0.003);
+      o.start(now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+      setTimeout(()=>{ try{ o.stop(); }catch(e){} }, (dur+0.05)*1000);
+    }catch(e){}
   }
 }
-function stopMusic(){
-  musicPlaying = false;
-  if(korTimeout){ clearTimeout(korTimeout); korTimeout = null; }
-  document.getElementById('musicBtn').textContent = 'Вкл. музыку';
+const Sound = new SoundManager();
+
+/* ======= Game ======= */
+class Game {
+  constructor(canvas){
+    this.canvas = canvas; this.ctx = canvas.getContext('2d');
+    this.cols = COLS; this.rows = ROWS; this.block = 30; this.dpr = Math.min(window.devicePixelRatio||1,2);
+    this.grid = this._createGrid(); this.bag = []; this.queue = [];
+    this.hold = null; this.holdLocked = false;
+    this.current = null; this.currentX = 3; this.currentY = 0;
+    this.gravity = 1000; this.dropAcc = 0;
+    this.score = 0; this.level = 1; this.lines = 0; this.b2b = false; this.combo = -1;
+    this.keymap = JSON.parse(localStorage.getItem('tetris_keymap')||'null')||{left:'ArrowLeft',right:'ArrowRight',rotate:'ArrowUp',drop:'Space',hold:'ShiftLeft',soft:'ArrowDown'};
+    this.DAS = Number(localStorage.getItem('tetris_das')) || 170;
+    this.ARR = Number(localStorage.getItem('tetris_arr')) || 80;
+    this.keyState = {}; this.paused=false; this.gameOver=false; this.lastTime=null;
+    this.resize();
+  }
+  _createGrid(){ return Array.from({length:this.rows}, ()=>new Array(this.cols).fill(0)); }
+  _refillBag(){ if(this.bag.length===0){ this.bag=[0,1,2,3,4,5,6]; for(let i=this.bag.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [this.bag[i],this.bag[j]]=[this.bag[j],this.bag[i]]; } } }
+  _fillQueue(){ while(this.queue.length < NEXT_COUNT){ this._refillBag(); this.queue.push(this.bag.shift()); } }
+  spawn(){ this._fillQueue(); const id = this.queue.shift(); this._fillQueue(); this.current = {id, shape: deepClone(SHAPES[id]), rot:0}; this.currentX = Math.floor((this.cols - this.current.shape[0].length)/2); this.currentY = -this.current.shape.length+1; this.holdLocked=false; if(this._collides(this.currentX,this.currentY,this.current.shape)) this._endGame(); }
+  _collides(x,y,shape){ for(let i=0;i<shape.length;i++) for(let j=0;j<shape[i].length;j++) if(shape[i][j]){ const gx=x+j, gy=y+i; if(gx<0||gx>=this.cols||gy>=this.rows) return true; if(gy>=0 && this.grid[gy][gx]) return true; } return false; }
+  _lockPiece(){ const s=this.current.shape, id=this.current.id+1; for(let i=0;i<s.length;i++) for(let j=0;j<s[i].length;j++) if(s[i][j]){ const gx=this.currentX+j, gy=this.currentY+i; if(gy>=0) this.grid[gy][gx]=id; } Sound.beep(300,0.06,'square',0.06); const cleared = this._clearLines(); const isT = (this.current.id===2); const wasT = isT && this._detectTSpin(); this._applyScoring(cleared, wasT); this.spawn(); }
+  _detectTSpin(){ const cx = Math.floor(this.currentX + this.current.shape[0].length/2); const cy = Math.floor(this.currentY + this.current.shape.length/2); const check=(x,y)=>{ if(x<0||x>=this.cols||y<0||y>=this.rows) return true; return !!this.grid[y][x]; }; let corners=0; if(check(cx-1,cy-1)) corners++; if(check(cx+1,cy-1)) corners++; if(check(cx-1,cy+1)) corners++; if(check(cx+1,cy+1)) corners++; return corners>=3; }
+  _clearLines(){ const newG = this.grid.filter(row=>row.some(c=>c===0)); const cleared = this.rows - newG.length; if(cleared>0){ for(let i=0;i<cleared;i++) newG.unshift(new Array(this.cols).fill(0)); this.grid = newG; this.lines += cleared; this.level = Math.floor(this.lines/10)+1; this.gravity = Math.max(80,1000 - (this.level-1)*80); } return cleared; }
+  _applyScoring(cleared, wasT){ let gained=0; let isB2B=false; if(wasT){ if(cleared===1){ gained+=800; isB2B=true; } else if(cleared===2){ gained+=1200; isB2B=true; } else if(cleared>=3){ gained+=1600; isB2B=true; } } else { const scoring={0:0,1:100,2:300,3:500,4:800}; gained += (scoring[cleared]||0)*this.level; if(cleared===4) isB2B=true; } if(cleared>0){ this.combo = Math.max(0,this.combo)+1; gained += this.combo*50; } else this.combo=-1; if(isB2B && this.b2b) gained = Math.floor(gained*1.5); this.b2b = isB2B; this.score += gained; if(cleared>0) Sound.beep(360+cleared*40,0.14,'square',0.09); this._updateUI(); }
+  hardDrop(){ let d=0; while(!this._collides(this.currentX,this.currentY+1,this.current.shape)){ this.currentY++; d++; } this.score += d*2; this._lockPiece(); }
+  softDrop(){ if(!this._collides(this.currentX,this.currentY+1,this.current.shape)){ this.currentY++; this.score+=1; } else this._lockPiece(); this._updateUI(); }
+  rotate(dir=1){ let tempShape = deepClone(this.current.shape); let tempRot = this.current.rot; if(dir===1){ tempShape = rotateMatrixCW(tempShape); tempRot = (tempRot+1)%4; } else { tempShape = rotateMatrixCCW(tempShape); tempRot = (tempRot+3)%4; } const kicks = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[0,1]]; for(const k of kicks){ const nx=this.currentX+k[0], ny=this.currentY+k[1]; if(!this._collides(nx,ny,tempShape)){ this.current.shape = tempShape; this.current.rot = tempRot; this.currentX = nx; this.currentY = ny; Sound.beep(880,0.04,'sawtooth',0.06); return true; } } return false; }
+  holdPiece(){ if(this.holdLocked) return; this.holdLocked=true; if(this.hold===null){ this.hold=this.current.id; this.spawn(); } else { const tmp=this.hold; this.hold=this.current.id; this.current = {id:tmp, shape: deepClone(SHAPES[tmp]), rot:0}; this.currentX = Math.floor((this.cols - this.current.shape[0].length)/2); this.currentY = -this.current.shape.length+1; if(this._collides(this.currentX,this.currentY,this.current.shape)) this._endGame(); } this._updateUI(); }
+  move(dx){ if(!this._collides(this.currentX+dx,this.currentY,this.current.shape)){ this.currentX += dx; Sound.beep(300,0.02,'square',0.02); } }
+  _endGame(){ this.gameOver=true; document.getElementById('gameOverOverlay').style.display='flex'; document.getElementById('go-score').textContent = 'Ваш счет: '+this.score; setTimeout(()=>{ const name = prompt('Игра окончена! Введите имя для таблицы лидеров:', 'Игрок'); if(name) this._storeHighScore({name,score:this.score,date:new Date().toISOString()}); this._updateUI(); },60); }
+  _storeHighScore(rec){ const hs = JSON.parse(localStorage.getItem('tetris_high_scores')||'[]'); hs.push(rec); hs.sort((a,b)=>b.score-a.score); if(hs.length>10) hs.length=10; localStorage.setItem('tetris_high_scores',JSON.stringify(hs)); }
+  _updateUI(){ document.getElementById('score').textContent=this.score; document.getElementById('level').textContent=this.level; this._renderPreviews(); this._renderHighScores(); }
+  _renderPreviews(){ const nextEl=document.getElementById('next'); nextEl.innerHTML=''; for(let i=0;i<NEXT_COUNT;i++){ const idx=this.queue[i] ?? null; const el=document.createElement('div'); el.className='preview'; if(idx!==null) drawMini(el, SHAPES[idx], COLORS[idx]); nextEl.appendChild(el); } const holdEl=document.getElementById('hold'); holdEl.innerHTML=''; const b=document.createElement('div'); b.className='preview'; if(this.hold!==null) drawMini(b, SHAPES[this.hold], COLORS[this.hold]); holdEl.appendChild(b); }
+  _renderHighScores(){ const el=document.getElementById('high-scores-list'); el.innerHTML=''; const hs=JSON.parse(localStorage.getItem('tetris_high_scores')||'[]'); if(hs.length===0){ el.innerHTML='<li class=\"muted\">Нет рекордов</li>'; return; } hs.forEach(r=>{ const li=document.createElement('li'); li.textContent = `${r.name} — ${r.score}`; el.appendChild(li); }); }
+  draw(){ const ctx=this.ctx; ctx.clearRect(0,0,this.canvas.width,this.canvas.height); ctx.fillStyle='#061016'; ctx.fillRect(0,0,this.cols*this.block,this.rows*this.block); ctx.strokeStyle='rgba(255,255,255,0.02)'; ctx.lineWidth=1; for(let x=0;x<=this.cols;x++){ ctx.beginPath(); ctx.moveTo(x*this.block,0); ctx.lineTo(x*this.block,this.rows*this.block); ctx.stroke(); } for(let y=0;y<=this.rows;y++){ ctx.beginPath(); ctx.moveTo(0,y*this.block); ctx.lineTo(this.cols*this.block,y*this.block); ctx.stroke(); } for(let r=0;r<this.rows;r++) for(let c=0;c<this.cols;c++){ const v=this.grid[r][c]; if(v){ const color=COLORS[v-1]; const x=c*this.block, y=r*this.block; const g=ctx.createLinearGradient(x,y,x+this.block,y+this.block); g.addColorStop(0,lighten(color,0.15)); g.addColorStop(1,color); ctx.fillStyle=g; ctx.fillRect(x+1,y+1,this.block-2,this.block-2); ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.strokeRect(x+1,y+1,this.block-2,this.block-2); ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fillRect(x+3,y+3,this.block-6,Math.max(2,this.block/6)); } } if(this.current){ let gy=this.currentY; while(!this._collides(this.currentX, gy+1, this.current.shape)) gy++; ctx.globalAlpha=0.22; for(let i=0;i<this.current.shape.length;i++) for(let j=0;j<this.current.shape[i].length;j++) if(this.current.shape[i][j]){ const px=(this.currentX+j)*this.block, py=(gy+i)*this.block; const color=COLORS[this.current.id]; const g=ctx.createLinearGradient(px,py,px+this.block,py+this.block); g.addColorStop(0,lighten(color,0.15)); g.addColorStop(1,color); ctx.fillStyle=g; ctx.fillRect(px+1,py+1,this.block-2,this.block-2); } ctx.globalAlpha=1; } if(this.current){ for(let i=0;i<this.current.shape.length;i++) for(let j=0;j<this.current.shape[i].length;j++) if(this.current.shape[i][j]){ const px=(this.currentX+j)*this.block, py=(this.currentY+i)*this.block; const color=COLORS[this.current.id]; const g2=ctx.createLinearGradient(px,py,px+this.block,py+this.block); g2.addColorStop(0,lighten(color,0.15)); g2.addColorStop(1,color); ctx.fillStyle=g2; ctx.fillRect(px+1,py+1,this.block-2,this.block-2); ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.strokeRect(px+1,py+1,this.block-2,this.block-2); ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fillRect(px+3,py+3,this.block-6,Math.max(2,this.block/6)); } } }
+  resize(){ const rect=this.canvas.parentElement.getBoundingClientRect(); const availW=rect.width||window.innerWidth; const availH=window.innerHeight-40; const idealBlock=Math.floor(Math.min(availW/this.cols, availH/this.rows)); this.block = clamp(idealBlock,14,48); this.dpr = Math.min(window.devicePixelRatio||1,2); this.canvas.width = this.cols*this.block*this.dpr; this.canvas.height = this.rows*this.block*this.dpr; this.canvas.style.width = (this.cols*this.block)+'px'; this.canvas.style.height = (this.rows*this.block)+'px'; this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0); }
+  _handleDAS(now){ const left = this.keymap.left, right = this.keymap.right; [['left',-1,left],['right',1,right]].forEach(([k,dir,code])=>{ const st=this.keyState[code]; if(!st || !st.downAt) return; const elapsed = now - st.downAt; if(!st.movedOnce){ this.move(dir); st.movedOnce=true; st.lastMoveAt=now; return; } if(elapsed >= this.DAS){ if(!st.lastMoveAt || now - st.lastMoveAt >= Math.max(1,this.ARR)){ this.move(dir); st.lastMoveAt = now; } } }); }
+  loop = (time=0) => { if(!this.lastTime) this.lastTime = time; const delta = time - this.lastTime; this.lastTime = time; if(this.paused || this.gameOver){ requestAnimationFrame(this.loop); return; } this.dropAcc += delta; if(this.dropAcc >= this.gravity){ const steps = Math.floor(this.dropAcc / this.gravity); for(let i=0;i<steps;i++){ if(!this._collides(this.currentX,this.currentY+1,this.current.shape)) this.currentY++; else this._lockPiece(); } this.dropAcc %= this.gravity; } this._handleDAS(time); this.draw(); requestAnimationFrame(this.loop); }
+  start(){ this.resize(); window.addEventListener('resize', ()=>{ this.resize(); this.draw(); }); this._fillQueue(); this.spawn(); this._updateUI(); this.lastTime=null; requestAnimationFrame(this.loop); }
 }
 
-/* Resume audio on first gesture (best-effort) */
-function attachOneTimeAudioResume(){
-  function resume(){
-    try{ if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }catch(e){}
-    window.removeEventListener('pointerdown', resume);
-    window.removeEventListener('keydown', resume);
-  }
-  window.addEventListener('pointerdown', resume);
-  window.addEventListener('keydown', resume);
-}
-attachOneTimeAudioResume();
-
-/* ===========================
-   Input: keyboard + DAS/ARR + touch + remap
-   =========================== */
-
-/**
- * handleKeyDownForDAS(key)
- * Обрабатывает удержание влево/вправо с DAS/ARR.
- */
-function handleKeyDownForDAS(key){
-  if(key === keymap.left){
-    if(dasTimeoutLeft || arrIntervalLeft) return;
-    move(-1);
-    dasTimeoutLeft = setTimeout(()=>{
-      arrIntervalLeft = setInterval(()=>move(-1), Math.max(1, ARR));
-    }, DAS);
-  }
-  if(key === keymap.right){
-    if(dasTimeoutRight || arrIntervalRight) return;
-    move(1);
-    dasTimeoutRight = setTimeout(()=>{
-      arrIntervalRight = setInterval(()=>move(1), Math.max(1, ARR));
-    }, DAS);
-  }
-}
-function handleKeyUpForDAS(key){
-  if(key === keymap.left){
-    if(dasTimeoutLeft){ clearTimeout(dasTimeoutLeft); dasTimeoutLeft = null; }
-    if(arrIntervalLeft){ clearInterval(arrIntervalLeft); arrIntervalLeft = null; }
-  }
-  if(key === keymap.right){
-    if(dasTimeoutRight){ clearTimeout(dasTimeoutRight); dasTimeoutRight = null; }
-    if(arrIntervalRight){ clearInterval(arrIntervalRight); arrIntervalRight = null; }
-  }
+/* ======= UI Helpers ======= */
+function drawMini(container, shape, color){
+  const mini = document.createElement('canvas'); mini.width=40; mini.height=80; container.appendChild(mini);
+  const mctx = mini.getContext('2d'); mctx.fillStyle='rgba(255,255,255,0.02)'; mctx.fillRect(0,0,mini.width,mini.height);
+  const cell = Math.floor(Math.min(14, Math.max(6, 40 / shape[0].length))); mctx.translate(6,6);
+  for(let i=0;i<shape.length;i++) for(let j=0;j<shape[i].length;j++) if(shape[i][j]){ const x=j*cell, y=i*cell; const g=mctx.createLinearGradient(x,y,x+cell,y+cell); g.addColorStop(0,lighten(color,0.18)); g.addColorStop(1,color); mctx.fillStyle=g; mctx.fillRect(x,y,cell-2,cell-2); mctx.strokeStyle='rgba(0,0,0,0.35)'; mctx.strokeRect(x,y,cell-2,cell-2); }
 }
 
-/* Keyboard events */
-window.addEventListener('keydown', (e)=>{
-  if(isGameOver) return;
-  if(e.key === 'p' || e.key === 'P'){ pauseGame(); return; }
-  // DAS/ARR
-  handleKeyDownForDAS(e.key);
+/* ======= Init and input ======= */
+const canvas = document.getElementById('gameCanvas'); const game = new Game(canvas);
 
-  if(isPaused) return;
-
-  if(e.key === keymap.rotate || e.key.toLowerCase() === 'x'){ rotateCW(); draw(); }
-  else if(e.key.toLowerCase() === 'z'){ rotateCCW(); draw(); }
-  else if(e.key === keymap.soft){ softDrop(); draw(); }
-  else if(e.key === keymap.drop){ e.preventDefault(); hardDrop(); draw(); }
-  else if(e.key === keymap.hold){ hold(); draw(); }
+window.addEventListener('keydown', (e) => {
+  const key = e.key, code = e.code;
+  // Обработка повтора: блокируем повторное срабатывание для одноразовых действий
+  if(e.repeat && (code === game.keymap.rotate || code === game.keymap.drop || code === game.keymap.hold)) return;
+  if(code === 'Space') e.preventDefault();
+  if(game.gameOver) return;
+  if(key.toLowerCase() === 'p'){ game.paused = !game.paused; document.getElementById('pauseOverlay').style.display = game.paused ? 'flex' : 'none'; document.getElementById('pauseBtn').textContent = game.paused ? 'Продолжить' : 'Пауза'; return; }
+  if(key.toLowerCase() === 'f'){ toggleFullscreen(); return; }
+  if(!game.keyState[code]) game.keyState[code] = { downAt:null, movedOnce:false, lastMoveAt:null };
+  const st = game.keyState[code];
+  if(!st.downAt){ st.downAt = performance.now(); st.movedOnce = false; st.lastMoveAt = null; }
+  if(code === game.keymap.rotate || key.toLowerCase() === 'x'){ game.rotate(1); game.draw(); }
+  else if(key.toLowerCase() === 'z'){ game.rotate(-1); game.draw(); }
+  else if(code === game.keymap.soft){ game.softDrop(); game.draw(); }
+  else if(code === game.keymap.drop){ game.hardDrop(); game.draw(); }
+  else if(code === game.keymap.hold){ game.holdPiece(); game.draw(); }
+  if(code === game.keymap.left){ if(!st.movedOnce){ game.move(-1); st.movedOnce=true; st.lastMoveAt = performance.now(); } }
+  if(code === game.keymap.right){ if(!st.movedOnce){ game.move(1); st.movedOnce=true; st.lastMoveAt = performance.now(); } }
 });
-window.addEventListener('keyup', (e)=>{ handleKeyUpForDAS(e.key); });
+window.addEventListener('keyup', (e)=>{ const code = e.code; const st = game.keyState[code]; if(st){ st.downAt=null; st.movedOnce=false; st.lastMoveAt=null; } });
 
-/* Touch controls: buttons already exist; also add swipe on canvas */
-['t-left','t-right','t-rotate','t-down','t-drop','t-hold'].forEach(id=>{
-  const el = document.getElementById(id);
-  if(!el) return;
-  el.addEventListener('click', ()=>{
-    if(isGameOver) return;
-    if(id === 't-left') move(-1);
-    if(id === 't-right') move(1);
-    if(id === 't-rotate') rotateCW();
-    if(id === 't-down') softDrop();
-    if(id === 't-drop') hardDrop();
-    if(id === 't-hold') hold();
-    draw();
-  });
-});
+['t-left','t-right','t-rotate','t-down','t-drop','t-hold'].forEach(id=>{ const el=document.getElementById(id); if(!el) return; el.addEventListener('click', ()=>{ if(game.gameOver) return; if(id==='t-left') game.move(-1); if(id==='t-right') game.move(1); if(id==='t-rotate') game.rotate(1); if(id==='t-down') game.softDrop(); if(id==='t-drop') game.hardDrop(); if(id==='t-hold') game.holdPiece(); game.draw(); }); });
 
-/* Canvas touch swipe & hold for soft drop */
-let touchStartX = 0, touchStartY = 0, touchStartT = 0, touchHoldTimer = null;
-cvs.addEventListener('touchstart', (e)=>{
-  const t = e.touches[0];
-  touchStartX = t.clientX; touchStartY = t.clientY; touchStartT = Date.now();
-  touchHoldTimer = setTimeout(()=>{ touchHoldTimer = setInterval(()=>softDrop(), 120); }, 350);
-});
-cvs.addEventListener('touchmove', (e)=>{
-  const t = e.touches[0];
-  const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
-  if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)){
-    if(dx < 0) move(-1); else move(1);
-    if(touchHoldTimer){ clearTimeout(touchHoldTimer); clearInterval(touchHoldTimer); touchHoldTimer = null; }
-    touchStartX = t.clientX;
-  }
-});
-cvs.addEventListener('touchend', (e)=>{
-  const dt = Date.now() - touchStartT;
-  if(touchHoldTimer){ clearTimeout(touchHoldTimer); clearInterval(touchHoldTimer); touchHoldTimer = null; }
-  if(dt < 200) rotateCW();
-});
+let tsX=0, tsY=0, tsT=0, holdTimer=null;
+canvas.addEventListener('touchstart',(e)=>{ const t=e.touches[0]; tsX=t.clientX; tsY=t.clientY; tsT=Date.now(); holdTimer = setTimeout(()=>{ holdTimer = setInterval(()=>{ game.softDrop(); game.draw(); },120); },350); });
+canvas.addEventListener('touchmove',(e)=>{ const t=e.touches[0]; const dx=t.clientX-tsX, dy=t.clientY-tsY; if(Math.abs(dx)>30 && Math.abs(dx)>Math.abs(dy)){ if(dx<0) game.move(-1); else game.move(1); if(holdTimer){ clearTimeout(holdTimer); clearInterval(holdTimer); holdTimer=null; } tsX=t.clientX; game.draw(); } });
+canvas.addEventListener('touchend',(e)=>{ const dt = Date.now()-tsT; if(holdTimer){ clearTimeout(holdTimer); clearInterval(holdTimer); holdTimer=null; } if(dt<200) { game.rotate(1); game.draw(); } });
 
-/* Key remap UI */
-function startRebind(buttonId, action){
-  const btn = document.getElementById(buttonId);
-  btn.textContent = 'Нажмите клавишу...';
-  function onKey(e){
-    e.preventDefault();
-    keymap[action] = e.key;
-    localStorage.setItem('tetris_keymap', JSON.stringify(keymap));
-    btn.textContent = e.key;
-    window.removeEventListener('keydown', onKey);
-  }
-  window.addEventListener('keydown', onKey);
-}
-function initKeymapUI(){
-  const mapping = { 'rebind-left':'left','rebind-right':'right','rebind-rotate':'rotate','rebind-drop':'drop','rebind-hold':'hold','rebind-soft':'soft' };
-  Object.keys(mapping).forEach(id=>{
-    const action = mapping[id];
-    const btn = document.getElementById(id);
-    btn.textContent = keymap[action];
-    btn.addEventListener('click', ()=>startRebind(id, action));
-  });
-  const dasInput = document.getElementById('dasInput'), arrInput = document.getElementById('arrInput');
-  dasInput.value = DAS; arrInput.value = ARR;
-  dasInput.addEventListener('change', ()=>{ DAS = Number(dasInput.value); localStorage.setItem('tetris_das', DAS); });
-  arrInput.addEventListener('change', ()=>{ ARR = Number(arrInput.value); localStorage.setItem('tetris_arr', ARR); });
-  const musicBtn = document.getElementById('musicBtn');
-  musicBtn.textContent = musicPlaying ? 'Выкл. музыку' : 'Вкл. музыку';
-  musicBtn.addEventListener('click', ()=>{ if(musicPlaying) stopMusic(); else startMusic(); });
-}
+// Rebind и настройки
+function startRebind(buttonId, action){ const btn=document.getElementById(buttonId); btn.textContent='Нажмите клавишу...'; function onKey(e){ e.preventDefault(); game.keymap[action] = e.code; localStorage.setItem('tetris_keymap', JSON.stringify(game.keymap)); btn.textContent = e.code; window.removeEventListener('keydown', onKey); } window.addEventListener('keydown', onKey); }
+function initKeymapUI(){ const mapping = {'rebind-left':'left','rebind-right':'right','rebind-rotate':'rotate','rebind-drop':'drop','rebind-hold':'hold','rebind-soft':'soft'}; Object.keys(mapping).forEach(id=>{ const action=mapping[id]; const btn=document.getElementById(id); btn.textContent = game.keymap[action]; btn.addEventListener('click', ()=>startRebind(id, action)); }); const dasInput=document.getElementById('dasInput'), arrInput=document.getElementById('arrInput'); dasInput.value = game.DAS; arrInput.value = game.ARR; dasInput.addEventListener('change', ()=>{ game.DAS = Number(dasInput.value); localStorage.setItem('tetris_das', game.DAS); }); arrInput.addEventListener('change', ()=>{ game.ARR = Number(arrInput.value); localStorage.setItem('tetris_arr', game.ARR); }); const musicBtn=document.getElementById('musicBtn'); musicBtn.textContent = Sound.musicPlaying ? 'Выкл. музыку' : 'Вкл. музыку'; musicBtn.addEventListener('click', async ()=>{ try{ Sound.ensure(); if(!Sound.musicBuffer){ await Sound.loadMusic('assets/music/korobeiniki_rearranged.ogg'); } if(Sound.ctx && Sound.ctx.state === 'suspended'){ try{ await Sound.ctx.resume(); }catch(e){ console.warn('resume failed', e); } } if(!Sound.musicPlaying){ Sound.playMusic(true); musicBtn.textContent = 'Выкл. музыку'; } else { Sound.stopMusic(); musicBtn.textContent = 'Вкл. музыку'; } }catch(e){ console.warn(e); } }); const vol=document.getElementById('vol'); vol.value = Sound.musicGainVal; vol.addEventListener('input', ()=>{ Sound.setMusicVolume(Number(vol.value)); localStorage.setItem('tetris_music_vol', vol.value); }); const savedVol = Number(localStorage.getItem('tetris_music_vol')||Sound.musicGainVal); Sound.setMusicVolume(savedVol); vol.value = savedVol; }
 
-/* ===========================
-   Fullscreen support
-   =========================== */
-function isFullscreen(){
-  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-}
-function toggleFullscreen(){
-  const el = document.getElementById('game-area');
-  if(!isFullscreen()){
-    if(el.requestFullscreen) el.requestFullscreen();
-    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    else if(el.mozRequestFullScreen) el.mozRequestFullScreen();
-    else if(el.msRequestFullscreen) el.msRequestFullscreen();
-  } else {
-    if(document.exitFullscreen) document.exitFullscreen();
-    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
-    else if(document.mozCancelFullScreen) document.mozCancelFullScreen();
-    else if(document.msExitFullscreen) document.msExitFullscreen();
-  }
-}
-['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','msfullscreenchange'].forEach(evt=>{
-  document.addEventListener(evt, ()=>{
-    setTimeout(()=>{ resizeCanvas(); draw(); }, 50);
-    const btn = document.getElementById('fullscreenBtn'); if(btn) btn.textContent = isFullscreen() ? 'Выйти из полноэкрана' : 'Полноэкранный';
-  });
-});
-const fsBtn = document.getElementById('fullscreenBtn'); if(fsBtn) fsBtn.addEventListener('click', toggleFullscreen);
-window.addEventListener('keydown', (e)=>{ if(e.key && e.key.toLowerCase() === 'f'){ e.preventDefault(); toggleFullscreen(); } });
+// Контролы
+document.getElementById('startBtn').addEventListener('click', ()=>{ document.getElementById('gameOverOverlay').style.display='none'; game.grid = game._createGrid(); game.bag=[]; game.queue=[]; game.hold=null; game.holdLocked=false; game.score=0; game.level=1; game.lines=0; game.b2b=false; game.combo=-1; game.gameOver=false; game.paused=false; game._fillQueue(); game.spawn(); game._updateUI(); game.lastTime=null; requestAnimationFrame(game.loop); });
+document.getElementById('pauseBtn').addEventListener('click', ()=>{ game.paused = !game.paused; document.getElementById('pauseOverlay').style.display = game.paused ? 'flex' : 'none'; document.getElementById('pauseBtn').textContent = game.paused ? 'Продолжить' : 'Пауза'; });
+document.getElementById('resetBtn').addEventListener('click', ()=>{ game.grid = game._createGrid(); game.score=0; game.level=1; game.lines=0; game.bag=[]; game.queue=[]; game.hold=null; game.gameOver=false; document.getElementById('gameOverOverlay').style.display='none'; game._fillQueue(); game.spawn(); game._updateUI(); game.lastTime=null; requestAnimationFrame(game.loop); });
+const goRestart = document.getElementById('go-restart'); if(goRestart) goRestart.addEventListener('click', ()=>{ document.getElementById('gameOverOverlay').style.display='none'; game.grid = game._createGrid(); game.score=0; game.level=1; game.lines=0; game.bag=[]; game.queue=[]; game.hold=null; game.gameOver=false; game._fillQueue(); game.spawn(); game._updateUI(); game.lastTime=null; requestAnimationFrame(game.loop); });
 
-/* ===========================
-   Highscores (localStorage)
-   =========================== */
-function loadHighScores(){ try{ return JSON.parse(localStorage.getItem('tetris_high_scores') || '[]'); }catch(e){ return []; } }
-function storeHighScore(record){ const hs = loadHighScores(); hs.push(record); hs.sort((a,b)=>b.score - a.score); if(hs.length > 10) hs.length = 10; localStorage.setItem('tetris_high_scores', JSON.stringify(hs)); }
-function renderHighScores(){ const el = document.getElementById('high-scores-list'); el.innerHTML = ''; const hs = loadHighScores(); if(hs.length === 0){ el.innerHTML = '<li class="muted">Нет рекордов</li>'; return; } hs.forEach(r=>{ const li = document.createElement('li'); li.textContent = `${r.name} — ${r.score}`; el.appendChild(li); }); }
+// Fullscreen: используем document.documentElement
+function isFullscreen(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement); }
+function toggleFullscreen(){ const el = document.documentElement; if(!isFullscreen()){ if(el.requestFullscreen) el.requestFullscreen(); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else if(el.mozRequestFullScreen) el.mozRequestFullScreen(); else if(el.msRequestFullscreen) el.msRequestFullscreen(); } else { if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); else if(document.mozCancelFullScreen) document.mozCancelFullScreen(); else if(document.msExitFullscreen) document.msExitFullscreen(); } }
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','msfullscreenchange'].forEach(evt=>{ document.addEventListener(evt, ()=>{ setTimeout(()=>{ game.resize(); game.draw(); },50); const btn=document.getElementById('fullscreenBtn'); if(btn) btn.textContent = isFullscreen() ? 'Выйти из полноэкрана' : 'Полноэкранный'; }); });
+window.addEventListener('keydown',(e)=>{ if(e.key && e.key.toLowerCase() === 'f'){ e.preventDefault(); toggleFullscreen(); } });
 
-/* ===========================
-   Controls bindings + UI
-   =========================== */
-document.getElementById('startBtn').addEventListener('click', ()=>{ startGame(); document.getElementById('gameOverOverlay').style.display = 'none'; });
-document.getElementById('pauseBtn').addEventListener('click', pauseGame);
-document.getElementById('resetBtn').addEventListener('click', resetGame);
-const goRestart = document.getElementById('go-restart'); if(goRestart) goRestart.addEventListener('click', ()=>{ document.getElementById('gameOverOverlay').style.display='none'; startGame(); });
-
-/* ===========================
-   Game state control (start/pause/reset/end)
-   =========================== */
-
-/**
- * startGame()
- * Начинает новую партию: сбрасывает состояние и стартует цикл.
- */
-function startGame(){
-  grid = createEmptyGrid(); bag = []; queue = []; holdPiece = null; holdLocked = false;
-  score = 0; level = 1; linesCleared = 0; dropInterval = 1000; lastDrop = 0;
-  isPaused = false; isGameOver = false;
-  fillQueue(); spawnPiece();
-  updateUI();
-  lastTime = performance.now();
-  requestAnimationFrame(loop);
-}
-
-/** pauseGame() */
-function pauseGame(){
-  isPaused = !isPaused;
-  document.getElementById('pauseOverlay').style.display = isPaused ? 'flex' : 'none';
-  document.getElementById('pauseBtn').textContent = isPaused ? 'Продолжить' : 'Пауза';
-}
-
-/** endGame() */
-function endGame(){
-  isGameOver = true;
-  document.getElementById('gameOverOverlay').style.display = 'flex';
-  document.getElementById('go-score').textContent = 'Ваш счет: ' + score;
-  // prompt name
-  setTimeout(()=>{ // small delay so overlay renders
-    const name = prompt('Игра окончена! Введите имя для таблицы лидеров:', 'Игрок');
-    if(name) storeHighScore({name, score, date: (new Date()).toISOString()});
-    updateUI();
-  }, 60);
-}
-
-/** resetGame() */
-function resetGame(){
-  grid = createEmptyGrid();
-  score = 0; level = 1; linesCleared = 0;
-  dropInterval = 1000; bag = []; queue = []; holdPiece = null; isGameOver = false;
-  document.getElementById('gameOverOverlay').style.display='none';
-  startGame();
-}
-
-/* ===========================
-   Init
-   =========================== */
-function init(){
-  initKeymapUI();
-  fillQueue();
-  spawnPiece();
-  updateUI();
-  draw();
-  renderHighScores();
-}
-init();
-
+// Init
+function loadSettings(){ try{ const km = JSON.parse(localStorage.getItem('tetris_keymap')||'null'); if(km) game.keymap = km; const das = Number(localStorage.getItem('tetris_das')); if(!isNaN(das)) game.DAS = das; const arr = Number(localStorage.getItem('tetris_arr')); if(!isNaN(arr)) game.ARR = arr; }catch(e){} }
+function renderInitial(){ loadSettings(); initKeymapUI(); game._fillQueue(); game.spawn(); game._updateUI(); game.draw(); }
+renderInitial();
 </script>
 </body>
 </html>
