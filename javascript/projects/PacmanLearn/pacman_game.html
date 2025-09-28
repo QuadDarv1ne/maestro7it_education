@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacman - Улучшенная версия</title>
+    <script src="pacman_music.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #121212, #1a1a2e);
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-attachment: fixed;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #FFD700;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        #game-canvas {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 440px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-size: 1.2rem;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #bbb;
+        }
+
+        .info-value {
+            font-weight: bold;
+            color: #FFD700;
+            font-size: 1.4rem;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 440px;
+            text-align: center;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .instructions p {
+            margin: 5px 0;
+            color: #bbb;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #2c3e50;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid #3498db;
+        }
+
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            animation: fadeIn 0.5s;
+        }
+        
+        /* Menu Styles */
+        .menu-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            z-index: 200;
+            border: 2px solid #FFD700;
+            animation: fadeIn 0.5s;
+        }
+        
+        .menu-title {
+            font-size: 2.5rem;
+            color: #FFD700;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+        
+        .menu-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .menu-btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .menu-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* High Scores Styles */
+        #scores-list {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .score-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(44, 62, 80, 0.7);
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .score-rank {
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .score-name {
+            flex-grow: 1;
+            text-align: center;
+        }
+        
+        .score-value {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        /* Settings Styles */
+        .setting-item {
+            margin: 15px 0;
+        }
+        
+        .setting-select {
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+        }
+        
+        .setting-select:focus {
+            outline: 2px solid #3498db;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .menu-title {
+                font-size: 2rem;
+            }
+            
+            .btn, .menu-btn {
+                padding: 12px 16px;
+                font-size: 1rem;
+            }
+            
+            #game-canvas {
+                width: 95vw;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Menu Screen -->
+    <div id="main-menu" class="menu-screen">
+        <h1 class="menu-title">PACMAN</h1>
+        <div class="menu-buttons">
+            <button id="play-btn" class="menu-btn">Играть</button>
+            <button id="settings-btn" class="menu-btn">Настройки</button>
+            <button id="highscores-btn" class="menu-btn">Рекорды</button>
+            <button id="about-btn" class="menu-btn">Об игре</button>
+        </div>
+    </div>
+    
+    <!-- High Scores Screen -->
+    <div id="highscores-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Рекорды</h1>
+        <div id="scores-list" style="width: 100%; max-width: 400px;">
+            <!-- Scores will be populated here -->
+        </div>
+        <button id="back-from-scores-btn" class="menu-btn" style="margin-top: 20px;">Назад</button>
+    </div>
+    
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Настройки</h1>
+        <div class="settings-container" style="width: 100%; max-width: 400px;">
+            <div class="setting-item" style="margin: 15px 0;">
+                <label for="difficulty" style="display: block; margin-bottom: 5px;">Сложность:</label>
+                <select id="difficulty" class="setting-select" style="width: 100%; padding: 10px; background: #2c3e50; color: white; border: none; border-radius: 5px;">
+                    <option value="easy">Легко</option>
+                    <option value="normal" selected>Нормально</option>
+                    <option value="hard">Сложно</option>
+                </select>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label for="game-speed" style="display: block; margin-bottom: 5px;">Скорость игры:</label>
+                <input type="range" id="game-speed" min="50" max="300" value="150" style="width: 100%;">
+                <span id="speed-value" style="display: block; text-align: center; margin-top: 5px;">150 мс</span>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="sound-enabled" checked> Звук
+                </label>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="music-enabled" checked> Музыка
+                </label>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="animations-enabled" checked> Анимации
+                </label>
+            </div>
+        </div>
+        <button id="save-settings-btn" class="menu-btn" style="margin-top: 20px;">Сохранить</button>
+        <button id="back-from-settings-btn" class="menu-btn" style="margin-top: 10px;">Назад</button>
+    </div>
+    
+    <!-- Game Screen -->
+    <div id="game-screen" class="game-container hidden">
+        <div class="header">
+            <h1>Pacman - Улучшенная версия</h1>
+            <div class="controls">
+                <button id="start-btn" class="btn">Начать игру</button>
+                <button id="pause-btn" class="btn">Пауза</button>
+                <button id="reset-btn" class="btn">Сброс</button>
+            </div>
+        </div>
+        
+        <canvas id="game-canvas" width="440" height="520"></canvas>
+        
+        <div class="status-bar">
+            <div class="info-item">
+                <span class="info-label">Очки</span>
+                <span id="score" class="info-value">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Уровень</span>
+                <span id="level" class="info-value">1</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Жизни</span>
+                <span id="lives" class="info-value">❤️❤️❤️</span>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <p>Управление: <span class="key">↑</span> <span class="key">↓</span> <span class="key">←</span> <span class="key">→</span> или <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span></p>
+            <p>Цель: Соберите всю еду и избегайте привидений!</p>
+        </div>
+    </div>
+    
+    <div id="message" class="message">
+        <h2 id="message-title">Игра окончена</h2>
+        <p id="message-text">Ваш счет: 0</p>
+        <button id="message-btn" class="btn">OK</button>
+    </div>
+
+    <script>
+        class PacmanGame {
+            constructor() {
+                // Инициализация холста
+                this.canvas = document.getElementById('game-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.cellSize = 22;
+                
+                // Игровые параметры
+                this.isRunning = false;
+                this.animationFrameId = null;
+                this.lastTimestamp = 0;
+                this.updateInterval = 150; // Интервал обновления в миллисекундах (замедляет игру)
+                this.lastUpdate = 0;
+                
+                // Игровые объекты
+                this.pacman = {
+                    x: 10,
+                    y: 15,
+                    direction: 'right',
+                    nextDirection: null,
+                    mouthAngle: 0,
+                    mouthOpening: 0.1,
+                    powerMode: false,
+                    powerModeTimer: 0
+                };
+                
+                this.ghosts = [
+                    { x: 10, y: 8, direction: 'left', color: 'red', speed: 0.8 },
+                    { x: 9, y: 9, direction: 'up', color: 'pink', speed: 0.7 },
+                    { x: 11, y: 9, direction: 'down', color: 'cyan', speed: 0.9 },
+                    { x: 10, y: 10, direction: 'right', color: 'orange', speed: 0.6 }
+                ];
+                
+                // Игровое состояние
+                this.score = 0;
+                this.level = 1;
+                this.lives = 3;
+                
+                // Карта уровня (1 - путь, 0 - стена, 2 - еда, 3 - супер-еда)
+                this.map = [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ];
+                
+                // Подсчет еды
+                this.foodCount = 0;
+                this.totalFood = 0;
+                this.countFood();
+                
+                // High scores
+                this.highScores = this.loadHighScores();
+                
+                // Settings
+                this.settings = this.loadSettings();
+                
+                // Initialize sounds
+                this.initSounds();
+                
+                // Инициализация событий
+                this.setupEventListeners();
+                
+                // Первичная отрисовка
+                this.draw();
+                
+                console.log("Игра инициализирована");
+            }
+            
+            setupEventListeners() {
+                // Кнопки управления
+                document.getElementById('start-btn').addEventListener('click', () => {
+                    console.log("Нажата кнопка Start");
+                    this.playSound('start'); // Play sound for button click
+                    this.start();
+                });
+                
+                document.getElementById('pause-btn').addEventListener('click', () => {
+                    console.log("Нажата кнопка Pause");
+                    this.playSound('start'); // Play sound for button click
+                    this.pause();
+                });
+                
+                document.getElementById('reset-btn').addEventListener('click', () => {
+                    console.log("Нажата кнопка Reset");
+                    this.playSound('start'); // Play sound for button click
+                    this.reset();
+                });
+                
+                document.getElementById('message-btn').addEventListener('click', () => {
+                    this.playSound('start'); // Play sound for button click
+                    document.getElementById('message').style.display = 'none';
+                });
+                
+                // Управление клавишами
+                document.addEventListener('keydown', (e) => {
+                    console.log("Нажата клавиша:", e.key);
+                    this.handleKey(e);
+                });
+                
+                console.log("Обработчики событий установлены");
+            }
+            
+            handleKey(e) {
+                // Всегда разрешаем управление, даже если игра на паузе
+                switch(e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        this.pacman.nextDirection = 'up';
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        this.pacman.nextDirection = 'down';
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        this.pacman.nextDirection = 'left';
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        this.pacman.nextDirection = 'right';
+                        e.preventDefault();
+                        break;
+                }
+            }
+            
+            countFood() {
+                this.totalFood = 0;
+                for (let y = 0; y < this.map.length; y++) {
+                    for (let x = 0; x < this.map[y].length; x++) {
+                        if (this.map[y][x] === 2 || this.map[y][x] === 3) {
+                            this.totalFood++;
+                        }
+                    }
+                }
+                console.log("Всего еды:", this.totalFood);
+            }
+            
+            start() {
+                console.log("Запуск игры");
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.lastTimestamp = performance.now();
+                    this.lastUpdate = performance.now();
+                    this.gameLoop();
+                    document.getElementById('start-btn').textContent = "Продолжить";
+                    
+                    // Play start sound with visual feedback
+                    this.playSound('start');
+                    
+                    // Play background music if enabled
+                    if (this.settings.musicEnabled) {
+                        this.playBackgroundMusic();
+                    }
+                    
+                    // Hide menu when starting game
+                    this.hideMenu();
+                }
+            }
+            
+            pause() {
+                console.log("Пауза игры");
+                this.isRunning = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                
+                // Pause background music
+                this.pauseBackgroundMusic();
+            }
+            
+            gameLoop(timestamp) {
+                if (!this.isRunning) return;
+                
+                // Вычисляем deltaTime для плавного движения
+                const deltaTime = timestamp - this.lastTimestamp;
+                this.lastTimestamp = timestamp;
+                
+                // Обновляем игру с заданным интервалом
+                if (timestamp - this.lastUpdate >= this.updateInterval) {
+                    this.update(deltaTime);
+                    this.lastUpdate = timestamp;
+                }
+                
+                // Отрисовываем
+                this.draw();
+                
+                // Продолжаем цикл
+                this.animationFrameId = requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+            }
+            
+            update(deltaTime) {
+                // Обновляем движение Пакмана
+                this.movePacman();
+                
+                // Обновляем движение привидений
+                this.moveGhosts();
+                
+                // Проверяем столкновения
+                this.checkCollisions();
+                
+                // Анимируем рот Пакмана
+                this.animateMouth();
+                
+                // Update power mode timer
+                if (this.pacman.powerMode) {
+                    this.pacman.powerModeTimer -= deltaTime;
+                    if (this.pacman.powerModeTimer <= 0) {
+                        this.pacman.powerMode = false;
+                        this.pacman.powerModeTimer = 0;
+                    }
+                }
+            }
+            
+            movePacman() {
+                // Применяем следующее направление, если возможно
+                if (this.pacman.nextDirection) {
+                    const nextPos = this.getNextPosition(this.pacman.x, this.pacman.y, this.pacman.nextDirection);
+                    if (this.isValidMove(nextPos.x, nextPos.y)) {
+                        this.pacman.direction = this.pacman.nextDirection;
+                        this.pacman.nextDirection = null;
+                    }
+                }
+                
+                // Двигаемся в текущем направлении
+                const nextPos = this.getNextPosition(this.pacman.x, this.pacman.y, this.pacman.direction);
+                if (this.isValidMove(nextPos.x, nextPos.y)) {
+                    this.pacman.x = nextPos.x;
+                    this.pacman.y = nextPos.y;
+                }
+            }
+            
+            moveGhosts() {
+                this.ghosts.forEach(ghost => {
+                    // Adjust speed based on power mode
+                    const effectiveSpeed = this.pacman.powerMode ? ghost.speed * 0.5 : ghost.speed;
+                    
+                    // Only move if it's time for this ghost to move based on its speed
+                    if (Math.random() > effectiveSpeed) return;
+                    
+                    // Улучшенный ИИ привидений
+                    // Сначала пытаемся двигаться в направлении Пакмана
+                    const directionsToPacman = [];
+                    if (ghost.x < this.pacman.x) directionsToPacman.push('right');
+                    if (ghost.x > this.pacman.x) directionsToPacman.push('left');
+                    if (ghost.y < this.pacman.y) directionsToPacman.push('down');
+                    if (ghost.y > this.pacman.y) directionsToPacman.push('up');
+                    
+                    // If Pacman is in power mode, ghosts should try to avoid him
+                    if (this.pacman.powerMode) {
+                        directionsToPacman.reverse(); // Reverse direction to run away
+                    }
+                    
+                    // Проверяем направления к Пакману
+                    let moved = false;
+                    for (const dir of directionsToPacman) {
+                        const nextPos = this.getNextPosition(ghost.x, ghost.y, dir);
+                        if (this.isValidMove(nextPos.x, nextPos.y)) {
+                            ghost.x = nextPos.x;
+                            ghost.y = nextPos.y;
+                            ghost.direction = dir;
+                            moved = true;
+                            break;
+                        }
+                    }
+                    
+                    // Если не можем двигаться к Пакману, используем случайное движение
+                    if (!moved) {
+                        const directions = ['up', 'down', 'left', 'right'];
+                        const validDirections = directions.filter(dir => {
+                            const nextPos = this.getNextPosition(ghost.x, ghost.y, dir);
+                            return this.isValidMove(nextPos.x, nextPos.y);
+                        });
+                        
+                        // Если есть доступные направления, выбираем случайное
+                        if (validDirections.length > 0) {
+                            const randomDirection = validDirections[Math.floor(Math.random() * validDirections.length)];
+                            const nextPos = this.getNextPosition(ghost.x, ghost.y, randomDirection);
+                            ghost.x = nextPos.x;
+                            ghost.y = nextPos.y;
+                            ghost.direction = randomDirection;
+                        }
+                    }
+                });
+            }
+            
+            getNextPosition(x, y, direction) {
+                switch(direction) {
+                    case 'up': return { x, y: y - 1 };
+                    case 'down': return { x, y: y + 1 };
+                    case 'left': return { x: x - 1, y };
+                    case 'right': return { x: x + 1, y };
+                    default: return { x, y };
+                }
+            }
+            
+            isValidMove(x, y) {
+                // Проверка границ
+                if (x < 0 || x >= this.map[0].length || y < 0 || y >= this.map.length) {
+                    return false;
+                }
+                
+                // Проверка стен
+                return this.map[y][x] !== 0;
+            }
+            
+            checkCollisions() {
+                // Проверка сбора еды
+                const cell = this.map[this.pacman.y][this.pacman.x];
+                if (cell === 2) { // Обычная еда
+                    this.map[this.pacman.y][this.pacman.x] = 1;
+                    this.score += 10;
+                    this.foodCount++;
+                    this.updateUI();
+                    this.playSound('eat'); // Play eating sound
+                    console.log("Собрана еда, счет:", this.score);
+                } else if (cell === 3) { // Супер-еда
+                    this.map[this.pacman.y][this.pacman.x] = 1;
+                    this.score += 50;
+                    this.foodCount++;
+                    this.updateUI();
+                    this.playSound('eatPower'); // Play power pellet sound
+                    
+                    // Activate power mode
+                    this.pacman.powerMode = true;
+                    this.pacman.powerModeTimer = 5000; // 5 seconds
+                    
+                    console.log("Собрана супер-еда, счет:", this.score);
+                }
+                
+                // Проверка столкновения с привидениями
+                for (const ghost of this.ghosts) {
+                    if (this.pacman.x === ghost.x && this.pacman.y === ghost.y) {
+                        if (this.pacman.powerMode) {
+                            // Pacman eats the ghost
+                            this.score += 200;
+                            this.updateUI();
+                            // Reset ghost position
+                            ghost.x = 10;
+                            ghost.y = 8;
+                            this.playSound('eat'); // Play eating sound
+                        } else {
+                            this.playSound('ghost'); // Play ghost collision sound
+                            this.loseLife();
+                            return;
+                        }
+                    }
+                }
+                
+                // Проверка завершения уровня
+                if (this.foodCount >= this.totalFood) {
+                    this.playSound('win'); // Play win sound
+                    this.nextLevel();
+                }
+            }
+            
+            loseLife() {
+                this.lives--;
+                this.updateUI();
+                console.log("Потеряна жизнь, осталось:", this.lives);
+                
+                if (this.lives <= 0) {
+                    this.playSound('lose'); // Play game over sound
+                    this.gameOver();
+                } else {
+                    // Сброс позиций
+                    this.pacman.x = 10;
+                    this.pacman.y = 15;
+                    this.pacman.direction = 'right';
+                    this.pacman.nextDirection = null;
+                }
+            }
+            
+            nextLevel() {
+                // Play win sound with visual feedback
+                this.playSound('win');
+                
+                this.level++;
+                this.foodCount = 0;
+                this.score += 100; // Бонус за уровень
+                
+                // Reset power mode
+                this.pacman.powerMode = false;
+                this.pacman.powerModeTimer = 0;
+                
+                // Сброс карты
+                this.map = [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ];
+                
+                // Сброс позиций
+                this.pacman.x = 10;
+                this.pacman.y = 15;
+                this.pacman.direction = 'right';
+                this.pacman.nextDirection = null;
+                
+                this.ghosts = [
+                    { x: 10, y: 8, direction: 'left', color: 'red', speed: 0.8 },
+                    { x: 9, y: 9, direction: 'up', color: 'pink', speed: 0.7 },
+                    { x: 11, y: 9, direction: 'down', color: 'cyan', speed: 0.9 },
+                    { x: 10, y: 10, direction: 'right', color: 'orange', speed: 0.6 }
+                ];
+                
+                this.countFood();
+                this.updateUI();
+                console.log("Переход на уровень:", this.level);
+            }
+            
+            gameOver() {
+                this.pause();
+                console.log("Игра окончена, счет:", this.score);
+                
+                // Stop background music
+                this.stopBackgroundMusic();
+                
+                // Play game over sound with visual feedback
+                this.playSound('lose');
+                
+                // Check for high score
+                if (this.highScores.length < 10 || this.score > this.highScores[this.highScores.length - 1].score) {
+                    const name = prompt('Поздравляем! Вы попали в таблицу рекордов! Введите ваше имя:', 'Игрок');
+                    if (name) {
+                        this.addHighScore(name, this.score);
+                    }
+                }
+                
+                // Показываем сообщение
+                document.getElementById('message-title').textContent = "Игра окончена!";
+                document.getElementById('message-text').textContent = `Ваш счет: ${this.score}`;
+                document.getElementById('message').style.display = 'block';
+                
+                // Show menu after game over
+                setTimeout(() => {
+                    this.showMenu();
+                }, 3000);
+            }
+            
+            reset() {
+                console.log("Сброс игры");
+                this.pause();
+                
+                this.score = 0;
+                this.level = 1;
+                this.lives = 3;
+                this.foodCount = 0;
+                
+                // Reset power mode
+                this.pacman.powerMode = false;
+                this.pacman.powerModeTimer = 0;
+                
+                // Stop background music
+                this.stopBackgroundMusic();
+                
+                // Сброс карты
+                this.map = [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ];
+                
+                // Сброс позиций
+                this.pacman.x = 10;
+                this.pacman.y = 15;
+                this.pacman.direction = 'right';
+                this.pacman.nextDirection = null;
+                
+                this.ghosts = [
+                    { x: 10, y: 8, direction: 'left', color: 'red', speed: 0.8 },
+                    { x: 9, y: 9, direction: 'up', color: 'pink', speed: 0.7 },
+                    { x: 11, y: 9, direction: 'down', color: 'cyan', speed: 0.9 },
+                    { x: 10, y: 10, direction: 'right', color: 'orange', speed: 0.6 }
+                ];
+                
+                this.countFood();
+                this.updateUI();
+                this.draw();
+                
+                // Скрываем сообщение, если оно открыто
+                document.getElementById('message').style.display = 'none';
+                
+                document.getElementById('start-btn').textContent = "Начать игру";
+                
+                // Show menu after reset
+                this.showMenu();
+                
+                console.log("Игра сброшена");
+            }
+            
+            animateMouth() {
+                this.pacman.mouthAngle += this.pacman.mouthOpening;
+                if (this.pacman.mouthAngle > 0.4 || this.pacman.mouthAngle < 0.05) {
+                    this.pacman.mouthOpening *= -1;
+                }
+            }
+            
+            updateUI() {
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('level').textContent = this.level;
+                document.getElementById('lives').textContent = '❤️'.repeat(this.lives);
+            }
+            
+            draw() {
+                // Очистка холста
+                this.ctx.fillStyle = 'black';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Отрисовка карты
+                this.drawMap();
+                
+                // Отрисовка Пакмана
+                this.drawPacman();
+                
+                // Отрисовка привидений
+                this.drawGhosts();
+            }
+            
+            drawMap() {
+                for (let y = 0; y < this.map.length; y++) {
+                    for (let x = 0; x < this.map[y].length; x++) {
+                        const cell = this.map[y][x];
+                        const xPos = x * this.cellSize;
+                        const yPos = y * this.cellSize;
+                        
+                        switch(cell) {
+                            case 0: // Стена
+                                this.ctx.fillStyle = '#2c3e50';
+                                this.ctx.fillRect(xPos, yPos, this.cellSize, this.cellSize);
+                                break;
+                            case 1: // Путь
+                                this.ctx.fillStyle = '#000';
+                                this.ctx.fillRect(xPos, yPos, this.cellSize, this.cellSize);
+                                break;
+                            case 2: // Еда
+                                this.ctx.fillStyle = 'white';
+                                this.ctx.beginPath();
+                                this.ctx.arc(xPos + this.cellSize/2, yPos + this.cellSize/2, 3, 0, Math.PI * 2);
+                                this.ctx.fill();
+                                break;
+                            case 3: // Супер-еда
+                                this.ctx.fillStyle = '#FFD700';
+                                this.ctx.beginPath();
+                                this.ctx.arc(xPos + this.cellSize/2, yPos + this.cellSize/2, 6, 0, Math.PI * 2);
+                                this.ctx.fill();
+                                break;
+                        }
+                    }
+                }
+            }
+            
+            drawPacman() {
+                const x = this.pacman.x * this.cellSize + this.cellSize/2;
+                const y = this.pacman.y * this.cellSize + this.cellSize/2;
+                const radius = this.cellSize/2 - 2;
+                
+                // Add glow effect if Pacman has recently eaten a power pellet
+                if (this.pacman.powerMode) {
+                    this.ctx.shadowColor = '#FFD700';
+                    this.ctx.shadowBlur = 15;
+                }
+                
+                this.ctx.fillStyle = 'yellow';
+                this.ctx.beginPath();
+                
+                // Рассчитываем угол рта в зависимости от направления
+                let startAngle, endAngle;
+                switch(this.pacman.direction) {
+                    case 'right':
+                        startAngle = this.pacman.mouthAngle;
+                        endAngle = Math.PI * 2 - this.pacman.mouthAngle;
+                        break;
+                    case 'left':
+                        startAngle = Math.PI + this.pacman.mouthAngle;
+                        endAngle = Math.PI * 3 - this.pacman.mouthAngle;
+                        break;
+                    case 'up':
+                        startAngle = Math.PI * 1.5 + this.pacman.mouthAngle;
+                        endAngle = Math.PI * 1.5 - this.pacman.mouthAngle + Math.PI * 2;
+                        break;
+                    case 'down':
+                        startAngle = Math.PI * 0.5 + this.pacman.mouthAngle;
+                        endAngle = Math.PI * 0.5 - this.pacman.mouthAngle + Math.PI * 2;
+                        break;
+                    default:
+                        startAngle = 0;
+                        endAngle = Math.PI * 2;
+                }
+                
+                this.ctx.arc(x, y, radius, startAngle, endAngle);
+                this.ctx.lineTo(x, y);
+                this.ctx.fill();
+                
+                // Reset shadow
+                this.ctx.shadowColor = 'transparent';
+                this.ctx.shadowBlur = 0;
+            }
+            
+            drawGhosts() {
+                for (const ghost of this.ghosts) {
+                    const x = ghost.x * this.cellSize + this.cellSize/2;
+                    const y = ghost.y * this.cellSize + this.cellSize/2;
+                    const radius = this.cellSize/2 - 2;
+                    
+                    // Change color if Pacman is in power mode
+                    const ghostColor = this.pacman.powerMode ? 'blue' : ghost.color;
+                    
+                    // Тело привидения
+                    this.ctx.fillStyle = ghostColor;
+                    this.ctx.beginPath();
+                    
+                    // Верхняя часть (полукруг)
+                    this.ctx.arc(x, y - 2, radius, Math.PI, Math.PI * 2);
+                    
+                    // Нижняя часть (волнистая линия)
+                    this.ctx.lineTo(x + radius, y + radius - 2);
+                    
+                    // Волнистая нижняя часть
+                    for (let i = 0; i < 3; i++) {
+                        this.ctx.arc(x + radius - i * (radius * 2 / 3), y + radius - 2, radius / 3, 0, Math.PI, true);
+                    }
+                    
+                    this.ctx.lineTo(x - radius, y + radius - 2);
+                    this.ctx.lineTo(x - radius, y - 2);
+                    this.ctx.fill();
+                    
+                    // Глаза
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x - radius/3, y - 2, radius/3, 0, Math.PI * 2);
+                    this.ctx.arc(x + radius/3, y - 2, radius/3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    this.ctx.fillStyle = 'black';
+                    this.ctx.beginPath();
+                    
+                    // Направление глаз в зависимости от направления привидения
+                    let eyeOffsetX = 0;
+                    let eyeOffsetY = 0;
+                    switch(ghost.direction) {
+                        case 'left': eyeOffsetX = -1; break;
+                        case 'right': eyeOffsetX = 1; break;
+                        case 'up': eyeOffsetY = -1; break;
+                        case 'down': eyeOffsetY = 1; break;
+                    }
+                    
+                    this.ctx.arc(x - radius/3 + eyeOffsetX, y - 2 + eyeOffsetY, radius/6, 0, Math.PI * 2);
+                    this.ctx.arc(x + radius/3 + eyeOffsetX, y - 2 + eyeOffsetY, radius/6, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+            
+            // Menu Functions
+            showMenu() {
+                document.getElementById('main-menu').classList.remove('hidden');
+                document.getElementById('game-screen').classList.add('hidden');
+            }
+            
+            hideMenu() {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+            }
+            
+            // High Scores Functions
+            loadHighScores() {
+                try {
+                    const scores = localStorage.getItem('pacmanHighScores');
+                    return scores ? JSON.parse(scores) : [];
+                } catch (e) {
+                    console.error('Failed to load high scores:', e);
+                    return [];
+                }
+            }
+            
+            saveHighScores() {
+                try {
+                    localStorage.setItem('pacmanHighScores', JSON.stringify(this.highScores));
+                } catch (e) {
+                    console.error('Failed to save high scores:', e);
+                }
+            }
+            
+            addHighScore(name, score) {
+                this.highScores.push({ name, score, date: new Date().toLocaleDateString() });
+                this.highScores.sort((a, b) => b.score - a.score);
+                this.highScores = this.highScores.slice(0, 10); // Keep only top 10
+                this.saveHighScores();
+            }
+            
+            showHighScores() {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('highscores-screen').classList.remove('hidden');
+                
+                const scoresList = document.getElementById('scores-list');
+                scoresList.innerHTML = '';
+                
+                if (this.highScores.length === 0) {
+                    scoresList.innerHTML = '<div class="score-entry"><span>Пока нет рекордов</span></div>';
+                    return;
+                }
+                
+                this.highScores.forEach((entry, index) => {
+                    const scoreElement = document.createElement('div');
+                    scoreElement.className = 'score-entry';
+                    scoreElement.innerHTML = `
+                        <span class="score-rank">#${index + 1}</span>
+                        <span class="score-name">${entry.name}</span>
+                        <span class="score-value">${entry.score}</span>
+                    `;
+                    scoresList.appendChild(scoreElement);
+                });
+            }
+            
+            hideHighScores() {
+                document.getElementById('highscores-screen').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            }
+            
+            // Settings Functions
+            loadSettings() {
+                try {
+                    const settings = localStorage.getItem('pacmanSettings');
+                    return settings ? JSON.parse(settings) : {
+                        difficulty: 'normal',
+                        gameSpeed: 150,
+                        soundEnabled: true,
+                        musicEnabled: true,
+                        animationsEnabled: true
+                    };
+                } catch (e) {
+                    console.error('Failed to load settings:', e);
+                    return {
+                        difficulty: 'normal',
+                        gameSpeed: 150,
+                        soundEnabled: true,
+                        musicEnabled: true,
+                        animationsEnabled: true
+                    };
+                }
+            }
+            
+            saveSettings() {
+                try {
+                    localStorage.setItem('pacmanSettings', JSON.stringify(this.settings));
+                } catch (e) {
+                    console.error('Failed to save settings:', e);
+                }
+            }
+            
+            showSettings() {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('settings-screen').classList.remove('hidden');
+                
+                // Populate settings form
+                document.getElementById('difficulty').value = this.settings.difficulty;
+                document.getElementById('game-speed').value = this.settings.gameSpeed;
+                document.getElementById('speed-value').textContent = this.settings.gameSpeed + ' мс';
+                document.getElementById('sound-enabled').checked = this.settings.soundEnabled;
+                document.getElementById('music-enabled').checked = this.settings.musicEnabled;
+                document.getElementById('animations-enabled').checked = this.settings.animationsEnabled;
+                
+                // Add event listener for speed slider
+                document.getElementById('game-speed').addEventListener('input', (e) => {
+                    document.getElementById('speed-value').textContent = e.target.value + ' мс';
+                });
+            }
+            
+            hideSettings() {
+                document.getElementById('settings-screen').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            }
+            
+            applySettings() {
+                this.settings.difficulty = document.getElementById('difficulty').value;
+                this.settings.gameSpeed = parseInt(document.getElementById('game-speed').value);
+                this.settings.soundEnabled = document.getElementById('sound-enabled').checked;
+                this.settings.musicEnabled = document.getElementById('music-enabled').checked;
+                this.settings.animationsEnabled = document.getElementById('animations-enabled').checked;
+                
+                this.saveSettings();
+                
+                // Apply game speed
+                this.updateInterval = this.settings.gameSpeed;
+                
+                // Apply difficulty
+                this.applyDifficulty();
+                
+                // Handle music
+                if (this.settings.musicEnabled) {
+                    this.playBackgroundMusic();
+                } else {
+                    this.stopBackgroundMusic();
+                }
+                
+                // Play sound if enabled
+                this.playSound('start');
+                
+                alert('Настройки сохранены!');
+            }
+            
+            applyDifficulty() {
+                // Adjust ghost speeds based on difficulty
+                switch(this.settings.difficulty) {
+                    case 'easy':
+                        this.ghosts[0].speed = 0.6;
+                        this.ghosts[1].speed = 0.5;
+                        this.ghosts[2].speed = 0.7;
+                        this.ghosts[3].speed = 0.4;
+                        break;
+                    case 'normal':
+                        this.ghosts[0].speed = 0.8;
+                        this.ghosts[1].speed = 0.7;
+                        this.ghosts[2].speed = 0.9;
+                        this.ghosts[3].speed = 0.6;
+                        break;
+                    case 'hard':
+                        this.ghosts[0].speed = 1.0;
+                        this.ghosts[1].speed = 0.9;
+                        this.ghosts[2].speed = 1.1;
+                        this.ghosts[3].speed = 0.8;
+                        break;
+                }
+            }
+
+            // Sound Functions
+            initSounds() {
+                // Create audio context
+                this.audioContext = null;
+                this.sounds = {};
+                this.backgroundMusic = null;
+                this.musicVolume = 0.3;
+                
+                // Try to create audio context (may require user interaction)
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Web Audio API is not supported in this browser');
+                }
+                
+                // Pre-create sound buffers
+                this.createSounds();
+            }
+            
+            createSounds() {
+                if (!this.audioContext) return;
+                
+                // Create different sound effects
+                this.sounds = {
+                    eat: this.createTone(440, 0.1), // A note for eating
+                    eatPower: this.createTone(523.25, 0.3), // C note for power pellets
+                    ghost: this.createTone(220, 0.5), // A lower note for ghost collisions
+                    win: this.createMelody([523.25, 659.25, 783.99], [0.2, 0.2, 0.4]), // Win melody
+                    lose: this.createTone(110, 1.0), // Low note for losing
+                    start: this.createMelody([261.63, 329.63, 392.00], [0.1, 0.1, 0.3]) // Start melody
+                };
+            }
+            
+            createTone(frequency, duration) {
+                if (!this.audioContext) return null;
+                
+                return () => {
+                    // Access settings through the game instance
+                    if (!this.settings.soundEnabled) return;
+                    
+                    try {
+                        const oscillator = this.audioContext.createOscillator();
+                        const gainNode = this.audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(this.audioContext.destination);
+                        
+                        oscillator.type = 'sine';
+                        oscillator.frequency.value = frequency;
+                        
+                        gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                        
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + duration);
+                    } catch (e) {
+                        console.warn('Failed to play sound:', e);
+                    }
+                };
+            }
+            
+            createMelody(frequencies, durations) {
+                if (!this.audioContext) return null;
+                
+                return () => {
+                    // Access settings through the game instance
+                    if (!this.settings.soundEnabled) return;
+                    
+                    try {
+                        let timeOffset = 0;
+                        frequencies.forEach((freq, index) => {
+                            const oscillator = this.audioContext.createOscillator();
+                            const gainNode = this.audioContext.createGain();
+                            
+                            oscillator.connect(gainNode);
+                            gainNode.connect(this.audioContext.destination);
+                            
+                            oscillator.type = 'sine';
+                            oscillator.frequency.value = freq;
+                            
+                            const duration = durations[index] || 0.2;
+                            
+                            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime + timeOffset);
+                            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + timeOffset + duration);
+                            
+                            oscillator.start(this.audioContext.currentTime + timeOffset);
+                            oscillator.stop(this.audioContext.currentTime + timeOffset + duration);
+                            
+                            timeOffset += duration;
+                        });
+                    } catch (e) {
+                        console.warn('Failed to play melody:', e);
+                    }
+                };
+            }
+            
+            // Background Music Functions
+            playBackgroundMusic() {
+                // If music is already playing, don't start again
+                if (this.backgroundMusic && this.backgroundMusic.isPlaying) {
+                    return;
+                }
+                
+                // Create new PacmanMusic instance
+                this.backgroundMusic = new PacmanMusic();
+                if (this.backgroundMusic.init()) {
+                    this.backgroundMusic.playTheme();
+                } else {
+                    console.warn('Failed to initialize music');
+                }
+            }
+            
+            stopBackgroundMusic() {
+                if (this.backgroundMusic) {
+                    this.backgroundMusic.stop();
+                    this.backgroundMusic = null;
+                }
+            }
+            
+            pauseBackgroundMusic() {
+                if (this.backgroundMusic) {
+                    this.backgroundMusic.stop();
+                }
+            }
+            
+            resumeBackgroundMusic() {
+                if (this.backgroundMusic && this.settings.musicEnabled) {
+                    this.backgroundMusic.playTheme();
+                }
+            }
+            
+            playSound(soundName) {
+                // Initialize audio context on first user interaction if needed
+                if (!this.audioContext && window.AudioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.createSounds();
+                }
+                
+                if (this.settings.soundEnabled && this.sounds[soundName]) {
+                    this.sounds[soundName]();
+                    // Add visual feedback when sound is played
+                    this.visualFeedback(soundName);
+                }
+            }
+            
+            visualFeedback(soundName) {
+                // Create a visual effect based on the sound played
+                if (!this.settings.animationsEnabled) return;
+                
+                // Create a temporary visual effect
+                switch(soundName) {
+                    case 'eat':
+                        // Flash effect for eating
+                        this.createFlashEffect('rgba(255, 255, 255, 0.3)', 50);
+                        break;
+                    case 'eatPower':
+                        // Brighter flash for power pellets
+                        this.createFlashEffect('rgba(255, 215, 0, 0.5)', 100);
+                        break;
+                    case 'ghost':
+                        // Red flash for ghost collision with shake effect
+                        this.createFlashEffect('rgba(255, 0, 0, 0.5)', 200);
+                        this.shakeScreen();
+                        break;
+                    case 'win':
+                        // Celebration effect for level completion
+                        this.createCelebrationEffect();
+                        break;
+                    case 'lose':
+                        // Dark flash for game over
+                        this.createFlashEffect('rgba(0, 0, 0, 0.7)', 500);
+                        break;
+                    case 'start':
+                        // Subtle flash for start
+                        this.createFlashEffect('rgba(0, 255, 255, 0.2)', 100);
+                        break;
+                }
+            }
+            
+            createFlashEffect(color, duration) {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                setTimeout(() => {
+                    if (this.ctx) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        this.draw();
+                    }
+                }, duration);
+            }
+            
+            shakeScreen() {
+                const canvas = this.canvas;
+                const originalPosition = { x: canvas.style.marginLeft || '0px', y: canvas.style.marginTop || '0px' };
+                
+                // Shake animation
+                let shakes = 0;
+                const maxShakes = 5;
+                const shakeAmount = 5;
+                
+                const shake = () => {
+                    if (shakes < maxShakes) {
+                        const offsetX = (Math.random() - 0.5) * shakeAmount * 2;
+                        const offsetY = (Math.random() - 0.5) * shakeAmount * 2;
+                        
+                        canvas.style.marginLeft = offsetX + 'px';
+                        canvas.style.marginTop = offsetY + 'px';
+                        
+                        shakes++;
+                        setTimeout(shake, 50);
+                    } else {
+                        canvas.style.marginLeft = originalPosition.x;
+                        canvas.style.marginTop = originalPosition.y;
+                    }
+                };
+                
+                shake();
+            }
+            
+            createCelebrationEffect() {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                
+                // Create confetti-like effect
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        if (!this.ctx) return;
+                        
+                        const x = Math.random() * canvas.width;
+                        const y = Math.random() * canvas.height;
+                        const size = Math.random() * 5 + 2;
+                        const colors = ['yellow', 'red', 'blue', 'green', 'pink', 'cyan'];
+                        const color = colors[Math.floor(Math.random() * colors.length)];
+                        
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Fade out
+                        setTimeout(() => {
+                            if (this.ctx) {
+                                ctx.clearRect(x - size - 1, y - size - 1, size * 2 + 2, size * 2 + 2);
+                                this.draw();
+                            }
+                        }, 300);
+                    }, i * 50);
+                }
+            }
+        }
+        
+        // Инициализация игры
+        window.addEventListener('DOMContentLoaded', () => {
+            const game = new PacmanGame();
+            window.pacmanGame = game; // Для отладки
+            
+            // Initially show menu
+            game.showMenu();
+            
+            // Menu event listeners
+            document.getElementById('play-btn').addEventListener('click', () => {
+                game.playSound('start'); // Play sound for button click
+                game.hideMenu();
+                game.start();
+            });
+            
+            document.getElementById('settings-btn').addEventListener('click', () => {
+                game.playSound('start'); // Play sound for button click
+                game.showSettings();
+            });
+            
+            document.getElementById('highscores-btn').addEventListener('click', () => {
+                game.playSound('start'); // Play sound for button click
+                game.showHighScores();
+            });
+            
+            document.getElementById('about-btn').addEventListener('click', () => {
+                game.playSound('start'); // Play sound for button click
+                alert('Информация об игре будет добавлена в следующей версии');
+            });
+            
+            // High scores event listener
+            document.getElementById('back-from-scores-btn').addEventListener('click', () => {
+                game.playSound('start'); // Play sound for button click
+                game.hideHighScores();
+            });
+            
+            // Settings event listeners
+            document.getElementById('back-from-settings-btn').addEventListener('click', () => {
+                game.playSound('start'); // Play sound for button click
+                game.hideSettings();
+            });
+            
+            document.getElementById('save-settings-btn').addEventListener('click', () => {
+                game.playSound('start'); // Play sound for button click
+                game.applySettings();
+            });
+        });
+    </script>
+</body>
+</html>
