@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacman - Полная завершенная версия</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #121212, #1a1a2e);
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-attachment: fixed;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #FFD700;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        #game-canvas {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 440px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-size: 1.2rem;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #bbb;
+        }
+
+        .info-value {
+            font-weight: bold;
+            color: #FFD700;
+            font-size: 1.4rem;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 440px;
+            text-align: center;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .instructions p {
+            margin: 5px 0;
+            color: #bbb;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #2c3e50;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid #3498db;
+        }
+
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            animation: fadeIn 0.5s;
+        }
+        
+        /* Menu Styles */
+        .menu-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            z-index: 200;
+            border: 2px solid #FFD700;
+            animation: fadeIn 0.5s;
+        }
+        
+        .menu-title {
+            font-size: 2.5rem;
+            color: #FFD700;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+        
+        .menu-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .menu-btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .menu-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Level Selection Styles */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .level-btn {
+            padding: 15px 5px;
+            font-size: 1rem;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .level-btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .level-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .level-btn.locked {
+            background: linear-gradient(145deg, #3e3e3e, #2a2a2a);
+            border-color: #777;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+        
+        .level-btn.locked:hover {
+            background: linear-gradient(145deg, #3e3e3e, #2a2a2a);
+            transform: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* High Scores Styles */
+        #scores-list {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .score-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(44, 62, 80, 0.7);
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .score-rank {
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .score-name {
+            flex-grow: 1;
+            text-align: center;
+        }
+        
+        .score-value {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        /* Settings Styles */
+        .setting-item {
+            margin: 15px 0;
+        }
+        
+        .setting-select {
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+        }
+        
+        .setting-select:focus {
+            outline: 2px solid #3498db;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .menu-title {
+                font-size: 2rem;
+            }
+            
+            .btn, .menu-btn {
+                padding: 12px 16px;
+                font-size: 1rem;
+            }
+            
+            #game-canvas {
+                width: 95vw;
+                height: auto;
+            }
+            
+            .level-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        /* Particle effect styles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        /* Combo display */
+        #combo-display {
+            position: absolute;
+            color: #FF00FF;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px #FF00FF;
+            z-index: 50;
+            animation: comboPulse 0.5s infinite alternate;
+        }
+        
+        @keyframes comboPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
+        
+        /* Power mode effect */
+        .power-mode {
+            animation: powerGlow 0.5s infinite alternate;
+        }
+        
+        @keyframes powerGlow {
+            from { box-shadow: 0 0 5px #0000FF; }
+            to { box-shadow: 0 0 20px #0000FF, 0 0 30px #0000FF; }
+        }
+        
+        /* Achievement notification styles */
+        .achievement-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #8A2BE2, #4B0082);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            animation: slideIn 0.5s, fadeOut 0.5s 4.5s forwards;
+            border: 2px solid #FFD700;
+            max-width: 300px;
+        }
+        
+        .achievement-content h3 {
+            margin: 0 0 5px 0;
+            color: #FFD700;
+            font-size: 1.2em;
+        }
+        
+        .achievement-content h4 {
+            margin: 0 0 5px 0;
+            font-size: 1.1em;
+        }
+        
+        .achievement-content p {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .achievement-content span {
+            font-weight: bold;
+            color: #00FF00;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Menu Screen -->
+    <div id="main-menu" class="menu-screen">
+        <h1 class="menu-title">PACMAN</h1>
+        <div class="menu-buttons">
+            <button id="play-btn" class="menu-btn">Играть</button>
+            <button id="level-select-btn" class="menu-btn">Выбор уровня</button>
+            <button id="settings-btn" class="menu-btn">Настройки</button>
+            <button id="highscores-btn" class="menu-btn">Рекорды</button>
+            <button id="about-btn" class="menu-btn">Об игре</button>
+        </div>
+    </div>
+    
+    <!-- Level Selection Screen -->
+    <div id="level-select-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Выбор уровня</h1>
+        <div class="level-grid" id="level-grid">
+            <!-- Level buttons will be generated here -->
+        </div>
+        <button id="back-from-levels-btn" class="menu-btn" style="margin-top: 20px;">Назад</button>
+    </div>
+    
+    <!-- High Scores Screen -->
+    <div id="highscores-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Рекорды</h1>
+        <div id="scores-list" style="width: 100%; max-width: 400px;">
+            <!-- Scores will be populated here -->
+        </div>
+        <button id="back-from-scores-btn" class="menu-btn" style="margin-top: 20px;">Назад</button>
+    </div>
+    
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Настройки</h1>
+        <div class="settings-container" style="width: 100%; max-width: 400px;">
+            <div class="setting-item" style="margin: 15px 0;">
+                <label for="difficulty" style="display: block; margin-bottom: 5px;">Сложность:</label>
+                <select id="difficulty" class="setting-select" style="width: 100%; padding: 10px; background: #2c3e50; color: white; border: none; border-radius: 5px;">
+                    <option value="easy">Легко</option>
+                    <option value="normal" selected>Нормально</option>
+                    <option value="hard">Сложно</option>
+                    <option value="expert">Эксперт</option>
+                </select>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label for="game-speed" style="display: block; margin-bottom: 5px;">Скорость игры:</label>
+                <input type="range" id="game-speed" min="50" max="300" value="150" style="width: 100%;">
+                <span id="speed-value" style="display: block; text-align: center; margin-top: 5px;">150 мс</span>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="sound-enabled" checked> Звук
+                </label>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="music-enabled" checked> Музыка
+                </label>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="animations-enabled" checked> Анимации
+                </label>
+            </div>
+        </div>
+        <button id="save-settings-btn" class="menu-btn" style="margin-top: 20px;">Сохранить</button>
+        <button id="back-from-settings-btn" class="menu-btn" style="margin-top: 10px;">Назад</button>
+    </div>
+    
+    <!-- Game Screen -->
+    <div id="game-screen" class="game-container hidden">
+        <div class="header">
+            <h1>Pacman - Полная завершенная версия</h1>
+            <div class="controls">
+                <button id="start-btn" class="btn">Начать игру</button>
+                <button id="pause-btn" class="btn">Пауза</button>
+                <button id="reset-btn" class="btn">Сброс</button>
+                <button id="menu-btn" class="btn">Меню</button>
+            </div>
+        </div>
+        
+        <canvas id="game-canvas" width="440" height="520"></canvas>
+        
+        <div class="status-bar">
+            <div class="info-item">
+                <span class="info-label">Очки</span>
+                <span id="score" class="info-value">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Уровень</span>
+                <span id="level" class="info-value">1</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Жизни</span>
+                <span id="lives" class="info-value">❤️❤️❤️</span>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <p>Управление: <span class="key">↑</span> <span class="key">↓</span> <span class="key">←</span> <span class="key">→</span> или <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span></p>
+            <p>Цель: Соберите всю еду и избегайте привидений!</p>
+        </div>
+    </div>
+    
+    <div id="message" class="message">
+        <h2 id="message-title">Игра окончена</h2>
+        <p id="message-text">Ваш счет: 0</p>
+        <button id="message-btn" class="btn">OK</button>
+    </div>
+
+    <script>
+        // Генератор музыки Pacman
+        class PacmanMusic {
+            constructor() {
+                this.audioContext = null;
+                this.isPlaying = false;
+                this.volume = 0.3;
+            }
+            
+            init() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    return true;
+                } catch (e) {
+                    console.warn('Web Audio API не поддерживается в этом браузере');
+                    return false;
+                }
+            }
+            
+            // Ноты классической темы Pacman
+            getThemeNotes() {
+                return [
+                    // Первая фраза
+                    { frequency: 261.63, duration: 0.2 }, // До 4 октавы
+                    { frequency: 329.63, duration: 0.2 }, // Ми 4 октавы
+                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
+                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
+                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
+                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
+                    
+                    // Вторая фраза
+                    { frequency: 261.63, duration: 0.2 }, // До 4 октавы
+                    { frequency: 329.63, duration: 0.2 }, // Ми 4 октавы
+                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
+                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
+                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
+                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
+                    
+                    // Третья фраза
+                    { frequency: 659.25, duration: 0.2 }, // Ми 5 октавы
+                    { frequency: 587.33, duration: 0.2 }, // Ре 5 октавы
+                    { frequency: 523.25, duration: 0.2 }, // До 5 октавы
+                    { frequency: 392.00, duration: 0.4 }, // Соль 4 октавы
+                    { frequency: 440.00, duration: 0.2 }, // Ля 4 октавы
+                    { frequency: 392.00, duration: 0.4 }, // Соль 4 октавы
+                ];
+            }
+            
+            playNote(frequency, duration, startTime) {
+                if (!this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.type = 'square';
+                oscillator.frequency.value = frequency;
+                
+                // Установить огибающую громкости
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.setValueAtTime(this.volume, startTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                
+                oscillator.start(startTime);
+                oscillator.stop(startTime + duration);
+                
+                return startTime + duration;
+            }
+            
+            playTheme() {
+                if (!this.audioContext || this.isPlaying) return;
+                
+                this.isPlaying = true;
+                const notes = this.getThemeNotes();
+                let startTime = this.audioContext.currentTime;
+                
+                // Воспроизвести каждую ноту по очереди
+                notes.forEach((note, index) => {
+                    startTime = this.playNote(note.frequency, note.duration, startTime + (index * 0.01));
+                });
+                
+                // Запланировать повтор
+                setTimeout(() => {
+                    if (this.isPlaying) {
+                        this.playTheme();
+                    }
+                }, notes.length * 200);
+            }
+            
+            stop() {
+                this.isPlaying = false;
+            }
+        }
+
+        class PacmanGame {
+            constructor() {
+                // Инициализация холста
+                this.canvas = document.getElementById('game-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.cellSize = 22;
+                
+                // Игровые параметры
+                this.isRunning = false;
+                this.animationFrameId = null;
+                this.lastTimestamp = 0;
+                this.updateInterval = 150; // Интервал обновления в миллисекундах (замедляет игру)
+                this.lastUpdate = 0;
+                
+                // Игровые объекты
+                this.pacman = {
+                    x: 10,
+                    y: 15,
+                    direction: 'right',
+                    nextDirection: null,
+                    mouthAngle: 0,
+                    mouthOpening: 0.1,
+                    powerMode: false,
+                    powerModeTimer: 0
+                };
+                
+                this.ghosts = [
+                    { x: 10, y: 8, direction: 'left', color: 'red', speed: 0.8, name: 'Blinky' },
+                    { x: 9, y: 9, direction: 'up', color: 'pink', speed: 0.7, name: 'Pinky' },
+                    { x: 11, y: 9, direction: 'down', color: 'cyan', speed: 0.9, name: 'Inky' },
+                    { x: 10, y: 10, direction: 'right', color: 'orange', speed: 0.6, name: 'Clyde' }
+                ];
+                
+                // Игровое состояние
+                this.score = 0;
+                this.level = 1;
+                this.lives = 3;
+                this.selectedLevel = 1; // Default level
+                
+                // Система бонусов
+                this.consecutiveEats = 0;  // Система последовательного поедания
+                this.lastEatTime = 0;      // Время последнего поедания
+                this.comboBonus = 0;       // Бонус за комбо
+                this.comboDisplay = null;  // Отображение комбо
+                
+                // Частицы
+                this.particles = [];  // Частицы
+                
+                // Карта уровня (1 - путь, 0 - стена, 2 - еда, 3 - супер-еда)
+                this.map = [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,0
