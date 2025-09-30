@@ -1,0 +1,23 @@
+{
+  "name": "pacman-game",
+  "version": "1.0.0",
+  "description": "An enhanced Pacman game implementation with modern JavaScript features",
+  "main": "main.js",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["pacman", "game", "javascript", "canvas"],
+  "author": "Maxim Ivanov",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions"
+  ]
+}

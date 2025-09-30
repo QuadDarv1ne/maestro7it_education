@@ -1,5 +1,11 @@
 // Импортируем необходимые классы
-// В браузерной среде они должны быть доступны через window
+import { Pacman } from './Pacman.js';
+import { Ghost } from './Ghost.js';
+import { GameMap } from './GameMap.js';
+import { SoundManager } from './SoundManager.js';
+import { ParticleManager } from './ParticleManager.js';
+import { FruitManager } from './FruitManager.js';
+import { AchievementManager } from './AchievementManager.js';
 
 class PacmanGame {
     constructor() {
@@ -199,7 +205,7 @@ class PacmanGame {
             this.map[this.pacman.y][this.pacman.x] = 1;
             this.foodCount++;
             this.score += 10;
-            this.playSound('eat');
+            this.soundManager.playSound('eat');
             this.createCombo();
             // Создаем визуальный эффект при сборе обычной еды
             this.createFoodParticles(this.pacman.x, this.pacman.y, false);
@@ -214,7 +220,7 @@ class PacmanGame {
             this.pacman.powerMode = true;
             this.pacman.powerModeTimer = 10000; // 10 секунд
             this.canvas.classList.add('power-mode');
-            this.playSound('power');
+            this.soundManager.playSound('power');
             this.createCombo();
             // Создаем визуальный эффект при сборе супер-еды
             this.createFoodParticles(this.pacman.x, this.pacman.y, true);
@@ -236,7 +242,7 @@ class PacmanGame {
                     // Пакман съедает привидение
                     this.score += 200;
                     this.achievementManager.incrementGhostsEaten(); // Track for achievements
-                    this.playSound('ghost');
+                    this.soundManager.playSound('ghost');
                     this.createParticles(ghost.x, ghost.y, ghost.color);
                     // Создаем специальный эффект при поедании привидения
                     this.createGhostEatenEffect(ghost.x, ghost.y, ghost.color);
@@ -251,7 +257,7 @@ class PacmanGame {
                     // Привидение съедает Пакмана
                     this.lives--;
                     this.updateLives();
-                    this.playSound('death');
+                    this.soundManager.playSound('death');
                     this.createParticles(this.pacman.x, this.pacman.y, 'yellow');
                     // Создаем специальный эффект при потере жизни
                     this.createLifeLostEffect(this.pacman.x, this.pacman.y);
@@ -307,7 +313,7 @@ class PacmanGame {
         this.showMessage(`Игра окончена!<br>Ваш счет: ${this.score}<br>Достигнутый уровень: ${this.level}`);
         
         // Воспроизводим звук окончания игры
-        this.playSound('gameover');
+        this.soundManager.playSound('gameover');
     }
     
     // Метод для установки обработчиков событий
@@ -555,10 +561,11 @@ class PacmanGame {
             }
         );
         
+        // Only add points if fruit was collected (points > 0)
+        // Sound is already played in the callback, so we don't play it again here
         if (points > 0) {
             this.score += points;
             this.achievementManager.incrementFruitsCollected();
-            this.soundManager.playSound('fruit');
             this.updateScore();
         }
     }
@@ -576,31 +583,84 @@ class PacmanGame {
     
     // Метод для обновления счета
     updateScore() {
-        document.getElementById('score').textContent = this.score;
+        try {
+            const scoreElement = document.getElementById('score');
+            if (scoreElement) {
+                scoreElement.textContent = this.score;
+            } else {
+                console.warn('Score element not found in DOM');
+            }
+        } catch (error) {
+            console.error('Error updating score display:', error);
+        }
     }
     
     // Метод для обновления уровня
     updateLevel() {
-        document.getElementById('level').textContent = this.level;
+        try {
+            const levelElement = document.getElementById('level');
+            if (levelElement) {
+                levelElement.textContent = this.level;
+            } else {
+                console.warn('Level element not found in DOM');
+            }
+        } catch (error) {
+            console.error('Error updating level display:', error);
+        }
     }
     
     // Метод для обновления жизней
     updateLives() {
-        document.getElementById('lives').innerHTML = '❤️'.repeat(this.lives);
+        try {
+            const livesElement = document.getElementById('lives');
+            if (livesElement) {
+                livesElement.innerHTML = '❤️'.repeat(this.lives);
+            } else {
+                console.warn('Lives element not found in DOM');
+            }
+        } catch (error) {
+            console.error('Error updating lives display:', error);
+        }
     }
     
     // Метод для отображения сообщений
     showMessage(text) {
-        document.getElementById('message-title').textContent = 'Игра окончена';
-        document.getElementById('message-text').innerHTML = text;
-        document.getElementById('message').style.display = 'block';
+        try {
+            const titleElement = document.getElementById('message-title');
+            const textElement = document.getElementById('message-text');
+            const messageElement = document.getElementById('message');
+            
+            if (titleElement && textElement && messageElement) {
+                titleElement.textContent = 'Игра окончена';
+                textElement.innerHTML = text;
+                messageElement.style.display = 'block';
+            } else {
+                console.warn('Message elements not found in DOM');
+                // Fallback to alert
+                alert(text);
+            }
+        } catch (error) {
+            console.error('Error showing message:', error);
+            // Fallback to alert
+            alert(text);
+        }
     }
     
     // Система рекордов
     loadHighScores() {
         try {
             const scores = localStorage.getItem('pacmanHighScores');
-            return scores ? JSON.parse(scores) : [];
+            if (scores) {
+                const parsed = JSON.parse(scores);
+                // Validate that it's an array
+                if (Array.isArray(parsed)) {
+                    return parsed;
+                } else {
+                    console.warn('Invalid high scores format in localStorage');
+                    return [];
+                }
+            }
+            return [];
         } catch (e) {
             console.error('Ошибка загрузки рекордов:', e);
             return [];
@@ -609,8 +669,24 @@ class PacmanGame {
     
     saveHighScore() {
         try {
+            // Validate score before saving
+            if (typeof this.score !== 'number' || this.score < 0) {
+                console.warn('Invalid score value:', this.score);
+                return;
+            }
+            
             const name = prompt('Поздравляем! Вы набрали ' + this.score + ' очков. Введите ваше имя:', 'Игрок') || 'Аноним';
-            const newScore = { name, score: this.score, date: new Date().toLocaleDateString() };
+            // Validate name
+            if (typeof name !== 'string' || name.trim().length === 0) {
+                console.warn('Invalid player name');
+                return;
+            }
+            
+            const newScore = { 
+                name: name.trim(), 
+                score: this.score, 
+                date: new Date().toLocaleDateString() 
+            };
             
             this.highScores.push(newScore);
             this.highScores.sort((a, b) => b.score - a.score);
@@ -624,69 +700,134 @@ class PacmanGame {
     }
     
     showHighScores() {
-        document.getElementById('main-menu').classList.add('hidden');
-        document.getElementById('highscores-screen').classList.remove('hidden');
-        
-        const scoresList = document.getElementById('scores-list');
-        scoresList.innerHTML = '';
-        
-        if (this.highScores.length === 0) {
-            scoresList.innerHTML = '<div class="score-entry"><span>Нет рекордов</span></div>';
-            return;
+        try {
+            const menuElement = document.getElementById('main-menu');
+            const scoresScreenElement = document.getElementById('highscores-screen');
+            const scoresListElement = document.getElementById('scores-list');
+            
+            if (!menuElement || !scoresScreenElement || !scoresListElement) {
+                console.warn('High scores elements not found in DOM');
+                return;
+            }
+            
+            menuElement.classList.add('hidden');
+            scoresScreenElement.classList.remove('hidden');
+            
+            scoresListElement.innerHTML = '';
+            
+            if (this.highScores.length === 0) {
+                scoresListElement.innerHTML = '<div class="score-entry"><span>Нет рекордов</span></div>';
+                return;
+            }
+            
+            this.highScores.forEach((score, index) => {
+                const entry = document.createElement('div');
+                entry.className = 'score-entry';
+                entry.innerHTML = `
+                    <span class="score-rank">#${index + 1}</span>
+                    <span class="score-name">${this.escapeHtml(score.name)}</span>
+                    <span class="score-value">${score.score}</span>
+                `;
+                scoresListElement.appendChild(entry);
+            });
+        } catch (error) {
+            console.error('Error showing high scores:', error);
         }
-        
-        this.highScores.forEach((score, index) => {
-            const entry = document.createElement('div');
-            entry.className = 'score-entry';
-            entry.innerHTML = `
-                <span class="score-rank">#${index + 1}</span>
-                <span class="score-name">${score.name}</span>
-                <span class="score-value">${score.score}</span>
-            `;
-            scoresList.appendChild(entry);
-        });
+    }
+    
+    // Utility method to escape HTML to prevent XSS
+    escapeHtml(text) {
+        if (typeof text !== 'string') return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
     }
     
     hideHighScores() {
-        document.getElementById('highscores-screen').classList.add('hidden');
-        document.getElementById('main-menu').classList.remove('hidden');
+        try {
+            const scoresScreenElement = document.getElementById('highscores-screen');
+            const menuElement = document.getElementById('main-menu');
+            
+            if (!scoresScreenElement || !menuElement) {
+                console.warn('High scores elements not found in DOM');
+                return;
+            }
+            
+            scoresScreenElement.classList.add('hidden');
+            menuElement.classList.remove('hidden');
+        } catch (error) {
+            console.error('Error hiding high scores:', error);
+        }
     }
     
     // Система настроек
     loadSettings() {
         try {
             const settings = localStorage.getItem('pacmanSettings');
-            return settings ? JSON.parse(settings) : {
-                difficulty: 'normal',
-                gameSpeed: 150,
-                soundEnabled: true,
-                musicEnabled: true,
-                animationsEnabled: true
-            };
+            if (settings) {
+                const parsed = JSON.parse(settings);
+                // Validate settings object
+                if (typeof parsed === 'object' && parsed !== null) {
+                    return {
+                        difficulty: parsed.difficulty || 'normal',
+                        gameSpeed: parsed.gameSpeed || 150,
+                        soundEnabled: parsed.soundEnabled !== undefined ? parsed.soundEnabled : true,
+                        musicEnabled: parsed.musicEnabled !== undefined ? parsed.musicEnabled : true,
+                        animationsEnabled: parsed.animationsEnabled !== undefined ? parsed.animationsEnabled : true
+                    };
+                } else {
+                    console.warn('Invalid settings format in localStorage');
+                }
+            }
         } catch (e) {
             console.error('Ошибка загрузки настроек:', e);
-            return {
-                difficulty: 'normal',
-                gameSpeed: 150,
-                soundEnabled: true,
-                musicEnabled: true,
-                animationsEnabled: true
-            };
         }
+        
+        // Return default settings if anything fails
+        return {
+            difficulty: 'normal',
+            gameSpeed: 150,
+            soundEnabled: true,
+            musicEnabled: true,
+            animationsEnabled: true
+        };
     }
     
     applySettings() {
-        const settings = {
-            difficulty: document.getElementById('difficulty').value,
-            gameSpeed: parseInt(document.getElementById('game-speed').value),
-            soundEnabled: document.getElementById('sound-enabled').checked,
-            musicEnabled: document.getElementById('music-enabled').checked,
-            animationsEnabled: document.getElementById('animations-enabled').checked
-        };
-        
-        this.settings = settings;
-        
         try {
+            const difficultyElement = document.getElementById('difficulty');
+            const gameSpeedElement = document.getElementById('game-speed');
+            const soundEnabledElement = document.getElementById('sound-enabled');
+            const musicEnabledElement = document.getElementById('music-enabled');
+            const animationsEnabledElement = document.getElementById('animations-enabled');
+            
+            if (!difficultyElement || !gameSpeedElement || !soundEnabledElement || 
+                !musicEnabledElement || !animationsEnabledElement) {
+                console.warn('Settings elements not found in DOM');
+                return;
+            }
+            
+            const settings = {
+                difficulty: difficultyElement.value,
+                gameSpeed: parseInt(gameSpeedElement.value),
+                soundEnabled: soundEnabledElement.checked,
+                musicEnabled: musicEnabledElement.checked,
+                animationsEnabled: animationsEnabledElement.checked
+            };
+            
+            // Validate settings values
+            if (isNaN(settings.gameSpeed) || settings.gameSpeed < 50 || settings.gameSpeed > 300) {
+                console.warn('Invalid game speed value:', settings.gameSpeed);
+                settings.gameSpeed = 150; // Default value
+            }
+            
+            this.settings = settings;
+            
             localStorage.setItem('pacmanSettings', JSON.stringify(settings));
             console.log('Настройки сохранены:', settings);
             

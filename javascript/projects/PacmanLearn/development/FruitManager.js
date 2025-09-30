@@ -97,12 +97,4 @@ class FruitManager {
 }
 
 // Экспортируем класс для использования в других файлах
-// В браузерной среде добавляем в глобальную область видимости
-if (typeof window !== 'undefined') {
-    window.FruitManager = FruitManager;
-}
-
-// Для Node.js или модульных систем
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = FruitManager;
-}
+export { FruitManager };

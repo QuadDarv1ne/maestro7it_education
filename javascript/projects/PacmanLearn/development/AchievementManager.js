@@ -217,12 +217,4 @@ class AchievementManager {
 }
 
 // Экспортируем класс для использования в других файлах
-// В браузерной среде добавляем в глобальную область видимости
-if (typeof window !== 'undefined') {
-    window.AchievementManager = AchievementManager;
-}
-
-// Для Node.js или модульных систем
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = AchievementManager;
-}
+export { AchievementManager };

@@ -9,6 +9,8 @@ class Ghost {
         this.name = name;
         this.speed = speed;
         this.defaultSpeed = speed;
+        // Cache for possible moves to reduce calculations
+        this.possibleMovesCache = [];
     }
 
     // Метод для перемещения призрака
@@ -60,11 +62,12 @@ class Ghost {
                 break;
         }
         
-        // Calculate possible moves
-        const possibleMoves = [];
+        // Calculate possible moves using cached array to reduce garbage collection
+        this.possibleMovesCache.length = 0; // Clear array without creating new one
         const directions = ['up', 'down', 'left', 'right'];
         
-        directions.forEach(dir => {
+        for (let i = 0; i < directions.length; i++) {
+            const dir = directions[i];
             const nextPos = this.getNextPosition(this.x, this.y, dir, map, cellSize);
             if (this.isValidMove(nextPos.x, nextPos.y, map)) {
                 // Calculate distance to target for this move
@@ -72,26 +75,26 @@ class Ghost {
                 const moveDy = nextPos.y - targetY;
                 const moveDistance = Math.sqrt(moveDx * moveDx + moveDy * moveDy);
                 
-                possibleMoves.push({
+                this.possibleMovesCache.push({
                     direction: dir,
                     x: nextPos.x,
                     y: nextPos.y,
                     distance: moveDistance
                 });
             }
-        });
+        }
         
         // Sort moves by distance to target (closest first)
         // If in power mode, sort in reverse (farthest first)
         if (powerMode) {
-            possibleMoves.sort((a, b) => b.distance - a.distance);
+            this.possibleMovesCache.sort((a, b) => b.distance - a.distance);
         } else {
-            possibleMoves.sort((a, b) => a.distance - b.distance);
+            this.possibleMovesCache.sort((a, b) => a.distance - b.distance);
         }
         
         // Choose the best move
-        if (possibleMoves.length > 0) {
-            const bestMove = possibleMoves[0];
+        if (this.possibleMovesCache.length > 0) {
+            const bestMove = this.possibleMovesCache[0];
             this.x = bestMove.x;
             this.y = bestMove.y;
             this.direction = bestMove.direction;
@@ -158,12 +161,4 @@ class Ghost {
 }
 
 // Экспортируем класс для использования в других файлах
-// В браузерной среде добавляем в глобальную область видимости
-if (typeof window !== 'undefined') {
-    window.Ghost = Ghost;
-}
-
-// Для Node.js или модульных систем
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Ghost;
-}
+export { Ghost };

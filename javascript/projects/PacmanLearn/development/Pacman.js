@@ -103,12 +103,4 @@ class Pacman {
 }
 
 // Экспортируем класс для использования в других файлах
-// В браузерной среде добавляем в глобальную область видимости
-if (typeof window !== 'undefined') {
-    window.Pacman = Pacman;
-}
-
-// Для Node.js или модульных систем
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Pacman;
-}
+export { Pacman };

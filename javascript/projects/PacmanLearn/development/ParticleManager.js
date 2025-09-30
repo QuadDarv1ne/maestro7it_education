@@ -1,7 +1,31 @@
 class ParticleManager {
     constructor() {
         this.particles = [];
+        this.pool = [];
         this.maxParticles = 100; // Limit maximum particles for performance
+    }
+
+    // Get a particle from the pool or create a new one
+    getParticle() {
+        if (this.pool.length > 0) {
+            return this.pool.pop();
+        }
+        return {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            color: '#FFFFFF',
+            size: 1,
+            life: 30,
+            active: false
+        };
+    }
+
+    // Return a particle to the pool
+    releaseParticle(particle) {
+        particle.active = false;
+        this.pool.push(particle);
     }
 
     createParticles(x, y, color, count = 10) {
@@ -19,18 +43,19 @@ class ParticleManager {
         if (!settings.animationsEnabled) return;
 
         // Limit the number of particles to prevent performance issues
-        const particlesToAdd = Math.min(count, this.maxParticles - this.particles.length);
+        const particlesToAdd = Math.min(count, this.maxParticles - this.getActiveParticleCount());
         
         for (let i = 0; i < particlesToAdd; i++) {
-            this.particles.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 4,
-                vy: (Math.random() - 0.5) * 4,
-                color: color,
-                size: Math.random() * 3 + 1,
-                life: 30
-            });
+            const particle = this.getParticle();
+            particle.x = x;
+            particle.y = y;
+            particle.vx = (Math.random() - 0.5) * 4;
+            particle.vy = (Math.random() - 0.5) * 4;
+            particle.color = color;
+            particle.size = Math.random() * 3 + 1;
+            particle.life = 30;
+            particle.active = true;
+            this.particles.push(particle);
         }
     }
 
@@ -42,7 +67,9 @@ class ParticleManager {
             p.life--;
 
             if (p.life <= 0) {
+                // Remove from active particles and return to pool
                 this.particles.splice(i, 1);
+                this.releaseParticle(p);
             }
         }
     }
@@ -59,17 +86,18 @@ class ParticleManager {
     }
 
     clearParticles() {
-        this.particles = [];
+        // Return all particles to the pool
+        while (this.particles.length > 0) {
+            const particle = this.particles.pop();
+            this.releaseParticle(particle);
+        }
+    }
+
+    // Get count of active particles
+    getActiveParticleCount() {
+        return this.particles.length;
     }
 }
 
 // Экспортируем класс для использования в других файлах
-// В браузерной среде добавляем в глобальную область видимости
-if (typeof window !== 'undefined') {
-    window.ParticleManager = ParticleManager;
-}
-
-// Для Node.js или модульных систем
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ParticleManager;
-}
+export { ParticleManager };
