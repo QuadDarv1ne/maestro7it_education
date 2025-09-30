@@ -1,6 +1,10 @@
 '''
 326. Power of Three (Python3) by Dupley Maxim Igorevich
 https://leetcode.com/problems/power-of-three/description/?envType=daily-question&envId=2025-08-13
+
+Автор: Дуплей Максим Игоревич
+ORCID: https://orcid.org/0009-0007-7605-539X
+GitHub: https://github.com/QuadDarv1ne/
 '''
 
 class Solution:
