@@ -1,0 +1,7 @@
+
+python -m http.server 8000
+
+assets/music/korobeiniki_rearranged.ogg
+
+http://localhost:8000/tetris_optimized.html
+

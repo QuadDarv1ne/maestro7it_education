@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Tunneling Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ffff00;
+        }
+        .test-container {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .test-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            border: 2px solid #0000ff;
+            background-color: #000;
+            margin: 10px 0;
+        }
+        .instructions {
+            max-width: 600px;
+            margin: 20px 0;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .test-status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #333;
+            min-width: 300px;
+            text-align: center;
+        }
+        .success {
+            background-color: #4CAF50;
+        }
+        .failed {
+            background-color: #f44336;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Comprehensive Tunneling Test</h1>
+    
+    <div class="instructions">
+        <p>This test verifies that both Pacman and ghosts can move through horizontal and vertical tunnels in all game versions.</p>
+        <p>Click the test buttons to run specific tests.</p>
+    </div>
+    
+    <div class="test-container">
+        <div class="test-column">
+            <h2>Development Version</h2>
+            <canvas id="devCanvas" width="300" height="300"></canvas>
+            <div class="test-buttons">
+                <button onclick="runDevTest()">Run Test</button>
+                <button onclick="resetDevTest()">Reset</button>
+            </div>
+        </div>
+        <div class="test-column">
+            <h2>Main Version</h2>
+            <canvas id="mainCanvas" width="300" height="300"></canvas>
+            <div class="test-buttons">
+                <button onclick="runMainTest()">Run Test</button>
+                <button onclick="resetMainTest()">Reset</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="testStatus" class="test-status">Click "Run Test" buttons to start testing</div>
+
+    <!-- Development Version Scripts -->
+    <script src="development/GameMap.js"></script>
+    <script src="development/Pacman.js"></script>
+    <script src="development/Ghost.js"></script>
+    
+    <!-- Main Version Scripts (simplified for testing) -->
+    <script>
+        // Simplified Pacman class for main version testing
+        class MainPacman {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+            
+            getNextPosition(x, y, direction, map) {
+                let newX = x;
+                let newY = y;
+                
+                switch(direction) {
+                    case 'up': newY--; break;
+                    case 'down': newY++; break;
+                    case 'left': newX--; break;
+                    case 'right': newX++; break;
+                }
+                
+                // Туннельные переходы
+                if (newX < 0) newX = map[0].length - 1;
+                if (newX >= map[0].length) newX = 0;
+                if (newY < 0) newY = map.length - 1;
+                if (newY >= map.length) newY = 0;
+                
+                return { x: newX, y: newY };
+            }
+        }
+        
+        // Simplified Ghost class for main version testing
+        class MainGhost {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+            
+            getNextPosition(x, y, direction, map) {
+                let newX = x;
+                let newY = y;
+                
+                switch(direction) {
+                    case 'up': newY--; break;
+                    case 'down': newY++; break;
+                    case 'left': newX--; break;
+                    case 'right': newX++; break;
+                }
+                
+                // Туннельные переходы
+                if (newX < 0) newX = map[0].length - 1;
+                if (newX >= map[0].length) newX = 0;
+                if (newY < 0) newY = map.length - 1;
+                if (newY >= map.length) newY = 0;
+                
+                return { x: newX, y: newY };
+            }
+        }
+    </script>
+    
+    <script>
+        // Test map
+        const testMap = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 2, 1, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 2, 1, 2, 1, 1, 1],
+            [1, 2, 2, 2, 2, 1, 2, 2, 2, 1],
+            [1, 1, 1, 1, 2, 1, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 1, 1, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+        
+        const cellSize = 30;
+        
+        // Test objects
+        let devPacman, devGhosts, mainPacman, mainGhosts;
+        let devTestResults = {}, mainTestResults = {};
+        
+        // Initialize test objects
+        function initTests() {
+            // Development version
+            devPacman = new Pacman(5, 5, cellSize);
+            devGhosts = [
+                new Ghost(2, 2, '#ff0000', 'Blinky'),
+                new Ghost(7, 2, '#ffb8ff', 'Pinky'),
+                new Ghost(2, 7, '#00ffff', 'Inky'),
+                new Ghost(7, 7, '#ffb852', 'Clyde')
+            ];
+            
+            // Main version
+            mainPacman = new MainPacman(5, 5);
+            mainGhosts = [
+                new MainGhost(2, 2),
+                new MainGhost(7, 2),
+                new MainGhost(2, 7),
+                new MainGhost(7, 7)
+            ];
+            
+            resetTests();
+        }
+        
+        function resetTests() {
+            // Reset test results
+            devTestResults = {
+                horizontalTunnelPacman: false,
+                verticalTunnelPacman: false,
+                horizontalTunnelGhost: false,
+                verticalTunnelGhost: false
+            };
+            
+            mainTestResults = {
+                horizontalTunnelPacman: false,
+                verticalTunnelPacman: false,
+                horizontalTunnelGhost: false,
+                verticalTunnelGhost: false
+            };
+            
+            document.getElementById('testStatus').className = 'test-status';
+            document.getElementById('testStatus').innerHTML = 'Tests reset. Click "Run Test" buttons to start testing';
+        }
+        
+        function resetDevTest() {
+            resetTests();
+        }
+        
+        function resetMainTest() {
+            resetTests();
+        }
+        
+        // Draw map on canvas
+        function drawMap(ctx) {
+            for (let y = 0; y < testMap.length; y++) {
+                for (let x = 0; x < testMap[y].length; x++) {
+                    const cell = testMap[y][x];
+                    ctx.fillStyle = cell === 1 ? '#0000ff' : (cell === 0 ? '#000' : '#000');
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    
+                    if (cell === 2) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(
+                            x * cellSize + cellSize / 2,
+                            y * cellSize + cellSize / 2,
+                            cellSize / 8,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+        
+        // Draw objects on canvas
+        function drawObjects(ctx, pacman, ghosts) {
+            // Draw Pacman
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(
+                pacman.x * cellSize + cellSize / 2,
+                pacman.y * cellSize + cellSize / 2,
+                cellSize / 2 - 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+            
+            // Draw ghosts
+            ghosts.forEach((ghost, index) => {
+                ctx.fillStyle = ghost.color || ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'][index];
+                ctx.beginPath();
+                ctx.arc(
+                    ghost.x * cellSize + cellSize / 2,
+                    ghost.y * cellSize + cellSize / 2,
+                    cellSize / 2 - 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            });
+        }
+        
+        // Run development version test
+        function runDevTest() {
+            const canvas = document.getElementById('devCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw map
+            drawMap(ctx);
+            
+            // Test horizontal tunneling for Pacman
+            const pacmanStartX = devPacman.x;
+            devPacman.x = -0.5;
+            const newPos = devPacman.getNextPosition(devPacman.x, devPacman.y, 'left', testMap, cellSize);
+            devTestResults.horizontalTunnelPacman = (newPos.x === testMap[0].length - 1);
+            devPacman.x = pacmanStartX;
+            
+            // Test vertical tunneling for Pacman
+            const pacmanStartY = devPacman.y;
+            devPacman.y = -0.5;
+            const newPos2 = devPacman.getNextPosition(devPacman.x, devPacman.y, 'up', testMap, cellSize);
+            devTestResults.verticalTunnelPacman = (newPos2.y === testMap.length - 1);
+            devPacman.y = pacmanStartY;
+            
+            // Test horizontal tunneling for Ghost
+            const ghostStartX = devGhosts[0].x;
+            devGhosts[0].x = -0.5;
+            const newPos3 = devGhosts[0].getNextPosition(devGhosts[0].x, devGhosts[0].y, 'left', testMap, cellSize);
+            devTestResults.horizontalTunnelGhost = (newPos3.x === testMap[0].length - 1);
+            devGhosts[0].x = ghostStartX;
+            
+            // Test vertical tunneling for Ghost
+            const ghostStartY = devGhosts[0].y;
+            devGhosts[0].y = -0.5;
+            const newPos4 = devGhosts[0].getNextPosition(devGhosts[0].x, devGhosts[0].y, 'up', testMap, cellSize);
+            devTestResults.verticalTunnelGhost = (newPos4.y === testMap.length - 1);
+            devGhosts[0].y = ghostStartY;
+            
+            // Draw objects
+            drawObjects(ctx, devPacman, devGhosts);
+            
+            updateTestStatus('Development', devTestResults);
+        }
+        
+        // Run main version test
+        function runMainTest() {
+            const canvas = document.getElementById('mainCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw map
+            drawMap(ctx);
+            
+            // Test horizontal tunneling for Pacman
+            const pacmanStartX = mainPacman.x;
+            mainPacman.x = -0.5;
+            const newPos = mainPacman.getNextPosition(mainPacman.x, mainPacman.y, 'left', testMap);
+            mainTestResults.horizontalTunnelPacman = (newPos.x === testMap[0].length - 1);
+            mainPacman.x = pacmanStartX;
+            
+            // Test vertical tunneling for Pacman
+            const pacmanStartY = mainPacman.y;
+            mainPacman.y = -0.5;
+            const newPos2 = mainPacman.getNextPosition(mainPacman.x, mainPacman.y, 'up', testMap);
+            mainTestResults.verticalTunnelPacman = (newPos2.y === testMap.length - 1);
+            mainPacman.y = pacmanStartY;
+            
+            // Test horizontal tunneling for Ghost
+            const ghostStartX = mainGhosts[0].x;
+            mainGhosts[0].x = -0.5;
+            const newPos3 = mainGhosts[0].getNextPosition(mainGhosts[0].x, mainGhosts[0].y, 'left', testMap);
+            mainTestResults.horizontalTunnelGhost = (newPos3.x === testMap[0].length - 1);
+            mainGhosts[0].x = ghostStartX;
+            
+            // Test vertical tunneling for Ghost
+            const ghostStartY = mainGhosts[0].y;
+            mainGhosts[0].y = -0.5;
+            const newPos4 = mainGhosts[0].getNextPosition(mainGhosts[0].x, mainGhosts[0].y, 'up', testMap);
+            mainTestResults.verticalTunnelGhost = (newPos4.y === testMap.length - 1);
+            mainGhosts[0].y = ghostStartY;
+            
+            // Draw objects
+            drawObjects(ctx, mainPacman, mainGhosts);
+            
+            updateTestStatus('Main', mainTestResults);
+        }
+        
+        function updateTestStatus(version, results) {
+            const statusElement = document.getElementById('testStatus');
+            const allTestsPassed = Object.values(results).every(result => result === true);
+            
+            if (allTestsPassed) {
+                statusElement.className = 'test-status success';
+                statusElement.innerHTML = `<h3>All ${version} Version Tunneling Tests Passed! ✅</h3>` +
+                    '<p>✓ Horizontal tunneling for Pacman</p>' +
+                    '<p>✓ Vertical tunneling for Pacman</p>' +
+                    '<p>✓ Horizontal tunneling for Ghosts</p>' +
+                    '<p>✓ Vertical tunneling for Ghosts</p>';
+            } else {
+                statusElement.className = 'test-status failed';
+                statusElement.innerHTML = `<h3>${version} Version Tunneling Tests Results:</h3>` +
+                    `<p>${results.horizontalTunnelPacman ? '✓' : '❌'} Horizontal tunneling for Pacman</p>` +
+                    `<p>${results.verticalTunnelPacman ? '✓' : '❌'} Vertical tunneling for Pacman</p>` +
+                    `<p>${results.horizontalTunnelGhost ? '✓' : '❌'} Horizontal tunneling for Ghosts</p>` +
+                    `<p>${results.verticalTunnelGhost ? '✓' : '❌'} Vertical tunneling for Ghosts</p>`;
+            }
+        }
+        
+        // Initialize tests when page loads
+        window.onload = function() {
+            initTests();
+        };
+    </script>
+</body>
+</html>

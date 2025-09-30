@@ -1,0 +1,2758 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacman - Полностью улучшенная версия</title>
+    <script src="pacman_music.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #121212, #1a1a2e);
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-attachment: fixed;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #FFD700;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        #game-canvas {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 440px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-size: 1.2rem;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #bbb;
+        }
+
+        .info-value {
+            font-weight: bold;
+            color: #FFD700;
+            font-size: 1.4rem;
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 440px;
+            text-align: center;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .instructions p {
+            margin: 5px 0;
+            color: #bbb;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #2c3e50;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid #3498db;
+        }
+
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            animation: fadeIn 0.5s;
+        }
+        
+        /* Menu Styles */
+        .menu-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            z-index: 200;
+            border: 2px solid #FFD700;
+            animation: fadeIn 0.5s;
+        }
+        
+        .menu-title {
+            font-size: 2.5rem;
+            color: #FFD700;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+        
+        .menu-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .menu-btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .menu-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Level Selection Styles */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .level-btn {
+            padding: 15px 5px;
+            font-size: 1rem;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .level-btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .level-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .level-btn.locked {
+            background: linear-gradient(145deg, #3e3e3e, #2a2a2a);
+            border-color: #777;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+        
+        .level-btn.locked:hover {
+            background: linear-gradient(145deg, #3e3e3e, #2a2a2a);
+            transform: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* High Scores Styles */
+        #scores-list {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .score-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(44, 62, 80, 0.7);
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .score-rank {
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .score-name {
+            flex-grow: 1;
+            text-align: center;
+        }
+        
+        .score-value {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        /* Settings Styles */
+        .setting-item {
+            margin: 15px 0;
+        }
+        
+        .setting-select {
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+        }
+        
+        .setting-select:focus {
+            outline: 2px solid #3498db;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .menu-title {
+                font-size: 2rem;
+            }
+            
+            .btn, .menu-btn {
+                padding: 12px 16px;
+                font-size: 1rem;
+            }
+            
+            #game-canvas {
+                width: 95vw;
+                height: auto;
+            }
+            
+            .level-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        /* Particle effect styles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        /* Combo display */
+        #combo-display {
+            position: absolute;
+            color: #FF00FF;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px #FF00FF;
+            z-index: 50;
+            animation: comboPulse 0.5s infinite alternate;
+        }
+        
+        @keyframes comboPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
+        
+        /* Power mode effect */
+        .power-mode {
+            animation: powerGlow 0.5s infinite alternate;
+        }
+        
+        @keyframes powerGlow {
+            from { box-shadow: 0 0 5px #0000FF; }
+            to { box-shadow: 0 0 20px #0000FF, 0 0 30px #0000FF; }
+        }
+        
+        /* Achievement notification styles */
+        .achievement-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #8A2BE2, #4B0082);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            animation: slideIn 0.5s, fadeOut 0.5s 4.5s forwards;
+            border: 2px solid #FFD700;
+            max-width: 300px;
+        }
+        
+        .achievement-content h3 {
+            margin: 0 0 5px 0;
+            color: #FFD700;
+            font-size: 1.2em;
+        }
+        
+        .achievement-content h4 {
+            margin: 0 0 5px 0;
+            font-size: 1.1em;
+        }
+        
+        .achievement-content p {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .achievement-content span {
+            font-weight: bold;
+            color: #00FF00;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Menu Screen -->
+    <div id="main-menu" class="menu-screen">
+        <h1 class="menu-title">PACMAN</h1>
+        <div class="menu-buttons">
+            <button id="play-btn" class="menu-btn">Играть</button>
+            <button id="level-select-btn" class="menu-btn">Выбор уровня</button>
+            <button id="settings-btn" class="menu-btn">Настройки</button>
+            <button id="highscores-btn" class="menu-btn">Рекорды</button>
+            <button id="about-btn" class="menu-btn">Об игре</button>
+        </div>
+    </div>
+    
+    <!-- Level Selection Screen -->
+    <div id="level-select-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Выбор уровня</h1>
+        <div class="level-grid" id="level-grid">
+            <!-- Level buttons will be generated here -->
+        </div>
+        <button id="back-from-levels-btn" class="menu-btn" style="margin-top: 20px;">Назад</button>
+    </div>
+    
+    <!-- High Scores Screen -->
+    <div id="highscores-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Рекорды</h1>
+        <div id="scores-list" style="width: 100%; max-width: 400px;">
+            <!-- Scores will be populated here -->
+        </div>
+        <button id="back-from-scores-btn" class="menu-btn" style="margin-top: 20px;">Назад</button>
+    </div>
+    
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="menu-screen hidden">
+        <h1 class="menu-title">Настройки</h1>
+        <div class="settings-container" style="width: 100%; max-width: 400px;">
+            <div class="setting-item" style="margin: 15px 0;">
+                <label for="difficulty" style="display: block; margin-bottom: 5px;">Сложность:</label>
+                <select id="difficulty" class="setting-select" style="width: 100%; padding: 10px; background: #2c3e50; color: white; border: none; border-radius: 5px;">
+                    <option value="easy">Легко</option>
+                    <option value="normal" selected>Нормально</option>
+                    <option value="hard">Сложно</option>
+                    <option value="expert">Эксперт</option>
+                </select>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label for="game-speed" style="display: block; margin-bottom: 5px;">Скорость игры:</label>
+                <input type="range" id="game-speed" min="50" max="300" value="150" style="width: 100%;">
+                <span id="speed-value" style="display: block; text-align: center; margin-top: 5px;">150 мс</span>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="sound-enabled" checked> Звук
+                </label>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="music-enabled" checked> Музыка
+                </label>
+            </div>
+            
+            <div class="setting-item" style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" id="animations-enabled" checked> Анимации
+                </label>
+            </div>
+        </div>
+        <button id="save-settings-btn" class="menu-btn" style="margin-top: 20px;">Сохранить</button>
+        <button id="back-from-settings-btn" class="menu-btn" style="margin-top: 10px;">Назад</button>
+    </div>
+    
+    <!-- Game Screen -->
+    <div id="game-screen" class="game-container hidden">
+        <div class="header">
+            <h1>Pacman - Полностью улучшенная версия</h1>
+            <div class="controls">
+                <button id="start-btn" class="btn">Начать игру</button>
+                <button id="pause-btn" class="btn">Пауза</button>
+                <button id="reset-btn" class="btn">Сброс</button>
+                <button id="menu-btn" class="btn">Меню</button>
+            </div>
+        </div>
+        
+        <canvas id="game-canvas" width="440" height="520"></canvas>
+        
+        <div class="status-bar">
+            <div class="info-item">
+                <span class="info-label">Очки</span>
+                <span id="score" class="info-value">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Уровень</span>
+                <span id="level" class="info-value">1</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Жизни</span>
+                <span id="lives" class="info-value">❤️❤️❤️</span>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <p>Управление: <span class="key">↑</span> <span class="key">↓</span> <span class="key">←</span> <span class="key">→</span> или <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span></p>
+            <p>Цель: Соберите всю еду и избегайте привидений!</p>
+        </div>
+    </div>
+    
+    <div id="message" class="message">
+        <h2 id="message-title">Игра окончена</h2>
+        <p id="message-text">Ваш счет: 0</p>
+        <button id="message-btn" class="btn">OK</button>
+    </div>
+
+    <script>
+        class PacmanGame {
+            constructor() {
+                // Инициализация холста
+                this.canvas = document.getElementById('game-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.cellSize = 22;
+                
+                // Игровые параметры
+                this.isRunning = false;
+                this.animationFrameId = null;
+                this.lastTimestamp = 0;
+                this.updateInterval = 150; // Интервал обновления в миллисекундах (замедляет игру)
+                this.lastUpdate = 0;
+                
+                // Игровые объекты
+                this.pacman = {
+                    x: 10,
+                    y: 15,
+                    direction: 'right',
+                    nextDirection: null,
+                    mouthAngle: 0,
+                    mouthOpening: 0.1,
+                    powerMode: false,
+                    powerModeTimer: 0
+                };
+                
+                this.ghosts = [
+                    { x: 10, y: 8, direction: 'left', color: 'red', speed: 0.8, name: 'Blinky' },
+                    { x: 9, y: 9, direction: 'up', color: 'pink', speed: 0.7, name: 'Pinky' },
+                    { x: 11, y: 9, direction: 'down', color: 'cyan', speed: 0.9, name: 'Inky' },
+                    { x: 10, y: 10, direction: 'right', color: 'orange', speed: 0.6, name: 'Clyde' }
+                ];
+                
+                // Игровое состояние
+                this.score = 0;
+                this.level = 1;
+                this.lives = 3;
+                this.selectedLevel = 1; // Default level
+                this.levelStartTime = Date.now(); // Время начала уровня для бонусов
+                
+                // Система бонусов
+                this.consecutiveEats = 0;  // Система последовательного поедания
+                this.lastEatTime = 0;      // Время последнего поедания
+                this.comboBonus = 0;       // Бонус за комбо
+                this.comboDisplay = null;  // Отображение комбо
+                
+                // Частицы
+                this.particles = [];  // Частицы
+                
+                // Карта уровня (1 - путь, 0 - стена, 2 - еда, 3 - супер-еда)
+                // Классическая карта Pacman с улучшенной навигацией
+                this.map = [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                    [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                    [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                    [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ];
+                
+                // Подсчет еды
+                this.foodCount = 0;
+                this.totalFood = 0;
+                this.countFood();
+                
+                // Рекорды
+                this.highScores = this.loadHighScores();  // Рекорды
+                
+                // Настройки
+                this.settings = this.loadSettings();  // Настройки
+                
+                // Инициализация звуков
+                this.initSounds();  // Инициализация звуков
+                
+                // Инициализация фруктов
+                this.initFruits();  // Инициализация фруктов
+                
+                // Инициализация достижений
+                this.initAchievements();  // Инициализация достижений
+                
+                // Инициализация уровней
+                this.initLevels();  // Инициализация уровней
+                
+                // Инициализация событий
+                this.setupEventListeners();
+                
+                // Первичная отрисовка
+                this.draw();
+                
+                console.log("Игра инициализирована");
+            }
+            
+            // Initialize level system with more unique and challenging levels
+            initLevels() {
+                // Define 10 different level maps with increasing difficulty
+                this.levelMaps = [
+                    // Level 1 - Beginner (open layout)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                        [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                        [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 2 - Novice (more walls, fewer paths)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,2,0,2,2,0,2,2,2,2,2,2,0,2,2,0,2,2,0],
+                        [0,2,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,0],
+                        [0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,2,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,2,0],
+                        [0,2,2,0,0,2,0,2,2,2,2,2,2,0,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,2,0,0,0,0,2,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,0,2,0,2,2,0,2,0,0,2,0,2,2,0],
+                        [0,0,0,0,2,0,0,2,0,2,2,0,2,0,0,2,0,0,0,0],
+                        [0,2,2,0,0,2,0,0,0,0,0,0,0,0,2,0,0,2,2,0],
+                        [0,2,0,0,0,2,0,2,2,2,2,2,2,0,2,0,0,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,0,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,0,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,0,2,2,0,2,2,2,2,2,2,0,2,2,0,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 3 - Intermediate (narrow passages)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,2,0,2,0,2,2,0,2,0,2,2,2,0,2,0],
+                        [0,0,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,0,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,2,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,2,0],
+                        [0,2,2,0,0,2,0,2,2,2,2,2,2,0,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,2,0,0,0,0,2,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,0,2,0,2,2,0,2,0,0,2,0,2,2,0],
+                        [0,0,0,0,2,0,0,2,0,2,2,0,2,0,0,2,0,0,0,0],
+                        [0,2,2,0,0,2,0,0,0,0,0,0,0,0,2,0,0,2,2,0],
+                        [0,2,0,0,0,2,0,2,2,2,2,2,2,0,2,0,0,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,0,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,0,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,2,2,2,0,0,2,2,2,0,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,0,2,2,0,2,2,2,2,2,2,0,2,2,0,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 4 - Challenging (complex maze)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,0,0,2,0,2,0,2,0,2,2,0],
+                        [0,0,0,0,2,0,0,0,2,0,0,2,0,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,2,2,2,0,2,0,2,0,2,2,0],
+                        [0,2,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,2,0,2,0,0,2,0,2,0,2,2,0,2,0],
+                        [0,0,0,2,0,0,0,0,2,0,0,2,0,0,0,0,2,0,0,0],
+                        [0,2,0,2,0,2,2,0,2,2,2,2,0,2,2,0,2,0,2,0],
+                        [0,2,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,2,0],
+                        [0,2,2,0,0,2,0,2,0,2,2,0,2,0,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,2,0,2,2,0,2,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,0,0,0,0,0,0,0,0,0,2,0,2,2,0],
+                        [0,2,0,0,2,2,0,2,2,2,2,2,2,0,2,2,0,0,2,0],
+                        [0,2,0,2,0,0,0,2,0,0,0,0,2,0,0,0,0,2,2,0],
+                        [0,0,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,0,0],
+                        [0,2,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,2,0],
+                        [0,2,2,0,2,2,2,0,2,2,2,2,0,2,2,2,0,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 5 - Advanced (multiple paths, more ghosts)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,3,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,3,0],
+                        [0,0,0,2,0,0,0,0,0,2,2,0,0,0,0,0,2,0,0,0],
+                        [0,2,0,2,0,2,2,0,0,2,2,0,0,2,2,0,2,0,2,0],
+                        [0,2,0,0,0,2,0,0,2,0,0,2,0,0,2,0,0,0,2,0],
+                        [0,2,2,0,0,2,0,2,2,0,0,2,2,0,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,2,0,0,0,0,2,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,0,2,0,2,2,0,2,0,0,2,0,2,2,0],
+                        [0,2,0,0,2,2,0,0,0,2,2,0,0,0,2,2,0,0,2,0],
+                        [0,2,0,2,0,0,0,2,0,2,2,0,2,0,0,0,0,2,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,0,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,0,0],
+                        [0,2,2,0,0,2,2,0,2,2,2,2,0,2,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,0,2,0,0,2,0,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,0,0,2,0,2,0,2,0,2,2,0],
+                        [0,3,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,3,0],
+                        [0,2,0,2,2,0,2,0,2,2,2,2,0,2,0,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 6 - Expert (dense walls, strategic food placement)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,3,2,0,2,0,2,3,2,0,0,2,3,2,0,2,0,2,3,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,0,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,0,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,0,2,2,0,0,2,2,0,0,2,2,0,2,0],
+                        [0,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,2,2,2,0,2,0,2,0,2,2,0],
+                        [0,0,0,0,2,0,2,0,2,0,0,2,0,2,0,2,0,0,0,0],
+                        [0,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2],
+                        [0,0,0,0,2,0,2,2,0,0,0,0,2,2,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,0,0,0,2,2,0,0,0,0,2,0,2,2,0],
+                        [0,0,0,0,0,0,2,2,0,2,2,0,2,2,0,0,0,0,0,0],
+                        [0,2,0,2,2,0,0,0,0,0,0,0,0,0,0,2,2,0,2,0],
+                        [0,2,0,0,0,0,2,0,2,2,2,2,0,2,0,0,0,0,2,0],
+                        [0,0,0,2,0,0,2,0,0,0,0,0,0,2,0,0,2,0,0,0],
+                        [0,3,2,0,2,0,2,3,2,0,0,2,3,2,0,2,0,2,3,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 7 - Master (complex patterns, limited sight lines)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,2,0,0,2,2,0,0,2,0,2,2,0,2,0],
+                        [0,0,0,0,0,0,2,0,2,0,0,2,0,2,0,0,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,0,0,2,0,2,0,2,0,2,2,0],
+                        [0,0,0,0,2,0,0,0,2,0,0,2,0,0,0,2,0,0,0,0],
+                        [0,2,0,0,2,2,0,2,2,2,2,2,2,0,2,2,0,0,2,0],
+                        [0,2,0,2,0,0,0,2,0,0,0,0,2,0,0,0,0,2,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,0,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,2,0,0,2,2,0,0,2,0,2,2,0,2,0],
+                        [0,0,0,0,0,0,2,0,2,0,0,2,0,2,0,0,0,0,0,0],
+                        [0,2,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,0,2,2,2,0,0,2,2,2,0,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 8 - Legendary (extreme difficulty)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,3,0,2,0,2,0,3,0,2,2,0,3,0,2,0,2,0,3,0],
+                        [0,0,0,2,0,0,0,0,0,2,2,0,0,0,0,0,2,0,0,0],
+                        [0,2,0,2,0,2,2,0,0,2,2,0,0,2,0,2,2,0,2,0],
+                        [0,2,0,0,0,2,0,0,2,0,0,2,0,0,2,0,0,0,2,0],
+                        [0,2,2,0,0,2,0,2,2,0,0,2,2,0,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,2,0,0,0,0,2,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,0,2,0,2,2,0,2,0,0,2,0,2,2,0],
+                        [0,2,0,0,2,2,0,0,0,2,2,0,0,0,2,2,0,0,2,0],
+                        [0,2,0,2,0,0,0,2,0,2,2,0,2,0,0,0,0,2,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,0,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,0,0],
+                        [0,2,2,0,0,2,2,0,2,2,2,2,0,2,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,0,2,0,0,2,0,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,0,0,2,0,2,0,2,0,2,2,0],
+                        [0,3,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,3,0],
+                        [0,2,0,2,2,0,2,0,2,2,2,2,0,2,0,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 9 - Ultimate (maximum complexity)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,3,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,3,0],
+                        [0,0,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,0,0],
+                        [0,2,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,2,0],
+                        [0,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,0],
+                        [0,0,0,0,0,0,2,0,0,2,2,0,0,2,0,0,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,0,0,2,0,2,0,2,0,2,2,0],
+                        [0,0,0,0,2,0,0,0,2,0,0,2,0,0,0,2,0,0,0,0],
+                        [0,2,0,0,2,2,0,2,2,2,2,2,2,0,2,2,0,0,2,0],
+                        [0,2,0,2,0,0,0,2,0,0,0,0,2,0,0,0,0,2,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,0,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,0,0],
+                        [0,2,2,0,0,2,2,0,2,2,2,2,0,2,2,0,0,2,2,0],
+                        [0,0,0,0,2,0,0,0,2,0,0,2,0,0,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,0,0,2,0,2,0,2,0,2,2,0],
+                        [0,3,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,3,0],
+                        [0,2,0,2,2,0,2,2,2,0,0,2,2,2,0,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ],
+                    // Level 10 - God Mode (nearly impossible)
+                    [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,3,0,2,0,0,0,2,0,2,2,0,2,0,0,0,2,0,3,0],
+                        [0,0,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,0,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,0,0,2,0,2,2,0,0,2,2,0,2,0,0,0,2,0],
+                        [0,0,0,2,0,2,0,0,0,0,0,0,0,0,2,0,2,0,0,0],
+                        [0,2,0,2,0,2,2,0,2,0,0,2,0,2,2,0,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,2,0,0,2,0,0,0,0,0,0,2,0],
+                        [0,2,2,0,2,0,2,0,2,2,2,2,0,2,0,2,0,2,2,0],
+                        [0,0,0,0,2,0,2,0,0,0,0,0,0,2,0,2,0,0,0,0],
+                        [0,2,2,0,2,0,2,0,2,2,2,2,0,2,0,2,0,2,2,0],
+                        [0,2,0,0,0,0,0,0,2,0,0,2,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,0,2,2,0,2,0,0,2,0,2,2,0,2,0,2,0],
+                        [0,0,0,2,0,2,0,0,0,0,0,0,0,0,2,0,2,0,0,0],
+                        [0,2,0,0,0,2,0,2,2,0,0,2,2,0,2,0,0,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,0,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,0,0],
+                        [0,2,0,0,0,0,0,2,0,2,2,0,2,0,0,0,0,0,2,0],
+                        [0,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ]
+                ];
+            }
+            
+            // Инициализация событий
+            setupEventListeners() {
+                // Обработчики для кнопок меню
+                document.getElementById('play-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.hideMenu();
+                    this.start();
+                });
+                
+                document.getElementById('level-select-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.showLevelSelect();
+                });
+                
+                document.getElementById('settings-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.showSettings();
+                });
+                
+                document.getElementById('highscores-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.showHighScores();
+                });
+                
+                document.getElementById('about-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    alert('Pacman - классическая аркадная игра 1980 года.\\n\\nУправление:\\n- Стрелки или WASD для движения\\n\\nЦель:\\n- Соберите всю еду\\n- Избегайте привидений\\n- Используйте супер-еду для временного преимущества\\n\\nОсобенности:\\n- Система комбо\\n- Увеличивающаяся сложность\\n- Рекорды\\n- Настройки игры');
+                });
+                
+                // Добавляем обработчики для кнопок возврата
+                document.getElementById('back-from-scores-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.hideHighScores();
+                });
+                
+                document.getElementById('back-from-settings-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.hideSettings();
+                });
+                
+                // Добавляем обработчик для кнопки возврата из выбора уровней
+                document.getElementById('back-from-levels-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.hideLevelSelect();
+                });
+                
+                document.getElementById('save-settings-btn').addEventListener('click', () => {
+                    this.playSound('start');
+                    this.applySettings();
+                });
+                
+                // Управление клавишами
+                document.addEventListener('keydown', (e) => {
+                    console.log("Нажата клавиша:", e.key);
+                    this.handleKey(e);
+                });
+                
+                // Событие слайдера для настроек
+                document.getElementById('game-speed').addEventListener('input', (e) => {
+                    document.getElementById('speed-value').textContent = e.target.value + ' мс';
+                });
+                
+                console.log("Обработчики событий установлены");
+            }
+            
+            handleKey(e) {
+                // Всегда разрешаем управление, даже если игра на паузе
+                switch(e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        this.pacman.nextDirection = 'up';
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        this.pacman.nextDirection = 'down';
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        this.pacman.nextDirection = 'left';
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        this.pacman.nextDirection = 'right';
+                        e.preventDefault();
+                        break;
+                }
+            }
+            
+            countFood() {
+                this.totalFood = 0;
+                for (let y = 0; y < this.map.length; y++) {
+                    for (let x = 0; x < this.map[y].length; x++) {
+                        if (this.map[y][x] === 2 || this.map[y][x] === 3) {
+                            this.totalFood++;
+                        }
+                    }
+                }
+                console.log("Всего еды:", this.totalFood);
+            }
+            
+            start() {
+                console.log("Запуск игры");
+                if (!this.isRunning) {
+                    this.isRunning = true;
+                    this.lastTimestamp = performance.now();
+                    this.lastUpdate = performance.now();
+                    this.gameLoop();
+                    document.getElementById('start-btn').textContent = "Продолжить";
+                    
+                    // Создаем визуальный эффект при запуске игры
+                    this.createGameStartEffect();
+                    
+                    // Воспроизвести фоновую музыку, если включена
+                    if (this.settings.musicEnabled) {
+                        this.playBackgroundMusic();
+                    }
+                }
+            }
+            
+            // Создаем эффект при запуске игры
+            createGameStartEffect() {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем радужные частицы по всему экрану
+                for (let i = 0; i < 150; i++) {
+                    const hue = Math.floor(Math.random() * 360);
+                    
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        color: `hsl(${hue}, 100%, 70%)`,
+                        size: 2 + Math.random() * 3,
+                        life: 80 + Math.floor(Math.random() * 40),
+                        decay: 0.02 + Math.random() * 0.02,
+                        glow: 0.5
+                    });
+                }
+            }
+            
+            pause() {
+                console.log("Пауза игры");
+                this.isRunning = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                
+                // Пауза фоновой музыки
+                this.pauseBackgroundMusic();
+            }
+            
+            gameLoop(timestamp) {
+                if (!this.isRunning) return;
+                
+                // Вычисляем deltaTime для плавного движения
+                const deltaTime = timestamp - this.lastTimestamp;
+                this.lastTimestamp = timestamp;
+                
+                // Обновляем игру с заданным интервалом
+                if (timestamp - this.lastUpdate >= this.updateInterval) {
+                    this.update(deltaTime);
+                    this.lastUpdate = timestamp;
+                }
+                
+                // Отрисовываем
+                this.draw();
+                
+                // Обновляем частицы
+                this.updateParticles();
+                
+                // Продолжаем цикл
+                this.animationFrameId = requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+            }
+            
+            update(deltaTime) {
+                // Обновляем движение Пакмана
+                this.movePacman();
+                
+                // Обновляем движение привидений
+                this.moveGhosts();
+                
+                // Проверяем столкновения
+                this.checkCollisions();
+                
+                // Анимируем рот Пакмана
+                this.animateMouth();
+                
+                // Update power mode timer
+                if (this.pacman.powerMode) {
+                    this.pacman.powerModeTimer -= deltaTime;
+                    
+                    // Создаем периодические частицы во время power mode
+                    if (Math.random() < 0.3) {
+                        this.createPowerModeParticles();
+                    }
+                    
+                    if (this.pacman.powerModeTimer <= 0) {
+                        this.pacman.powerMode = false;
+                        this.pacman.powerModeTimer = 0;
+                        // Remove power mode effect
+                        this.canvas.classList.remove('power-mode');
+                    }
+                }
+                
+                // Update combo display timer
+                if (this.comboDisplay && Date.now() - this.comboDisplay.startTime > 2000) {
+                    this.comboDisplay = null;
+                }
+                
+                // Update fruit system
+                this.spawnFruit();
+                this.checkFruitCollection();
+                
+                // Check achievements
+                this.checkAchievements();
+            }
+            
+            movePacman() {
+                // Применяем следующее направление, если возможно
+                if (this.pacman.nextDirection) {
+                    const nextPos = this.getNextPosition(this.pacman.x, this.pacman.y, this.pacman.nextDirection);
+                    if (this.isValidMove(nextPos.x, nextPos.y)) {
+                        this.pacman.direction = this.pacman.nextDirection;
+                        this.pacman.nextDirection = null;
+                    }
+                }
+                
+                // Двигаемся в текущем направлении
+                const nextPos = this.getNextPosition(this.pacman.x, this.pacman.y, this.pacman.direction);
+                if (this.isValidMove(nextPos.x, nextPos.y)) {
+                    this.pacman.x = nextPos.x;
+                    this.pacman.y = nextPos.y;
+                }
+            }
+            
+            // Enhanced ghost movement with more intelligent AI and initial movement fix
+            moveGhosts() {
+                this.ghosts.forEach(ghost => {
+                    // Ensure ghosts start moving immediately by removing initial delay
+                    // Adjust speed based on power mode and ghost type
+                    const effectiveSpeed = this.pacman.powerMode ? ghost.speed * 0.5 : ghost.speed;
+                    
+                    // Move ghosts more consistently rather than randomly
+                    // Only skip movement based on speed factor
+                    if (Math.random() > effectiveSpeed) return;
+                    
+                    // Enhanced AI for ghost movement
+                    // Calculate distance to Pacman
+                    const dx = this.pacman.x - ghost.x;
+                    const dy = this.pacman.y - ghost.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Different behaviors based on ghost type and distance
+                    let targetX = this.pacman.x;
+                    let targetY = this.pacman.y;
+                    
+                    // Special behaviors for different ghosts
+                    switch(ghost.name) {
+                        case 'Blinky': // Red ghost - aggressive, targets Pacman directly
+                            // Always targets Pacman
+                            break;
+                        case 'Pinky': // Pink ghost - ambush, targets 4 tiles ahead of Pacman
+                            switch(this.pacman.direction) {
+                                case 'up': targetY -= 4; break;
+                                case 'down': targetY += 4; break;
+                                case 'left': targetX -= 4; break;
+                                case 'right': targetX += 4; break;
+                            }
+                            break;
+                        case 'Inky': // Cyan ghost - erratic, targets based on Blinky's position
+                            // More random movement when far, more targeted when close
+                            if (distance > 8) {
+                                // Random movement when far away
+                                targetX = ghost.x + (Math.random() > 0.5 ? 2 : -2);
+                                targetY = ghost.y + (Math.random() > 0.5 ? 2 : -2);
+                            }
+                            break;
+                        case 'Clyde': // Orange ghost - coward, runs away when close
+                            if (distance < 5) {
+                                // Run away from Pacman
+                                targetX = ghost.x - dx;
+                                targetY = ghost.y - dy;
+                            }
+                            break;
+                    }
+                    
+                    // Calculate possible moves
+                    const possibleMoves = [];
+                    const directions = ['up', 'down', 'left', 'right'];
+                    
+                    directions.forEach(dir => {
+                        const nextPos = this.getNextPosition(ghost.x, ghost.y, dir);
+                        if (this.isValidMove(nextPos.x, nextPos.y)) {
+                            // Calculate distance to target for this move
+                            const moveDx = nextPos.x - targetX;
+                            const moveDy = nextPos.y - targetY;
+                            const moveDistance = Math.sqrt(moveDx * moveDx + moveDy * moveDy);
+                            
+                            possibleMoves.push({
+                                direction: dir,
+                                x: nextPos.x,
+                                y: nextPos.y,
+                                distance: moveDistance
+                            });
+                        }
+                    });
+                    
+                    // Sort moves by distance to target (closest first)
+                    // If in power mode, sort in reverse (farthest first)
+                    if (this.pacman.powerMode) {
+                        possibleMoves.sort((a, b) => b.distance - a.distance);
+                    } else {
+                        possibleMoves.sort((a, b) => a.distance - b.distance);
+                    }
+                    
+                    // Choose the best move
+                    if (possibleMoves.length > 0) {
+                        const bestMove = possibleMoves[0];
+                        ghost.x = bestMove.x;
+                        ghost.y = bestMove.y;
+                        ghost.direction = bestMove.direction;
+                    }
+                });
+            }
+            
+            // Method to initialize ghosts with better starting positions
+            initGhosts() {
+                this.ghosts = [
+                    { x: 10, y: 8, direction: 'left', color: 'red', speed: 0.8, name: 'Blinky' },
+                    { x: 9, y: 9, direction: 'up', color: 'pink', speed: 0.7, name: 'Pinky' },
+                    { x: 11, y: 9, direction: 'down', color: 'cyan', speed: 0.9, name: 'Inky' },
+                    { x: 10, y: 10, direction: 'right', color: 'orange', speed: 0.6, name: 'Clyde' }
+                ];
+            }
+            
+            // Enhanced reset positions to ensure ghosts start moving
+            resetPositions() {
+                // Сброс позиции Пакмана
+                this.pacman.x = 10;
+                this.pacman.y = 15;
+                this.pacman.direction = 'right';
+                this.pacman.nextDirection = null;
+                
+                // Reinitialize ghosts to ensure they start in correct positions
+                this.initGhosts();
+                
+                // Отключаем режим силы
+                this.pacman.powerMode = false;
+                this.pacman.powerModeTimer = 0;
+                this.canvas.classList.remove('power-mode');
+            }
+            
+            getNextPosition(x, y, direction) {
+                let newX = x;
+                let newY = y;
+                
+                switch(direction) {
+                    case 'up': newY--; break;
+                    case 'down': newY++; break;
+                    case 'left': newX--; break;
+                    case 'right': newX++; break;
+                }
+                
+                // Туннельные переходы
+                if (newX < 0) newX = this.map[0].length - 1;
+                if (newX >= this.map[0].length) newX = 0;
+                if (newY < 0) newY = this.map.length - 1;
+                if (newY >= this.map.length) newY = 0;
+                
+                return { x: newX, y: newY };
+            }
+            
+            isValidMove(x, y) {
+                // Проверяем границы карты по вертикали
+                if (y < 0 || y >= this.map.length) return false;
+                
+                // Проверяем стены
+                if (this.map[y][x] === 0) return false;
+                
+                return true;
+            }
+            
+            checkCollisions() {
+                // Проверяем сбор еды
+                const cell = this.map[this.pacman.y][this.pacman.x];
+                if (cell === 2) { // Обычная еда
+                    this.map[this.pacman.y][this.pacman.x] = 1;
+                    this.foodCount++;
+                    this.score += 10;
+                    this.playSound('eat');
+                    this.createCombo();
+                    // Создаем визуальный эффект при сборе обычной еды
+                    this.createFoodParticles(this.pacman.x, this.pacman.y, false);
+                    this.updateScore();
+                    this.checkLevelComplete();
+                } else if (cell === 3) { // Супер-еда
+                    this.map[this.pacman.y][this.pacman.x] = 1;
+                    this.foodCount++;
+                    this.score += 50;
+                    this.pacman.powerMode = true;
+                    this.pacman.powerModeTimer = 10000; // 10 секунд
+                    this.canvas.classList.add('power-mode');
+                    this.playSound('power');
+                    this.createCombo();
+                    // Создаем визуальный эффект при сборе супер-еды
+                    this.createFoodParticles(this.pacman.x, this.pacman.y, true);
+                    // Добавляем дополнительный эффект для супер-еды
+                    this.createSuperFoodEffect(this.pacman.x, this.pacman.y);
+                    this.updateScore();
+                    this.checkLevelComplete();
+                }
+                
+                // Проверяем сбор фрукта
+                this.checkFruitCollection();
+                
+                // Проверяем столкновения с привидениями
+                this.ghosts.forEach(ghost => {
+                    if (this.pacman.x === ghost.x && this.pacman.y === ghost.y) {
+                        if (this.pacman.powerMode) {
+                            // Пакман съедает привидение
+                            this.score += 200;
+                            this.ghostsEaten++;
+                            this.playSound('ghost');
+                            this.createParticles(ghost.x, ghost.y, ghost.color);
+                            // Создаем специальный эффект при поедании привидения
+                            this.createGhostEatenEffect(ghost.x, ghost.y, ghost.color);
+                            // Возвращаем привидение на начальную позицию
+                            ghost.x = 10;
+                            ghost.y = ghost.color === 'red' ? 8 : ghost.color === 'pink' ? 9 : 
+                                      ghost.color === 'cyan' ? 9 : 10;
+                            this.updateScore();
+                        } else {
+                            // Привидение съедает Пакмана
+                            this.lives--;
+                            this.updateLives();
+                            this.playSound('death');
+                            this.createParticles(this.pacman.x, this.pacman.y, 'yellow');
+                            // Создаем специальный эффект при потере жизни
+                            this.createLifeLostEffect(this.pacman.x, this.pacman.y);
+                            
+                            if (this.lives <= 0) {
+                                this.gameOver();
+                            } else {
+                                // Возвращаем Пакмана и привидений на начальные позиции
+                                this.resetPositions();
+                            }
+                        }
+                    }
+                });
+            }
+            
+            createCombo() {
+                const now = Date.now();
+                if (now - this.lastEatTime < 2000) { // 2 секунды для комбо
+                    this.consecutiveEats++;
+                    if (this.consecutiveEats >= 3) {
+                        this.comboBonus = this.consecutiveEats * 10;
+                        this.score += this.comboBonus;
+                        this.playSound('combo');
+                        this.showCombo(this.comboBonus);
+                        this.createParticles(this.pacman.x, this.pacman.y, '#FF00FF');
+                        // Создаем специальный эффект при комбо
+                        this.createComboEffect(this.pacman.x, this.pacman.y, this.consecutiveEats);
+                    }
+                } else {
+                    this.consecutiveEats = 1;
+                }
+                this.lastEatTime = now;
+            }
+            
+            // Создаем эффект при комбо
+            createComboEffect(x, y, count) {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем радужные частицы
+                for (let i = 0; i < count * 5; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 2;
+                    const hue = (i * 30) % 360;
+                    
+                    this.particles.push({
+                        x: x * this.cellSize + this.cellSize/2,
+                        y: y * this.cellSize + this.cellSize/2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: `hsl(${hue}, 100%, 70%)`,
+                        size: 2 + Math.random() * 2,
+                        life: 40 + Math.floor(Math.random() * 30),
+                        decay: 0.02 + Math.random() * 0.02,
+                        glow: 0.6
+                    });
+                }
+            }
+            
+            showCombo(bonus) {
+                this.comboDisplay = {
+                    text: `КОМБО +${bonus}`,
+                    x: this.pacman.x * this.cellSize + this.cellSize/2,
+                    y: this.pacman.y * this.cellSize,
+                    startTime: Date.now()
+                };
+            }
+            
+            createParticles(x, y, color) {
+                if (!this.settings.animationsEnabled) return;
+                
+                for (let i = 0; i < 10; i++) {
+                    this.particles.push({
+                        x: x * this.cellSize + this.cellSize/2,
+                        y: y * this.cellSize + this.cellSize/2,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        color: color,
+                        size: Math.random() * 3 + 1,
+                        life: 30
+                    });
+                }
+            }
+            
+            // Создаем частицы при сборе еды
+            createFoodParticles(x, y, isSuperFood = false) {
+                if (!this.settings.animationsEnabled) return;
+                
+                const particleCount = isSuperFood ? 30 : 15;
+                const baseColor = isSuperFood ? '#FFFFFF' : '#FFD700';
+                const particleSize = isSuperFood ? 4 : 3;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    // Случайное направление и скорость
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 3;
+                    
+                    // Добавляем немного свечения для супер-еды
+                    const color = isSuperFood ? 
+                        `hsl(${Math.random() * 60 + 40}, 100%, ${70 + Math.random() * 30}%)` : 
+                        baseColor;
+                    
+                    this.particles.push({
+                        x: x * this.cellSize + this.cellSize/2,
+                        y: y * this.cellSize + this.cellSize/2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: color,
+                        size: particleSize + Math.random() * 3,
+                        life: 40 + Math.floor(Math.random() * 50), // 40-90 кадров жизни
+                        decay: 0.01 + Math.random() * 0.02,
+                        // Добавляем эффект свечения для супер-еды
+                        glow: isSuperFood ? 0.5 + Math.random() * 0.5 : 0
+                    });
+                }
+            }
+            
+            updateParticles() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    
+                    // Применяем гравитацию
+                    p.vy += 0.05;
+                    
+                    // Уменьшаем жизнь
+                    p.life--;
+                    
+                    // Применяем распад, если определен
+                    if (p.decay) {
+                        p.size = Math.max(0, p.size - p.decay);
+                    }
+                    
+                    if (p.life <= 0 || p.size <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+            
+            drawParticles() {
+                this.particles.forEach(p => {
+                    this.ctx.globalAlpha = Math.min(1, p.life / 30);
+                    
+                    // Рисуем текст, если есть
+                    if (p.text) {
+                        this.ctx.fillStyle = p.color;
+                        this.ctx.font = `bold ${p.size}px Arial`;
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText(p.text, p.x, p.y);
+                    } else {
+                        // Рисуем свечение, если есть
+                        if (p.glow && p.glow > 0) {
+                            this.ctx.shadowColor = p.color;
+                            this.ctx.shadowBlur = p.size * p.glow * 10;
+                        }
+                        
+                        this.ctx.fillStyle = p.color;
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Сбрасываем свечение
+                        this.ctx.shadowBlur = 0;
+                    }
+                });
+                this.ctx.globalAlpha = 1;
+            }
+            
+            animateMouth() {
+                this.pacman.mouthAngle += this.pacman.mouthOpening;
+                if (this.pacman.mouthAngle <= 0 || this.pacman.mouthAngle >= 0.5) {
+                    this.pacman.mouthOpening *= -1;
+                }
+            }
+            
+            checkLevelComplete() {
+                if (this.foodCount >= this.totalFood) {
+                    this.level++;
+                    this.score += 1000 * this.level;
+                    
+                    // Бонус за быстрое прохождение уровня
+                    const timeBonus = Math.max(0, 5000 - (Date.now() - this.levelStartTime) / 10);
+                    if (timeBonus > 0) {
+                        this.score += Math.floor(timeBonus);
+                    }
+                    
+                    // Убираем разблокировку уровней, так как все уровни открыты
+                    // this.unlockNextLevel();
+                    
+                    // Проверить достижение "Выживший"
+                    if (this.lives === this.currentLevelStartLives) {
+                        this.levelsCompletedWithoutDeath++;
+                        if (this.levelsCompletedWithoutDeath >= 1 && !this.achievements[7].unlocked) {
+                            this.unlockAchievement('survivor');
+                        }
+                    } else {
+                        this.currentLevelStartLives = this.lives;
+                    }
+                    
+                    this.playSound('level');
+                    
+                    // Создаем визуальный эффект при завершении уровня
+                    this.createLevelCompleteEffect();
+                    
+                    // Небольшая задержка перед переходом на следующий уровень
+                    setTimeout(() => {
+                        this.resetLevel();
+                    }, 1000);
+                }
+            }
+            
+            // Создаем визуальный эффект при завершении уровня
+            createLevelCompleteEffect() {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем множество частиц по всему экрану
+                for (let i = 0; i < 100; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+                        size: Math.random() * 5 + 2,
+                        life: 60 + Math.floor(Math.random() * 60),
+                        decay: 0.02 + Math.random() * 0.03,
+                        glow: 0.3 + Math.random() * 0.7
+                    });
+                }
+            }
+            
+            // Создаем специальный эффект при сборе супер-еды
+            createSuperFoodEffect(x, y) {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем концентрические круги
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        for (let j = 0; j < 20; j++) {
+                            const angle = (j / 20) * Math.PI * 2;
+                            const distance = 20 + i * 10;
+                            
+                            this.particles.push({
+                                x: x * this.cellSize + this.cellSize/2 + Math.cos(angle) * distance,
+                                y: y * this.cellSize + this.cellSize/2 + Math.sin(angle) * distance,
+                                vx: Math.cos(angle) * 2,
+                                vy: Math.sin(angle) * 2,
+                                color: '#00FFFF',
+                                size: 3,
+                                life: 30,
+                                decay: 0.05,
+                                glow: 0.8
+                            });
+                        }
+                    }, i * 100);
+                }
+            }
+            
+            // Создаем частицы во время power mode
+            createPowerModeParticles() {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем частицы вокруг Пакмана
+                for (let i = 0; i < 3; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = 15 + Math.random() * 10;
+                    
+                    this.particles.push({
+                        x: this.pacman.x * this.cellSize + this.cellSize/2 + Math.cos(angle) * distance,
+                        y: this.pacman.y * this.cellSize + this.cellSize/2 + Math.sin(angle) * distance,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        color: '#0000FF',
+                        size: 2 + Math.random() * 2,
+                        life: 20 + Math.floor(Math.random() * 20),
+                        decay: 0.05,
+                        glow: 0.5
+                    });
+                }
+            }
+            
+            // Создаем эффект при поедании привидения
+            createGhostEatenEffect(x, y, color) {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем взрыв частиц
+                for (let i = 0; i < 30; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 3;
+                    
+                    this.particles.push({
+                        x: x * this.cellSize + this.cellSize/2,
+                        y: y * this.cellSize + this.cellSize/2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: color,
+                        size: 2 + Math.random() * 3,
+                        life: 40 + Math.floor(Math.random() * 30),
+                        decay: 0.03 + Math.random() * 0.02,
+                        glow: 0.7
+                    });
+                }
+                
+                // Создаем текстовый эффект
+                this.particles.push({
+                    x: x * this.cellSize + this.cellSize/2,
+                    y: y * this.cellSize + this.cellSize/2,
+                    vy: -2,
+                    color: '#FFFF00',
+                    size: 15,
+                    life: 60,
+                    text: '+200',
+                    decay: 0
+                });
+            }
+            
+            // Создаем эффект при сборе фрукта
+            createFruitCollectedEffect(x, y, points) {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем радужные частицы
+                for (let i = 0; i < 25; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 2;
+                    const hue = Math.floor(Math.random() * 360);
+                    
+                    this.particles.push({
+                        x: x * this.cellSize + this.cellSize/2,
+                        y: y * this.cellSize + this.cellSize/2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: `hsl(${hue}, 100%, 70%)`,
+                        size: 3 + Math.random() * 2,
+                        life: 50 + Math.floor(Math.random() * 30),
+                        decay: 0.02 + Math.random() * 0.02,
+                        glow: 0.6
+                    });
+                }
+                
+                // Создаем текстовый эффект
+                this.particles.push({
+                    x: x * this.cellSize + this.cellSize/2,
+                    y: y * this.cellSize + this.cellSize/2,
+                    vy: -1.5,
+                    color: '#FF00FF',
+                    size: 14,
+                    life: 70,
+                    text: `+${points}`,
+                    decay: 0
+                });
+            }
+            
+            // Создаем эффект при потере жизни
+            createLifeLostEffect(x, y) {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем красные частицы
+                for (let i = 0; i < 40; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 3;
+                    
+                    this.particles.push({
+                        x: x * this.cellSize + this.cellSize/2,
+                        y: y * this.cellSize + this.cellSize/2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: '#FF0000',
+                        size: 2 + Math.random() * 3,
+                        life: 60 + Math.floor(Math.random() * 40),
+                        decay: 0.03 + Math.random() * 0.02,
+                        glow: 0.8
+                    });
+                }
+                
+                // Создаем текстовый эффект
+                this.particles.push({
+                    x: x * this.cellSize + this.cellSize/2,
+                    y: y * this.cellSize + this.cellSize/2,
+                    vy: -2,
+                    color: '#FF0000',
+                    size: 16,
+                    life: 80,
+                    text: '-1 LIFE',
+                    decay: 0
+                });
+            }
+            
+            resetLevel() {
+                // Сброс карты для текущего уровня
+                if (this.levelMaps && this.levelMaps[this.level - 1]) {
+                    this.map = JSON.parse(JSON.stringify(this.levelMaps[this.level - 1]));
+                } else {
+                    // Если нет карты для уровня, используем стандартную
+                    this.map = [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                        [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                        [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ];
+                }
+                
+                // Сброс позиций
+                this.resetPositions();
+                
+                // Сброс счетчиков еды
+                this.foodCount = 0;
+                this.countFood();
+                
+                // Сброс фруктов
+                this.fruitVisible = false;
+                this.currentFruit = null;
+                
+                // Увеличиваем сложность
+                this.increaseDifficulty();
+                
+                // Обновляем время начала уровня
+                this.levelStartTime = Date.now();
+                
+                // Обновляем UI
+                this.updateLevel();
+                this.updateScore();
+            }
+            
+            increaseDifficulty() {
+                // Увеличиваем скорость привидений с каждым уровнем
+                this.ghosts.forEach(ghost => {
+                    ghost.speed = Math.min(ghost.speed + 0.05, 1.0);
+                });
+                
+                // Уменьшаем интервал обновления для более быстрой игры
+                this.updateInterval = Math.max(50, this.updateInterval - 5);
+            }
+            
+            resetPositions() {
+                // Сброс позиции Пакмана
+                this.pacman.x = 10;
+                this.pacman.y = 15;
+                this.pacman.direction = 'right';
+                this.pacman.nextDirection = null;
+                
+                // Сброс позиций привидений
+                this.ghosts[0].x = 10; this.ghosts[0].y = 8; this.ghosts[0].direction = 'left';
+                this.ghosts[1].x = 9; this.ghosts[1].y = 9; this.ghosts[1].direction = 'up';
+                this.ghosts[2].x = 11; this.ghosts[2].y = 9; this.ghosts[2].direction = 'down';
+                this.ghosts[3].x = 10; this.ghosts[3].y = 10; this.ghosts[3].direction = 'right';
+                
+                // Отключаем режим силы
+                this.pacman.powerMode = false;
+                this.pacman.powerModeTimer = 0;
+                this.canvas.classList.remove('power-mode');
+            }
+            
+            gameOver() {
+                this.isRunning = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                
+                this.pauseBackgroundMusic();
+                this.playSound('gameover');
+                
+                // Создаем визуальный эффект при окончании игры
+                this.createGameOverEffect();
+                
+                // Проверяем и сохраняем рекорд
+                this.saveHighScore(this.score);
+                
+                // Показываем сообщение
+                document.getElementById('message-title').textContent = 'Игра окончена';
+                document.getElementById('message-text').textContent = `Ваш счет: ${this.score}`;
+                document.getElementById('message').style.display = 'block';
+            }
+            
+            // Создаем эффект при окончании игры
+            createGameOverEffect() {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем темные частицы по всему экрану
+                for (let i = 0; i < 200; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: (Math.random() - 0.5) * 6,
+                        color: '#333333',
+                        size: 1 + Math.random() * 4,
+                        life: 100 + Math.floor(Math.random() * 50),
+                        decay: 0.01 + Math.random() * 0.01,
+                        glow: 0.3
+                    });
+                }
+            }
+            
+            reset() {
+                // Сброс всех игровых параметров
+                this.score = 0;           // Счет
+                this.level = this.selectedLevel; // Уровень (используем выбранный уровень)
+                this.lives = 3;           // Жизни
+                this.foodCount = 0;       // Счетчик еды
+                this.consecutiveEats = 0; // Последовательное поедание
+                this.comboBonus = 0;      // Бонус за комбо
+                this.comboDisplay = null; // Отображение комбо
+                this.particles = [];      // Частицы
+                this.levelStartTime = Date.now(); // Время начала уровня для бонусов
+                
+                // Сброс позиций
+                this.resetPositions();
+                
+                // Сброс карты для текущего уровня
+                if (this.levelMaps && this.levelMaps[this.level - 1]) {
+                    this.map = JSON.parse(JSON.stringify(this.levelMaps[this.level - 1]));
+                } else {
+                    // Если нет карты для уровня, используем стандартную
+                    this.map = [
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                        [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,2,2,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,0,0,0,0,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,2,2,2,2,2,2,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
+                        [0,2,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,2,0],
+                        [0,3,0,2,0,0,0,2,0,0,0,0,2,0,0,0,2,0,3,0],
+                        [0,2,0,2,2,2,0,2,2,2,2,2,2,0,2,2,2,0,2,0],
+                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
+                        [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ];
+                }
+                
+                // Сброс режима силы
+                this.pacman.powerMode = false;
+                this.pacman.powerModeTimer = 0;
+                this.canvas.classList.remove('power-mode');
+                
+                // Пересчет еды
+                this.countFood();
+                
+                // Обновление UI
+                this.updateScore();
+                this.updateLevel();
+                this.updateLives();
+                
+                // Остановка игры
+                this.isRunning = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                
+                // Пауза музыки
+                this.pauseBackgroundMusic();
+                
+                // Первичная отрисовка
+                this.draw();
+                
+                console.log("Игра сброшена");
+            }
+            
+            draw() {
+                // Очистка холста
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Отрисовка карты
+                this.drawMap();
+                
+                // Отрисовка фруктов
+                this.drawFruits();
+                
+                // Отрисовка Пакмана
+                this.drawPacman();
+                
+                // Отрисовка привидений
+                this.drawGhosts();
+                
+                // Отрисовка частиц
+                this.drawParticles();
+                
+                // Отрисовка комбо
+                this.drawCombo();
+            }
+            
+            drawMap() {
+                for (let y = 0; y < this.map.length; y++) {
+                    for (let x = 0; x < this.map[y].length; x++) {
+                        const cell = this.map[y][x];
+                        const pixelX = x * this.cellSize;
+                        const pixelY = y * this.cellSize;
+                        
+                        switch(cell) {
+                            case 0: // Стена
+                                this.ctx.fillStyle = '#2222FF';
+                                this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
+                                // Добавляем детали стен
+                                this.ctx.fillStyle = '#0000CC';
+                                this.ctx.fillRect(pixelX + 2, pixelY + 2, this.cellSize - 4, this.cellSize - 4);
+                                break;
+                            case 1: // Путь
+                                this.ctx.fillStyle = '#000';
+                                this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
+                                break;
+                            case 2: // Еда
+                                this.ctx.fillStyle = '#FFF';
+                                this.ctx.beginPath();
+                                this.ctx.arc(pixelX + this.cellSize/2, pixelY + this.cellSize/2, 3, 0, Math.PI * 2);
+                                this.ctx.fill();
+                                break;
+                            case 3: // Супер-еда
+                                this.ctx.fillStyle = '#FFF';
+                                this.ctx.beginPath();
+                                this.ctx.arc(pixelX + this.cellSize/2, pixelY + this.cellSize/2, 6, 0, Math.PI * 2);
+                                this.ctx.fill();
+                                break;
+                        }
+                    }
+                }
+            }
+            
+            drawPacman() {
+                const pixelX = this.pacman.x * this.cellSize + this.cellSize/2;
+                const pixelY = this.pacman.y * this.cellSize + this.cellSize/2;
+                const radius = this.cellSize/2 - 2;
+                
+                this.ctx.fillStyle = '#FFD700'; // Золотой цвет
+                this.ctx.beginPath();
+                
+                let startAngle, endAngle;
+                switch(this.pacman.direction) {
+                    case 'right':
+                        startAngle = this.pacman.mouthAngle * Math.PI;
+                        endAngle = (2 - this.pacman.mouthAngle) * Math.PI;
+                        break;
+                    case 'down':
+                        startAngle = (0.5 + this.pacman.mouthAngle) * Math.PI;
+                        endAngle = (2.5 - this.pacman.mouthAngle) * Math.PI;
+                        break;
+                    case 'left':
+                        startAngle = (1 + this.pacman.mouthAngle) * Math.PI;
+                        endAngle = (3 - this.pacman.mouthAngle) * Math.PI;
+                        break;
+                    case 'up':
+                        startAngle = (1.5 + this.pacman.mouthAngle) * Math.PI;
+                        endAngle = (3.5 - this.pacman.mouthAngle) * Math.PI;
+                        break;
+                }
+                
+                this.ctx.arc(pixelX, pixelY, radius, startAngle, endAngle);
+                this.ctx.lineTo(pixelX, pixelY);
+                this.ctx.fill();
+            }
+            
+            drawGhosts() {
+                this.ghosts.forEach(ghost => {
+                    const pixelX = ghost.x * this.cellSize + this.cellSize/2;
+                    const pixelY = ghost.y * this.cellSize + this.cellSize/2;
+                    const radius = this.cellSize/2 - 2;
+                    
+                    // Тело привидения
+                    this.ctx.fillStyle = this.pacman.powerMode ? '#0000FF' : ghost.color;
+                    
+                    // Добавляем свечение во время power mode
+                    if (this.pacman.powerMode) {
+                        this.ctx.shadowColor = '#0000FF';
+                        this.ctx.shadowBlur = 10;
+                    }
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(pixelX, pixelY - 2, radius, Math.PI, 0, false); // Верхняя часть
+                    this.ctx.lineTo(pixelX + radius, pixelY + radius - 2);
+                    
+                    // Нижняя часть с волнами
+                    for (let i = 0; i < 3; i++) {
+                        this.ctx.lineTo(pixelX + radius - (i * radius * 2/3), pixelY + radius - 6);
+                        this.ctx.lineTo(pixelX + radius - ((i + 0.5) * radius * 2/3), pixelY + radius - 2);
+                    }
+                    
+                    this.ctx.lineTo(pixelX - radius, pixelY + radius - 2);
+                    this.ctx.lineTo(pixelX - radius, pixelY - 2);
+                    this.ctx.fill();
+                    
+                    // Сбрасываем свечение
+                    this.ctx.shadowBlur = 0;
+                    
+                    // Глаза
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.beginPath();
+                    this.ctx.arc(pixelX - 4, pixelY - 4, 3, 0, Math.PI * 2);
+                    this.ctx.arc(pixelX + 4, pixelY - 4, 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    this.ctx.fillStyle = 'black';
+                    let eyeOffsetX = 0, eyeOffsetY = 0;
+                    switch(ghost.direction) {
+                        case 'left': eyeOffsetX = -1; break;
+                        case 'right': eyeOffsetX = 1; break;
+                        case 'up': eyeOffsetY = -1; break;
+                        case 'down': eyeOffsetY = 1; break;
+                    }
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(pixelX - 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
+                    this.ctx.arc(pixelX + 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+            
+            drawCombo() {
+                if (this.comboDisplay && this.settings.animationsEnabled) {
+                    const elapsed = Date.now() - this.comboDisplay.startTime;
+                    const alpha = 1 - elapsed / 2000;
+                    const scale = 1 + Math.sin(elapsed / 200) * 0.2; // Пульсация
+                    
+                    this.ctx.globalAlpha = alpha;
+                    
+                    // Добавляем свечение
+                    this.ctx.shadowColor = '#FF00FF';
+                    this.ctx.shadowBlur = 10;
+                    
+                    this.ctx.fillStyle = '#FF00FF';
+                    this.ctx.font = `bold ${20 * scale}px Arial`;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(this.comboDisplay.text, this.comboDisplay.x, this.comboDisplay.y);
+                    
+                    // Сбрасываем свечение
+                    this.ctx.shadowBlur = 0;
+                    this.ctx.globalAlpha = 1;
+                    this.ctx.textAlign = 'left';
+                }
+            }
+            
+            updateScore() {
+                document.getElementById('score').textContent = this.score;
+            }
+            
+            updateLevel() {
+                document.getElementById('level').textContent = this.level;
+            }
+            
+            updateLives() {
+                document.getElementById('lives').innerHTML = '❤️'.repeat(this.lives);
+            }
+            
+            // Система рекордов
+            loadHighScores() {
+                try {
+                    const scores = localStorage.getItem('pacmanHighScores');
+                    return scores ? JSON.parse(scores) : [];
+                } catch (e) {
+                    console.error('Ошибка загрузки рекордов:', e);
+                    return [];
+                }
+            }
+            
+            saveHighScore(score) {
+                try {
+                    const name = prompt('Поздравляем! Вы набрали ' + score + ' очков. Введите ваше имя:', 'Игрок') || 'Аноним';
+                    const newScore = { name, score, date: new Date().toLocaleDateString() };
+                    
+                    this.highScores.push(newScore);
+                    this.highScores.sort((a, b) => b.score - a.score);
+                    this.highScores = this.highScores.slice(0, 10); // Сохраняем только топ-10
+                    
+                    // Создаем визуальный эффект при новом рекорде
+                    if (this.highScores[0].score === score) {
+                        this.createNewHighScoreEffect();
+                    }
+                    
+                    localStorage.setItem('pacmanHighScores', JSON.stringify(this.highScores));
+                    console.log('Рекорд сохранен:', newScore);
+                } catch (e) {
+                    console.error('Ошибка сохранения рекорда:', e);
+                }
+            }
+            
+            // Создаем эффект при новом рекорде
+            createNewHighScoreEffect() {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем золотые частицы
+                for (let i = 0; i < 100; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 3;
+                    
+                    this.particles.push({
+                        x: this.canvas.width / 2,
+                        y: this.canvas.height / 2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: '#FFD700',
+                        size: 3 + Math.random() * 3,
+                        life: 80 + Math.floor(Math.random() * 40),
+                        decay: 0.02 + Math.random() * 0.02,
+                        glow: 0.9
+                    });
+                }
+                
+                // Создаем текстовый эффект
+                this.particles.push({
+                    x: this.canvas.width / 2,
+                    y: this.canvas.height / 2,
+                    vy: -1,
+                    color: '#FFD700',
+                    size: 20,
+                    life: 120,
+                    text: 'НОВЫЙ РЕКОРД!',
+                    decay: 0
+                });
+            }
+            
+            showHighScores() {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('highscores-screen').classList.remove('hidden');
+                
+                const scoresList = document.getElementById('scores-list');
+                scoresList.innerHTML = '';
+                
+                if (this.highScores.length === 0) {
+                    scoresList.innerHTML = '<div class="score-entry"><span>Нет рекордов</span></div>';
+                    return;
+                }
+                
+                this.highScores.forEach((score, index) => {
+                    const entry = document.createElement('div');
+                    entry.className = 'score-entry';
+                    entry.innerHTML = `
+                        <span class="score-rank">#${index + 1}</span>
+                        <span class="score-name">${score.name}</span>
+                        <span class="score-value">${score.score}</span>
+                    `;
+                    scoresList.appendChild(entry);
+                });
+            }
+            
+            hideHighScores() {
+                document.getElementById('highscores-screen').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            }
+            
+            // Система настроек
+            loadSettings() {
+                try {
+                    const settings = localStorage.getItem('pacmanSettings');
+                    return settings ? JSON.parse(settings) : {
+                        difficulty: 'normal',
+                        gameSpeed: 150,
+                        soundEnabled: true,
+                        musicEnabled: true,
+                        animationsEnabled: true
+                    };
+                } catch (e) {
+                    console.error('Ошибка загрузки настроек:', e);
+                    return {
+                        difficulty: 'normal',
+                        gameSpeed: 150,
+                        soundEnabled: true,
+                        musicEnabled: true,
+                        animationsEnabled: true
+                    };
+                }
+            }
+            
+            applySettings() {
+                const settings = {
+                    difficulty: document.getElementById('difficulty').value,
+                    gameSpeed: parseInt(document.getElementById('game-speed').value),
+                    soundEnabled: document.getElementById('sound-enabled').checked,
+                    musicEnabled: document.getElementById('music-enabled').checked,
+                    animationsEnabled: document.getElementById('animations-enabled').checked
+                };
+                
+                this.settings = settings;
+                
+                try {
+                    localStorage.setItem('pacmanSettings', JSON.stringify(settings));
+                    console.log('Настройки сохранены:', settings);
+                    
+                    // Применяем настройки
+                    this.updateInterval = settings.gameSpeed;
+                    
+                    // Если игра запущена и музыка включена, запускаем её
+                    if (this.isRunning && settings.musicEnabled) {
+                        this.playBackgroundMusic();
+                    } else if (!settings.musicEnabled) {
+                        this.pauseBackgroundMusic();
+                    }
+                } catch (e) {
+                    console.error('Ошибка сохранения настроек:', e);
+                }
+                
+                this.hideSettings();
+            }
+            
+            showSettings() {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('settings-screen').classList.remove('hidden');
+                
+                // Заполняем поля текущими значениями
+                document.getElementById('difficulty').value = this.settings.difficulty;
+                document.getElementById('game-speed').value = this.settings.gameSpeed;
+                document.getElementById('speed-value').textContent = this.settings.gameSpeed + ' мс';
+                document.getElementById('sound-enabled').checked = this.settings.soundEnabled;
+                document.getElementById('music-enabled').checked = this.settings.musicEnabled;
+                document.getElementById('animations-enabled').checked = this.settings.animationsEnabled;
+            }
+            
+            hideSettings() {
+                document.getElementById('settings-screen').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            }
+            
+            hideMenu() {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+            }
+            
+            // Добавляем методы для работы с выбором уровней
+            showLevelSelect() {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('level-select-screen').classList.remove('hidden');
+                
+                // Генерируем кнопки уровней
+                this.generateLevelButtons();
+            }
+            
+            hideLevelSelect() {
+                document.getElementById('level-select-screen').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            }
+            
+            generateLevelButtons() {
+                const levelGrid = document.getElementById('level-grid');
+                levelGrid.innerHTML = '';
+                
+                // Создаем кнопки для 10 уровней - все уровни открыты
+                for (let i = 1; i <= 10; i++) {
+                    const button = document.createElement('button');
+                    button.className = 'level-btn';
+                    
+                    // Добавляем сложность уровня в текст кнопки
+                    let difficulty = '';
+                    if (i <= 3) difficulty = ' ★';
+                    else if (i <= 6) difficulty = ' ★★';
+                    else if (i <= 9) difficulty = ' ★★★';
+                    else difficulty = ' ★★★★';
+                    
+                    button.textContent = `Уровень ${i}${difficulty}`;
+                    
+                    // Все уровни доступны без ограничений
+                    button.addEventListener('click', () => {
+                        this.playSound('start');
+                        this.selectLevel(i);
+                    });
+                    
+                    levelGrid.appendChild(button);
+                }
+            }
+            
+            selectLevel(level) {
+                this.selectedLevel = level;
+                this.level = level;
+                
+                // Загружаем карту для выбранного уровня
+                if (this.levelMaps && this.levelMaps[level - 1]) {
+                    this.map = JSON.parse(JSON.stringify(this.levelMaps[level - 1]));
+                }
+                
+                // Сбрасываем игру
+                this.reset();
+                
+                // Скрываем выбор уровней и показываем игру
+                this.hideLevelSelect();
+                this.hideMenu();
+                this.start();
+            }
+            
+            // Метод для разблокировки следующего уровня (устарел, все уровни открыты)
+            /*
+            unlockNextLevel() {
+                try {
+                    let unlockedLevels = 3; // Начинаем с 3 разблокированных уровней
+                    const saved = localStorage.getItem('pacmanUnlockedLevels');
+                    if (saved) {
+                        unlockedLevels = Math.min(10, Math.max(3, parseInt(saved)));
+                    }
+                    
+                    // Разблокируем следующий уровень
+                    if (this.level >= unlockedLevels && this.level < 10) {
+                        unlockedLevels = this.level + 1;
+                        localStorage.setItem('pacmanUnlockedLevels', unlockedLevels.toString());
+                        
+                        // Показываем уведомление о разблокировке
+                        if (unlockedLevels <= 10) {
+                            this.showAchievementNotification({
+                                name: `Уровень ${unlockedLevels} разблокирован!`,
+                                description: `Доступен новый уровень сложности`,
+                                points: 100 * unlockedLevels
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Ошибка сохранения разблокированных уровней:', e);
+                }
+            }
+            */
+            
+            // Метод для возврата в главное меню во время игры
+            showMenu() {
+                // Останавливаем игру
+                this.isRunning = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                
+                // Пауза музыки
+                this.pauseBackgroundMusic();
+                
+                // Скрываем игровой экран и показываем меню
+                document.getElementById('game-screen').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            }
+            
+            // Система звука
+            initSounds() {
+                try {
+                    // Создать аудио контекст
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Инициализировать звуковые эффекты
+                    this.sounds = {};
+                    
+                    // Создать проигрыватель фоновой музыки
+                    this.musicPlayer = new PacmanMusic();
+                    this.musicPlayer.init();
+                } catch (e) {
+                    console.warn('Web Audio API не поддерживается в этом браузере');
+                }
+            }
+            
+            playSound(type) {
+                if (!this.settings.soundEnabled || !this.audioContext) return;
+                
+                try {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                    
+                    switch(type) {
+                        case 'start':
+                            oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime); // До 5 октавы
+                            oscillator.type = 'square';
+                            break;
+                        case 'eat':
+                            oscillator.frequency.setValueAtTime(783.99, this.audioContext.currentTime); // Соль 5 октавы
+                            oscillator.type = 'triangle';
+                            break;
+                        case 'power':
+                            oscillator.frequency.setValueAtTime(1046.50, this.audioContext.currentTime); // До 6 октавы
+                            oscillator.type = 'sawtooth';
+                            break;
+                        case 'ghost':
+                            oscillator.frequency.setValueAtTime(1567.98, this.audioContext.currentTime); // Соль 6 октавы
+                            oscillator.type = 'square';
+                            break;
+                        case 'death':
+                            oscillator.frequency.setValueAtTime(220, this.audioContext.currentTime); // Ля 3 октавы
+                            oscillator.type = 'sawtooth';
+                            break;
+                        case 'level':
+                            oscillator.frequency.setValueAtTime(1318.51, this.audioContext.currentTime); // Ми 6 октавы
+                            oscillator.type = 'triangle';
+                            break;
+                        case 'combo':
+                            oscillator.frequency.setValueAtTime(1567.98, this.audioContext.currentTime); // Соль 6 октавы
+                            oscillator.type = 'sine';
+                            // Воспроизвести последовательность нот
+                            gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                            oscillator.frequency.setValueAtTime(1567.98, this.audioContext.currentTime);
+                            oscillator.frequency.setValueAtTime(1760, this.audioContext.currentTime + 0.1);
+                            oscillator.frequency.setValueAtTime(1975.53, this.audioContext.currentTime + 0.2);
+                            break;
+                        case 'gameover':
+                            oscillator.frequency.setValueAtTime(130.81, this.audioContext.currentTime); // До 3 октавы
+                            oscillator.type = 'sawtooth';
+                            break;
+                        case 'fruit':
+                            oscillator.frequency.setValueAtTime(1760, this.audioContext.currentTime); // Ля 6 октавы
+                            oscillator.type = 'sine';
+                            break;
+                        case 'achievement':
+                            // Play a celebratory sound
+                            oscillator.frequency.setValueAtTime(1046.50, this.audioContext.currentTime); // До 6 октавы
+                            oscillator.frequency.setValueAtTime(1318.51, this.audioContext.currentTime + 0.1); // Ми 6 октавы
+                            oscillator.frequency.setValueAtTime(1567.98, this.audioContext.currentTime + 0.2); // Соль 6 октавы
+                            oscillator.type = 'sine';
+                            break;
+                    }
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + 0.3);
+                } catch (e) {
+                    console.warn('Ошибка воспроизведения звука:', e);
+                }
+            }
+            
+            playBackgroundMusic() {
+                if (this.settings.musicEnabled && this.musicPlayer) {
+                    this.musicPlayer.playTheme();
+                }
+            }
+            
+            pauseBackgroundMusic() {
+                if (this.musicPlayer) {
+                    this.musicPlayer.stop();
+                }
+            }
+            
+            // Fruit System
+            initFruits() {
+                // Фрукты, которые появляются на определенных уровнях
+                this.fruits = [];
+                this.fruitTypes = [
+                    { type: 'cherry', points: 100, color: '#FF0000', symbol: '🍒' },
+                    { type: 'strawberry', points: 300, color: '#FF00FF', symbol: '🍓' },
+                    { type: 'orange', points: 500, color: '#FFA500', symbol: '🍊' },
+                    { type: 'apple', points: 700, color: '#FF0000', symbol: '🍎' },
+                    { type: 'melon', points: 1000, color: '#00FF00', symbol: '🍉' },
+                    { type: 'galaxian', points: 2000, color: '#FFFF00', symbol: '⭐' },
+                    { type: 'bell', points: 3000, color: '#FFFF00', symbol: '🔔' },
+                    { type: 'key', points: 5000, color: '#FFFF00', symbol: '🔑' }
+                ];
+                this.fruitTimer = 0;
+                this.fruitVisible = false;
+                this.currentFruit = null;
+            }
+            
+            // Показать фрукт на карте
+            spawnFruit() {
+                if (!this.fruitVisible && Math.random() < 0.005 && this.foodCount > this.totalFood * 0.3) {
+                    // Найти свободное место для фрукта
+                    let attempts = 0;
+                    while (attempts < 50) {
+                        const x = Math.floor(Math.random() * (this.map[0].length - 2)) + 1;
+                        const y = Math.floor(Math.random() * (this.map.length - 2)) + 1;
+                        
+                        if (this.map[y][x] === 1) { // Пустое место
+                            this.currentFruit = {
+                                x: x,
+                                y: y,
+                                ...this.fruitTypes[Math.min(this.level - 1, this.fruitTypes.length - 1)],
+                                spawnTime: Date.now()
+                            };
+                            this.fruitVisible = true;
+                            break;
+                        }
+                        attempts++;
+                    }
+                }
+                
+                // Удалить фрукт через 10 секунд
+                if (this.fruitVisible && Date.now() - this.currentFruit.spawnTime > 10000) {
+                    this.fruitVisible = false;
+                    this.currentFruit = null;
+                }
+            }
+            
+            // Проверить сбор фрукта
+            checkFruitCollection() {
+                if (this.fruitVisible && this.pacman.x === this.currentFruit.x && this.pacman.y === this.currentFruit.y) {
+                    this.score += this.currentFruit.points;
+                    this.playSound('fruit');
+                    this.createParticles(this.currentFruit.x, this.currentFruit.y, this.currentFruit.color);
+                    // Создаем специальный эффект при сборе фрукта
+                    this.createFruitCollectedEffect(this.currentFruit.x, this.currentFruit.y, this.currentFruit.points);
+                    this.fruitVisible = false;
+                    this.currentFruit = null;
+                    this.updateScore();
+                }
+            }
+            
+            // Draw fruits on the map
+            drawFruits() {
+                if (this.fruitVisible && this.currentFruit) {
+                    const pixelX = this.currentFruit.x * this.cellSize + this.cellSize/2;
+                    const pixelY = this.currentFruit.y * this.cellSize + this.cellSize/2;
+                    
+                    // Анимация пульсации
+                    const pulse = Math.sin(Date.now() / 200) * 0.2 + 1;
+                    
+                    // Добавляем свечение
+                    this.ctx.shadowColor = this.currentFruit.color;
+                    this.ctx.shadowBlur = 15;
+                    
+                    this.ctx.save();
+                    this.ctx.translate(pixelX, pixelY);
+                    this.ctx.scale(pulse, pulse);
+                    
+                    this.ctx.font = '24px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillStyle = this.currentFruit.color;
+                    this.ctx.fillText(this.currentFruit.symbol, 0, 0);
+                    
+                    this.ctx.restore();
+                    
+                    // Сбрасываем свечение
+                    this.ctx.shadowBlur = 0;
+                }
+            }
+            
+            // Achievement System
+            initAchievements() {
+                this.achievements = [
+                    { id: 'first_game', name: 'Первый шаг', description: 'Начать первую игру', unlocked: false, points: 100 },
+                    { id: 'score_1000', name: 'Тысячник', description: 'Набрать 1000 очков', unlocked: false, points: 200 },
+                    { id: 'score_5000', name: 'Пяти тысячник', description: 'Набрать 5000 очков', unlocked: false, points: 500 },
+                    { id: 'level_5', name: 'Продвинутый', description: 'Достичь 5 уровня', unlocked: false, points: 300 },
+                    { id: 'combo_10', name: 'Комбо-мастер', description: 'Собрать 10 комбо', unlocked: false, points: 400 },
+                    { id: 'ghost_hunter', name: 'Охотник за привидениями', description: 'Съесть 20 привидений', unlocked: false, points: 600 },
+                    { id: 'fruit_lover', name: 'Любитель фруктов', description: 'Собрать 10 фруктов', unlocked: false, points: 350 },
+                    { id: 'survivor', name: 'Выживший', description: 'Пройти уровень без потери жизни', unlocked: false, points: 700 }
+                ];
+                
+                this.ghostsEaten = 0;
+                this.fruitsCollected = 0;
+                this.levelsCompletedWithoutDeath = 0;
+                this.currentLevelStartLives = 3;
+            }
+            
+            // Check and unlock achievements
+            checkAchievements() {
+                // First game
+                if (!this.achievements[0].unlocked) {
+                    this.unlockAchievement('first_game');
+                }
+                
+                // Score achievements
+                if (!this.achievements[1].unlocked && this.score >= 1000) {
+                    this.unlockAchievement('score_1000');
+                }
+                
+                if (!this.achievements[2].unlocked && this.score >= 5000) {
+                    this.unlockAchievement('score_5000');
+                }
+                
+                // Level achievement
+                if (!this.achievements[3].unlocked && this.level >= 5) {
+                    this.unlockAchievement('level_5');
+                }
+                
+                // Combo achievement
+                if (!this.achievements[4].unlocked && this.consecutiveEats >= 10) {
+                    this.unlockAchievement('combo_10');
+                }
+                
+                // Ghost hunter achievement
+                if (!this.achievements[5].unlocked && this.ghostsEaten >= 20) {
+                    this.unlockAchievement('ghost_hunter');
+                }
+                
+                // Fruit lover achievement
+                if (!this.achievements[6].unlocked && this.fruitsCollected >= 10) {
+                    this.unlockAchievement('fruit_lover');
+                }
+            }
+            
+            // Unlock an achievement
+            unlockAchievement(id) {
+                const achievement = this.achievements.find(a => a.id === id);
+                if (achievement && !achievement.unlocked) {
+                    achievement.unlocked = true;
+                    this.score += achievement.points;
+                    this.playSound('achievement');
+                    this.showAchievementNotification(achievement);
+                    this.updateScore();
+                    console.log(`Достижение разблокировано: ${achievement.name}`);
+                }
+            }
+            
+            // Show achievement notification
+            showAchievementNotification(achievement) {
+                // Создать элемент уведомления
+                const notification = document.createElement('div');
+                notification.className = 'achievement-notification';
+                
+                // Если это уведомление о разблокировке уровня, используем другой текст
+                const title = achievement.description ? 'Новое достижение!' : 'Новый уровень!';
+                const description = achievement.description || achievement.description;
+                const name = achievement.name;
+                const points = achievement.points || 0;
+                
+                notification.innerHTML = `
+                    <div class="achievement-content">
+                        <h3>${title}</h3>
+                        <h4>${name}</h4>
+                        ${description ? `<p>${description}</p>` : ''}
+                        ${points ? `<span>+${points} очков</span>` : ''}
+                    </div>
+                `;
+                
+                // Добавить стили для уведомления
+                if (!document.getElementById('achievement-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'achievement-styles';
+                    style.textContent = `
+                        .achievement-notification {
+                            position: fixed;
+                            top: 20px;
+                            right: 20px;
+                            background: linear-gradient(135deg, #8A2BE2, #4B0082);
+                            color: white;
+                            padding: 15px;
+                            border-radius: 10px;
+                            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+                            z-index: 1000;
+                            animation: slideIn 0.5s, fadeOut 0.5s 4.5s forwards;
+                            border: 2px solid #FFD700;
+                            max-width: 300px;
+                        }
+                        
+                        .achievement-content h3 {
+                            margin: 0 0 5px 0;
+                            color: #FFD700;
+                            font-size: 1.2em;
+                        }
+                        
+                        .achievement-content h4 {
+                            margin: 0 0 5px 0;
+                            font-size: 1.1em;
+                        }
+                        
+                        .achievement-content p {
+                            margin: 0 0 10px 0;
+                            font-size: 0.9em;
+                        }
+                        
+                        .achievement-content span {
+                            font-weight: bold;
+                            color: #00FF00;
+                        }
+                        
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        
+                        @keyframes fadeOut {
+                            from { opacity: 1; }
+                            to { opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                document.body.appendChild(notification);
+                
+                // Создаем визуальный эффект при получении достижения
+                this.createAchievementEffect();
+                
+                // Удалить уведомление через 5 секунд
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 5000);
+            }
+            
+            // Создаем эффект при получении достижения
+            createAchievementEffect() {
+                if (!this.settings.animationsEnabled) return;
+                
+                // Создаем фиолетовые частицы
+                for (let i = 0; i < 50; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 2;
+                    
+                    this.particles.push({
+                        x: this.canvas.width - 50,
+                        y: 50,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: '#8A2BE2',
+                        size: 2 + Math.random() * 2,
+                        life: 60 + Math.floor(Math.random() * 40),
+                        decay: 0.02 + Math.random() * 0.02,
+                        glow: 0.7
+                    });
+                }
+            }
+        }
+        
+        // Инициализировать игру при загрузке страницы
+        let game;
+        window.addEventListener('load', () => {
+            game = new PacmanGame();
+            console.log("Игра загружена");
+        });
+    </script>
+</body>
+</html>
