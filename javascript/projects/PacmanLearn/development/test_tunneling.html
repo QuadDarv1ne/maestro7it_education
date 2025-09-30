@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacman Tunneling Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ffff00;
+        }
+        canvas {
+            border: 2px solid #0000ff;
+            background-color: #000;
+        }
+        .instructions {
+            max-width: 600px;
+            margin: 20px 0;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .test-status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #333;
+        }
+        .success {
+            background-color: #4CAF50;
+        }
+        .failed {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pacman Tunneling Test</h1>
+    
+    <div class="instructions">
+        <p>This test verifies that both Pacman and ghosts can move through horizontal and vertical tunnels.</p>
+        <p>Watch as Pacman and ghosts move through the edges of the map and reappear on the opposite side.</p>
+    </div>
+    
+    <div id="testStatus" class="test-status">Running tests...</div>
+    
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <script src="GameMap.js"></script>
+    <script src="Pacman.js"></script>
+    <script src="Ghost.js"></script>
+    
+    <script>
+        // Simple test implementation
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const cellSize = 30;
+        
+        // Create a simple test map with tunnels
+        const testMap = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 1, 2, 2, 2, 1, 1, 2, 2, 2, 1, 2, 2, 2, 2, 1],
+            [1, 1, 1, 1, 2, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 2, 1, 1, 1, 1],
+            [0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0],
+            [1, 1, 1, 1, 2, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 2, 1, 1, 1, 1],
+            [0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0],
+            [1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 2, 1, 1, 1, 1],
+            [0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0],
+            [1, 1, 1, 1, 2, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 2, 1, 1, 1, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1],
+            [1, 2, 2, 1, 2, 2, 2, 2, 2, 0, 0, 2, 2, 2, 2, 2, 1, 2, 2, 1],
+            [1, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 1],
+            [1, 2, 2, 2, 2, 1, 2, 2, 2, 1, 1, 2, 2, 2, 1, 2, 2, 2, 2, 1],
+            [1, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 1],
+            [1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+        
+        // Create Pacman and ghosts
+        const pacman = new Pacman(10, 10, cellSize);
+        const ghosts = [
+            new Ghost(5, 5, '#ff0000', 'Blinky', 0.7),
+            new Ghost(15, 5, '#ffb8ff', 'Pinky', 0.6),
+            new Ghost(5, 15, '#00ffff', 'Inky', 0.5),
+            new Ghost(15, 15, '#ffb852', 'Clyde', 0.4)
+        ];
+        
+        // Test status tracking
+        let testResults = {
+            horizontalTunnelPacman: false,
+            verticalTunnelPacman: false,
+            horizontalTunnelGhost: false,
+            verticalTunnelGhost: false
+        };
+        
+        // Draw the map
+        function drawMap() {
+            for (let y = 0; y < testMap.length; y++) {
+                for (let x = 0; x < testMap[y].length; x++) {
+                    const cell = testMap[y][x];
+                    ctx.fillStyle = cell === 1 ? '#0000ff' : (cell === 0 ? '#000' : '#000');
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    
+                    if (cell === 2) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(
+                            x * cellSize + cellSize / 2,
+                            y * cellSize + cellSize / 2,
+                            cellSize / 8,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+        
+        // Draw Pacman
+        function drawPacman() {
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(
+                pacman.x * cellSize + cellSize / 2,
+                pacman.y * cellSize + cellSize / 2,
+                cellSize / 2 - 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+        
+        // Draw ghosts
+        function drawGhosts() {
+            ghosts.forEach(ghost => {
+                ctx.fillStyle = ghost.color;
+                ctx.beginPath();
+                ctx.arc(
+                    ghost.x * cellSize + cellSize / 2,
+                    ghost.y * cellSize + cellSize / 2,
+                    cellSize / 2 - 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            });
+        }
+        
+        // Test tunneling functionality
+        function testTunneling() {
+            // Test horizontal tunneling for Pacman
+            const pacmanStartX = pacman.x;
+            pacman.x = -0.5; // Position just off the left edge
+            const newPos = pacman.getNextPosition(pacman.x, pacman.y, 'left', testMap, cellSize);
+            if (newPos.x === testMap[0].length - 1) {
+                testResults.horizontalTunnelPacman = true;
+            }
+            pacman.x = pacmanStartX; // Reset position
+            
+            // Test vertical tunneling for Pacman
+            const pacmanStartY = pacman.y;
+            pacman.y = -0.5; // Position just off the top edge
+            const newPos2 = pacman.getNextPosition(pacman.x, pacman.y, 'up', testMap, cellSize);
+            if (newPos2.y === testMap.length - 1) {
+                testResults.verticalTunnelPacman = true;
+            }
+            pacman.y = pacmanStartY; // Reset position
+            
+            // Test horizontal tunneling for Ghost
+            const ghostStartX = ghosts[0].x;
+            ghosts[0].x = -0.5; // Position just off the left edge
+            const newPos3 = ghosts[0].getNextPosition(ghosts[0].x, ghosts[0].y, 'left', testMap, cellSize);
+            if (newPos3.x === testMap[0].length - 1) {
+                testResults.horizontalTunnelGhost = true;
+            }
+            ghosts[0].x = ghostStartX; // Reset position
+            
+            // Test vertical tunneling for Ghost
+            const ghostStartY = ghosts[0].y;
+            ghosts[0].y = -0.5; // Position just off the top edge
+            const newPos4 = ghosts[0].getNextPosition(ghosts[0].x, ghosts[0].y, 'up', testMap, cellSize);
+            if (newPos4.y === testMap.length - 1) {
+                testResults.verticalTunnelGhost = true;
+            }
+            ghosts[0].y = ghostStartY; // Reset position
+            
+            // Update test status display
+            updateTestStatus();
+        }
+        
+        function updateTestStatus() {
+            const statusElement = document.getElementById('testStatus');
+            const allTestsPassed = Object.values(testResults).every(result => result === true);
+            
+            if (allTestsPassed) {
+                statusElement.className = 'test-status success';
+                statusElement.innerHTML = '<h3>All Tunneling Tests Passed! ✅</h3>' +
+                    '<p>✓ Horizontal tunneling for Pacman</p>' +
+                    '<p>✓ Vertical tunneling for Pacman</p>' +
+                    '<p>✓ Horizontal tunneling for Ghosts</p>' +
+                    '<p>✓ Vertical tunneling for Ghosts</p>';
+            } else {
+                statusElement.className = 'test-status failed';
+                statusElement.innerHTML = '<h3>Tunneling Tests Results:</h3>' +
+                    `<p>${testResults.horizontalTunnelPacman ? '✓' : '❌'} Horizontal tunneling for Pacman</p>` +
+                    `<p>${testResults.verticalTunnelPacman ? '✓' : '❌'} Vertical tunneling for Pacman</p>` +
+                    `<p>${testResults.horizontalTunnelGhost ? '✓' : '❌'} Horizontal tunneling for Ghosts</p>` +
+                    `<p>${testResults.verticalTunnelGhost ? '✓' : '❌'} Vertical tunneling for Ghosts</p>`;
+            }
+        }
+        
+        // Animation loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawMap();
+            drawPacman();
+            drawGhosts();
+            
+            // Move Pacman and ghosts for visual demonstration
+            pacman.move('right', testMap, cellSize);
+            ghosts.forEach(ghost => {
+                ghost.move(pacman.x, pacman.y, testMap, false, cellSize);
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Initialize and run tests
+        drawMap();
+        testTunneling();
+        animate();
+    </script>
+</body>
+</html>

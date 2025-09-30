@@ -69,6 +69,245 @@ class PacmanGame {
     countFood() {
         this.totalFood = this.gameMap.countFood(this.gameMap.getLevelMap(this.level));
         console.log("Всего еды:", this.totalFood);
+        // Set the food count for achievement tracking
+        this.achievementManager.setLevelFoodCount(this.totalFood);
+    }
+    
+    // Метод для сброса игры
+    reset() {
+        console.log("Сброс игры");
+        this.isRunning = false;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+        
+        // Сброс игровых объектов
+        this.pacman.resetPosition();
+        this.ghosts.forEach(ghost => ghost.resetPosition());
+        
+        // Сброс карты
+        this.resetMap();
+        
+        // Сброс состояния игры
+        this.score = 0;
+        this.level = 1;
+        this.lives = 3;
+        this.foodCount = 0;
+        this.countFood();
+        
+        // Сброс системы бонусов
+        this.consecutiveEats = 0;
+        this.comboBonus = 0;
+        this.comboDisplay = null;
+        
+        // Сброс менеджеров
+        this.particleManager.clearParticles();
+        this.fruitManager.reset();
+        this.achievementManager.reset();
+        
+        // Сброс времени начала уровня для достижения "Скоростной демон"
+        this.achievementManager.setLevelStartTime();
+        
+        this.updateScore();
+        this.updateLives();
+        this.updateLevel();
+        
+        // Перерисовка
+        this.draw();
+        
+        console.log("Игра сброшена");
+    }
+    
+    // Метод для сброса позиций
+    resetPositions() {
+        console.log("Сброс позиций");
+        this.pacman.resetPosition();
+        this.ghosts.forEach(ghost => ghost.resetPosition());
+        this.particleManager.clearParticles();
+    }
+    
+    // Метод для сброса карты
+    resetMap() {
+        console.log("Сброс карты");
+        const currentMap = this.gameMap.getLevelMap(this.level);
+        // Здесь должна быть логика сброса карты к исходному состоянию
+        // Для простоты мы просто пересоздаем карту
+        this.foodCount = 0;
+        this.countFood();
+        // Reset food eaten counter for achievement tracking
+        this.achievementManager.setLevelFoodCount(this.totalFood);
+    }
+    
+    // Метод для запуска игры
+    start() {
+        console.log("Запуск игры");
+        if (!this.isRunning) {
+            this.isRunning = true;
+            // Set the level start time for achievement tracking
+            this.achievementManager.setLevelStartTime();
+            this.gameLoop();
+        }
+    }
+    
+    // Метод для перехода на следующий уровень
+    nextLevel() {
+        console.log("Переход на следующий уровень");
+        this.level++;
+        this.foodCount = 0;
+        
+        // Сброс позиций
+        this.pacman.resetPosition();
+        this.ghosts.forEach(ghost => ghost.resetPosition());
+        
+        // Сброс менеджеров
+        this.particleManager.clearParticles();
+        this.fruitManager.reset();
+        
+        // Подсчет еды на новом уровне
+        this.countFood();
+        
+        // Set the level start time for achievement tracking
+        this.achievementManager.setLevelStartTime();
+        
+        // Увеличение сложности
+        this.increaseDifficulty();
+        
+        this.updateLevel();
+        this.draw();
+    }
+    
+    // Метод для проверки завершения уровня
+    checkLevelComplete() {
+        if (this.foodCount >= this.totalFood) {
+            console.log("Уровень завершен");
+            // Добавляем очки за завершение уровня
+            this.score += 1000 * this.level;
+            
+            // Проверяем достижение "Перфекционист"
+            this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
+            
+            // Переход на следующий уровень
+            this.nextLevel();
+        }
+    }
+    
+    // Метод для обработки столкновений
+    checkCollisions() {
+        // Проверяем сбор еды
+        const cell = this.map[this.pacman.y][this.pacman.x];
+        if (cell === 2) { // Обычная еда
+            this.map[this.pacman.y][this.pacman.x] = 1;
+            this.foodCount++;
+            this.score += 10;
+            this.playSound('eat');
+            this.createCombo();
+            // Создаем визуальный эффект при сборе обычной еды
+            this.createFoodParticles(this.pacman.x, this.pacman.y, false);
+            this.updateScore();
+            this.checkLevelComplete();
+            // Increment food eaten for achievement tracking
+            this.achievementManager.incrementFoodEaten();
+        } else if (cell === 3) { // Супер-еда
+            this.map[this.pacman.y][this.pacman.x] = 1;
+            this.foodCount++;
+            this.score += 50;
+            this.pacman.powerMode = true;
+            this.pacman.powerModeTimer = 10000; // 10 секунд
+            this.canvas.classList.add('power-mode');
+            this.playSound('power');
+            this.createCombo();
+            // Создаем визуальный эффект при сборе супер-еды
+            this.createFoodParticles(this.pacman.x, this.pacman.y, true);
+            // Добавляем дополнительный эффект для супер-еды
+            this.createSuperFoodEffect(this.pacman.x, this.pacman.y);
+            this.updateScore();
+            this.checkLevelComplete();
+            // Increment food eaten for achievement tracking
+            this.achievementManager.incrementFoodEaten();
+        }
+        
+        // Проверяем сбор фрукта
+        this.checkFruitCollection();
+        
+        // Проверяем столкновения с привидениями
+        this.ghosts.forEach(ghost => {
+            if (this.pacman.x === ghost.x && this.pacman.y === ghost.y) {
+                if (this.pacman.powerMode) {
+                    // Пакман съедает привидение
+                    this.score += 200;
+                    this.achievementManager.incrementGhostsEaten(); // Track for achievements
+                    this.playSound('ghost');
+                    this.createParticles(ghost.x, ghost.y, ghost.color);
+                    // Создаем специальный эффект при поедании привидения
+                    this.createGhostEatenEffect(ghost.x, ghost.y, ghost.color);
+                    // Возвращаем привидение на начальную позицию
+                    ghost.x = 10;
+                    ghost.y = ghost.color === 'red' ? 8 : ghost.color === 'pink' ? 9 : 
+                              ghost.color === 'cyan' ? 9 : 10;
+                    this.updateScore();
+                    // Check achievements after eating a ghost
+                    this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
+                } else {
+                    // Привидение съедает Пакмана
+                    this.lives--;
+                    this.updateLives();
+                    this.playSound('death');
+                    this.createParticles(this.pacman.x, this.pacman.y, 'yellow');
+                    // Создаем специальный эффект при потере жизни
+                    this.createLifeLostEffect(this.pacman.x, this.pacman.y);
+                    
+                    if (this.lives <= 0) {
+                        this.gameOver();
+                    } else {
+                        // Возвращаем Пакмана и привидений на начальные позиции
+                        this.resetPositions();
+                    }
+                }
+            }
+        });
+    }
+    
+    // Проверяем сбор фрукта
+    checkFruitCollection() {
+        const fruitPoints = this.fruitManager.checkFruitCollection(
+            this.pacman.x, 
+            this.pacman.y,
+            (points) => {
+                this.score += points;
+                this.updateScore();
+            },
+            (x, y, color) => {
+                this.createParticles(x, y, color);
+                this.achievementManager.incrementFruitsCollected(); // Track for achievements
+                this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
+            }
+        );
+        
+        if (fruitPoints > 0) {
+            this.score += fruitPoints;
+            this.updateScore();
+        }
+    }
+    
+    // Метод для завершения игры
+    gameOver() {
+        console.log("Игра окончена");
+        this.isRunning = false;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+        
+        // Сохраняем рекорд
+        this.saveHighScore();
+        
+        // Проверяем достижения
+        this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
+        
+        // Показываем сообщение
+        this.showMessage(`Игра окончена!<br>Ваш счет: ${this.score}<br>Достигнутый уровень: ${this.level}`);
+        
+        // Воспроизводим звук окончания игры
+        this.playSound('gameover');
     }
     
     // Метод для установки обработчиков событий
@@ -143,7 +382,6 @@ class PacmanGame {
             this.showMenu();
         });
         
-        // Обработчик для кнопки сообщения
         document.getElementById('message-btn').addEventListener('click', () => {
             document.getElementById('message').style.display = 'none';
             this.showMenu();
@@ -191,23 +429,6 @@ class PacmanGame {
                 this.pacman.setNextDirection('right');
                 e.preventDefault();
                 break;
-        }
-    }
-    
-    // Метод для запуска игры
-    start() {
-        console.log("Запуск игры");
-        if (!this.isRunning) {
-            this.isRunning = true;
-            this.lastTimestamp = performance.now();
-            this.lastUpdate = performance.now();
-            this.gameLoop();
-            document.getElementById('start-btn').textContent = "Продолжить";
-            
-            // Воспроизвести фоновую музыку, если включена
-            if (this.settings.musicEnabled) {
-                this.soundManager.playBackgroundMusic();
-            }
         }
     }
     
@@ -290,64 +511,6 @@ class PacmanGame {
         this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
     }
     
-    // Метод для проверки столкновений
-    checkCollisions() {
-        const map = this.gameMap.getLevelMap(this.level);
-        // Проверяем сбор еды
-        const cell = map[this.pacman.y][this.pacman.x];
-        if (cell === 2) { // Обычная еда
-            map[this.pacman.y][this.pacman.x] = 1;
-            this.foodCount++;
-            this.score += 10;
-            this.soundManager.playSound('eat');
-            this.createCombo();
-            this.updateScore();
-            this.checkLevelComplete();
-        } else if (cell === 3) { // Супер-еда
-            map[this.pacman.y][this.pacman.x] = 1;
-            this.foodCount++;
-            this.score += 50;
-            this.pacman.activatePowerMode(10000); // 10 секунд
-            this.canvas.classList.add('power-mode');
-            this.soundManager.playSound('power');
-            this.createCombo();
-            this.updateScore();
-            this.checkLevelComplete();
-        }
-        
-        // Проверяем сбор фрукта
-        this.checkFruitCollection();
-        
-        // Проверяем столкновения с привидениями
-        this.ghosts.forEach(ghost => {
-            if (this.pacman.x === ghost.x && this.pacman.y === ghost.y) {
-                if (this.pacman.powerMode) {
-                    // Пакман съедает привидение
-                    this.score += 200;
-                    this.achievementManager.incrementGhostsEaten();
-                    this.soundManager.playSound('ghost');
-                    this.particleManager.createParticles(ghost.x, ghost.y, ghost.color);
-                    // Возвращаем привидение на начальную позицию
-                    ghost.resetPosition();
-                    this.updateScore();
-                } else {
-                    // Привидение съедает Пакмана
-                    this.lives--;
-                    this.updateLives();
-                    this.soundManager.playSound('death');
-                    this.particleManager.createParticles(this.pacman.x, this.pacman.y, 'yellow');
-                    
-                    if (this.lives <= 0) {
-                        this.gameOver();
-                    } else {
-                        // Возвращаем Пакмана и привидений на начальные позиции
-                        this.resetPositions();
-                    }
-                }
-            }
-        });
-    }
-    
     // Метод для создания комбо
     createCombo() {
         const now = Date.now();
@@ -400,58 +563,6 @@ class PacmanGame {
         }
     }
     
-    // Метод для проверки завершения уровня
-    checkLevelComplete() {
-        if (this.foodCount >= this.totalFood) {
-            this.level++;
-            this.score += 1000 * this.level;
-            
-            // Убираем разблокировку уровней, так как все уровни открыты
-            // this.unlockNextLevel();
-            
-            // Проверить достижение "Выживший"
-            if (this.lives === this.achievementManager.currentLevelStartLives) {
-                this.achievementManager.incrementLevelsCompletedWithoutDeath();
-                // Проверим, нужно ли разблокировать достижение
-                if (this.achievementManager.levelsCompletedWithoutDeath >= 1 && 
-                    !this.achievementManager.achievements.find(a => a.id === 'survivor')?.unlocked) {
-                    const points = this.achievementManager.unlockAchievement('survivor');
-                    this.score += points;
-                    this.updateScore();
-                }
-            } else {
-                this.achievementManager.resetLevelCounters(this.lives);
-            }
-            
-            this.soundManager.playSound('level');
-            this.resetLevel();
-        }
-    }
-    
-    // Метод для сброса уровня
-    resetLevel() {
-        // Сброс карты для текущего уровня
-        const levelMap = this.gameMap.getLevelMap(this.level);
-        // Здесь должна быть логика сброса карты
-        
-        // Сброс позиций
-        this.resetPositions();
-        
-        // Сброс счетчиков еды
-        this.foodCount = 0;
-        this.countFood();
-        
-        // Сброс фруктов
-        this.fruitManager.reset();
-        
-        // Увеличиваем сложность
-        this.increaseDifficulty();
-        
-        // Обновляем UI
-        this.updateLevel();
-        this.updateScore();
-    }
-    
     // Метод для увеличения сложности
     increaseDifficulty() {
         // Увеличиваем скорость привидений с каждым уровнем
@@ -461,251 +572,6 @@ class PacmanGame {
         
         // Уменьшаем интервал обновления для более быстрой игры
         this.updateInterval = Math.max(50, this.updateInterval - 5);
-    }
-    
-    // Метод для сброса позиций
-    resetPositions() {
-        // Сброс позиции Пакмана
-        this.pacman.resetPosition();
-        
-        // Сброс позиций привидений
-        this.ghosts.forEach(ghost => {
-            ghost.resetPosition();
-        });
-        
-        // Отключаем режим силы
-        this.pacman.powerMode = false;
-        this.pacman.powerModeTimer = 0;
-        this.canvas.classList.remove('power-mode');
-    }
-    
-    // Метод для завершения игры
-    gameOver() {
-        this.isRunning = false;
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-        
-        this.soundManager.pauseBackgroundMusic();
-        this.soundManager.playSound('gameover');
-        
-        // Проверяем и сохраняем рекорд
-        this.saveHighScore(this.score);
-        
-        // Показываем сообщение
-        document.getElementById('message-title').textContent = 'Игра окончена';
-        document.getElementById('message-text').textContent = `Ваш счет: ${this.score}`;
-        document.getElementById('message').style.display = 'block';
-    }
-    
-    // Метод для сброса игры
-    reset() {
-        // Сброс всех игровых параметров
-        this.score = 0;           // Счет
-        this.level = this.selectedLevel; // Уровень (используем выбранный уровень)
-        this.lives = 3;           // Жизни
-        this.foodCount = 0;       // Счетчик еды
-        this.consecutiveEats = 0; // Последовательное поедание
-        this.comboBonus = 0;      // Бонус за комбо
-        this.comboDisplay = null; // Отображение комбо
-        
-        // Сброс позиций
-        this.resetPositions();
-        
-        // Сброс режима силы
-        this.pacman.powerMode = false;
-        this.pacman.powerModeTimer = 0;
-        this.canvas.classList.remove('power-mode');
-        
-        // Сброс фруктов
-        this.fruitManager.reset();
-        
-        // Сброс достижений
-        this.achievementManager.reset();
-        
-        // Пересчет еды
-        this.countFood();
-        
-        // Обновление UI
-        this.updateScore();
-        this.updateLevel();
-        this.updateLives();
-        
-        // Остановка игры
-        this.isRunning = false;
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-        
-        // Пауза музыки
-        this.soundManager.pauseBackgroundMusic();
-        
-        // Очистка частиц
-        this.particleManager.clearParticles();
-        
-        // Первичная отрисовка
-        this.draw();
-        
-        console.log("Игра сброшена");
-    }
-    
-    // Метод для отрисовки игры
-    draw() {
-        // Очистка холста
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Отрисовка карты
-        this.drawMap();
-        
-        // Отрисовка фруктов
-        this.fruitManager.drawFruits(this.ctx, this.cellSize);
-        
-        // Отрисовка Пакмана
-        this.drawPacman();
-        
-        // Отрисовка привидений
-        this.drawGhosts();
-        
-        // Отрисовка частиц
-        this.particleManager.drawParticles(this.ctx);
-        
-        // Отрисовка комбо
-        this.drawCombo();
-    }
-    
-    // Метод для отрисовки карты
-    drawMap() {
-        const map = this.gameMap.getLevelMap(this.level);
-        for (let y = 0; y < map.length; y++) {
-            for (let x = 0; x < map[y].length; x++) {
-                const cell = map[y][x];
-                const pixelX = x * this.cellSize;
-                const pixelY = y * this.cellSize;
-                
-                switch(cell) {
-                    case 0: // Стена
-                        this.ctx.fillStyle = '#2222FF';
-                        this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
-                        // Добавляем детали стен
-                        this.ctx.fillStyle = '#0000CC';
-                        this.ctx.fillRect(pixelX + 2, pixelY + 2, this.cellSize - 4, this.cellSize - 4);
-                        break;
-                    case 1: // Путь
-                        this.ctx.fillStyle = '#000';
-                        this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
-                        break;
-                    case 2: // Еда
-                        this.ctx.fillStyle = '#FFF';
-                        this.ctx.beginPath();
-                        this.ctx.arc(pixelX + this.cellSize/2, pixelY + this.cellSize/2, 3, 0, Math.PI * 2);
-                        this.ctx.fill();
-                        break;
-                    case 3: // Супер-еда
-                        this.ctx.fillStyle = '#FFF';
-                        this.ctx.beginPath();
-                        this.ctx.arc(pixelX + this.cellSize/2, pixelY + this.cellSize/2, 6, 0, Math.PI * 2);
-                        this.ctx.fill();
-                        break;
-                }
-            }
-        }
-    }
-    
-    // Метод для отрисовки Пакмана
-    drawPacman() {
-        const pixelX = this.pacman.x * this.cellSize + this.cellSize/2;
-        const pixelY = this.pacman.y * this.cellSize + this.cellSize/2;
-        const radius = this.cellSize/2 - 2;
-        
-        this.ctx.fillStyle = '#FFD700'; // Золотой цвет
-        this.ctx.beginPath();
-        
-        let startAngle, endAngle;
-        switch(this.pacman.direction) {
-            case 'right':
-                startAngle = this.pacman.mouthAngle * Math.PI;
-                endAngle = (2 - this.pacman.mouthAngle) * Math.PI;
-                break;
-            case 'down':
-                startAngle = (0.5 + this.pacman.mouthAngle) * Math.PI;
-                endAngle = (2.5 - this.pacman.mouthAngle) * Math.PI;
-                break;
-            case 'left':
-                startAngle = (1 + this.pacman.mouthAngle) * Math.PI;
-                endAngle = (3 - this.pacman.mouthAngle) * Math.PI;
-                break;
-            case 'up':
-                startAngle = (1.5 + this.pacman.mouthAngle) * Math.PI;
-                endAngle = (3.5 - this.pacman.mouthAngle) * Math.PI;
-                break;
-        }
-        
-        this.ctx.arc(pixelX, pixelY, radius, startAngle, endAngle);
-        this.ctx.lineTo(pixelX, pixelY);
-        this.ctx.fill();
-    }
-    
-    // Метод для отрисовки привидений
-    drawGhosts() {
-        this.ghosts.forEach(ghost => {
-            const pixelX = ghost.x * this.cellSize + this.cellSize/2;
-            const pixelY = ghost.y * this.cellSize + this.cellSize/2;
-            const radius = this.cellSize/2 - 2;
-            
-            // Тело привидения
-            this.ctx.fillStyle = this.pacman.powerMode ? '#0000FF' : ghost.color;
-            this.ctx.beginPath();
-            this.ctx.arc(pixelX, pixelY - 2, radius, Math.PI, 0, false); // Верхняя часть
-            this.ctx.lineTo(pixelX + radius, pixelY + radius - 2);
-            
-            // Нижняя часть с волнами
-            for (let i = 0; i < 3; i++) {
-                this.ctx.lineTo(pixelX + radius - (i * radius * 2/3), pixelY + radius - 6);
-                this.ctx.lineTo(pixelX + radius - ((i + 0.5) * radius * 2/3), pixelY + radius - 2);
-            }
-            
-            this.ctx.lineTo(pixelX - radius, pixelY + radius - 2);
-            this.ctx.lineTo(pixelX - radius, pixelY - 2);
-            this.ctx.fill();
-            
-            // Глаза
-            this.ctx.fillStyle = 'white';
-            this.ctx.beginPath();
-            this.ctx.arc(pixelX - 4, pixelY - 4, 3, 0, Math.PI * 2);
-            this.ctx.arc(pixelX + 4, pixelY - 4, 3, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            this.ctx.fillStyle = 'black';
-            let eyeOffsetX = 0, eyeOffsetY = 0;
-            switch(ghost.direction) {
-                case 'left': eyeOffsetX = -1; break;
-                case 'right': eyeOffsetX = 1; break;
-                case 'up': eyeOffsetY = -1; break;
-                case 'down': eyeOffsetY = 1; break;
-            }
-            
-            this.ctx.beginPath();
-            this.ctx.arc(pixelX - 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
-            this.ctx.arc(pixelX + 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
-            this.ctx.fill();
-        });
-    }
-    
-    // Метод для отрисовки комбо
-    drawCombo() {
-        if (this.comboDisplay && this.settings.animationsEnabled) {
-            const alpha = 1 - (Date.now() - this.comboDisplay.startTime) / 2000;
-            this.ctx.globalAlpha = alpha;
-            this.ctx.fillStyle = '#FF00FF';
-            this.ctx.font = 'bold 20px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(this.comboDisplay.text, this.comboDisplay.x, this.comboDisplay.y);
-            this.ctx.globalAlpha = 1;
-            this.ctx.textAlign = 'left';
-        }
     }
     
     // Метод для обновления счета
@@ -723,6 +589,13 @@ class PacmanGame {
         document.getElementById('lives').innerHTML = '❤️'.repeat(this.lives);
     }
     
+    // Метод для отображения сообщений
+    showMessage(text) {
+        document.getElementById('message-title').textContent = 'Игра окончена';
+        document.getElementById('message-text').innerHTML = text;
+        document.getElementById('message').style.display = 'block';
+    }
+    
     // Система рекордов
     loadHighScores() {
         try {
@@ -734,10 +607,10 @@ class PacmanGame {
         }
     }
     
-    saveHighScore(score) {
+    saveHighScore() {
         try {
-            const name = prompt('Поздравляем! Вы набрали ' + score + ' очков. Введите ваше имя:', 'Игрок') || 'Аноним';
-            const newScore = { name, score, date: new Date().toLocaleDateString() };
+            const name = prompt('Поздравляем! Вы набрали ' + this.score + ' очков. Введите ваше имя:', 'Игрок') || 'Аноним';
+            const newScore = { name, score: this.score, date: new Date().toLocaleDateString() };
             
             this.highScores.push(newScore);
             this.highScores.sort((a, b) => b.score - a.score);

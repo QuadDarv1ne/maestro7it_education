@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Pacman Enhancements Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ffff00;
+        }
+        .test-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 800px;
+        }
+        .test-section {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #FFD700;
+        }
+        .test-section h2 {
+            color: #FFD700;
+            margin-top: 0;
+        }
+        .test-results {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .test-result {
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .passed {
+            background-color: #4CAF50;
+        }
+        .failed {
+            background-color: #f44336;
+        }
+        .pending {
+            background-color: #ff9800;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        canvas {
+            background-color: #000;
+            border: 2px solid #0000ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Comprehensive Pacman Enhancements Test</h1>
+    
+    <div class="test-container">
+        <div class="test-section">
+            <h2>Performance Enhancements</h2>
+            <div class="test-results">
+                <div id="particle-limit-test" class="test-result pending">
+                    <span>Particle System Limit Test</span>
+                    <span>⏳ Pending</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Fruit Manager Enhancements</h2>
+            <div class="test-results">
+                <div id="new-fruits-test" class="test-result pending">
+                    <span>New Fruit Types Test</span>
+                    <span>⏳ Pending</span>
+                </div>
+                <div id="fruit-spawn-test" class="test-result pending">
+                    <span>Enhanced Fruit Spawning Test</span>
+                    <span>⏳ Pending</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Achievement System Enhancements</h2>
+            <div class="test-results">
+                <div id="new-achievements-test" class="test-result pending">
+                    <span>New Achievements Test</span>
+                    <span>⏳ Pending</span>
+                </div>
+                <div id="achievement-tracking-test" class="test-result pending">
+                    <span>Achievement Tracking Test</span>
+                    <span>⏳ Pending</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Visual Test</h2>
+            <canvas id="testCanvas" width="400" height="300"></canvas>
+            <div>
+                <button onclick="runVisualTest()">Run Visual Test</button>
+                <button onclick="resetVisualTest()">Reset</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Run All Tests</h2>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="resetAllTests()">Reset All Tests</button>
+        </div>
+    </div>
+
+    <script src="development/GameMap.js"></script>
+    <script src="development/Pacman.js"></script>
+    <script src="development/Ghost.js"></script>
+    <script src="development/ParticleManager.js"></script>
+    <script src="development/FruitManager.js"></script>
+    <script src="development/AchievementManager.js"></script>
+    
+    <script>
+        // Test objects
+        let particleManager, fruitManager, achievementManager;
+        
+        // Initialize test objects
+        function initTests() {
+            particleManager = new ParticleManager();
+            fruitManager = new FruitManager();
+            achievementManager = new AchievementManager();
+        }
+        
+        // Test particle limit
+        function testParticleLimit() {
+            const testElement = document.getElementById('particle-limit-test');
+            
+            try {
+                // Test that particle manager has maxParticles property
+                if (typeof particleManager.maxParticles === 'number' && particleManager.maxParticles > 0) {
+                    // Test creating particles beyond the limit
+                    particleManager.clearParticles();
+                    
+                    // Try to create more particles than the limit
+                    particleManager.createParticles(100, 100, '#FF0000', 150);
+                    
+                    // Check that we don't exceed the limit
+                    if (particleManager.particles.length <= particleManager.maxParticles) {
+                        testElement.className = 'test-result passed';
+                        testElement.innerHTML = '<span>Particle System Limit Test</span><span>✅ Passed</span>';
+                        return true;
+                    }
+                }
+                
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>Particle System Limit Test</span><span>❌ Failed</span>';
+                return false;
+            } catch (error) {
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>Particle System Limit Test</span><span>❌ Error: ' + error.message + '</span>';
+                return false;
+            }
+        }
+        
+        // Test new fruit types
+        function testNewFruits() {
+            const testElement = document.getElementById('new-fruits-test');
+            
+            try {
+                // Check that fruit manager has the new fruit types
+                if (fruitManager.fruitTypes.length >= 10) { // Original 8 + 2 new ones
+                    const hasBanana = fruitManager.fruitTypes.some(fruit => fruit.type === 'banana');
+                    const hasGrapes = fruitManager.fruitTypes.some(fruit => fruit.type === 'grapes');
+                    
+                    if (hasBanana && hasGrapes) {
+                        testElement.className = 'test-result passed';
+                        testElement.innerHTML = '<span>New Fruit Types Test</span><span>✅ Passed</span>';
+                        return true;
+                    }
+                }
+                
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>New Fruit Types Test</span><span>❌ Failed</span>';
+                return false;
+            } catch (error) {
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>New Fruit Types Test</span><span>❌ Error: ' + error.message + '</span>';
+                return false;
+            }
+        }
+        
+        // Test enhanced fruit spawning
+        function testFruitSpawning() {
+            const testElement = document.getElementById('fruit-spawn-test');
+            
+            try {
+                // Check that fruit manager has spawn chance property
+                if (typeof fruitManager.spawnChance === 'number') {
+                    testElement.className = 'test-result passed';
+                    testElement.innerHTML = '<span>Enhanced Fruit Spawning Test</span><span>✅ Passed</span>';
+                    return true;
+                }
+                
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>Enhanced Fruit Spawning Test</span><span>❌ Failed</span>';
+                return false;
+            } catch (error) {
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>Enhanced Fruit Spawning Test</span><span>❌ Error: ' + error.message + '</span>';
+                return false;
+            }
+        }
+        
+        // Test new achievements
+        function testNewAchievements() {
+            const testElement = document.getElementById('new-achievements-test');
+            
+            try {
+                // Check that achievement manager has new achievements
+                if (achievementManager.achievements.length >= 10) { // Original 8 + 2 new ones
+                    const hasSpeedDemon = achievementManager.achievements.some(ach => ach.id === 'speed_demon');
+                    const hasPerfectionist = achievementManager.achievements.some(ach => ach.id === 'perfectionist');
+                    
+                    if (hasSpeedDemon && hasPerfectionist) {
+                        testElement.className = 'test-result passed';
+                        testElement.innerHTML = '<span>New Achievements Test</span><span>✅ Passed</span>';
+                        return true;
+                    }
+                }
+                
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>New Achievements Test</span><span>❌ Failed</span>';
+                return false;
+            } catch (error) {
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>New Achievements Test</span><span>❌ Error: ' + error.message + '</span>';
+                return false;
+            }
+        }
+        
+        // Test achievement tracking
+        function testAchievementTracking() {
+            const testElement = document.getElementById('achievement-tracking-test');
+            
+            try {
+                // Check that achievement manager has new tracking methods
+                if (typeof achievementManager.setLevelStartTime === 'function' &&
+                    typeof achievementManager.setLevelFoodCount === 'function' &&
+                    typeof achievementManager.incrementFoodEaten === 'function') {
+                    testElement.className = 'test-result passed';
+                    testElement.innerHTML = '<span>Achievement Tracking Test</span><span>✅ Passed</span>';
+                    return true;
+                }
+                
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>Achievement Tracking Test</span><span>❌ Failed</span>';
+                return false;
+            } catch (error) {
+                testElement.className = 'test-result failed';
+                testElement.innerHTML = '<span>Achievement Tracking Test</span><span>❌ Error: ' + error.message + '</span>';
+                return false;
+            }
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            initTests();
+            
+            const results = [
+                testParticleLimit(),
+                testNewFruits(),
+                testFruitSpawning(),
+                testNewAchievements(),
+                testAchievementTracking()
+            ];
+            
+            const passed = results.filter(result => result === true).length;
+            const total = results.length;
+            
+            alert(`Tests completed: ${passed}/${total} passed`);
+        }
+        
+        // Reset all tests
+        function resetAllTests() {
+            const testElements = document.querySelectorAll('.test-result');
+            testElements.forEach(element => {
+                element.className = 'test-result pending';
+                const text = element.querySelector('span').textContent;
+                element.innerHTML = `<span>${text}</span><span>⏳ Pending</span>`;
+            });
+        }
+        
+        // Visual test functions
+        function runVisualTest() {
+            const canvas = document.getElementById('testCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Create a lot of particles to test the limit
+            for (let i = 0; i < 200; i++) {
+                particleManager.createParticles(
+                    50 + (i % 10) * 30,
+                    50 + Math.floor(i / 10) * 30,
+                    '#FF' + (i % 255).toString(16).padStart(2, '0') + '00',
+                    5
+                );
+            }
+            
+            // Update and draw particles
+            particleManager.updateParticles();
+            particleManager.drawParticles(ctx);
+            
+            // Test fruit drawing
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText('🍒🍓🍊🍎', 200, 150);
+            ctx.fillText('🍉⭐🔔🔑', 200, 180);
+            ctx.fillText('🍌🍇', 200, 210);
+            
+            // Test achievement display
+            ctx.fillStyle = '#8A2BE2';
+            ctx.fillRect(50, 230, 300, 40);
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '16px Arial';
+            ctx.fillText('New Achievements: Speed Demon, Perfectionist', 200, 255);
+        }
+        
+        function resetVisualTest() {
+            const canvas = document.getElementById('testCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Clear particles
+            if (particleManager) {
+                particleManager.clearParticles();
+            }
+        }
+        
+        // Initialize tests when page loads
+        window.onload = function() {
+            initTests();
+        };
+    </script>
+</body>
+</html>

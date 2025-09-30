@@ -8,13 +8,18 @@ class AchievementManager {
             { id: 'combo_10', name: 'Комбо-мастер', description: 'Собрать 10 комбо', unlocked: false, points: 400 },
             { id: 'ghost_hunter', name: 'Охотник за привидениями', description: 'Съесть 20 привидений', unlocked: false, points: 600 },
             { id: 'fruit_lover', name: 'Любитель фруктов', description: 'Собрать 10 фруктов', unlocked: false, points: 350 },
-            { id: 'survivor', name: 'Выживший', description: 'Пройти уровень без потери жизни', unlocked: false, points: 700 }
+            { id: 'survivor', name: 'Выживший', description: 'Пройти уровень без потери жизни', unlocked: false, points: 700 },
+            { id: 'speed_demon', name: 'Скоростной демон', description: 'Завершить уровень за 30 секунд', unlocked: false, points: 800 }, // New achievement
+            { id: 'perfectionist', name: 'Перфекционист', description: 'Собрать всю еду на уровне', unlocked: false, points: 1000 } // New achievement
         ];
 
         this.ghostsEaten = 0;
         this.fruitsCollected = 0;
         this.levelsCompletedWithoutDeath = 0;
         this.currentLevelStartLives = 3;
+        this.levelStartTime = 0; // Track level start time
+        this.foodEaten = 0; // Track food eaten in current level
+        this.totalFoodInLevel = 0; // Track total food in current level
     }
 
     // Check and unlock achievements
@@ -51,6 +56,22 @@ class AchievementManager {
         // Fruit lover achievement
         if (!this.achievements[6].unlocked && this.fruitsCollected >= 10) {
             this.unlockAchievement('fruit_lover');
+        }
+        
+        // Speed demon achievement - check if level was completed quickly
+        if (this.levelStartTime > 0) {
+            const timeToComplete = (Date.now() - this.levelStartTime) / 1000; // in seconds
+            const speedDemon = this.achievements.find(a => a.id === 'speed_demon');
+            if (speedDemon && !speedDemon.unlocked && timeToComplete <= 30) {
+                this.unlockAchievement('speed_demon');
+            }
+        }
+        
+        // Perfectionist achievement - check if all food was eaten
+        const perfectionist = this.achievements.find(a => a.id === 'perfectionist');
+        if (perfectionist && !perfectionist.unlocked && 
+            this.totalFoodInLevel > 0 && this.foodEaten >= this.totalFoodInLevel) {
+            this.unlockAchievement('perfectionist');
         }
     }
 
@@ -157,9 +178,18 @@ class AchievementManager {
         this.levelsCompletedWithoutDeath++;
     }
 
-    // Метод для сброса счетчиков при начале нового уровня
-    resetLevelCounters(lives) {
-        this.currentLevelStartLives = lives;
+    // New methods for tracking level progress
+    setLevelStartTime() {
+        this.levelStartTime = Date.now();
+    }
+
+    setLevelFoodCount(totalFood) {
+        this.totalFoodInLevel = totalFood;
+        this.foodEaten = 0;
+    }
+
+    incrementFoodEaten() {
+        this.foodEaten++;
     }
 
     // Метод для получения счетчиков
@@ -180,6 +210,9 @@ class AchievementManager {
         this.fruitsCollected = 0;
         this.levelsCompletedWithoutDeath = 0;
         this.currentLevelStartLives = 3;
+        this.levelStartTime = 0;
+        this.foodEaten = 0;
+        this.totalFoodInLevel = 0;
     }
 }
 

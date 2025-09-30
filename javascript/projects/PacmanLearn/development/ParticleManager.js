@@ -1,6 +1,7 @@
 class ParticleManager {
     constructor() {
         this.particles = [];
+        this.maxParticles = 100; // Limit maximum particles for performance
     }
 
     createParticles(x, y, color, count = 10) {
@@ -17,7 +18,10 @@ class ParticleManager {
 
         if (!settings.animationsEnabled) return;
 
-        for (let i = 0; i < count; i++) {
+        // Limit the number of particles to prevent performance issues
+        const particlesToAdd = Math.min(count, this.maxParticles - this.particles.length);
+        
+        for (let i = 0; i < particlesToAdd; i++) {
             this.particles.push({
                 x: x,
                 y: y,

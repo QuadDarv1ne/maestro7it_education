@@ -9,16 +9,22 @@ class FruitManager {
             { type: 'melon', points: 1000, color: '#00FF00', symbol: '🍉' },
             { type: 'galaxian', points: 2000, color: '#FFFF00', symbol: '⭐' },
             { type: 'bell', points: 3000, color: '#FFFF00', symbol: '🔔' },
-            { type: 'key', points: 5000, color: '#FFFF00', symbol: '🔑' }
+            { type: 'key', points: 5000, color: '#FFFF00', symbol: '🔑' },
+            { type: 'banana', points: 1500, color: '#FFD700', symbol: '🍌' }, // New fruit
+            { type: 'grapes', points: 2500, color: '#9370DB', symbol: '🍇' }   // New fruit
         ];
         this.fruitTimer = 0;
         this.fruitVisible = false;
         this.currentFruit = null;
+        this.spawnChance = 0.005; // Base spawn chance
     }
 
     // Показать фрукт на карте
     spawnFruit(map, foodCount, totalFood, level) {
-        if (!this.fruitVisible && Math.random() < 0.005 && foodCount > totalFood * 0.3) {
+        // Increase spawn chance based on level for more excitement
+        const levelAdjustedSpawnChance = Math.min(this.spawnChance * (1 + level * 0.1), 0.02);
+        
+        if (!this.fruitVisible && Math.random() < levelAdjustedSpawnChance && foodCount > totalFood * 0.3) {
             // Найти свободное место для фрукта
             let attempts = 0;
             while (attempts < 50) {
@@ -26,10 +32,14 @@ class FruitManager {
                 const y = Math.floor(Math.random() * (map.length - 2)) + 1;
                 
                 if (map[y][x] === 1) { // Пустое место
+                    // Select fruit based on level with some randomness
+                    const maxFruitIndex = Math.min(level - 1 + Math.floor(Math.random() * 3), this.fruitTypes.length - 1);
+                    const fruitIndex = Math.min(maxFruitIndex, this.fruitTypes.length - 1);
+                    
                     this.currentFruit = {
                         x: x,
                         y: y,
-                        ...this.fruitTypes[Math.min(level - 1, this.fruitTypes.length - 1)],
+                        ...this.fruitTypes[fruitIndex],
                         spawnTime: Date.now()
                     };
                     this.fruitVisible = true;

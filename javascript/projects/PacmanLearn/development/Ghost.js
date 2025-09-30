@@ -112,6 +112,8 @@ class Ghost {
         // Туннельные переходы
         if (newX < 0) newX = map[0].length - 1;
         if (newX >= map[0].length) newX = 0;
+        if (newY < 0) newY = map.length - 1;
+        if (newY >= map.length) newY = 0;
         
         return { x: newX, y: newY };
     }
