@@ -766,12 +766,13 @@ class PacmanGame {
     
     // Метод для отображения комбо
     showCombo(bonus) {
-        this.comboDisplay = {
-            text: `КОМБО +${bonus}`,
-            x: this.pacman.x * this.cellSize + this.cellSize/2,
-            y: this.pacman.y * this.cellSize,
-            startTime: Date.now()
-        };
+        // Reuse pre-allocated object to reduce garbage collection
+        this.tempComboDisplay.text = `КОМБО +${bonus}`;
+        this.tempComboDisplay.x = this.pacman.x * this.cellSize + this.cellSize/2;
+        this.tempComboDisplay.y = this.pacman.y * this.cellSize;
+        this.tempComboDisplay.startTime = Date.now();
+        
+        this.comboDisplay = {...this.tempComboDisplay};
     }
     
     // Метод для проверки сбора фруктов
