@@ -113,6 +113,7 @@ class PacmanGame {
         
         // Сброс времени начала уровня для достижения "Скоростной демон"
         this.achievementManager.setLevelStartTime();
+        this.achievementManager.currentLevelStartLives = 3; // Reset lives tracking
         
         this.updateScore();
         this.updateLives();
@@ -174,6 +175,7 @@ class PacmanGame {
         
         // Set the level start time for achievement tracking
         this.achievementManager.setLevelStartTime();
+        this.achievementManager.currentLevelStartLives = this.lives; // Track lives for this level
         
         // Увеличение сложности
         this.increaseDifficulty();
@@ -189,6 +191,9 @@ class PacmanGame {
             // Добавляем очки за завершение уровня
             this.score += 1000 * this.level;
             
+            // Notify achievement manager that level is completed
+            this.achievementManager.onLevelCompleted();
+            
             // Проверяем достижение "Перфекционист"
             this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
             
@@ -199,22 +204,31 @@ class PacmanGame {
     
     // Метод для обработки столкновений
     checkCollisions() {
+        // Получаем текущую карту уровня
+        const currentMap = this.gameMap.getLevelMap(this.level);
+        
         // Проверяем сбор еды
-        const cell = this.map[this.pacman.y][this.pacman.x];
+        const cell = currentMap[this.pacman.y][this.pacman.x];
         if (cell === 2) { // Обычная еда
-            this.map[this.pacman.y][this.pacman.x] = 1;
+            currentMap[this.pacman.y][this.pacman.x] = 1;
             this.foodCount++;
             this.score += 10;
             this.soundManager.playSound('eat');
             this.createCombo();
             // Создаем визуальный эффект при сборе обычной еды
-            this.createFoodParticles(this.pacman.x, this.pacman.y, false);
+            this.particleManager.createEffect(
+                this.pacman.x * this.cellSize + this.cellSize/2, 
+                this.pacman.y * this.cellSize + this.cellSize/2, 
+                this.particleManager.particleTypes.SPARKLE,
+                '#FFF',
+                5
+            );
             this.updateScore();
             this.checkLevelComplete();
             // Increment food eaten for achievement tracking
             this.achievementManager.incrementFoodEaten();
         } else if (cell === 3) { // Супер-еда
-            this.map[this.pacman.y][this.pacman.x] = 1;
+            currentMap[this.pacman.y][this.pacman.x] = 1;
             this.foodCount++;
             this.score += 50;
             this.pacman.powerMode = true;
@@ -223,7 +237,13 @@ class PacmanGame {
             this.soundManager.playSound('power');
             this.createCombo();
             // Создаем визуальный эффект при сборе супер-еды
-            this.createFoodParticles(this.pacman.x, this.pacman.y, true);
+            this.particleManager.createEffect(
+                this.pacman.x * this.cellSize + this.cellSize/2, 
+                this.pacman.y * this.cellSize + this.cellSize/2, 
+                this.particleManager.particleTypes.SPARKLE,
+                '#FFF',
+                15
+            );
             // Добавляем дополнительный эффект для супер-еды
             this.createSuperFoodEffect(this.pacman.x, this.pacman.y);
             this.updateScore();
@@ -232,33 +252,48 @@ class PacmanGame {
             this.achievementManager.incrementFoodEaten();
         }
         
-        // Проверяем сбор фрукта
+        // Проверяем сбор фрукта с более точным столкновением
         this.checkFruitCollection();
         
-        // Проверяем столкновения с привидениями
+        // Проверяем столкновения с привидениями с более точным столкновением
         this.ghosts.forEach(ghost => {
-            if (this.pacman.x === ghost.x && this.pacman.y === ghost.y) {
+            // Use more precise collision detection
+            if (this.pacman.checkCollision(ghost.x, ghost.y, ghost.collisionRadius)) {
                 if (this.pacman.powerMode) {
                     // Пакман съедает привидение
                     this.score += 200;
                     this.achievementManager.incrementGhostsEaten(); // Track for achievements
                     this.soundManager.playSound('ghost');
-                    this.createParticles(ghost.x, ghost.y, ghost.color);
+                    this.particleManager.createEffect(
+                        ghost.x * this.cellSize + this.cellSize/2, 
+                        ghost.y * this.cellSize + this.cellSize/2, 
+                        this.particleManager.particleTypes.EXPLOSION,
+                        ghost.color,
+                        20
+                    );
                     // Создаем специальный эффект при поедании привидения
                     this.createGhostEatenEffect(ghost.x, ghost.y, ghost.color);
                     // Возвращаем привидение на начальную позицию
                     ghost.x = 10;
                     ghost.y = ghost.color === 'red' ? 8 : ghost.color === 'pink' ? 9 : 
                               ghost.color === 'cyan' ? 9 : 10;
+                    ghost.resetPosition(); // Reset sub-pixel position too
                     this.updateScore();
                     // Check achievements after eating a ghost
                     this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
                 } else {
                     // Привидение съедает Пакмана
                     this.lives--;
+                    this.achievementManager.onLifeLost(); // Track for achievements
                     this.updateLives();
                     this.soundManager.playSound('death');
-                    this.createParticles(this.pacman.x, this.pacman.y, 'yellow');
+                    this.particleManager.createEffect(
+                        this.pacman.x * this.cellSize + this.cellSize/2, 
+                        this.pacman.y * this.cellSize + this.cellSize/2, 
+                        this.particleManager.particleTypes.EXPLOSION,
+                        'yellow',
+                        30
+                    );
                     // Создаем специальный эффект при потере жизни
                     this.createLifeLostEffect(this.pacman.x, this.pacman.y);
                     
@@ -273,7 +308,7 @@ class PacmanGame {
         });
     }
     
-    // Проверяем сбор фрукта
+    // Проверяем сбор фрукта с более точным столкновением
     checkFruitCollection() {
         const fruitPoints = this.fruitManager.checkFruitCollection(
             this.pacman.x, 
@@ -283,8 +318,19 @@ class PacmanGame {
                 this.updateScore();
             },
             (x, y, color) => {
-                this.createParticles(x, y, color);
-                this.achievementManager.incrementFruitsCollected(); // Track for achievements
+                this.particleManager.createEffect(
+                    x * this.cellSize + this.cellSize/2, 
+                    y * this.cellSize + this.cellSize/2, 
+                    this.particleManager.particleTypes.SPARKLE,
+                    color,
+                    25
+                );
+                // Track fruit collection with fruit type for achievements
+                if (this.fruitManager.currentFruit) {
+                    this.achievementManager.incrementFruitsCollected(this.fruitManager.currentFruit.type);
+                } else {
+                    this.achievementManager.incrementFruitsCollected();
+                }
                 this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
             }
         );
@@ -517,22 +563,197 @@ class PacmanGame {
         this.achievementManager.checkAchievements(this.score, this.level, this.consecutiveEats);
     }
     
-    // Метод для создания комбо
-    createCombo() {
-        const now = Date.now();
-        if (now - this.lastEatTime < 2000) { // 2 секунды для комбо
-            this.consecutiveEats++;
-            if (this.consecutiveEats >= 3) {
-                this.comboBonus = this.consecutiveEats * 10;
-                this.score += this.comboBonus;
-                this.soundManager.playSound('combo');
-                this.showCombo(this.comboBonus);
-                this.particleManager.createParticles(this.pacman.x, this.pacman.y, '#FF00FF');
+    // Метод для отрисовки игры
+    draw() {
+        // Очистка холста
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Получаем текущую карту уровня
+        this.map = this.gameMap.getLevelMap(this.level);
+        
+        // Отрисовка карты
+        this.drawMap();
+        
+        // Отрисовка фруктов
+        this.fruitManager.drawFruits(this.ctx, this.cellSize);
+        
+        // Отрисовка Пакмана
+        this.drawPacman();
+        
+        // Отрисовка привидений
+        this.drawGhosts();
+        
+        // Отрисовка частиц
+        this.particleManager.drawParticles(this.ctx);
+        
+        // Отрисовка комбо
+        this.drawCombo();
+    }
+    
+    // Метод для отрисовки карты
+    drawMap() {
+        for (let y = 0; y < this.map.length; y++) {
+            for (let x = 0; x < this.map[y].length; x++) {
+                const cell = this.map[y][x];
+                const pixelX = x * this.cellSize;
+                const pixelY = y * this.cellSize;
+                
+                switch(cell) {
+                    case 0: // Стена
+                        this.ctx.fillStyle = '#2222FF';
+                        this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
+                        // Добавляем детали стен
+                        this.ctx.fillStyle = '#0000CC';
+                        this.ctx.fillRect(pixelX + 2, pixelY + 2, this.cellSize - 4, this.cellSize - 4);
+                        break;
+                    case 1: // Путь
+                        this.ctx.fillStyle = '#000';
+                        this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
+                        break;
+                    case 2: // Еда
+                        this.ctx.fillStyle = '#FFF';
+                        this.ctx.beginPath();
+                        this.ctx.arc(pixelX + this.cellSize/2, pixelY + this.cellSize/2, 3, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                    case 3: // Супер-еда
+                        this.ctx.fillStyle = '#FFF';
+                        this.ctx.beginPath();
+                        this.ctx.arc(pixelX + this.cellSize/2, pixelY + this.cellSize/2, 6, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                }
             }
-        } else {
-            this.consecutiveEats = 1;
         }
-        this.lastEatTime = now;
+    }
+    
+    // Метод для отрисовки Пакмана
+    drawPacman() {
+        // Use sub-pixel positioning for smoother movement
+        const pixelX = this.pacman.pixelX;
+        const pixelY = this.pacman.pixelY;
+        const radius = this.cellSize/2 - 2;
+        
+        this.ctx.fillStyle = '#FFD700'; // Золотой цвет
+        this.ctx.beginPath();
+        
+        let startAngle, endAngle;
+        switch(this.pacman.direction) {
+            case 'right':
+                startAngle = this.pacman.mouthAngle * Math.PI;
+                endAngle = (2 - this.pacman.mouthAngle) * Math.PI;
+                break;
+            case 'down':
+                startAngle = (0.5 + this.pacman.mouthAngle) * Math.PI;
+                endAngle = (2.5 - this.pacman.mouthAngle) * Math.PI;
+                break;
+            case 'left':
+                startAngle = (1 + this.pacman.mouthAngle) * Math.PI;
+                endAngle = (3 - this.pacman.mouthAngle) * Math.PI;
+                break;
+            case 'up':
+                startAngle = (1.5 + this.pacman.mouthAngle) * Math.PI;
+                endAngle = (3.5 - this.pacman.mouthAngle) * Math.PI;
+                break;
+        }
+        
+        this.ctx.arc(pixelX, pixelY, radius, startAngle, endAngle);
+        this.ctx.lineTo(pixelX, pixelY);
+        this.ctx.fill();
+    }
+    
+    // Метод для отрисовки привидений
+    drawGhosts() {
+        this.ghosts.forEach(ghost => {
+            // Use sub-pixel positioning for smoother movement
+            const pixelX = ghost.pixelX;
+            const pixelY = ghost.pixelY;
+            const radius = this.cellSize/2 - 2;
+            
+            // Тело привидения
+            this.ctx.fillStyle = this.pacman.powerMode ? '#0000FF' : ghost.color;
+            
+            // Добавляем свечение во время power mode
+            if (this.pacman.powerMode) {
+                this.ctx.shadowColor = '#0000FF';
+                this.ctx.shadowBlur = 10;
+            }
+            
+            this.ctx.beginPath();
+            this.ctx.arc(pixelX, pixelY - 2, radius, Math.PI, 0, false); // Верхняя часть
+            this.ctx.lineTo(pixelX + radius, pixelY + radius - 2);
+            
+            // Нижняя часть с волнами
+            for (let i = 0; i < 3; i++) {
+                this.ctx.lineTo(pixelX + radius - (i * radius * 2/3), pixelY + radius - 6);
+                this.ctx.lineTo(pixelX + radius - ((i + 0.5) * radius * 2/3), pixelY + radius - 2);
+            }
+            
+            this.ctx.lineTo(pixelX - radius, pixelY + radius - 2);
+            this.ctx.lineTo(pixelX - radius, pixelY - 2);
+            this.ctx.fill();
+            
+            // Сбрасываем свечение
+            this.ctx.shadowBlur = 0;
+            
+            // Глаза
+            this.ctx.fillStyle = 'white';
+            this.ctx.beginPath();
+            this.ctx.arc(pixelX - 4, pixelY - 4, 3, 0, Math.PI * 2);
+            this.ctx.arc(pixelX + 4, pixelY - 4, 3, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            this.ctx.fillStyle = 'black';
+            let eyeOffsetX = 0, eyeOffsetY = 0;
+            switch(ghost.direction) {
+                case 'left': eyeOffsetX = -1; break;
+                case 'right': eyeOffsetX = 1; break;
+                case 'up': eyeOffsetY = -1; break;
+                case 'down': eyeOffsetY = 1; break;
+            }
+            
+            this.ctx.beginPath();
+            this.ctx.arc(pixelX - 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
+            this.ctx.arc(pixelX + 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+    }
+    
+    // Метод для отрисовки комбо
+    drawCombo() {
+        // Получаем настройки из localStorage или используем значения по умолчанию
+        let settings = { animationsEnabled: true };
+        try {
+            const savedSettings = localStorage.getItem('pacmanSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+            }
+        } catch (e) {
+            console.warn('Ошибка загрузки настроек анимации:', e);
+        }
+        
+        if (this.comboDisplay && settings.animationsEnabled) {
+            const elapsed = Date.now() - this.comboDisplay.startTime;
+            const alpha = 1 - elapsed / 2000;
+            const scale = 1 + Math.sin(elapsed / 200) * 0.2; // Пульсация
+            
+            this.ctx.globalAlpha = alpha;
+            
+            // Добавляем свечение
+            this.ctx.shadowColor = '#FF00FF';
+            this.ctx.shadowBlur = 10;
+            
+            this.ctx.fillStyle = '#FF00FF';
+            this.ctx.font = `bold ${20 * scale}px Arial`;
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(this.comboDisplay.text, this.comboDisplay.x, this.comboDisplay.y);
+            
+            // Сбрасываем свечение
+            this.ctx.shadowBlur = 0;
+            this.ctx.globalAlpha = 1;
+            this.ctx.textAlign = 'left';
+        }
     }
     
     // Метод для отображения комбо
@@ -568,6 +789,122 @@ class PacmanGame {
             this.achievementManager.incrementFruitsCollected();
             this.updateScore();
         }
+    }
+    
+    // Метод для создания эффекта при сборе супер-еды
+    createSuperFoodEffect(x, y) {
+        // Получаем настройки из localStorage или используем значения по умолчанию
+        let settings = { animationsEnabled: true };
+        try {
+            const savedSettings = localStorage.getItem('pacmanSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+            }
+        } catch (e) {
+            console.warn('Ошибка загрузки настроек анимации:', e);
+        }
+        
+        if (!settings.animationsEnabled) return;
+        
+        // Создаем концентрические круги через частицы
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                for (let j = 0; j < 20; j++) {
+                    const angle = (j / 20) * Math.PI * 2;
+                    const distance = 20 + i * 10;
+                    const pixelX = x * this.cellSize + this.cellSize/2;
+                    const pixelY = y * this.cellSize + this.cellSize/2;
+                    
+                    this.particleManager.createEffect(
+                        pixelX + Math.cos(angle) * distance,
+                        pixelY + Math.sin(angle) * distance,
+                        this.particleManager.particleTypes.GLOW,
+                        '#00FFFF',
+                        1
+                    );
+                }
+            }, i * 100);
+        }
+    }
+    
+    // Метод для создания эффекта при поедании привидения
+    createGhostEatenEffect(x, y, color) {
+        // Получаем настройки из localStorage или используем значения по умолчанию
+        let settings = { animationsEnabled: true };
+        try {
+            const savedSettings = localStorage.getItem('pacmanSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+            }
+        } catch (e) {
+            console.warn('Ошибка загрузки настроек анимации:', e);
+        }
+        
+        if (!settings.animationsEnabled) return;
+        
+        // Создаем взрыв частиц
+        const pixelX = x * this.cellSize + this.cellSize/2;
+        const pixelY = y * this.cellSize + this.cellSize/2;
+        
+        this.particleManager.createEffect(
+            pixelX,
+            pixelY,
+            this.particleManager.particleTypes.EXPLOSION,
+            color,
+            30
+        );
+    }
+    
+    // Метод для создания эффекта при потере жизни
+    createLifeLostEffect(x, y) {
+        // Получаем настройки из localStorage или используем значения по умолчанию
+        let settings = { animationsEnabled: true };
+        try {
+            const savedSettings = localStorage.getItem('pacmanSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+            }
+        } catch (e) {
+            console.warn('Ошибка загрузки настроек анимации:', e);
+        }
+        
+        if (!settings.animationsEnabled) return;
+        
+        // Создаем красные частицы
+        const pixelX = x * this.cellSize + this.cellSize/2;
+        const pixelY = y * this.cellSize + this.cellSize/2;
+        
+        this.particleManager.createEffect(
+            pixelX,
+            pixelY,
+            this.particleManager.particleTypes.EXPLOSION,
+            '#FF0000',
+            40
+        );
+    }
+    
+    // Метод для создания комбо
+    createCombo() {
+        const now = Date.now();
+        if (now - this.lastEatTime < 2000) { // 2 секунды для комбо
+            this.consecutiveEats++;
+            if (this.consecutiveEats >= 3) {
+                this.comboBonus = this.consecutiveEats * 10;
+                this.score += this.comboBonus;
+                this.soundManager.playSound('combo');
+                this.showCombo(this.comboBonus);
+                this.particleManager.createEffect(
+                    this.pacman.x * this.cellSize + this.cellSize/2, 
+                    this.pacman.y * this.cellSize + this.cellSize/2, 
+                    this.particleManager.particleTypes.SPARKLE,
+                    '#FF00FF',
+                    20
+                );
+            }
+        } else {
+            this.consecutiveEats = 1;
+        }
+        this.lastEatTime = now;
     }
     
     // Метод для увеличения сложности

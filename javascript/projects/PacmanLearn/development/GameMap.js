@@ -228,6 +228,26 @@ class GameMap {
             ]
         ]
     }
+    
+    // Метод для получения карты уровня
+    getLevelMap(level) {
+        // Уровни начинаются с 1, а индекс массива с 0
+        const levelIndex = Math.min(level - 1, this.levelMaps.length - 1);
+        return this.levelMaps[levelIndex];
+    }
+    
+    // Метод для подсчета еды на карте
+    countFood(map) {
+        let count = 0;
+        for (let y = 0; y < map.length; y++) {
+            for (let x = 0; x < map[y].length; x++) {
+                if (map[y][x] === 2 || map[y][x] === 3) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
 }
 
 // Экспортируем класс для использования в других файлах
