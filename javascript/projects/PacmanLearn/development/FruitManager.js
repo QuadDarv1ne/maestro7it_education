@@ -1,28 +1,30 @@
+import { FRUIT_RARITIES, RARITY_BONUSES } from './Constants.js';
+
 class FruitManager {
     constructor() {
         // Фрукты, которые появляются на определенных уровнях
         this.fruitTypes = [
-            { type: 'cherry', points: 100, color: '#FF0000', symbol: '🍒', rarity: 'common' },
-            { type: 'strawberry', points: 300, color: '#FF00FF', symbol: '🍓', rarity: 'common' },
-            { type: 'orange', points: 500, color: '#FFA500', symbol: '🍊', rarity: 'uncommon' },
-            { type: 'apple', points: 700, color: '#FF0000', symbol: '🍎', rarity: 'uncommon' },
-            { type: 'melon', points: 1000, color: '#00FF00', symbol: '🍉', rarity: 'rare' },
-            { type: 'galaxian', points: 2000, color: '#FFFF00', symbol: '⭐', rarity: 'rare' },
-            { type: 'bell', points: 3000, color: '#FFFF00', symbol: '🔔', rarity: 'epic' },
-            { type: 'key', points: 5000, color: '#FFFF00', symbol: '🔑', rarity: 'legendary' },
-            { type: 'banana', points: 1500, color: '#FFD700', symbol: '🍌', rarity: 'uncommon' },
-            { type: 'grapes', points: 2500, color: '#9370DB', symbol: '🍇', rarity: 'rare' },
+            { type: 'cherry', points: 100, color: '#FF0000', symbol: '🍒', rarity: FRUIT_RARITIES.COMMON },
+            { type: 'strawberry', points: 300, color: '#FF00FF', symbol: '🍓', rarity: FRUIT_RARITIES.COMMON },
+            { type: 'orange', points: 500, color: '#FFA500', symbol: '🍊', rarity: FRUIT_RARITIES.UNCOMMON },
+            { type: 'apple', points: 700, color: '#FF0000', symbol: '🍎', rarity: FRUIT_RARITIES.UNCOMMON },
+            { type: 'melon', points: 1000, color: '#00FF00', symbol: '🍉', rarity: FRUIT_RARITIES.RARE },
+            { type: 'galaxian', points: 2000, color: '#FFFF00', symbol: '⭐', rarity: FRUIT_RARITIES.RARE },
+            { type: 'bell', points: 3000, color: '#FFFF00', symbol: '🔔', rarity: FRUIT_RARITIES.EPIC },
+            { type: 'key', points: 5000, color: '#FFFF00', symbol: '🔑', rarity: FRUIT_RARITIES.LEGENDARY },
+            { type: 'banana', points: 1500, color: '#FFD700', symbol: '🍌', rarity: FRUIT_RARITIES.UNCOMMON },
+            { type: 'grapes', points: 2500, color: '#9370DB', symbol: '🍇', rarity: FRUIT_RARITIES.RARE },
             // New fruit types
-            { type: 'pineapple', points: 1200, color: '#FFD700', symbol: '🍍', rarity: 'rare' },
-            { type: 'peach', points: 800, color: '#FFB6C1', symbol: '🍑', rarity: 'uncommon' },
-            { type: 'pear', points: 600, color: '#90EE90', symbol: '🍐', rarity: 'uncommon' },
-            { type: 'coconut', points: 1800, color: '#D2B48C', symbol: '🥥', rarity: 'rare' },
-            { type: 'kiwi', points: 900, color: '#ADFF2F', symbol: '🥝', rarity: 'uncommon' },
-            { type: 'mango', points: 1600, color: '#FFA500', symbol: '🥭', rarity: 'rare' },
-            { type: 'watermelon', points: 2200, color: '#00FF00', symbol: '🍉', rarity: 'epic' },
-            { type: 'dragonfruit', points: 3500, color: '#FF69B4', symbol: '🐉', rarity: 'epic' },
-            { type: 'starfruit', points: 2800, color: '#7FFF00', symbol: '⭐', rarity: 'epic' },
-            { type: 'durian', points: 4000, color: '#DAA520', symbol: '💥', rarity: 'legendary' }
+            { type: 'pineapple', points: 1200, color: '#FFD700', symbol: '🍍', rarity: FRUIT_RARITIES.RARE },
+            { type: 'peach', points: 800, color: '#FFB6C1', symbol: '🍑', rarity: FRUIT_RARITIES.UNCOMMON },
+            { type: 'pear', points: 600, color: '#90EE90', symbol: '🍐', rarity: FRUIT_RARITIES.UNCOMMON },
+            { type: 'coconut', points: 1800, color: '#D2B48C', symbol: '🥥', rarity: FRUIT_RARITIES.RARE },
+            { type: 'kiwi', points: 900, color: '#ADFF2F', symbol: '🥝', rarity: FRUIT_RARITIES.UNCOMMON },
+            { type: 'mango', points: 1600, color: '#FFA500', symbol: '🥭', rarity: FRUIT_RARITIES.RARE },
+            { type: 'watermelon', points: 2200, color: '#00FF00', symbol: '🍉', rarity: FRUIT_RARITIES.EPIC },
+            { type: 'dragonfruit', points: 3500, color: '#FF69B4', symbol: '🐉', rarity: FRUIT_RARITIES.EPIC },
+            { type: 'starfruit', points: 2800, color: '#7FFF00', symbol: '⭐', rarity: FRUIT_RARITIES.EPIC },
+            { type: 'durian', points: 4000, color: '#DAA520', symbol: '💥', rarity: FRUIT_RARITIES.LEGENDARY }
         ];
         this.fruitTimer = 0;
         this.fruitVisible = false;
@@ -31,13 +33,7 @@ class FruitManager {
         // Add tracking for collected fruits
         this.collectedFruits = {};
         this.totalFruitsSpawned = 0;
-        this.rarityBonuses = {
-            'common': 1,
-            'uncommon': 1.2,
-            'rare': 1.5,
-            'epic': 2.0,
-            'legendary': 3.0
-        };
+        this.rarityBonuses = RARITY_BONUSES;
         // Pre-allocate arrays for weighted selection to reduce garbage collection
         this.availableFruits = [];
         this.weightedFruits = [];
@@ -49,7 +45,7 @@ class FruitManager {
             points: 0,
             color: '#FFFFFF',
             symbol: '',
-            rarity: 'common',
+            rarity: FRUIT_RARITIES.COMMON,
             spawnTime: 0,
             pulsePhase: 0
         };
@@ -119,11 +115,11 @@ class FruitManager {
             if (level >= levelRequirement) {
                 // Add multiple entries based on rarity (common fruits appear more often)
                 const rarityWeights = {
-                    'common': 5,
-                    'uncommon': 3,
-                    'rare': 2,
-                    'epic': 1,
-                    'legendary': 0.5
+                    [FRUIT_RARITIES.COMMON]: 5,
+                    [FRUIT_RARITIES.UNCOMMON]: 3,
+                    [FRUIT_RARITIES.RARE]: 2,
+                    [FRUIT_RARITIES.EPIC]: 1,
+                    [FRUIT_RARITIES.LEGENDARY]: 0.5
                 };
                 
                 const weight = rarityWeights[fruit.rarity] || 1;
@@ -161,7 +157,7 @@ class FruitManager {
             this.collectedFruits[this.currentFruit.type]++;
             
             // Special effect for rare fruits
-            if (this.currentFruit.rarity === 'epic' || this.currentFruit.rarity === 'legendary') {
+            if (this.currentFruit.rarity === FRUIT_RARITIES.EPIC || this.currentFruit.rarity === FRUIT_RARITIES.LEGENDARY) {
                 // Could trigger special effects here
                 console.log(`Rare fruit collected: ${this.currentFruit.type}`);
             }
@@ -183,7 +179,7 @@ class FruitManager {
             const pulse = Math.sin((Date.now() / 200) + this.currentFruit.pulsePhase) * 0.2 + 1;
             
             // Add glow effect for rare fruits
-            if (this.currentFruit.rarity === 'epic' || this.currentFruit.rarity === 'legendary') {
+            if (this.currentFruit.rarity === FRUIT_RARITIES.EPIC || this.currentFruit.rarity === FRUIT_RARITIES.LEGENDARY) {
                 ctx.shadowColor = this.currentFruit.color;
                 ctx.shadowBlur = 15;
             }
@@ -209,12 +205,12 @@ class FruitManager {
             ctx.shadowBlur = 0;
             
             // Draw rarity indicator for rare fruits
-            if (this.currentFruit.rarity === 'rare' || this.currentFruit.rarity === 'epic' || this.currentFruit.rarity === 'legendary') {
+            if (this.currentFruit.rarity === FRUIT_RARITIES.RARE || this.currentFruit.rarity === FRUIT_RARITIES.EPIC || this.currentFruit.rarity === FRUIT_RARITIES.LEGENDARY) {
                 let indicatorColor;
                 switch(this.currentFruit.rarity) {
-                    case 'rare': indicatorColor = '#00BFFF'; break;
-                    case 'epic': indicatorColor = '#FF00FF'; break;
-                    case 'legendary': indicatorColor = '#FFD700'; break;
+                    case FRUIT_RARITIES.RARE: indicatorColor = '#00BFFF'; break;
+                    case FRUIT_RARITIES.EPIC: indicatorColor = '#FF00FF'; break;
+                    case FRUIT_RARITIES.LEGENDARY: indicatorColor = '#FFD700'; break;
                     default: indicatorColor = '#FFFFFF';
                 }
                 

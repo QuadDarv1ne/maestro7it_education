@@ -1,22 +1,24 @@
+import { DIRECTIONS, COLLISION_SETTINGS, GAME_SETTINGS } from './Constants.js';
+
 class Pacman {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.startX = x;
         this.startY = y;
-        this.direction = 'right';
+        this.direction = DIRECTIONS.RIGHT;
         this.nextDirection = null;
         this.mouthAngle = 0;
         this.mouthOpening = 0.1;
         this.powerMode = false;
         this.powerModeTimer = 0;
         // Add sub-pixel positioning for smoother movement
-        this.pixelX = x * 22 + 11; // Assuming cellSize = 22, center of cell
-        this.pixelY = y * 22 + 11;
-        this.speed = 2.5; // Pixels per frame
-        this.cellSize = 22;
+        this.pixelX = x * GAME_SETTINGS.DEFAULT_CELL_SIZE + GAME_SETTINGS.DEFAULT_CELL_SIZE/2; // Center of cell
+        this.pixelY = y * GAME_SETTINGS.DEFAULT_CELL_SIZE + GAME_SETTINGS.DEFAULT_CELL_SIZE/2;
+        this.speed = GAME_SETTINGS.DEFAULT_PACMAN_SPEED; // Pixels per frame
+        this.cellSize = GAME_SETTINGS.DEFAULT_CELL_SIZE;
         // Add collision radius for more precise collision detection
-        this.collisionRadius = 8;
+        this.collisionRadius = COLLISION_SETTINGS.PACMAN_RADIUS;
         // Pre-allocate object for position calculations
         this.tempPosition = { x: 0, y: 0 };
     }
@@ -39,16 +41,16 @@ class Pacman {
         if (this.isValidMove(nextPos.x, nextPos.y, map)) {
             // Update sub-pixel position
             switch(this.direction) {
-                case 'up':
+                case DIRECTIONS.UP:
                     this.pixelY -= this.speed;
                     break;
-                case 'down':
+                case DIRECTIONS.DOWN:
                     this.pixelY += this.speed;
                     break;
-                case 'left':
+                case DIRECTIONS.LEFT:
                     this.pixelX -= this.speed;
                     break;
-                case 'right':
+                case DIRECTIONS.RIGHT:
                     this.pixelX += this.speed;
                     break;
             }
@@ -70,10 +72,10 @@ class Pacman {
         let newY = y;
         
         switch(direction) {
-            case 'up': newY--; break;
-            case 'down': newY++; break;
-            case 'left': newX--; break;
-            case 'right': newX++; break;
+            case DIRECTIONS.UP: newY--; break;
+            case DIRECTIONS.DOWN: newY++; break;
+            case DIRECTIONS.LEFT: newX--; break;
+            case DIRECTIONS.RIGHT: newX++; break;
         }
         
         // Туннельные переходы
@@ -101,7 +103,7 @@ class Pacman {
     resetPosition() {
         this.x = this.startX;
         this.y = this.startY;
-        this.direction = 'right';
+        this.direction = DIRECTIONS.RIGHT;
         this.nextDirection = null;
         this.powerMode = false;
         this.powerModeTimer = 0;
@@ -119,7 +121,7 @@ class Pacman {
     }
 
     // Метод для активации режима силы
-    activatePowerMode(duration = 10000) {
+    activatePowerMode(duration = GAME_SETTINGS.POWER_MODE_DURATION) {
         this.powerMode = true;
         this.powerModeTimer = duration;
     }
@@ -141,7 +143,7 @@ class Pacman {
     }
     
     // Метод для проверки столкновения с другим объектом (более точная проверка)
-    checkCollision(otherX, otherY, otherRadius = 8) {
+    checkCollision(otherX, otherY, otherRadius = COLLISION_SETTINGS.PACMAN_RADIUS) {
         // Use sub-pixel positions for more accurate collision detection
         const dx = this.pixelX - (otherX * this.cellSize + this.cellSize/2);
         const dy = this.pixelY - (otherY * this.cellSize + this.cellSize/2);

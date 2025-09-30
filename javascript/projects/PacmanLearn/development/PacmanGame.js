@@ -6,19 +6,21 @@ import { SoundManager } from './SoundManager.js';
 import { ParticleManager } from './ParticleManager.js';
 import { FruitManager } from './FruitManager.js';
 import { AchievementManager } from './AchievementManager.js';
+import { Utils } from './Utils.js';
+import { GAME_SETTINGS, UI_CONSTANTS } from './Constants.js';
 
 class PacmanGame {
     constructor() {
         // Инициализация холста
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.cellSize = 22;
+        this.cellSize = GAME_SETTINGS.DEFAULT_CELL_SIZE;
         
         // Игровые параметры
         this.isRunning = false;
         this.animationFrameId = null;
         this.lastTimestamp = 0;
-        this.updateInterval = 150; // Интервал обновления в миллисекундах (замедляет игру)
+        this.updateInterval = GAME_SETTINGS.DEFAULT_UPDATE_INTERVAL; // Интервал обновления в миллисекундах (замедляет игру)
         this.lastUpdate = 0;
         
         // Инициализация игровых объектов
@@ -240,7 +242,7 @@ class PacmanGame {
             this.foodCount++;
             this.score += 50;
             this.pacman.powerMode = true;
-            this.pacman.powerModeTimer = 10000; // 10 секунд
+            this.pacman.powerModeTimer = GAME_SETTINGS.POWER_MODE_DURATION; // 10 секунд
             this.canvas.classList.add('power-mode');
             this.soundManager.playSound('power');
             this.createCombo();

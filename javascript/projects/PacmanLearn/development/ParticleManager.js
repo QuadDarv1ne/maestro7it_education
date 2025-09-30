@@ -1,15 +1,11 @@
+import { PARTICLE_TYPES } from './Constants.js';
+
 class ParticleManager {
     constructor() {
         this.particles = [];
         this.pool = [];
         this.maxParticles = 200;
-        this.particleTypes = {
-            DEFAULT: 'default',
-            GLOW: 'glow',
-            SPARKLE: 'sparkle',
-            SMOKE: 'smoke',
-            EXPLOSION: 'explosion'
-        };
+        this.particleTypes = PARTICLE_TYPES;
         // Pre-allocate object pool for better performance
         this.initializePool();
     }

@@ -1,10 +1,12 @@
+import { GHOST_STATES, DIRECTIONS, COLLISION_SETTINGS } from './Constants.js';
+
 class Ghost {
     constructor(x, y, color, name, speed = 0.8) {
         this.x = x;
         this.y = y;
         this.startX = x;
         this.startY = y;
-        this.direction = 'left';
+        this.direction = DIRECTIONS.LEFT;
         this.color = color;
         this.name = name;
         this.speed = speed;
@@ -12,7 +14,7 @@ class Ghost {
         // Reuse array instead of creating new ones to reduce garbage collection
         this.possibleMoves = [];
         // Add state tracking for more intelligent behavior
-        this.state = 'chase'; // 'chase', 'scatter', 'frightened'
+        this.state = GHOST_STATES.CHASE; // 'chase', 'scatter', 'frightened'
         this.stateTimer = 0;
         this.scatterTarget = this.getScatterTarget();
         // Add sub-pixel positioning for smoother movement
@@ -21,7 +23,7 @@ class Ghost {
         this.speedPixels = speed * 2; // Convert to pixels per frame
         this.cellSize = 22;
         // Add collision radius for more precise collision detection
-        this.collisionRadius = 8;
+        this.collisionRadius = COLLISION_SETTINGS.GHOST_RADIUS;
         // Add pathfinding variables
         this.path = [];
         this.currentTarget = null;
@@ -57,16 +59,16 @@ class Ghost {
         
         // Switch between chase and scatter modes periodically
         if (this.stateTimer > 300 && !powerMode) { // About 5 seconds at 60 FPS
-            this.state = this.state === 'chase' ? 'scatter' : 'chase';
+            this.state = this.state === GHOST_STATES.CHASE ? GHOST_STATES.SCATTER : GHOST_STATES.CHASE;
             this.stateTimer = 0;
         }
         
         // In power mode, always frightened
         if (powerMode) {
-            this.state = 'frightened';
-        } else if (this.state === 'frightened') {
+            this.state = GHOST_STATES.FRIGHTENED;
+        } else if (this.state === GHOST_STATES.FRIGHTENED) {
             // Return to normal state after power mode ends
-            this.state = 'chase';
+            this.state = GHOST_STATES.CHASE;
         }
         
         // Enhanced AI for ghost movement
@@ -79,19 +81,19 @@ class Ghost {
         let targetX, targetY;
         
         switch(this.state) {
-            case 'frightened':
+            case GHOST_STATES.FRIGHTENED:
                 // Run away randomly
                 targetX = this.x + (Math.random() > 0.5 ? 5 : -5);
                 targetY = this.y + (Math.random() > 0.5 ? 5 : -5);
                 break;
                 
-            case 'scatter':
+            case GHOST_STATES.SCATTER:
                 // Go to corner
                 targetX = this.scatterTarget.x;
                 targetY = this.scatterTarget.y;
                 break;
                 
-            case 'chase':
+            case GHOST_STATES.CHASE:
             default:
                 // Special behaviors for different ghosts
                 switch(this.name) {
@@ -102,10 +104,10 @@ class Ghost {
                         
                     case 'Pinky': // Pink ghost - ambush, targets 4 tiles ahead of Pacman
                         switch(this.direction) {
-                            case 'up': targetY = pacmanY - 4; break;
-                            case 'down': targetY = pacmanY + 4; break;
-                            case 'left': targetX = pacmanX - 4; break;
-                            case 'right': targetX = pacmanX + 4; break;
+                            case DIRECTIONS.UP: targetY = pacmanY - 4; break;
+                            case DIRECTIONS.DOWN: targetY = pacmanY + 4; break;
+                            case DIRECTIONS.LEFT: targetX = pacmanX - 4; break;
+                            case DIRECTIONS.RIGHT: targetX = pacmanX + 4; break;
                             default: 
                                 targetX = pacmanX;
                                 targetY = pacmanY;
@@ -158,7 +160,7 @@ class Ghost {
         this.possibleMoves.length = 0; // Clear array without creating new one
         
         // Use pre-allocated object for position calculations
-        const directions = ['up', 'down', 'left', 'right'];
+        const directions = [DIRECTIONS.UP, DIRECTIONS.DOWN, DIRECTIONS.LEFT, DIRECTIONS.RIGHT];
         
         for (let i = 0; i < directions.length; i++) {
             const dir = directions[i];
@@ -170,7 +172,7 @@ class Ghost {
                 const moveDistance = Math.sqrt(moveDx * moveDx + moveDy * moveDy);
                 
                 // Add some randomness to make behavior less predictable (but not in frightened mode)
-                const randomness = (this.state === 'frightened') ? 0 : Math.random() * 3;
+                const randomness = (this.state === GHOST_STATES.FRIGHTENED) ? 0 : Math.random() * 3;
                 
                 this.possibleMoves.push({
                     direction: dir,
@@ -183,7 +185,7 @@ class Ghost {
         
         // Sort moves by distance to target (closest first)
         // If in frightened mode, sort in reverse (farthest first)
-        if (this.state === 'frightened') {
+        if (this.state === GHOST_STATES.FRIGHTENED) {
             this.possibleMoves.sort((a, b) => b.distance - a.distance);
         } else {
             this.possibleMoves.sort((a, b) => a.distance - b.distance);
@@ -198,16 +200,16 @@ class Ghost {
             
             // Update sub-pixel position
             switch(this.direction) {
-                case 'up':
+                case DIRECTIONS.UP:
                     this.pixelY -= this.speedPixels;
                     break;
-                case 'down':
+                case DIRECTIONS.DOWN:
                     this.pixelY += this.speedPixels;
                     break;
-                case 'left':
+                case DIRECTIONS.LEFT:
                     this.pixelX -= this.speedPixels;
                     break;
-                case 'right':
+                case DIRECTIONS.RIGHT:
                     this.pixelX += this.speedPixels;
                     break;
             }
@@ -229,10 +231,10 @@ class Ghost {
         let newY = y;
         
         switch(direction) {
-            case 'up': newY--; break;
-            case 'down': newY++; break;
-            case 'left': newX--; break;
-            case 'right': newX++; break;
+            case DIRECTIONS.UP: newY--; break;
+            case DIRECTIONS.DOWN: newY++; break;
+            case DIRECTIONS.LEFT: newX--; break;
+            case DIRECTIONS.RIGHT: newX++; break;
         }
         
         // Туннельные переходы
@@ -261,7 +263,7 @@ class Ghost {
         this.x = this.startX;
         this.y = this.startY;
         this.direction = this.getInitialDirection();
-        this.state = 'chase';
+        this.state = GHOST_STATES.CHASE;
         this.stateTimer = 0;
         // Reset sub-pixel positioning
         this.pixelX = this.x * this.cellSize + this.cellSize/2;
@@ -271,11 +273,11 @@ class Ghost {
     getInitialDirection() {
         // Определяем начальное направление в зависимости от имени призрака
         switch(this.name) {
-            case 'Blinky': return 'left';
-            case 'Pinky': return 'up';
-            case 'Inky': return 'down';
-            case 'Clyde': return 'right';
-            default: return 'left';
+            case 'Blinky': return DIRECTIONS.LEFT;
+            case 'Pinky': return DIRECTIONS.UP;
+            case 'Inky': return DIRECTIONS.DOWN;
+            case 'Clyde': return DIRECTIONS.RIGHT;
+            default: return DIRECTIONS.LEFT;
         }
     }
 
@@ -292,7 +294,7 @@ class Ghost {
     }
     
     // Метод для проверки столкновения с другим объектом (более точная проверка)
-    checkCollision(otherX, otherY, otherRadius = 8) {
+    checkCollision(otherX, otherY, otherRadius = COLLISION_SETTINGS.GHOST_RADIUS) {
         // Use sub-pixel positions for more accurate collision detection
         const dx = this.pixelX - (otherX * this.cellSize + this.cellSize/2);
         const dy = this.pixelY - (otherY * this.cellSize + this.cellSize/2);

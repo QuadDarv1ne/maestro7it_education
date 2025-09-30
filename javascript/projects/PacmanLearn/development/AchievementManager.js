@@ -1,25 +1,27 @@
+import { ACHIEVEMENT_IDS } from './Constants.js';
+
 class AchievementManager {
     constructor() {
         this.achievements = [
-            { id: 'first_game', name: 'Первый шаг', description: 'Начать первую игру', unlocked: false, points: 100 },
-            { id: 'score_1000', name: 'Тысячник', description: 'Набрать 1000 очков', unlocked: false, points: 200 },
-            { id: 'score_5000', name: 'Пяти тысячник', description: 'Набрать 5000 очков', unlocked: false, points: 500 },
-            { id: 'level_5', name: 'Продвинутый', description: 'Достичь 5 уровня', unlocked: false, points: 300 },
-            { id: 'combo_10', name: 'Комбо-мастер', description: 'Собрать 10 комбо', unlocked: false, points: 400 },
-            { id: 'ghost_hunter', name: 'Охотник за привидениями', description: 'Съесть 20 привидений', unlocked: false, points: 600 },
-            { id: 'fruit_lover', name: 'Любитель фруктов', description: 'Собрать 10 фруктов', unlocked: false, points: 350 },
-            { id: 'survivor', name: 'Выживший', description: 'Пройти уровень без потери жизни', unlocked: false, points: 700 },
-            { id: 'speed_demon', name: 'Скоростной демон', description: 'Завершить уровень за 30 секунд', unlocked: false, points: 800 },
-            { id: 'perfectionist', name: 'Перфекционист', description: 'Собрать всю еду на уровне', unlocked: false, points: 1000 },
+            { id: ACHIEVEMENT_IDS.FIRST_GAME, name: 'Первый шаг', description: 'Начать первую игру', unlocked: false, points: 100 },
+            { id: ACHIEVEMENT_IDS.SCORE_1000, name: 'Тысячник', description: 'Набрать 1000 очков', unlocked: false, points: 200 },
+            { id: ACHIEVEMENT_IDS.SCORE_5000, name: 'Пяти тысячник', description: 'Набрать 5000 очков', unlocked: false, points: 500 },
+            { id: ACHIEVEMENT_IDS.LEVEL_5, name: 'Продвинутый', description: 'Достичь 5 уровня', unlocked: false, points: 300 },
+            { id: ACHIEVEMENT_IDS.COMBO_10, name: 'Комбо-мастер', description: 'Собрать 10 комбо', unlocked: false, points: 400 },
+            { id: ACHIEVEMENT_IDS.GHOST_HUNTER, name: 'Охотник за привидениями', description: 'Съесть 20 привидений', unlocked: false, points: 600 },
+            { id: ACHIEVEMENT_IDS.FRUIT_LOVER, name: 'Любитель фруктов', description: 'Собрать 10 фруктов', unlocked: false, points: 350 },
+            { id: ACHIEVEMENT_IDS.SURVIVOR, name: 'Выживший', description: 'Пройти уровень без потери жизни', unlocked: false, points: 700 },
+            { id: ACHIEVEMENT_IDS.SPEED_DEMON, name: 'Скоростной демон', description: 'Завершить уровень за 30 секунд', unlocked: false, points: 800 },
+            { id: ACHIEVEMENT_IDS.PERFECTIONIST, name: 'Перфекционист', description: 'Собрать всю еду на уровне', unlocked: false, points: 1000 },
             // New achievements
-            { id: 'ghost_buster', name: 'Призракобой', description: 'Съесть 50 привидений', unlocked: false, points: 1200 },
-            { id: 'fruit_expert', name: 'Эксперт по фруктам', description: 'Собрать 25 фруктов', unlocked: false, points: 1000 },
-            { id: 'combo_king', name: 'Король комбо', description: 'Собрать 20 комбо', unlocked: false, points: 1500 },
-            { id: 'level_master', name: 'Мастер уровней', description: 'Достичь 10 уровня', unlocked: false, points: 2000 },
-            { id: 'pacman_legend', name: 'Легенда Pacman', description: 'Набрать 10000 очков', unlocked: false, points: 3000 },
-            { id: 'ghost_haunter', name: 'Преследователь призраков', description: 'Съесть 5 привидений за одну жизнь', unlocked: false, points: 1000 },
-            { id: 'speedrunner', name: 'Спидраннер', description: 'Завершить уровень за 15 секунд', unlocked: false, points: 1500 },
-            { id: 'collector', name: 'Коллекционер', description: 'Собрать все типы фруктов', unlocked: false, points: 800 }
+            { id: ACHIEVEMENT_IDS.GHOST_BUSTER, name: 'Призракобой', description: 'Съесть 50 привидений', unlocked: false, points: 1200 },
+            { id: ACHIEVEMENT_IDS.FRUIT_EXPERT, name: 'Эксперт по фруктам', description: 'Собрать 25 фруктов', unlocked: false, points: 1000 },
+            { id: ACHIEVEMENT_IDS.COMBO_KING, name: 'Король комбо', description: 'Собрать 20 комбо', unlocked: false, points: 1500 },
+            { id: ACHIEVEMENT_IDS.LEVEL_MASTER, name: 'Мастер уровней', description: 'Достичь 10 уровня', unlocked: false, points: 2000 },
+            { id: ACHIEVEMENT_IDS.PACMAN_LEGEND, name: 'Легенда Pacman', description: 'Набрать 10000 очков', unlocked: false, points: 3000 },
+            { id: ACHIEVEMENT_IDS.GHOST_HAUNTER, name: 'Преследователь призраков', description: 'Съесть 5 привидений за одну жизнь', unlocked: false, points: 1000 },
+            { id: ACHIEVEMENT_IDS.SPEEDRUNNER, name: 'Спидраннер', description: 'Завершить уровень за 15 секунд', unlocked: false, points: 1500 },
+            { id: ACHIEVEMENT_IDS.COLLECTOR, name: 'Коллекционер', description: 'Собрать все типы фруктов', unlocked: false, points: 800 }
         ];
 
         this.ghostsEaten = 0;
@@ -57,104 +59,104 @@ class AchievementManager {
     checkAchievements(score, level, consecutiveEats) {
         // First game
         if (!this.achievements[0].unlocked) {
-            this.unlockAchievement('first_game');
+            this.unlockAchievement(ACHIEVEMENT_IDS.FIRST_GAME);
         }
         
         // Score achievements
         if (!this.achievements[1].unlocked && score >= 1000) {
-            this.unlockAchievement('score_1000');
+            this.unlockAchievement(ACHIEVEMENT_IDS.SCORE_1000);
         }
         
         if (!this.achievements[2].unlocked && score >= 5000) {
-            this.unlockAchievement('score_5000');
+            this.unlockAchievement(ACHIEVEMENT_IDS.SCORE_5000);
         }
         
         // New high score achievement
-        if (!this.achievements.find(a => a.id === 'pacman_legend').unlocked && score >= 10000) {
-            this.unlockAchievement('pacman_legend');
+        if (!this.achievements.find(a => a.id === ACHIEVEMENT_IDS.PACMAN_LEGEND).unlocked && score >= 10000) {
+            this.unlockAchievement(ACHIEVEMENT_IDS.PACMAN_LEGEND);
         }
         
         // Level achievement
         if (!this.achievements[3].unlocked && level >= 5) {
-            this.unlockAchievement('level_5');
+            this.unlockAchievement(ACHIEVEMENT_IDS.LEVEL_5);
         }
         
         // New level achievement
-        const levelMaster = this.achievements.find(a => a.id === 'level_master');
+        const levelMaster = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.LEVEL_MASTER);
         if (levelMaster && !levelMaster.unlocked && level >= 10) {
-            this.unlockAchievement('level_master');
+            this.unlockAchievement(ACHIEVEMENT_IDS.LEVEL_MASTER);
         }
         
         // Combo achievement
         if (!this.achievements[4].unlocked && consecutiveEats >= 10) {
-            this.unlockAchievement('combo_10');
+            this.unlockAchievement(ACHIEVEMENT_IDS.COMBO_10);
         }
         
         // New combo achievement
-        const comboKing = this.achievements.find(a => a.id === 'combo_king');
+        const comboKing = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.COMBO_KING);
         if (comboKing && !comboKing.unlocked && consecutiveEats >= 20) {
-            this.unlockAchievement('combo_king');
+            this.unlockAchievement(ACHIEVEMENT_IDS.COMBO_KING);
         }
         
         // Ghost hunter achievement
         if (!this.achievements[5].unlocked && this.ghostsEaten >= 20) {
-            this.unlockAchievement('ghost_hunter');
+            this.unlockAchievement(ACHIEVEMENT_IDS.GHOST_HUNTER);
         }
         
         // New ghost achievements
-        const ghostBuster = this.achievements.find(a => a.id === 'ghost_buster');
+        const ghostBuster = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.GHOST_BUSTER);
         if (ghostBuster && !ghostBuster.unlocked && this.ghostsEaten >= 50) {
-            this.unlockAchievement('ghost_buster');
+            this.unlockAchievement(ACHIEVEMENT_IDS.GHOST_BUSTER);
         }
         
-        const ghostHaunter = this.achievements.find(a => a.id === 'ghost_haunter');
+        const ghostHaunter = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.GHOST_HAUNTER);
         if (ghostHaunter && !ghostHaunter.unlocked && this.ghostsEatenInCurrentLife >= 5) {
-            this.unlockAchievement('ghost_haunter');
+            this.unlockAchievement(ACHIEVEMENT_IDS.GHOST_HAUNTER);
         }
         
         // Fruit lover achievement
         if (!this.achievements[6].unlocked && this.fruitsCollected >= 10) {
-            this.unlockAchievement('fruit_lover');
+            this.unlockAchievement(ACHIEVEMENT_IDS.FRUIT_LOVER);
         }
         
         // New fruit achievements
-        const fruitExpert = this.achievements.find(a => a.id === 'fruit_expert');
+        const fruitExpert = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.FRUIT_EXPERT);
         if (fruitExpert && !fruitExpert.unlocked && this.fruitsCollected >= 25) {
-            this.unlockAchievement('fruit_expert');
+            this.unlockAchievement(ACHIEVEMENT_IDS.FRUIT_EXPERT);
         }
         
-        const collector = this.achievements.find(a => a.id === 'collector');
+        const collector = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.COLLECTOR);
         if (collector && !collector.unlocked && this.collectedFruitTypes.size >= 10) {
-            this.unlockAchievement('collector');
+            this.unlockAchievement(ACHIEVEMENT_IDS.COLLECTOR);
         }
         
         // Survivor achievement - check if level was completed without losing lives
-        const survivor = this.achievements.find(a => a.id === 'survivor');
+        const survivor = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.SURVIVOR);
         if (survivor && !survivor.unlocked && 
             this.currentLevelStartLives === 3 && this.levelsCompletedWithoutDeath > 0) {
-            this.unlockAchievement('survivor');
+            this.unlockAchievement(ACHIEVEMENT_IDS.SURVIVOR);
         }
         
         // Speed demon achievement - check if level was completed quickly
         if (this.levelStartTime > 0) {
             const timeToComplete = (Date.now() - this.levelStartTime) / 1000; // in seconds
-            const speedDemon = this.achievements.find(a => a.id === 'speed_demon');
+            const speedDemon = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.SPEED_DEMON);
             if (speedDemon && !speedDemon.unlocked && timeToComplete <= 30) {
-                this.unlockAchievement('speed_demon');
+                this.unlockAchievement(ACHIEVEMENT_IDS.SPEED_DEMON);
             }
             
             // New speedrunner achievement
-            const speedrunner = this.achievements.find(a => a.id === 'speedrunner');
+            const speedrunner = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.SPEEDRUNNER);
             if (speedrunner && !speedrunner.unlocked && timeToComplete <= 15) {
-                this.unlockAchievement('speedrunner');
+                this.unlockAchievement(ACHIEVEMENT_IDS.SPEEDRUNNER);
             }
         }
         
         // Perfectionist achievement - check if all food was eaten
-        const perfectionist = this.achievements.find(a => a.id === 'perfectionist');
+        const perfectionist = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.PERFECTIONIST);
         if (perfectionist && !perfectionist.unlocked && 
             this.totalFoodInLevel > 0 && this.foodEaten >= this.totalFoodInLevel) {
-            this.unlockAchievement('perfectionist');
+            this.unlockAchievement(ACHIEVEMENT_IDS.PERFECTIONIST);
         }
     }
 
