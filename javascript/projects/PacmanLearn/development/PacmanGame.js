@@ -68,6 +68,14 @@ class PacmanGame {
         // Первичная отрисовка
         this.draw();
         
+        // Pre-allocate objects for performance
+        this.tempComboDisplay = {
+            text: '',
+            x: 0,
+            y: 0,
+            startTime: 0
+        };
+        
         console.log("Игра инициализирована");
     }
     
