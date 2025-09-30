@@ -1,5 +1,9 @@
 '''
 https://leetcode.com/problems/implement-queue-using-stacks/description/
+
+Автор: Дуплей Максим Игоревич
+ORCID: https://orcid.org/0009-0007-7605-539X
+GitHub: https://github.com/QuadDarv1ne/
 '''
 
 class MyQueue:

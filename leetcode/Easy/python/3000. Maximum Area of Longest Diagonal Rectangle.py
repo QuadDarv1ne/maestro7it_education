@@ -1,5 +1,9 @@
 '''
 https://leetcode.com/problems/maximum-area-of-longest-diagonal-rectangle/description/?envType=daily-question&envId=2025-08-26
+
+Автор: Дуплей Максим Игоревич
+ORCID: https://orcid.org/0009-0007-7605-539X
+GitHub: https://github.com/QuadDarv1ne/
 '''
 
 class Solution:

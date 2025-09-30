@@ -1,5 +1,9 @@
 '''
 https://leetcode.com/problems/count-elements-with-maximum-frequency/description/?envType=daily-question&envId=2025-09-22
+
+Автор: Дуплей Максим Игоревич
+ORCID: https://orcid.org/0009-0007-7605-539X
+GitHub: https://github.com/QuadDarv1ne/
 '''
 
 from collections import Counter
