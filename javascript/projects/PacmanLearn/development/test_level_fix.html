@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест исправленного уровня Pacman</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            text-align: center;
+        }
+        h1 {
+            color: #FFD700;
+        }
+        .test-section {
+            background-color: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .map-display {
+            display: inline-block;
+            background-color: #000;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .cell {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #333;
+            text-align: center;
+            line-height: 20px;
+            font-size: 12px;
+        }
+        .wall { background-color: #2222FF; }
+        .path { background-color: #000; }
+        .food { background-color: #FFF; color: #000; }
+        .super-food { background-color: #FFF; color: #000; font-weight: bold; }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Тест исправленного уровня Pacman</h1>
+        
+        <div class="test-section">
+            <h2>Проверка начального уровня</h2>
+            <p>Этот тест проверяет, что начальный уровень был исправлен для более свободного передвижения, как в классическом Pacman.</p>
+            
+            <div id="map-container">
+                <h3>Начальный уровень (уровень 1):</h3>
+                <div id="level-map" class="map-display"></div>
+            </div>
+            
+            <div id="test-results"></div>
+            
+            <button onclick="runTests()">Запустить тесты</button>
+            <button onclick="showLevel(1)">Показать уровень 1</button>
+            <button onclick="showLevel(2)">Показать уровень 2</button>
+        </div>
+    </div>
+
+    <script src="GameMap.js"></script>
+    <script>
+        let gameMap;
+        
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', () => {
+            gameMap = new GameMap();
+            showLevel(1); // Показать начальный уровень по умолчанию
+        });
+        
+        // Функция для отображения уровня
+        function showLevel(level) {
+            const map = gameMap.getLevelMap(level);
+            const container = document.getElementById('level-map');
+            container.innerHTML = '';
+            
+            // Создаем таблицу для отображения карты
+            const table = document.createElement('table');
+            table.style.borderCollapse = 'collapse';
+            
+            for (let y = 0; y < map.length; y++) {
+                const row = document.createElement('tr');
+                for (let x = 0; x < map[y].length; x++) {
+                    const cell = document.createElement('td');
+                    cell.style.width = '20px';
+                    cell.style.height = '20px';
+                    cell.style.border = '1px solid #333';
+                    cell.style.textAlign = 'center';
+                    cell.style.verticalAlign = 'middle';
+                    cell.style.fontSize = '12px';
+                    
+                    switch(map[y][x]) {
+                        case 0: // Стена
+                            cell.style.backgroundColor = '#2222FF';
+                            cell.textContent = '█';
+                            break;
+                        case 1: // Путь
+                            cell.style.backgroundColor = '#000';
+                            cell.textContent = '';
+                            break;
+                        case 2: // Еда
+                            cell.style.backgroundColor = '#000';
+                            cell.textContent = '•';
+                            cell.style.color = '#FFF';
+                            break;
+                        case 3: // Супер-еда
+                            cell.style.backgroundColor = '#000';
+                            cell.textContent = '●';
+                            cell.style.color = '#FFF';
+                            cell.style.fontWeight = 'bold';
+                            break;
+                    }
+                    
+                    row.appendChild(cell);
+                }
+                table.appendChild(row);
+            }
+            
+            container.appendChild(table);
+        }
+        
+        // Функция для запуска тестов
+        function runTests() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h3>Результаты тестов:</h3>';
+            
+            let passed = 0;
+            let total = 0;
+            
+            // Тест 1: Проверка размера карты
+            total++;
+            const level1 = gameMap.getLevelMap(1);
+            if (level1.length === 20 && level1[0].length === 20) {
+                results.innerHTML += '<p class="success">✓ Тест 1 пройден: Размер карты корректный (20x20)</p>';
+                passed++;
+            } else {
+                results.innerHTML += `<p class="error">✗ Тест 1 не пройден: Неверный размер карты (${level1.length}x${level1[0] ? level1[0].length : 0})</p>`;
+            }
+            
+            // Тест 2: Проверка наличия путей
+            total++;
+            let pathCount = 0;
+            for (let y = 0; y < level1.length; y++) {
+                for (let x = 0; x < level1[y].length; x++) {
+                    if (level1[y][x] === 1 || level1[y][x] === 2 || level1[y][x] === 3) {
+                        pathCount++;
+                    }
+                }
+            }
+            
+            if (pathCount > 100) {
+                results.innerHTML += `<p class="success">✓ Тест 2 пройден: Достаточно путей для передвижения (${pathCount} клеток)</p>`;
+                passed++;
+            } else {
+                results.innerHTML += `<p class="error">✗ Тест 2 не пройден: Недостаточно путей для передвижения (${pathCount} клеток)</p>`;
+            }
+            
+            // Тест 3: Проверка наличия еды
+            total++;
+            const foodCount = gameMap.countFood(level1);
+            if (foodCount > 50) {
+                results.innerHTML += `<p class="success">✓ Тест 3 пройден: Достаточно еды (${foodCount} единиц)</p>`;
+                passed++;
+            } else {
+                results.innerHTML += `<p class="error">✗ Тест 3 не пройден: Недостаточно еды (${foodCount} единиц)</p>`;
+            }
+            
+            // Тест 4: Проверка наличия супер-еды
+            total++;
+            let superFoodCount = 0;
+            for (let y = 0; y < level1.length; y++) {
+                for (let x = 0; x < level1[y].length; x++) {
+                    if (level1[y][x] === 3) {
+                        superFoodCount++;
+                    }
+                }
+            }
+            
+            if (superFoodCount >= 4) {
+                results.innerHTML += `<p class="success">✓ Тест 4 пройден: Наличие супер-еды (${superFoodCount} единиц)</p>`;
+                passed++;
+            } else {
+                results.innerHTML += `<p class="error">✗ Тест 4 не пройден: Недостаточно супер-еды (${superFoodCount} единиц)</p>`;
+            }
+            
+            // Итоговый результат
+            results.innerHTML += `<h3>Итог: ${passed}/${total} тестов пройдено</h3>`;
+            
+            if (passed === total) {
+                results.innerHTML += '<p class="success">Все тесты пройдены! Начальный уровень соответствует требованиям классического Pacman.</p>';
+            } else {
+                results.innerHTML += '<p class="error">Некоторые тесты не пройдены. Требуется дополнительная настройка уровня.</p>';
+            }
+        }
+    </script>
+</body>
+</html>

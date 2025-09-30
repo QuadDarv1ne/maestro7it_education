@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тесты для Pacman Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .test-results {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-passed {
+            color: green;
+        }
+        .test-failed {
+            color: red;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #test-output {
+            white-space: pre-wrap;
+            background-color: #000;
+            color: #00FF00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тесты для Pacman Game</h1>
+    
+    <div class="test-results">
+        <h2>Результаты тестов</h2>
+        <div id="test-output">Нажмите кнопку "Запустить тесты" для начала тестирования</div>
+        <button id="run-tests">Запустить тесты</button>
+    </div>
+
+    <!-- Подключаем модули -->
+    <script src="Pacman.js"></script>
+    <script src="Ghost.js"></script>
+    <script src="GameMap.js"></script>
+    <script src="SoundManager.js"></script>
+    <script src="ParticleManager.js"></script>
+    <script src="FruitManager.js"></script>
+    <script src="AchievementManager.js"></script>
+
+    <script>
+        // Функция для запуска тестов
+        function runTests() {
+            const output = document.getElementById('test-output');
+            output.textContent = 'Запуск тестов...\n';
+            
+            // Тесты для класса Pacman
+            testPacman();
+            
+            // Тесты для класса Ghost
+            testGhost();
+            
+            // Тесты для класса GameMap
+            testGameMap();
+            
+            // Тесты для класса SoundManager
+            testSoundManager();
+            
+            // Тесты для класса ParticleManager
+            testParticleManager();
+            
+            // Тесты для класса FruitManager
+            testFruitManager();
+            
+            // Тесты для класса AchievementManager
+            testAchievementManager();
+            
+            output.textContent += '\nВсе тесты завершены!';
+        }
+        
+        // Тесты для класса Pacman
+        function testPacman() {
+            const output = document.getElementById('test-output');
+            output.textContent += '\n--- Тесты для класса Pacman ---\n';
+            
+            try {
+                // Создаем экземпляр Пакмана
+                const pacman = new Pacman(10, 15);
+                
+                // Тест начальной позиции
+                if (pacman.x === 10 && pacman.y === 15) {
+                    output.textContent += '✓ Тест начальной позиции пройден\n';
+                } else {
+                    output.textContent += '✗ Тест начальной позиции провален\n';
+                }
+                
+                // Тест установки направления
+                pacman.setNextDirection('up');
+                if (pacman.nextDirection === 'up') {
+                    output.textContent += '✓ Тест установки направления пройден\n';
+                } else {
+                    output.textContent += '✗ Тест установки направления провален\n';
+                }
+                
+                // Тест активации режима силы
+                pacman.activatePowerMode(5000);
+                if (pacman.powerMode === true && pacman.powerModeTimer === 5000) {
+                    output.textContent += '✓ Тест активации режима силы пройден\n';
+                } else {
+                    output.textContent += '✗ Тест активации режима силы провален\n';
+                }
+                
+                // Тест анимации рта
+                const initialMouthAngle = pacman.mouthAngle;
+                pacman.animateMouth();
+                if (pacman.mouthAngle !== initialMouthAngle) {
+                    output.textContent += '✓ Тест анимации рта пройден\n';
+                } else {
+                    output.textContent += '✗ Тест анимации рта провален\n';
+                }
+                
+                // Тест сброса позиции
+                pacman.resetPosition();
+                if (pacman.x === pacman.startX && pacman.y === pacman.startY && pacman.powerMode === false) {
+                    output.textContent += '✓ Тест сброса позиции пройден\n';
+                } else {
+                    output.textContent += '✗ Тест сброса позиции провален\n';
+                }
+            } catch (e) {
+                output.textContent += `✗ Ошибка при тестировании Pacman: ${e.message}\n`;
+            }
+        }
+        
+        // Тесты для класса Ghost
+        function testGhost() {
+            const output = document.getElementById('test-output');
+            output.textContent += '\n--- Тесты для класса Ghost ---\n';
+            
+            try {
+                // Создаем экземпляр призрака
+                const ghost = new Ghost(10, 8, 'red', 'Blinky');
+                
+                // Тест начальной позиции
+                if (ghost.x === 10 && ghost.y === 8) {
+                    output.textContent += '✓ Тест начальной позиции пройден\n';
+                } else {
+                    output.textContent += '✗ Тест начальной позиции провален\n';
+                }
+                
+                // Тест начального направления
+                if (ghost.getInitialDirection() === 'left') {
+                    output.textContent += '✓ Тест начального направления пройден\n';
+                } else {
+                    output.textContent += '✗ Тест начального направления провален\n';
+                }
+                
+                // Тест сброса позиции
+                ghost.resetPosition();
+                if (ghost.x === ghost.startX && ghost.y === ghost.startY) {
+                    output.textContent += '✓ Тест сброса позиции пройден\n';
+                } else {
+                    output.textContent += '✗ Тест сброса позиции провален\n';
+                }
+            } catch (e) {
+                output.textContent += `✗ Ошибка при тестировании Ghost: ${e.message}\n`;
+            }
+        }
+        
+        // Тесты для класса GameMap
+        function testGameMap() {
+            const output = document.getElementById('test-output');
+            output.textContent += '\n--- Тесты для класса GameMap ---\n';
+            
+            try {
+                // Создаем экземпляр карты
+                const gameMap = new GameMap();
+                
+                // Тест получения карты уровня
+                const level1Map = gameMap.getLevelMap(1);
+                if (level1Map && level1Map.length > 0) {
+                    output.textContent += '✓ Тест получения карты уровня пройден\n';
+                } else {
+                    output.textContent += '✗ Тест получения карты уровня провален\n';
+                }
+                
+                // Тест подсчета еды
+                const foodCount = gameMap.countFood(level1Map);
+                if (foodCount > 0) {
+                    output.textContent += '✓ Тест подсчета еды пройден\n';
+                } else {
+                    output.textContent += '✗ Тест подсчета еды провален\n';
+                }
+            } catch (e) {
+                output.textContent += `✗ Ошибка при тестировании GameMap: ${e.message}\n`;
+            }
+        }
+        
+        // Тесты для класса SoundManager
+        function testSoundManager() {
+            const output = document.getElementById('test-output');
+            output.textContent += '\n--- Тесты для класса SoundManager ---\n';
+            
+            try {
+                // Создаем экземпляр менеджера звуков
+                const soundManager = new SoundManager();
+                
+                // Тест воспроизведения звука
+                soundManager.playSound('eat');
+                output.textContent += '✓ Тест воспроизведения звука выполнен (проверьте наличие звука)\n';
+                
+                // Тест воспроизведения фоновой музыки
+                soundManager.playBackgroundMusic();
+                output.textContent += '✓ Тест воспроизведения фоновой музыки выполнен\n';
+                
+                // Тест паузы фоновой музыки
+                soundManager.pauseBackgroundMusic();
+                output.textContent += '✓ Тест паузы фоновой музыки выполнен\n';
+            } catch (e) {
+                output.textContent += `✗ Ошибка при тестировании SoundManager: ${e.message}\n`;
+            }
+        }
+        
+        // Тесты для класса ParticleManager
+        function testParticleManager() {
+            const output = document.getElementById('test-output');
+            output.textContent += '\n--- Тесты для класса ParticleManager ---\n';
+            
+            try {
+                // Создаем экземпляр менеджера частиц
+                const particleManager = new ParticleManager();
+                
+                // Тест создания частиц
+                particleManager.createParticles(100, 100, '#FF0000', 5);
+                if (particleManager.particles.length === 5) {
+                    output.textContent += '✓ Тест создания частиц пройден\n';
+                } else {
+                    output.textContent += '✗ Тест создания частиц провален\n';
+                }
+                
+                // Тест обновления частиц
+                const initialParticles = particleManager.particles.length;
+                particleManager.updateParticles();
+                if (particleManager.particles.length <= initialParticles) {
+                    output.textContent += '✓ Тест обновления частиц пройден\n';
+                } else {
+                    output.textContent += '✗ Тест обновления частиц провален\n';
+                }
+                
+                // Тест очистки частиц
+                particleManager.clearParticles();
+                if (particleManager.particles.length === 0) {
+                    output.textContent += '✓ Тест очистки частиц пройден\n';
+                } else {
+                    output.textContent += '✗ Тест очистки частиц провален\n';
+                }
+            } catch (e) {
+                output.textContent += `✗ Ошибка при тестировании ParticleManager: ${e.message}\n`;
+            }
+        }
+        
+        // Тесты для класса FruitManager
+        function testFruitManager() {
+            const output = document.getElementById('test-output');
+            output.textContent += '\n--- Тесты для класса FruitManager ---\n';
+            
+            try {
+                // Создаем экземпляр менеджера фруктов
+                const fruitManager = new FruitManager();
+                
+                // Тест сброса фруктов
+                fruitManager.reset();
+                if (fruitManager.fruitVisible === false && fruitManager.currentFruit === null) {
+                    output.textContent += '✓ Тест сброса фруктов пройден\n';
+                } else {
+                    output.textContent += '✗ Тест сброса фруктов провален\n';
+                }
+            } catch (e) {
+                output.textContent += `✗ Ошибка при тестировании FruitManager: ${e.message}\n`;
+            }
+        }
+        
+        // Тесты для класса AchievementManager
+        function testAchievementManager() {
+            const output = document.getElementById('test-output');
+            output.textContent += '\n--- Тесты для класса AchievementManager ---\n';
+            
+            try {
+                // Создаем экземпляр менеджера достижений
+                const achievementManager = new AchievementManager();
+                
+                // Тест получения статистики
+                const stats = achievementManager.getStats();
+                if (stats.hasOwnProperty('ghostsEaten') && stats.hasOwnProperty('fruitsCollected')) {
+                    output.textContent += '✓ Тест получения статистики пройден\n';
+                } else {
+                    output.textContent += '✗ Тест получения статистики провален\n';
+                }
+                
+                // Тест сброса достижений
+                achievementManager.reset();
+                if (achievementManager.achievements[0].unlocked === false) {
+                    output.textContent += '✓ Тест сброса достижений пройден\n';
+                } else {
+                    output.textContent += '✗ Тест сброса достижений провален\n';
+                }
+            } catch (e) {
+                output.textContent += `✗ Ошибка при тестировании AchievementManager: ${e.message}\n`;
+            }
+        }
+        
+        // Обработчик события для кнопки запуска тестов
+        document.getElementById('run-tests').addEventListener('click', runTests);
+    </script>
+</body>
+</html>

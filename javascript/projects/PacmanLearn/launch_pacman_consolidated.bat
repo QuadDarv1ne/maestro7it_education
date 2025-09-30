@@ -4,7 +4,7 @@ echo Starting Pacman Game - Enhanced Consolidated Version...
 cd /d "c:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\javascript\projects\PacmanLearn"
 echo.
 echo Launching the enhanced consolidated version of Pacman...
-start "" "pacman_consolidated.html"
+start "" "pacman_enhanced.html"
 echo.
 echo Game started! The enhanced consolidated version of Pacman is now running.
 echo.

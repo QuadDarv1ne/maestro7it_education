@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pacman - Полная завершенная версия</title>
+    <title>Pacman - Модульная версия</title>
     <style>
         * {
             margin: 0;
@@ -498,7 +498,7 @@
     <!-- Game Screen -->
     <div id="game-screen" class="game-container hidden">
         <div class="header">
-            <h1>Pacman - Полная завершенная версия</h1>
+            <h1>Pacman - Модульная версия</h1>
             <div class="controls">
                 <button id="start-btn" class="btn">Начать игру</button>
                 <button id="pause-btn" class="btn">Пауза</button>
@@ -536,153 +536,14 @@
         <button id="message-btn" class="btn">OK</button>
     </div>
 
-    <script>
-        // Генератор музыки Pacman
-        class PacmanMusic {
-            constructor() {
-                this.audioContext = null;
-                this.isPlaying = false;
-                this.volume = 0.3;
-            }
-            
-            init() {
-                try {
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    return true;
-                } catch (e) {
-                    console.warn('Web Audio API не поддерживается в этом браузере');
-                    return false;
-                }
-            }
-            
-            // Ноты классической темы Pacman
-            getThemeNotes() {
-                return [
-                    // Первая фраза
-                    { frequency: 261.63, duration: 0.2 }, // До 4 октавы
-                    { frequency: 329.63, duration: 0.2 }, // Ми 4 октавы
-                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
-                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
-                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
-                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
-                    
-                    // Вторая фраза
-                    { frequency: 261.63, duration: 0.2 }, // До 4 октавы
-                    { frequency: 329.63, duration: 0.2 }, // Ми 4 октавы
-                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
-                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
-                    { frequency: 392.00, duration: 0.2 }, // Соль 4 октавы
-                    { frequency: 523.25, duration: 0.4 }, // До 5 октавы
-                    
-                    // Третья фраза
-                    { frequency: 659.25, duration: 0.2 }, // Ми 5 октавы
-                    { frequency: 587.33, duration: 0.2 }, // Ре 5 октавы
-                    { frequency: 523.25, duration: 0.2 }, // До 5 октавы
-                    { frequency: 392.00, duration: 0.4 }, // Соль 4 октавы
-                    { frequency: 440.00, duration: 0.2 }, // Ля 4 октавы
-                    { frequency: 392.00, duration: 0.4 }, // Соль 4 октавы
-                ];
-            }
-            
-            playNote(frequency, duration, startTime) {
-                if (!this.audioContext) return;
-                
-                const oscillator = this.audioContext.createOscillator();
-                const gainNode = this.audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(this.audioContext.destination);
-                
-                oscillator.type = 'square';
-                oscillator.frequency.value = frequency;
-                
-                // Установить огибающую громкости
-                gainNode.gain.setValueAtTime(0, startTime);
-                gainNode.gain.setValueAtTime(this.volume, startTime + 0.01);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-                
-                oscillator.start(startTime);
-                oscillator.stop(startTime + duration);
-                
-                return startTime + duration;
-            }
-            
-            playTheme() {
-                if (!this.audioContext || this.isPlaying) return;
-                
-                this.isPlaying = true;
-                const notes = this.getThemeNotes();
-                let startTime = this.audioContext.currentTime;
-                
-                // Воспроизвести каждую ноту по очереди
-                notes.forEach((note, index) => {
-                    startTime = this.playNote(note.frequency, note.duration, startTime + (index * 0.01));
-                });
-                
-                // Запланировать повтор
-                setTimeout(() => {
-                    if (this.isPlaying) {
-                        this.playTheme();
-                    }
-                }, notes.length * 200);
-            }
-            
-            stop() {
-                this.isPlaying = false;
-            }
-        }
-
-        class PacmanGame {
-            constructor() {
-                // Инициализация холста
-                this.canvas = document.getElementById('game-canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.cellSize = 22;
-                
-                // Игровые параметры
-                this.isRunning = false;
-                this.animationFrameId = null;
-                this.lastTimestamp = 0;
-                this.updateInterval = 150; // Интервал обновления в миллисекундах (замедляет игру)
-                this.lastUpdate = 0;
-                
-                // Игровые объекты
-                this.pacman = {
-                    x: 10,
-                    y: 15,
-                    direction: 'right',
-                    nextDirection: null,
-                    mouthAngle: 0,
-                    mouthOpening: 0.1,
-                    powerMode: false,
-                    powerModeTimer: 0
-                };
-                
-                this.ghosts = [
-                    { x: 10, y: 8, direction: 'left', color: 'red', speed: 0.8, name: 'Blinky' },
-                    { x: 9, y: 9, direction: 'up', color: 'pink', speed: 0.7, name: 'Pinky' },
-                    { x: 11, y: 9, direction: 'down', color: 'cyan', speed: 0.9, name: 'Inky' },
-                    { x: 10, y: 10, direction: 'right', color: 'orange', speed: 0.6, name: 'Clyde' }
-                ];
-                
-                // Игровое состояние
-                this.score = 0;
-                this.level = 1;
-                this.lives = 3;
-                this.selectedLevel = 1; // Default level
-                
-                // Система бонусов
-                this.consecutiveEats = 0;  // Система последовательного поедания
-                this.lastEatTime = 0;      // Время последнего поедания
-                this.comboBonus = 0;       // Бонус за комбо
-                this.comboDisplay = null;  // Отображение комбо
-                
-                // Частицы
-                this.particles = [];  // Частицы
-                
-                // Карта уровня (1 - путь, 0 - стена, 2 - еда, 3 - супер-еда)
-                this.map = [
-                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                    [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
-                    [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
-                    [0,2,0
+    <!-- Подключаем модули -->
+    <script src="Pacman.js"></script>
+    <script src="Ghost.js"></script>
+    <script src="GameMap.js"></script>
+    <script src="SoundManager.js"></script>
+    <script src="ParticleManager.js"></script>
+    <script src="FruitManager.js"></script>
+    <script src="AchievementManager.js"></script>
+    <script src="PacmanGame.js"></script>
+</body>
+</html>

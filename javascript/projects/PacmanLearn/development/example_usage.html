@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пример использования компонентов Pacman</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .component-demo {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        canvas {
+            border: 1px solid #ccc;
+            background-color: #000;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Пример использования компонентов Pacman</h1>
+    
+    <div class="component-demo">
+        <h2>Демонстрация Пакмана</h2>
+        <canvas id="pacmanCanvas" width="440" height="520"></canvas>
+        <div class="controls">
+            <button id="movePacman">Двигать Пакмана</button>
+            <button id="animateMouth">Анимировать рот</button>
+            <button id="activatePower">Активировать режим силы</button>
+            <button id="resetPacman">Сбросить Пакмана</button>
+        </div>
+        <p>Позиция Пакмана: <span id="pacmanPosition">10, 15</span></p>
+        <p>Режим силы: <span id="powerMode">Не активен</span></p>
+    </div>
+    
+    <div class="component-demo">
+        <h2>Демонстрация призраков</h2>
+        <canvas id="ghostsCanvas" width="440" height="220"></canvas>
+        <div class="controls">
+            <button id="moveGhosts">Двигать призраков</button>
+            <button id="resetGhosts">Сбросить призраков</button>
+        </div>
+        <p>Позиции призраков:</p>
+        <ul id="ghostsPositions">
+            <li>Blinky: 10, 8</li>
+            <li>Pinky: 9, 9</li>
+            <li>Inky: 11, 9</li>
+            <li>Clyde: 10, 10</li>
+        </ul>
+    </div>
+    
+    <div class="component-demo">
+        <h2>Демонстрация карты</h2>
+        <canvas id="mapCanvas" width="440" height="220"></canvas>
+        <div class="controls">
+            <button id="changeLevel">Сменить уровень</button>
+        </div>
+        <p>Текущий уровень: <span id="currentLevel">1</span></p>
+    </div>
+
+    <!-- Подключаем модули -->
+    <script src="Pacman.js"></script>
+    <script src="Ghost.js"></script>
+    <script src="GameMap.js"></script>
+    <script src="SoundManager.js"></script>
+    <script src="ParticleManager.js"></script>
+    <script src="FruitManager.js"></script>
+    <script src="AchievementManager.js"></script>
+
+    <script>
+        // Инициализация компонентов
+        const pacman = new Pacman(10, 15);
+        const ghosts = [
+            new Ghost(10, 8, 'red', 'Blinky'),
+            new Ghost(9, 9, 'pink', 'Pinky'),
+            new Ghost(11, 9, 'cyan', 'Inky'),
+            new Ghost(10, 10, 'orange', 'Clyde')
+        ];
+        const gameMap = new GameMap();
+        const soundManager = new SoundManager();
+        const particleManager = new ParticleManager();
+        
+        // Получаем контексты для отрисовки
+        const pacmanCtx = document.getElementById('pacmanCanvas').getContext('2d');
+        const ghostsCtx = document.getElementById('ghostsCanvas').getContext('2d');
+        const mapCtx = document.getElementById('mapCanvas').getContext('2d');
+        
+        // Размер ячейки
+        const cellSize = 22;
+        
+        // Текущий уровень
+        let currentLevel = 1;
+        
+        // Функция для отрисовки Пакмана
+        function drawPacman() {
+            pacmanCtx.clearRect(0, 0, pacmanCtx.canvas.width, pacmanCtx.canvas.height);
+            
+            // Отрисовка фона
+            pacmanCtx.fillStyle = '#000';
+            pacmanCtx.fillRect(0, 0, pacmanCtx.canvas.width, pacmanCtx.canvas.height);
+            
+            // Отрисовка Пакмана
+            const pixelX = pacman.x * cellSize + cellSize/2;
+            const pixelY = pacman.y * cellSize + cellSize/2;
+            const radius = cellSize/2 - 2;
+            
+            pacmanCtx.fillStyle = '#FFD700'; // Золотой цвет
+            pacmanCtx.beginPath();
+            
+            let startAngle, endAngle;
+            switch(pacman.direction) {
+                case 'right':
+                    startAngle = pacman.mouthAngle * Math.PI;
+                    endAngle = (2 - pacman.mouthAngle) * Math.PI;
+                    break;
+                case 'down':
+                    startAngle = (0.5 + pacman.mouthAngle) * Math.PI;
+                    endAngle = (2.5 - pacman.mouthAngle) * Math.PI;
+                    break;
+                case 'left':
+                    startAngle = (1 + pacman.mouthAngle) * Math.PI;
+                    endAngle = (3 - pacman.mouthAngle) * Math.PI;
+                    break;
+                case 'up':
+                    startAngle = (1.5 + pacman.mouthAngle) * Math.PI;
+                    endAngle = (3.5 - pacman.mouthAngle) * Math.PI;
+                    break;
+            }
+            
+            pacmanCtx.arc(pixelX, pixelY, radius, startAngle, endAngle);
+            pacmanCtx.lineTo(pixelX, pixelY);
+            pacmanCtx.fill();
+            
+            // Обновляем информацию о позиции
+            document.getElementById('pacmanPosition').textContent = `${pacman.x}, ${pacman.y}`;
+            document.getElementById('powerMode').textContent = pacman.powerMode ? 'Активен' : 'Не активен';
+        }
+        
+        // Функция для отрисовки призраков
+        function drawGhosts() {
+            ghostsCtx.clearRect(0, 0, ghostsCtx.canvas.width, ghostsCtx.canvas.height);
+            
+            // Отрисовка фона
+            ghostsCtx.fillStyle = '#000';
+            ghostsCtx.fillRect(0, 0, ghostsCtx.canvas.width, ghostsCtx.canvas.height);
+            
+            // Отрисовка призраков
+            ghosts.forEach(ghost => {
+                const pixelX = ghost.x * cellSize + cellSize/2;
+                const pixelY = ghost.y * cellSize + cellSize/2;
+                const radius = cellSize/2 - 2;
+                
+                // Тело привидения
+                ghostsCtx.fillStyle = ghost.color;
+                ghostsCtx.beginPath();
+                ghostsCtx.arc(pixelX, pixelY - 2, radius, Math.PI, 0, false); // Верхняя часть
+                ghostsCtx.lineTo(pixelX + radius, pixelY + radius - 2);
+                
+                // Нижняя часть с волнами
+                for (let i = 0; i < 3; i++) {
+                    ghostsCtx.lineTo(pixelX + radius - (i * radius * 2/3), pixelY + radius - 6);
+                    ghostsCtx.lineTo(pixelX + radius - ((i + 0.5) * radius * 2/3), pixelY + radius - 2);
+                }
+                
+                ghostsCtx.lineTo(pixelX - radius, pixelY + radius - 2);
+                ghostsCtx.lineTo(pixelX - radius, pixelY - 2);
+                ghostsCtx.fill();
+                
+                // Глаза
+                ghostsCtx.fillStyle = 'white';
+                ghostsCtx.beginPath();
+                ghostsCtx.arc(pixelX - 4, pixelY - 4, 3, 0, Math.PI * 2);
+                ghostsCtx.arc(pixelX + 4, pixelY - 4, 3, 0, Math.PI * 2);
+                ghostsCtx.fill();
+                
+                ghostsCtx.fillStyle = 'black';
+                let eyeOffsetX = 0, eyeOffsetY = 0;
+                switch(ghost.direction) {
+                    case 'left': eyeOffsetX = -1; break;
+                    case 'right': eyeOffsetX = 1; break;
+                    case 'up': eyeOffsetY = -1; break;
+                    case 'down': eyeOffsetY = 1; break;
+                }
+                
+                ghostsCtx.beginPath();
+                ghostsCtx.arc(pixelX - 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
+                ghostsCtx.arc(pixelX + 4 + eyeOffsetX, pixelY - 4 + eyeOffsetY, 1.5, 0, Math.PI * 2);
+                ghostsCtx.fill();
+            });
+            
+            // Обновляем информацию о позициях призраков
+            const positionsList = document.getElementById('ghostsPositions');
+            positionsList.innerHTML = '';
+            ghosts.forEach(ghost => {
+                const li = document.createElement('li');
+                li.textContent = `${ghost.name}: ${ghost.x}, ${ghost.y}`;
+                positionsList.appendChild(li);
+            });
+        }
+        
+        // Функция для отрисовки карты
+        function drawMap() {
+            mapCtx.clearRect(0, 0, mapCtx.canvas.width, mapCtx.canvas.height);
+            
+            const map = gameMap.getLevelMap(currentLevel);
+            for (let y = 0; y < map.length && y < 10; y++) { // Ограничиваем 10 строками для демонстрации
+                for (let x = 0; x < map[y].length && x < 20; x++) { // Ограничиваем 20 столбцами для демонстрации
+                    const cell = map[y][x];
+                    const pixelX = x * cellSize;
+                    const pixelY = y * cellSize;
+                    
+                    switch(cell) {
+                        case 0: // Стена
+                            mapCtx.fillStyle = '#2222FF';
+                            mapCtx.fillRect(pixelX, pixelY, cellSize, cellSize);
+                            // Добавляем детали стен
+                            mapCtx.fillStyle = '#0000CC';
+                            mapCtx.fillRect(pixelX + 2, pixelY + 2, cellSize - 4, cellSize - 4);
+                            break;
+                        case 1: // Путь
+                            mapCtx.fillStyle = '#000';
+                            mapCtx.fillRect(pixelX, pixelY, cellSize, cellSize);
+                            break;
+                        case 2: // Еда
+                            mapCtx.fillStyle = '#FFF';
+                            mapCtx.beginPath();
+                            mapCtx.arc(pixelX + cellSize/2, pixelY + cellSize/2, 3, 0, Math.PI * 2);
+                            mapCtx.fill();
+                            break;
+                        case 3: // Супер-еда
+                            mapCtx.fillStyle = '#FFF';
+                            mapCtx.beginPath();
+                            mapCtx.arc(pixelX + cellSize/2, pixelY + cellSize/2, 6, 0, Math.PI * 2);
+                            mapCtx.fill();
+                            break;
+                    }
+                }
+            }
+            
+            // Обновляем информацию о текущем уровне
+            document.getElementById('currentLevel').textContent = currentLevel;
+        }
+        
+        // Инициализация отрисовки
+        drawPacman();
+        drawGhosts();
+        drawMap();
+        
+        // Обработчики событий для кнопок
+        document.getElementById('movePacman').addEventListener('click', () => {
+            // Простое движение Пакмана вправо
+            pacman.setNextDirection('right');
+            pacman.move(gameMap.getLevelMap(currentLevel), cellSize);
+            drawPacman();
+            soundManager.playSound('eat');
+        });
+        
+        document.getElementById('animateMouth').addEventListener('click', () => {
+            pacman.animateMouth();
+            drawPacman();
+        });
+        
+        document.getElementById('activatePower').addEventListener('click', () => {
+            pacman.activatePowerMode(5000);
+            drawPacman();
+            soundManager.playSound('power');
+        });
+        
+        document.getElementById('resetPacman').addEventListener('click', () => {
+            pacman.resetPosition();
+            drawPacman();
+            soundManager.playSound('start');
+        });
+        
+        document.getElementById('moveGhosts').addEventListener('click', () => {
+            ghosts.forEach(ghost => {
+                ghost.move(pacman.x, pacman.y, gameMap.getLevelMap(currentLevel), pacman.powerMode, cellSize);
+            });
+            drawGhosts();
+            soundManager.playSound('ghost');
+        });
+        
+        document.getElementById('resetGhosts').addEventListener('click', () => {
+            ghosts.forEach(ghost => {
+                ghost.resetPosition();
+            });
+            drawGhosts();
+            soundManager.playSound('start');
+        });
+        
+        document.getElementById('changeLevel').addEventListener('click', () => {
+            currentLevel = currentLevel % 7 + 1; // Переключаемся между уровнями 1-7
+            drawMap();
+            soundManager.playSound('level');
+        });
+    </script>
+</body>
+</html>
