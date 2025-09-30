@@ -1,5 +1,9 @@
 '''
 https://codeforces.com/contest/2139/problem/D
+
+Автор: Дуплей Максим Игоревич
+ORCID: https://orcid.org/0009-0007-7605-539X
+GitHub: https://github.com/QuadDarv1ne/
 '''
 
 def is_perfect_subarray(a, l, r):

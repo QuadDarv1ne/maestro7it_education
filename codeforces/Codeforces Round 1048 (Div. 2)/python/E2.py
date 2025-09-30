@@ -1,5 +1,9 @@
 '''
 https://codeforces.com/contest/2139/problem/E2
+
+Автор: Дуплей Максим Игоревич
+ORCID: https://orcid.org/0009-0007-7605-539X
+GitHub: https://github.com/QuadDarv1ne/
 '''
 
 def max_lcs(n, k, p):

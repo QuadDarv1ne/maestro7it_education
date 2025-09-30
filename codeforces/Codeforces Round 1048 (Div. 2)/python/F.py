@@ -1,5 +1,9 @@
 '''
 https://codeforces.com/contest/2139/problem/F
+
+Автор: Дуплей Максим Игоревич
+ORCID: https://orcid.org/0009-0007-7605-539X
+GitHub: https://github.com/QuadDarv1ne/
 '''
 
 MOD = 10**9 + 7
