@@ -1,5 +1,17 @@
 '''
-Установка DuckDB
+Проверка Python установки:
+~ %LOCALAPPDATA%\Programs\Python
+
+Добавление в PATH:
+~ C:\Users\maksi\AppData\Local\Programs\Python\Python313
+~ C:\Users\maksi\AppData\Local\Programs\Python\Python313\Scripts
+
+Установка venv окружения:
+~ python -m venv duckdb_venv
+~ duckdb_venv\bin\Activate.ps1
+~ pip install duckdb
+
+Установка DuckDB:
 ~ pip install duckdb
 
 Автор: Дуплей Максим Игоревич
