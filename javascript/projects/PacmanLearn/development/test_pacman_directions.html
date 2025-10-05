@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест направлений Пакмана</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #121212;
+            color: #e0e0e0;
+        }
+        
+        .test-area {
+            margin: 20px 0;
+            padding: 20px;
+            background: #1e1e1e;
+            border-radius: 8px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background: #2c3e50;
+            color: white;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #3498db;
+        }
+        
+        #log {
+            height: 200px;
+            overflow-y: auto;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .pacman-display {
+            width: 50px;
+            height: 50px;
+            background: #FFD700;
+            border-radius: 50%;
+            margin: 20px 0;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест направлений Пакмана</h1>
+    
+    <div class="test-area">
+        <h2>Тест кнопок направлений:</h2>
+        <button id="up-btn">Вверх</button>
+        <button id="down-btn">Вниз</button>
+        <button id="left-btn">Влево</button>
+        <button id="right-btn">Вправо</button>
+    </div>
+    
+    <div class="test-area">
+        <h2>Визуализация Пакмана:</h2>
+        <div id="pacman" class="pacman-display"></div>
+        <p>Текущее направление: <span id="direction">right</span></p>
+    </div>
+    
+    <div class="test-area">
+        <h2>Лог событий:</h2>
+        <div id="log"></div>
+    </div>
+    
+    <script type="module">
+        // Import the game components
+        import { DIRECTIONS } from './Constants.js';
+        import { Pacman } from './Pacman.js';
+        
+        // Log function
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Create a Pacman instance
+        const pacman = new Pacman(10, 15);
+        
+        // Update direction display
+        function updateDirectionDisplay() {
+            document.getElementById('direction').textContent = pacman.direction;
+            
+            // Update visual representation
+            const pacmanElement = document.getElementById('pacman');
+            pacmanElement.style.transform = 'rotate(0deg)';
+            
+            switch(pacman.direction) {
+                case DIRECTIONS.UP:
+                    pacmanElement.style.transform = 'rotate(-90deg)';
+                    break;
+                case DIRECTIONS.DOWN:
+                    pacmanElement.style.transform = 'rotate(90deg)';
+                    break;
+                case DIRECTIONS.LEFT:
+                    pacmanElement.style.transform = 'rotate(180deg)';
+                    break;
+                case DIRECTIONS.RIGHT:
+                    pacmanElement.style.transform = 'rotate(0deg)';
+                    break;
+            }
+        }
+        
+        // Set up button event listeners
+        document.getElementById('up-btn').addEventListener('click', () => {
+            pacman.setNextDirection(DIRECTIONS.UP);
+            log(`Установлено следующее направление: ${DIRECTIONS.UP}`);
+            updateDirectionDisplay();
+        });
+        
+        document.getElementById('down-btn').addEventListener('click', () => {
+            pacman.setNextDirection(DIRECTIONS.DOWN);
+            log(`Установлено следующее направление: ${DIRECTIONS.DOWN}`);
+            updateDirectionDisplay();
+        });
+        
+        document.getElementById('left-btn').addEventListener('click', () => {
+            pacman.setNextDirection(DIRECTIONS.LEFT);
+            log(`Установлено следующее направление: ${DIRECTIONS.LEFT}`);
+            updateDirectionDisplay();
+        });
+        
+        document.getElementById('right-btn').addEventListener('click', () => {
+            pacman.setNextDirection(DIRECTIONS.RIGHT);
+            log(`Установлено следующее направление: ${DIRECTIONS.RIGHT}`);
+            updateDirectionDisplay();
+        });
+        
+        // Initialize display
+        updateDirectionDisplay();
+        log('Тест инициализирован');
+        log(`DIRECTIONS.UP = ${DIRECTIONS.UP}`);
+        log(`DIRECTIONS.DOWN = ${DIRECTIONS.DOWN}`);
+        log(`DIRECTIONS.LEFT = ${DIRECTIONS.LEFT}`);
+        log(`DIRECTIONS.RIGHT = ${DIRECTIONS.RIGHT}`);
+    </script>
+</body>
+</html>
