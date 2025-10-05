@@ -1022,43 +1022,6 @@
                 this.drawInfo();
             }
             
-            // Движение Pacman
-            movePacman() {
-                let nextX = this.pacman.x;
-                let nextY = this.pacman.y;
-                
-                if (this.pacman.nextDirection) {
-                    this.pacman.direction = this.pacman.nextDirection;
-                    this.pacman.nextDirection = null;
-                }
-                
-                switch (this.pacman.direction) {
-                    case 'up':
-                        nextY--;
-                        break;
-                    case 'down':
-                        nextY++;
-                        break;
-                    case 'left':
-                        nextX--;
-                        break;
-                    case 'right':
-                        nextX++;
-                        break;
-                }
-                
-                if (this.isPath(nextX, nextY)) {
-                    this.pacman.x = nextX;
-                    this.pacman.y = nextY;
-                }
-                
-                // Открытие и закрытие рта Pacman
-                this.pacman.mouthAngle += this.pacman.mouthOpening;
-                if (this.pacman.mouthAngle >= Math.PI / 4 || this.pacman.mouthAngle <= 0) {
-                    this.pacman.mouthOpening = -this.pacman.mouthOpening;
-                }
-            }
-            
             // Движение привидений
             moveGhosts() {
                 for (let ghost of this.ghosts) {
@@ -1388,21 +1351,17 @@
             
             // Подсчет количества еды на карте
             countFood() {
-                        [0,2,0,0,0,2,0,0,0,2,2,0,0,0,2,0,0,0,2,0],
-                        [0,2,2,0,0,2,0,2,2,2,2,2,2,0,2,0,0,2,2,0],
-                        [0,0,0,0,2,0,0,2,0,0,0,0,2,0,0,2,0,0,0,0],
-                        [0,2,2,0,2,0,0,2,0,2,2,0,2,0,0,2,0,2,2,0],
-                        [0,0,0,0,2,0,0,2,0,2,2,0,2,0,0,2,0,0,0,0],
-                        [0,2,2,0,0,2,0,0,0,0,0,0,0,0,2,0,0,2,2,0],
-                        [0,2,0,0,0,2,0,2,2,2,2,2,2,0,2,0,0,0,2,0],
-                        [0,2,0,2,0,2,0,0,0,2,2,0,0,0,2,0,2,0,2,0],
-                        [0,0,0,2,0,2,2,2,0,2,2,0,2,2,2,0,2,0,0,0],
-                        [0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0],
-                        [0,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,2,0,2,0],
-                        [0,2,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,2,0],
-                        [0,2,2,0,2,2,0,2,2,2,2,2,2,0,2,2,0,2,2,0],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-                    ],
+                this.foodCount = 0;
+                this.totalFood = 0;
+                for (let row of this.map) {
+                    for (let cell of row) {
+                        if (cell === 2) {
+                            this.foodCount++;
+                            this.totalFood++;
+                        }
+                    }
+                }
+            },
 
                     // Level 3 - Intermediate (narrow passages)
                     [
