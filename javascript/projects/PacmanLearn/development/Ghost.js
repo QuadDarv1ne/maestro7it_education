@@ -1,5 +1,3 @@
-import { GHOST_STATES, DIRECTIONS, COLLISION_SETTINGS } from './Constants.js';
-
 class Ghost {
     constructor(x, y, color, name, speed = 0.8) {
         this.x = x;
@@ -29,6 +27,11 @@ class Ghost {
         this.currentTarget = null;
         // Pre-allocate objects for position calculations
         this.tempPosition = { x: 0, y: 0 };
+        // Add personality traits for unique ghost behaviors
+        this.personality = this.getPersonality();
+        // Performance optimization: limit AI calculations
+        this.lastAiUpdate = 0;
+        this.aiUpdateInterval = 100; // Update AI every 100ms
     }
 
     // Get scatter target based on ghost name (corner of the map)
@@ -39,6 +42,22 @@ class Ghost {
             case 'Inky': return { x: 19, y: 15 };  // Bottom-right corner
             case 'Clyde': return { x: 0, y: 15 };  // Bottom-left corner
             default: return { x: 10, y: 10 };
+        }
+    }
+
+    // Get personality traits for unique ghost behaviors
+    getPersonality() {
+        switch(this.name) {
+            case 'Blinky': // Red ghost - aggressive
+                return { aggression: 1.0, predictiveness: 0.8, randomness: 0.1 };
+            case 'Pinky': // Pink ghost - ambush
+                return { aggression: 0.7, predictiveness: 1.0, randomness: 0.2 };
+            case 'Inky': // Cyan ghost - unpredictable
+                return { aggression: 0.5, predictiveness: 0.6, randomness: 0.5 };
+            case 'Clyde': // Orange ghost - coward
+                return { aggression: 0.3, predictiveness: 0.4, randomness: 0.4 };
+            default:
+                return { aggression: 0.5, predictiveness: 0.5, randomness: 0.5 };
         }
     }
 
@@ -71,6 +90,15 @@ class Ghost {
             this.state = GHOST_STATES.CHASE;
         }
         
+        // Limit AI calculations for performance
+        const now = Date.now();
+        if (now - this.lastAiUpdate < this.aiUpdateInterval) {
+            // Just move in current direction
+            this.moveInCurrentDirection(map, cellSize);
+            return;
+        }
+        this.lastAiUpdate = now;
+        
         // Enhanced AI for ghost movement
         // Calculate distance to Pacman
         const dx = pacmanX - this.x;
@@ -82,9 +110,18 @@ class Ghost {
         
         switch(this.state) {
             case GHOST_STATES.FRIGHTENED:
-                // Run away randomly
-                targetX = this.x + (Math.random() > 0.5 ? 5 : -5);
-                targetY = this.y + (Math.random() > 0.5 ? 5 : -5);
+                // Run away randomly with some intelligence
+                const fleeDirection = Math.random();
+                if (fleeDirection < this.personality.randomness) {
+                    // Completely random movement
+                    targetX = this.x + (Math.random() > 0.5 ? 5 : -5);
+                    targetY = this.y + (Math.random() > 0.5 ? 5 : -5);
+                } else {
+                    // Run away from Pacman with some randomness
+                    const randomFactor = 1 + (Math.random() * this.personality.randomness);
+                    targetX = this.x - dx * randomFactor;
+                    targetY = this.y - dy * randomFactor;
+                }
                 break;
                 
             case GHOST_STATES.SCATTER:
@@ -95,38 +132,65 @@ class Ghost {
                 
             case GHOST_STATES.CHASE:
             default:
-                // Special behaviors for different ghosts
+                // Special behaviors for different ghosts based on personality
                 switch(this.name) {
-                    case 'Blinky': // Red ghost - aggressive, targets Pacman directly
-                        targetX = pacmanX;
-                        targetY = pacmanY;
+                    case 'Blinky': // Red ghost - aggressive, targets Pacman directly with predictive behavior
+                        // When close, be more aggressive
+                        if (distance < 5) {
+                            targetX = pacmanX;
+                            targetY = pacmanY;
+                        } else {
+                            // Predict Pacman's movement based on his current direction
+                            let predictX = pacmanX, predictY = pacmanY;
+                            // Add predictive movement based on personality
+                            switch(this.direction) {
+                                case DIRECTIONS.UP: predictY -= 2 * this.personality.predictiveness; break;
+                                case DIRECTIONS.DOWN: predictY += 2 * this.personality.predictiveness; break;
+                                case DIRECTIONS.LEFT: predictX -= 2 * this.personality.predictiveness; break;
+                                case DIRECTIONS.RIGHT: predictX += 2 * this.personality.predictiveness; break;
+                            }
+                            targetX = predictX;
+                            targetY = predictY;
+                        }
                         break;
                         
                     case 'Pinky': // Pink ghost - ambush, targets 4 tiles ahead of Pacman
+                        // Predict where Pacman will be in 4 moves
+                        let predictX = pacmanX, predictY = pacmanY;
                         switch(this.direction) {
-                            case DIRECTIONS.UP: targetY = pacmanY - 4; break;
-                            case DIRECTIONS.DOWN: targetY = pacmanY + 4; break;
-                            case DIRECTIONS.LEFT: targetX = pacmanX - 4; break;
-                            case DIRECTIONS.RIGHT: targetX = pacmanX + 4; break;
-                            default: 
-                                targetX = pacmanX;
-                                targetY = pacmanY;
+                            case DIRECTIONS.UP: predictY -= 4; break;
+                            case DIRECTIONS.DOWN: predictY += 4; break;
+                            case DIRECTIONS.LEFT: predictX -= 4; break;
+                            case DIRECTIONS.RIGHT: predictX += 4; break;
                         }
-                        // Add some predictive behavior
+                        
+                        // Add some predictive behavior based on personality
                         if (distance < 6) {
                             // When close, be more aggressive
                             targetX = pacmanX;
                             targetY = pacmanY;
+                        } else {
+                            // When far, use predictive ambush strategy
+                            targetX = predictX;
+                            targetY = predictY;
                         }
                         break;
                         
-                    case 'Inky': // Cyan ghost - complex behavior based on Blinky's position
-                        // Calculate a more complex target based on Pacman's direction and Blinky's position
-                        const blinky = { x: 10, y: 8 }; // Approximate Blinky's position
-                        const vectorX = pacmanX - blinky.x;
-                        const vectorY = pacmanY - blinky.y;
-                        targetX = pacmanX + vectorX * 2;
-                        targetY = pacmanY + vectorY * 2;
+                    case 'Inky': // Cyan ghost - complex behavior based on Blinky's position and Pacman's direction
+                        // Calculate a more complex target based on Pacman's direction and distance
+                        let vectorX = dx;
+                        let vectorY = dy;
+                        
+                        // Add personality-based unpredictability
+                        if (Math.random() < this.personality.randomness) {
+                            // Occasionally make a random move
+                            targetX = this.x + (Math.random() > 0.5 ? 3 : -3);
+                            targetY = this.y + (Math.random() > 0.5 ? 3 : -3);
+                        } else {
+                            // Normal Inky behavior with personality modifier
+                            targetX = pacmanX + vectorX * this.personality.predictiveness;
+                            targetY = pacmanY + vectorY * this.personality.predictiveness;
+                        }
                         
                         // When far, be more unpredictable
                         if (distance > 10) {
@@ -138,15 +202,25 @@ class Ghost {
                         }
                         break;
                         
-                    case 'Clyde': // Orange ghost - coward, runs away when close
+                    case 'Clyde': // Orange ghost - coward, runs away when close but chases when far
                         if (distance < 5) {
-                            // Run away from Pacman
-                            targetX = this.x - dx * 2;
-                            targetY = this.y - dy * 2;
-                        } else {
+                            // Run away from Pacman with personality modifier
+                            const cowardFactor = 2 - this.personality.aggression;
+                            targetX = this.x - dx * cowardFactor;
+                            targetY = this.y - dy * cowardFactor;
+                        } else if (distance > 8) {
                             // When far, chase Pacman normally
                             targetX = pacmanX;
                             targetY = pacmanY;
+                        } else {
+                            // In middle distance, move unpredictably
+                            if (Math.random() < this.personality.randomness) {
+                                targetX = this.x + (Math.random() > 0.5 ? 2 : -2);
+                                targetY = this.y + (Math.random() > 0.5 ? 2 : -2);
+                            } else {
+                                targetX = pacmanX;
+                                targetY = pacmanY;
+                            }
                         }
                         break;
                         
@@ -172,7 +246,7 @@ class Ghost {
                 const moveDistance = Math.sqrt(moveDx * moveDx + moveDy * moveDy);
                 
                 // Add some randomness to make behavior less predictable (but not in frightened mode)
-                const randomness = (this.state === GHOST_STATES.FRIGHTENED) ? 0 : Math.random() * 3;
+                const randomness = (this.state === GHOST_STATES.FRIGHTENED) ? 0 : Math.random() * this.personality.randomness * 3;
                 
                 this.possibleMoves.push({
                     direction: dir,
@@ -225,6 +299,61 @@ class Ghost {
             }
         }
     }
+    
+    // Simple movement in current direction for performance
+    moveInCurrentDirection(map, cellSize) {
+        const nextPos = this.getNextPosition(this.x, this.y, this.direction, map, cellSize, this.tempPosition);
+        if (this.isValidMove(nextPos.x, nextPos.y, map)) {
+            // Update sub-pixel position
+            switch(this.direction) {
+                case DIRECTIONS.UP:
+                    this.pixelY -= this.speedPixels;
+                    break;
+                case DIRECTIONS.DOWN:
+                    this.pixelY += this.speedPixels;
+                    break;
+                case DIRECTIONS.LEFT:
+                    this.pixelX -= this.speedPixels;
+                    break;
+                case DIRECTIONS.RIGHT:
+                    this.pixelX += this.speedPixels;
+                    break;
+            }
+            
+            // Update grid position when we've moved enough
+            const newGridX = Math.floor(this.pixelX / cellSize);
+            const newGridY = Math.floor(this.pixelY / cellSize);
+            
+            // Only update grid position if it's actually changed
+            if (newGridX !== this.x || newGridY !== this.y) {
+                this.x = newGridX;
+                this.y = newGridY;
+            }
+        } else {
+            // If can't move in current direction, find a new direction
+            this.findNewDirection(map, cellSize);
+        }
+    }
+    
+    // Find a new direction when current direction is blocked
+    findNewDirection(map, cellSize) {
+        // Try to find a valid move
+        const directions = [DIRECTIONS.UP, DIRECTIONS.DOWN, DIRECTIONS.LEFT, DIRECTIONS.RIGHT];
+        const validDirections = [];
+        
+        for (let i = 0; i < directions.length; i++) {
+            const dir = directions[i];
+            const nextPos = this.getNextPosition(this.x, this.y, dir, map, cellSize, this.tempPosition);
+            if (this.isValidMove(nextPos.x, nextPos.y, map)) {
+                validDirections.push(dir);
+            }
+        }
+        
+        // Choose a random valid direction
+        if (validDirections.length > 0) {
+            this.direction = validDirections[Math.floor(Math.random() * validDirections.length)];
+        }
+    }
 
     getNextPosition(x, y, direction, map, cellSize, result = {}) {
         let newX = x;
@@ -268,6 +397,8 @@ class Ghost {
         // Reset sub-pixel positioning
         this.pixelX = this.x * this.cellSize + this.cellSize/2;
         this.pixelY = this.y * this.cellSize + this.cellSize/2;
+        // Reset AI update timer
+        this.lastAiUpdate = 0;
     }
 
     getInitialDirection() {
@@ -300,6 +431,57 @@ class Ghost {
         const dy = this.pixelY - (otherY * this.cellSize + this.cellSize/2);
         const distance = Math.sqrt(dx * dx + dy * dy);
         return distance < (this.collisionRadius + otherRadius);
+    }
+    
+    // Get visual effect for current state (for drawing)
+    getStateEffect() {
+        switch(this.state) {
+            case GHOST_STATES.FRIGHTENED:
+                // Pulsing blue effect when frightened
+                const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
+                return {
+                    color: '#0000FF',
+                    glow: pulse * 10,
+                    scale: 1 + pulse * 0.1
+                };
+            case GHOST_STATES.SCATTER:
+                // Subtle effect when scattering
+                return {
+                    color: this.color,
+                    glow: 2,
+                    scale: 1
+                };
+            default:
+                // Normal state
+                return {
+                    color: this.color,
+                    glow: 0,
+                    scale: 1
+                };
+        }
+    }
+
+    // Get personality-based visual effect
+    getPersonalityEffect() {
+        // Different visual effects based on personality
+        let effectColor = this.color;
+        let effectIntensity = 0;
+        
+        if (this.personality.aggression > 0.8) {
+            // Aggressive ghosts (Blinky) have a red glow
+            effectColor = '#FF0000';
+            effectIntensity = this.personality.aggression * 5;
+        } else if (this.personality.randomness > 0.4) {
+            // Unpredictable ghosts (Inky) have a rainbow effect
+            const hue = (Date.now() / 50) % 360;
+            effectColor = `hsl(${hue}, 100%, 50%)`;
+            effectIntensity = this.personality.randomness * 3;
+        }
+        
+        return {
+            color: effectColor,
+            glow: effectIntensity
+        };
     }
 }
 

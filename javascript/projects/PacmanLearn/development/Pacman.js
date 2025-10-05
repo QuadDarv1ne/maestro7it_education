@@ -21,6 +21,9 @@ class Pacman {
         this.collisionRadius = COLLISION_SETTINGS.PACMAN_RADIUS;
         // Pre-allocate object for position calculations
         this.tempPosition = { x: 0, y: 0 };
+        // Add tunnel transition tracking
+        this.isInTunnel = false;
+        this.tunnelTransitionProgress = 0;
     }
 
     // Метод для перемещения Пакмана
@@ -41,19 +44,22 @@ class Pacman {
         if (this.isValidMove(nextPos.x, nextPos.y, map)) {
             // Update sub-pixel position
             switch(this.direction) {
-                case DIRECTIONS.UP:
+                case DIRECTIONS.UP: 
                     this.pixelY -= this.speed;
                     break;
-                case DIRECTIONS.DOWN:
+                case DIRECTIONS.DOWN: 
                     this.pixelY += this.speed;
                     break;
-                case DIRECTIONS.LEFT:
+                case DIRECTIONS.LEFT: 
                     this.pixelX -= this.speed;
                     break;
-                case DIRECTIONS.RIGHT:
+                case DIRECTIONS.RIGHT: 
                     this.pixelX += this.speed;
                     break;
             }
+            
+            // Handle tunnel transitions more smoothly
+            this.handleTunnelTransition(map, cellSize);
             
             // Update grid position when we've moved enough
             const newGridX = Math.floor(this.pixelX / cellSize);
@@ -65,6 +71,41 @@ class Pacman {
                 this.y = newGridY;
             }
         }
+    }
+
+    // Handle tunnel transitions more smoothly
+    handleTunnelTransition(map, cellSize) {
+        // Left tunnel exit
+        if (this.x === 0 && this.direction === DIRECTIONS.LEFT) {
+            this.isInTunnel = true;
+            this.tunnelTransitionProgress = (this.pixelX / cellSize) + 1;
+            if (this.tunnelTransitionProgress >= 1) {
+                this.pixelX = map[0].length * cellSize - (cellSize - this.pixelX % cellSize);
+                this.isInTunnel = false;
+                this.tunnelTransitionProgress = 0;
+                // Notify that a tunnel transition was completed
+                return true;
+            }
+        }
+        // Right tunnel exit
+        else if (this.x === map[0].length - 1 && this.direction === DIRECTIONS.RIGHT) {
+            this.isInTunnel = true;
+            this.tunnelTransitionProgress = (this.pixelX / cellSize) - (map[0].length - 1);
+            if (this.tunnelTransitionProgress >= 1) {
+                this.pixelX = -(cellSize - this.pixelX % cellSize);
+                this.isInTunnel = false;
+                this.tunnelTransitionProgress = 0;
+                // Notify that a tunnel transition was completed
+                return true;
+            }
+        }
+        // Reset tunnel state when not in tunnel
+        else if (this.isInTunnel) {
+            this.isInTunnel = false;
+            this.tunnelTransitionProgress = 0;
+        }
+        
+        return false;
     }
 
     getNextPosition(x, y, direction, map, cellSize, result = {}) {
@@ -110,6 +151,9 @@ class Pacman {
         // Reset sub-pixel positioning
         this.pixelX = this.x * this.cellSize + this.cellSize/2;
         this.pixelY = this.y * this.cellSize + this.cellSize/2;
+        // Reset tunnel state
+        this.isInTunnel = false;
+        this.tunnelTransitionProgress = 0;
     }
 
     // Анимация рта Пакмана
@@ -149,6 +193,36 @@ class Pacman {
         const dy = this.pixelY - (otherY * this.cellSize + this.cellSize/2);
         const distance = Math.sqrt(dx * dx + dy * dy);
         return distance < (this.collisionRadius + otherRadius);
+    }
+    
+    // Метод для получения текущих координат для столкновений
+    getCollisionPosition() {
+        return {
+            x: this.pixelX / this.cellSize,
+            y: this.pixelY / this.cellSize,
+            pixelX: this.pixelX,
+            pixelY: this.pixelY
+        };
+    }
+
+    // Get power mode effect intensity (for visual effects)
+    getPowerModeEffect() {
+        if (!this.powerMode) return 0;
+        
+        // Pulsing effect that gets stronger as power mode nears expiration
+        const timeLeft = this.powerModeTimer / GAME_SETTINGS.POWER_MODE_DURATION;
+        const pulse = Math.sin(Date.now() / 100) * 0.5 + 0.5;
+        return timeLeft < 0.3 ? pulse * (1 - timeLeft) : 0; // Only show effect when time is running out
+    }
+
+    // Check if Pacman is in a tunnel transition
+    isInTunnelTransition() {
+        return this.isInTunnel;
+    }
+
+    // Get tunnel transition progress (0-1)
+    getTunnelTransitionProgress() {
+        return this.tunnelTransitionProgress;
     }
 }
 

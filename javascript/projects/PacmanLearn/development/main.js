@@ -6,6 +6,7 @@ import { SoundManager } from './SoundManager.js';
 import { ParticleManager } from './ParticleManager.js';
 import { FruitManager } from './FruitManager.js';
 import { AchievementManager } from './AchievementManager.js';
+import { PowerUpManager } from './PowerUpManager.js';
 import { PacmanGame } from './PacmanGame.js';
 
 // Export all classes for potential use by other modules
@@ -17,6 +18,7 @@ export {
     ParticleManager,
     FruitManager,
     AchievementManager,
+    PowerUpManager,
     PacmanGame
 };
 

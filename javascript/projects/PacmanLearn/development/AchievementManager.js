@@ -21,7 +21,18 @@ class AchievementManager {
             { id: ACHIEVEMENT_IDS.PACMAN_LEGEND, name: 'Легенда Pacman', description: 'Набрать 10000 очков', unlocked: false, points: 3000 },
             { id: ACHIEVEMENT_IDS.GHOST_HAUNTER, name: 'Преследователь призраков', description: 'Съесть 5 привидений за одну жизнь', unlocked: false, points: 1000 },
             { id: ACHIEVEMENT_IDS.SPEEDRUNNER, name: 'Спидраннер', description: 'Завершить уровень за 15 секунд', unlocked: false, points: 1500 },
-            { id: ACHIEVEMENT_IDS.COLLECTOR, name: 'Коллекционер', description: 'Собрать все типы фруктов', unlocked: false, points: 800 }
+            { id: ACHIEVEMENT_IDS.COLLECTOR, name: 'Коллекционер', description: 'Собрать все типы фруктов', unlocked: false, points: 800 },
+            // Additional new achievements for power-ups and special gameplay
+            { id: 'power_user', name: 'Энергетик', description: 'Собрать 10 энергетиков', unlocked: false, points: 900 },
+            { id: 'invincible', name: 'Неуязвимый', description: 'Использовать неуязвимость 5 раз', unlocked: false, points: 1100 },
+            { id: 'freeze_master', name: 'Мастер заморозки', description: 'Заморозить призраков 10 раз', unlocked: false, points: 800 },
+            { id: 'life_saver', name: 'Спасатель', description: 'Получить 3 дополнительные жизни', unlocked: false, points: 1200 },
+            { id: 'multiplier_madness', name: 'Множитель безумия', description: 'Использовать множитель очков 15 раз', unlocked: false, points: 1300 },
+            { id: 'tunnel_traveler', name: 'Туннельный путешественник', description: 'Использовать туннель 50 раз', unlocked: false, points: 700 },
+            { id: 'combo_legend', name: 'Легенда комбо', description: 'Собрать 50 комбо', unlocked: false, points: 2500 },
+            { id: 'ghost_legend', name: 'Легенда охотник за призраками', description: 'Съесть 100 привидений', unlocked: false, points: 3000 },
+            { id: 'fruit_legend', name: 'Легенда фруктов', description: 'Собрать 50 фруктов', unlocked: false, points: 2000 },
+            { id: 'level_legend', name: 'Легенда уровней', description: 'Пройти все 10 уровней', unlocked: false, points: 5000 }
         ];
 
         this.ghostsEaten = 0;
@@ -38,6 +49,15 @@ class AchievementManager {
         this.lastLevelCompletedTime = 0;
         this.achievementsUnlockedThisSession = 0;
         
+        // Additional tracking variables for new achievements
+        this.powerUpsCollected = 0;
+        this.invincibilityUsed = 0;
+        this.freezeUsed = 0;
+        this.extraLivesGained = 0;
+        this.multiplierUsed = 0;
+        this.tunnelTransitions = 0;
+        this.comboCount = 0;
+        
         // Pre-allocate objects for performance
         this.tempStats = {
             ghostsEaten: 0,
@@ -45,7 +65,13 @@ class AchievementManager {
             levelsCompletedWithoutDeath: 0,
             achievementsUnlocked: 0,
             achievementsUnlockedThisSession: 0,
-            uniqueFruitTypesCollected: 0
+            uniqueFruitTypesCollected: 0,
+            powerUpsCollected: 0,
+            invincibilityUsed: 0,
+            freezeUsed: 0,
+            extraLivesGained: 0,
+            multiplierUsed: 0,
+            tunnelTransitions: 0
         };
         
         this.tempProgress = {
@@ -87,15 +113,26 @@ class AchievementManager {
             this.unlockAchievement(ACHIEVEMENT_IDS.LEVEL_MASTER);
         }
         
+        // Level legend achievement
+        const levelLegend = this.achievements.find(a => a.id === 'level_legend');
+        if (levelLegend && !levelLegend.unlocked && level >= 10) {
+            this.unlockAchievement('level_legend');
+        }
+        
         // Combo achievement
         if (!this.achievements[4].unlocked && consecutiveEats >= 10) {
             this.unlockAchievement(ACHIEVEMENT_IDS.COMBO_10);
         }
         
-        // New combo achievement
+        // New combo achievements
         const comboKing = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.COMBO_KING);
         if (comboKing && !comboKing.unlocked && consecutiveEats >= 20) {
             this.unlockAchievement(ACHIEVEMENT_IDS.COMBO_KING);
+        }
+        
+        const comboLegend = this.achievements.find(a => a.id === 'combo_legend');
+        if (comboLegend && !comboLegend.unlocked && consecutiveEats >= 50) {
+            this.unlockAchievement('combo_legend');
         }
         
         // Ghost hunter achievement
@@ -107,6 +144,11 @@ class AchievementManager {
         const ghostBuster = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.GHOST_BUSTER);
         if (ghostBuster && !ghostBuster.unlocked && this.ghostsEaten >= 50) {
             this.unlockAchievement(ACHIEVEMENT_IDS.GHOST_BUSTER);
+        }
+        
+        const ghostLegend = this.achievements.find(a => a.id === 'ghost_legend');
+        if (ghostLegend && !ghostLegend.unlocked && this.ghostsEaten >= 100) {
+            this.unlockAchievement('ghost_legend');
         }
         
         const ghostHaunter = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.GHOST_HAUNTER);
@@ -125,9 +167,46 @@ class AchievementManager {
             this.unlockAchievement(ACHIEVEMENT_IDS.FRUIT_EXPERT);
         }
         
+        const fruitLegend = this.achievements.find(a => a.id === 'fruit_legend');
+        if (fruitLegend && !fruitLegend.unlocked && this.fruitsCollected >= 50) {
+            this.unlockAchievement('fruit_legend');
+        }
+        
         const collector = this.achievements.find(a => a.id === ACHIEVEMENT_IDS.COLLECTOR);
         if (collector && !collector.unlocked && this.collectedFruitTypes.size >= 10) {
             this.unlockAchievement(ACHIEVEMENT_IDS.COLLECTOR);
+        }
+        
+        // Power-up achievements
+        const powerUser = this.achievements.find(a => a.id === 'power_user');
+        if (powerUser && !powerUser.unlocked && this.powerUpsCollected >= 10) {
+            this.unlockAchievement('power_user');
+        }
+        
+        const invincible = this.achievements.find(a => a.id === 'invincible');
+        if (invincible && !invincible.unlocked && this.invincibilityUsed >= 5) {
+            this.unlockAchievement('invincible');
+        }
+        
+        const freezeMaster = this.achievements.find(a => a.id === 'freeze_master');
+        if (freezeMaster && !freezeMaster.unlocked && this.freezeUsed >= 10) {
+            this.unlockAchievement('freeze_master');
+        }
+        
+        const lifeSaver = this.achievements.find(a => a.id === 'life_saver');
+        if (lifeSaver && !lifeSaver.unlocked && this.extraLivesGained >= 3) {
+            this.unlockAchievement('life_saver');
+        }
+        
+        const multiplierMadness = this.achievements.find(a => a.id === 'multiplier_madness');
+        if (multiplierMadness && !multiplierMadness.unlocked && this.multiplierUsed >= 15) {
+            this.unlockAchievement('multiplier_madness');
+        }
+        
+        // Tunnel traveler achievement
+        const tunnelTraveler = this.achievements.find(a => a.id === 'tunnel_traveler');
+        if (tunnelTraveler && !tunnelTraveler.unlocked && this.tunnelTransitions >= 50) {
+            this.unlockAchievement('tunnel_traveler');
         }
         
         // Survivor achievement - check if level was completed without losing lives
@@ -361,6 +440,31 @@ class AchievementManager {
         this.ghostsEatenInCurrentLife = 0;
     }
 
+    // New methods for tracking power-up achievements
+    incrementPowerUpsCollected() {
+        this.powerUpsCollected++;
+    }
+
+    incrementInvincibilityUsed() {
+        this.invincibilityUsed++;
+    }
+
+    incrementFreezeUsed() {
+        this.freezeUsed++;
+    }
+
+    incrementExtraLivesGained() {
+        this.extraLivesGained++;
+    }
+
+    incrementMultiplierUsed() {
+        this.multiplierUsed++;
+    }
+
+    incrementTunnelTransitions() {
+        this.tunnelTransitions++;
+    }
+
     // New methods for tracking level progress
     setLevelStartTime() {
         this.levelStartTime = Date.now();
@@ -399,6 +503,12 @@ class AchievementManager {
         this.tempStats.achievementsUnlocked = this.achievements.filter(a => a.unlocked).length;
         this.tempStats.achievementsUnlockedThisSession = this.achievementsUnlockedThisSession;
         this.tempStats.uniqueFruitTypesCollected = this.collectedFruitTypes.size;
+        this.tempStats.powerUpsCollected = this.powerUpsCollected;
+        this.tempStats.invincibilityUsed = this.invincibilityUsed;
+        this.tempStats.freezeUsed = this.freezeUsed;
+        this.tempStats.extraLivesGained = this.extraLivesGained;
+        this.tempStats.multiplierUsed = this.multiplierUsed;
+        this.tempStats.tunnelTransitions = this.tunnelTransitions;
         return this.tempStats;
     }
 

@@ -96,3 +96,16 @@ export const COLLISION_SETTINGS = {
 export const UI_CONSTANTS = {
     MAX_HIGH_SCORES: 10
 };
+
+// Sound effects
+export const SOUND_EFFECTS = {
+    EAT: 'eat',
+    POWER: 'power',
+    GHOST: 'ghost',
+    DEATH: 'death',
+    LEVEL_COMPLETE: 'levelComplete',
+    GAME_OVER: 'gameOver',
+    FRUIT: 'fruit',
+    COMBO: 'combo',
+    POWER_UP: 'powerUp' // New sound for power-ups
+};
