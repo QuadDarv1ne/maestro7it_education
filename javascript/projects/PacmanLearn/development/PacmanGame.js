@@ -8,7 +8,7 @@ import { FruitManager } from './FruitManager.js';
 import { AchievementManager } from './AchievementManager.js';
 import { PowerUpManager } from './PowerUpManager.js';
 import { Utils } from './Utils.js';
-import { GAME_SETTINGS, UI_CONSTANTS, CELL_TYPES } from './Constants.js';
+import { GAME_SETTINGS, UI_CONSTANTS, CELL_TYPES, DIRECTIONS } from './Constants.js';
 
 class PacmanGame {
     constructor() {
@@ -97,6 +97,9 @@ class PacmanGame {
         
         // First-time setup
         this.setupCanvas();
+        
+        // Setup touch controls for mobile devices
+        this.setupTouchControls();
         
         // Первичная отрисовка
         this.draw();
@@ -1068,37 +1071,51 @@ class PacmanGame {
             }
         });
         
-        // Add touch controls for mobile devices
-        this.setupTouchControls();
+        // Кнопки управления игрой с проверкой существования элементов
+        const startBtn = document.getElementById('start-btn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                this.start();
+            });
+        }
         
-        // Кнопки управления игрой
-        document.getElementById('start-btn').addEventListener('click', () => {
-            this.start();
-        });
+        const pauseBtn = document.getElementById('pause-btn');
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => {
+                this.isRunning = !this.isRunning;
+                if (startBtn) {
+                    startBtn.textContent = this.isRunning ? "Продолжить" : "Начать игру";
+                }
+            });
+        }
         
-        document.getElementById('pause-btn').addEventListener('click', () => {
-            this.isRunning = !this.isRunning;
-            document.getElementById('start-btn').textContent = this.isRunning ? "Продолжить" : "Начать игру";
-        });
+        const resetBtn = document.getElementById('reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                this.reset();
+            });
+        }
         
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            this.reset();
-        });
-        
-        document.getElementById('menu-btn').addEventListener('click', () => {
-            this.isRunning = false;
-            if (this.animationFrameId) {
-                cancelAnimationFrame(this.animationFrameId);
-                this.animationFrameId = null;
-            }
-            document.getElementById('game-screen').classList.add('hidden');
-            document.getElementById('main-menu').classList.remove('hidden');
-        });
+        const menuBtn = document.getElementById('menu-btn');
+        if (menuBtn) {
+            menuBtn.addEventListener('click', () => {
+                this.isRunning = false;
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                document.getElementById('game-screen').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            });
+        }
         
         // Обработчик кнопки сообщения
-        document.getElementById('message-btn').addEventListener('click', () => {
-            document.getElementById('message').style.display = 'none';
-        });
+        const messageBtn = document.getElementById('message-btn');
+        if (messageBtn) {
+            messageBtn.addEventListener('click', () => {
+                document.getElementById('message').style.display = 'none';
+            });
+        }
         
         console.log("Обработчики событий установлены");
     }
@@ -1108,11 +1125,17 @@ class PacmanGame {
         // Check if we're on a touch device
         if (!('ontouchstart' in window)) return;
         
-        // Create touch control elements
-        this.createTouchControls();
+        // Check if touch controls already exist in HTML
+        const existingTouchControls = document.getElementById('touch-controls');
+        if (!existingTouchControls) {
+            // Create touch control elements if they don't exist
+            this.createTouchControls();
+        }
         
-        // Add touch event listeners
-        this.addTouchEventListeners();
+        // Add touch event listeners with a delay to ensure DOM is fully loaded
+        setTimeout(() => {
+            this.addTouchEventListeners();
+        }, 100);
     }
     
     // Create touch control elements
@@ -1253,36 +1276,84 @@ class PacmanGame {
     // Add touch event listeners
     addTouchEventListeners() {
         // Directional buttons
-        document.getElementById('up-btn')?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.pacman.setNextDirection(DIRECTIONS.UP);
-        });
+        const upBtn = document.getElementById('up-btn');
+        const downBtn = document.getElementById('down-btn');
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
+        const actionBtn = document.getElementById('action-btn');
         
-        document.getElementById('down-btn')?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.pacman.setNextDirection(DIRECTIONS.DOWN);
-        });
+        if (upBtn) {
+            upBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.UP);
+            });
+            
+            // Also add click event for testing on desktop
+            upBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.UP);
+            });
+        }
         
-        document.getElementById('left-btn')?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.pacman.setNextDirection(DIRECTIONS.LEFT);
-        });
+        if (downBtn) {
+            downBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.DOWN);
+            });
+            
+            // Also add click event for testing on desktop
+            downBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.DOWN);
+            });
+        }
         
-        document.getElementById('right-btn')?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.pacman.setNextDirection(DIRECTIONS.RIGHT);
-        });
+        if (leftBtn) {
+            leftBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.LEFT);
+            });
+            
+            // Also add click event for testing on desktop
+            leftBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.LEFT);
+            });
+        }
         
-        // Action button (for future use)
-        document.getElementById('action-btn')?.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            // Could be used for power-up activation or other actions
-        });
+        if (rightBtn) {
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.RIGHT);
+            });
+            
+            // Also add click event for testing on desktop
+            rightBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.pacman.setNextDirection(DIRECTIONS.RIGHT);
+            });
+        }
+        
+        if (actionBtn) {
+            actionBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                // Could be used for power-up activation or other actions
+            });
+            
+            // Also add click event for testing on desktop
+            actionBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Could be used for power-up activation or other actions
+            });
+        }
         
         // Prevent default touch behavior to avoid scrolling
-        document.getElementById('touch-controls')?.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-        });
+        const touchControls = document.getElementById('touch-controls');
+        if (touchControls) {
+            touchControls.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+            });
+        }
     }
 }
 

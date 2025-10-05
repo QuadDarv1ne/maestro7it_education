@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест кнопок</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #121212;
+            color: #e0e0e0;
+        }
+        
+        .test-area {
+            margin: 20px 0;
+            padding: 20px;
+            background: #1e1e1e;
+            border-radius: 8px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background: #2c3e50;
+            color: white;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #3498db;
+        }
+        
+        #log {
+            height: 200px;
+            overflow-y: auto;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест кнопок управления</h1>
+    
+    <div class="test-area">
+        <h2>Тест кнопок:</h2>
+        <button id="start-btn">Начать игру</button>
+        <button id="pause-btn">Пауза</button>
+        <button id="reset-btn">Сброс</button>
+        <button id="menu-btn">Меню</button>
+    </div>
+    
+    <div class="test-area">
+        <h2>Лог событий:</h2>
+        <div id="log"></div>
+    </div>
+    
+    <script>
+        // Log function
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Set up button event listeners with error checking
+        function setupButtonListeners() {
+            const buttons = [
+                { id: 'start-btn', action: 'Начать игру' },
+                { id: 'pause-btn', action: 'Пауза' },
+                { id: 'reset-btn', action: 'Сброс' },
+                { id: 'menu-btn', action: 'Меню' }
+            ];
+            
+            buttons.forEach(btn => {
+                const element = document.getElementById(btn.id);
+                if (element) {
+                    element.addEventListener('click', () => {
+                        log(`Нажата кнопка: ${btn.action}`);
+                    });
+                    log(`Добавлен обработчик для кнопки: ${btn.action}`);
+                } else {
+                    log(`Кнопка не найдена: ${btn.id}`);
+                }
+            });
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Страница загружена');
+            setupButtonListeners();
+        });
+    </script>
+</body>
+</html>

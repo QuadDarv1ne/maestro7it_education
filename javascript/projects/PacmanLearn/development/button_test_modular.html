@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест кнопок - Модульная версия</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #121212, #1a1a2e);
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-attachment: fixed;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #FFD700;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: linear-gradient(145deg, #2c3e50, #1a2530);
+            color: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        #game-canvas {
+            background: #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .test-area {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(30, 30, 30, 0.8);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 440px;
+        }
+        
+        #log {
+            height: 200px;
+            overflow-y: auto;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>Тест кнопок - Модульная версия</h1>
+            <div class="controls">
+                <button id="start-btn" class="btn">Начать игру</button>
+                <button id="pause-btn" class="btn">Пауза</button>
+                <button id="reset-btn" class="btn">Сброс</button>
+                <button id="menu-btn" class="btn">Меню</button>
+            </div>
+        </div>
+        
+        <canvas id="game-canvas" width="440" height="520"></canvas>
+        
+        <div class="test-area">
+            <h2>Лог событий:</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Log function
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Set up button event listeners with error checking
+        function setupButtonListeners() {
+            const buttons = [
+                { id: 'start-btn', action: 'Начать игру' },
+                { id: 'pause-btn', action: 'Пауза' },
+                { id: 'reset-btn', action: 'Сброс' },
+                { id: 'menu-btn', action: 'Меню' }
+            ];
+            
+            buttons.forEach(btn => {
+                const element = document.getElementById(btn.id);
+                if (element) {
+                    element.addEventListener('click', () => {
+                        log(`Нажата кнопка: ${btn.action}`);
+                    });
+                    log(`Добавлен обработчик для кнопки: ${btn.action}`);
+                } else {
+                    log(`Кнопка не найдена: ${btn.id}`);
+                }
+            });
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Страница загружена');
+            setupButtonListeners();
+            
+            // Try to get canvas context for testing
+            try {
+                const canvas = document.getElementById('game-canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#FFD700';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Тест кнопок', canvas.width/2, canvas.height/2);
+                log('Canvas инициализирован');
+            } catch (e) {
+                log(`Ошибка инициализации canvas: ${e.message}`);
+            }
+        });
+    </script>
+</body>
+</html>
