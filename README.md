@@ -1,5 +1,7 @@
 # Школа программирования Maestro7IT
 
+[![ORCID](https://img.shields.io/badge/ORCID-0009--0007--7605--539X-green?logo=orcid&logoColor=white)](https://orcid.org/0009-0007-7605-539X)
+
 <!-- ![maestro7it](img/logo_maestro7it.jpg) -->
 
 ![courses_booklet](img/courses_booklet.png)
