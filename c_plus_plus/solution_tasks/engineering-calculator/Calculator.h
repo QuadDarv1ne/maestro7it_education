@@ -25,7 +25,7 @@ class Calculator {
 public:
     static double evaluate(const std::vector<std::string>& tokens);
 private:
-    static std::vector<std::string> infixToPRN(const std::vector<std::string>& tokens);
+    static std::vector<std::string> infixToRPN(const std::vector<std::string>& tokens);
     
     static double evaluateRPN(const std::vector<std::string>& rpn);
     

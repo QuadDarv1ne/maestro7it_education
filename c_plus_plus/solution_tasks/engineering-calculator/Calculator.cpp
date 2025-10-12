@@ -4,6 +4,13 @@
 #include <stdexcept>
 #include <sstream>
 
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+#ifndef M_E
+    #define M_E 2.71828182845904523536
+#endif
+
 bool Calculator::isNumber(const std::string& token) {
     try {
         std::stod(token);
