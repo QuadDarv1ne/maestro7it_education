@@ -135,8 +135,8 @@ int main() {
 
 // === Конфигурация ===
 constexpr size_t DEFAULT_PRECISION = 3;
-constexpr size_t ARRAY_SIZE = 5;
-using NumberType = float;
+constexpr size_t ARRAY_SIZE = 10;
+using NumberType = double;
 
 // === Информация об авторе ===
 const std::string AUTHOR_NAME = "Дуплей М.И.";
@@ -158,7 +158,7 @@ void print_author_info() {
     std::cout << "===============================================\n\n";
 }
 
-// --- Остальные функции (без изменений) ---
+// --- Работа с основными функциями ---
 
 template <typename Container>
 void print_array(const Container& arr, size_t precision = DEFAULT_PRECISION) {
@@ -228,7 +228,7 @@ int main() {
     print_author_info();
 
     const std::array<NumberType, ARRAY_SIZE> numbers = {
-        150.0f, 2.6f, 31.3f, 44.5f, 5.757f
+        150.0f, 2.6f, 31.3f, 44.5f, 5.757f, 303.0f, 567.0f, -190.0f, -30.0f, -56.758765454f
     };
 
     std::cout << "📦 Исходные данные:\n";
