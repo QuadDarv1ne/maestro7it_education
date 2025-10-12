@@ -122,6 +122,132 @@ int main() {
 }
 ```
 
+---
+
+```cpp
+#include <iostream>
+#include <array>
+#include <vector>
+#include <iomanip>
+#include <numeric>
+#include <algorithm>
+#include <string>
+
+// === Конфигурация ===
+constexpr size_t DEFAULT_PRECISION = 3;
+constexpr size_t ARRAY_SIZE = 5;
+using NumberType = float;
+
+// === Информация об авторе ===
+const std::string AUTHOR_NAME = "Дуплей М.И.";
+const std::string ORCID_ID = "0009-0007-7605-539X";
+const std::string SCHOOL_NAME = "Maestro7IT";
+const std::string SCHOOL_URL = "https://school-maestro7it.ru/";
+
+/**
+ * @brief Выводит информационный баннер об авторе и проекте.
+ */
+void print_author_info() {
+    std::cout << "===============================================\n";
+    std::cout << "🎓 Автор: " << AUTHOR_NAME << "\n";
+    std::cout << "🆔 ORCID: https://orcid.org/" << ORCID_ID << "\n";
+    std::cout << "🏫 Школа программирования: " << SCHOOL_NAME << "\n";
+    std::cout << "🌐 Сайт: " << SCHOOL_URL << "\n";
+    std::cout << "© " << AUTHOR_NAME << ", " << SCHOOL_NAME << " — " 
+              << __DATE__ << "\n"; // Автоматическая дата компиляции
+    std::cout << "===============================================\n\n";
+}
+
+// --- Остальные функции (без изменений) ---
+
+template <typename Container>
+void print_array(const Container& arr, size_t precision = DEFAULT_PRECISION) {
+    std::cout << std::fixed << std::setprecision(static_cast<int>(precision));
+    for (size_t i = 0; i < arr.size(); ++i) {
+        std::cout << "Element [" << i << "] = " << arr[i] << '\n';
+    }
+    std::cout << '\n';
+}
+
+template <typename Container>
+NumberType compute_sum(const Container& arr) {
+    return std::accumulate(arr.begin(), arr.end(), static_cast<NumberType>(0));
+}
+
+template <typename Container>
+NumberType find_min(const Container& arr) {
+    return *std::min_element(arr.begin(), arr.end());
+}
+
+template <typename Container>
+NumberType find_max(const Container& arr) {
+    return *std::max_element(arr.begin(), arr.end());
+}
+
+template <typename Container>
+NumberType compute_mean(const Container& arr) {
+    if (arr.empty()) return 0;
+    return compute_sum(arr) / static_cast<NumberType>(arr.size());
+}
+
+template <typename Container>
+bool is_sorted_ascending(const Container& arr) {
+    return std::is_sorted(arr.begin(), arr.end());
+}
+
+template <typename Container>
+Container sorted_copy(const Container& arr) {
+    Container copy = arr;
+    std::sort(copy.begin(), copy.end());
+    return copy;
+}
+
+template <typename Container>
+void print_statistics(const Container& arr) {
+    std::cout << "📊 Статистика:\n";
+    std::cout << "  Сумма:        " << compute_sum(arr) << '\n';
+    std::cout << "  Минимум:      " << find_min(arr) << '\n';
+    std::cout << "  Максимум:     " << find_max(arr) << '\n';
+    std::cout << "  Среднее:      " << compute_mean(arr) << '\n';
+    std::cout << "  Отсортирован: " << (is_sorted_ascending(arr) ? "Да" : "Нет") << '\n';
+    std::cout << '\n';
+}
+
+template <typename Container>
+void demonstrate_sorting(const Container& arr) {
+    auto sorted = sorted_copy(arr);
+    std::cout << "🔁 Исходный массив:\n";
+    print_array(arr, 3);
+    std::cout << "✅ Отсортированный массив:\n";
+    print_array(sorted, 3);
+}
+
+// --- Основная функция ---
+int main() {
+    // Вывод информации об авторе
+    print_author_info();
+
+    const std::array<NumberType, ARRAY_SIZE> numbers = {
+        150.0f, 2.6f, 31.3f, 44.5f, 5.757f
+    };
+
+    std::cout << "📦 Исходные данные:\n";
+    print_array(numbers);
+
+    print_statistics(numbers);
+    demonstrate_sorting(numbers);
+
+    // Пример с vector
+    std::cout << "🧩 Пример с std::vector:\n";
+    std::vector<NumberType> dynamic_numbers = {1.1f, 3.3f, 2.2f, 5.5f};
+    print_array(dynamic_numbers);
+    print_statistics(dynamic_numbers);
+
+    std::cout.flush();
+    return 0;
+}
+```
+
 ### 2. Строки
 
 **В C++ строки могут быть представлены двумя способами:** как массивы символов или с помощью класса `std::string` из стандартной библиотеки.
