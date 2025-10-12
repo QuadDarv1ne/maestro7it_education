@@ -122,6 +122,132 @@ int main() {
 }
 ```
 
+---
+
+```cpp
+#include <iostream>
+#include <array>
+#include <vector>
+#include <iomanip>
+#include <numeric>
+#include <algorithm>
+#include <string>
+
+// === Конфигурация ===
+constexpr size_t DEFAULT_PRECISION = 3;
+constexpr size_t ARRAY_SIZE = 10;
+using NumberType = double;
+
+// === Информация об авторе ===
+const std::string AUTHOR_NAME = "Дуплей М.И.";
+const std::string ORCID_ID = "0009-0007-7605-539X";
+const std::string SCHOOL_NAME = "Maestro7IT";
+const std::string SCHOOL_URL = "https://school-maestro7it.ru/";
+
+/**
+ * @brief Выводит информационный баннер об авторе и проекте.
+ */
+void print_author_info() {
+    std::cout << "===============================================\n";
+    std::cout << "🎓 Автор: " << AUTHOR_NAME << "\n";
+    std::cout << "🆔 ORCID: https://orcid.org/" << ORCID_ID << "\n";
+    std::cout << "🏫 Школа программирования: " << SCHOOL_NAME << "\n";
+    std::cout << "🌐 Сайт: " << SCHOOL_URL << "\n";
+    std::cout << "© " << AUTHOR_NAME << ", " << SCHOOL_NAME << " — " 
+              << __DATE__ << "\n"; // Автоматическая дата компиляции
+    std::cout << "===============================================\n\n";
+}
+
+// --- Работа с основными функциями ---
+
+template <typename Container>
+void print_array(const Container& arr, size_t precision = DEFAULT_PRECISION) {
+    std::cout << std::fixed << std::setprecision(static_cast<int>(precision));
+    for (size_t i = 0; i < arr.size(); ++i) {
+        std::cout << "Element [" << i << "] = " << arr[i] << '\n';
+    }
+    std::cout << '\n';
+}
+
+template <typename Container>
+NumberType compute_sum(const Container& arr) {
+    return std::accumulate(arr.begin(), arr.end(), static_cast<NumberType>(0));
+}
+
+template <typename Container>
+NumberType find_min(const Container& arr) {
+    return *std::min_element(arr.begin(), arr.end());
+}
+
+template <typename Container>
+NumberType find_max(const Container& arr) {
+    return *std::max_element(arr.begin(), arr.end());
+}
+
+template <typename Container>
+NumberType compute_mean(const Container& arr) {
+    if (arr.empty()) return 0;
+    return compute_sum(arr) / static_cast<NumberType>(arr.size());
+}
+
+template <typename Container>
+bool is_sorted_ascending(const Container& arr) {
+    return std::is_sorted(arr.begin(), arr.end());
+}
+
+template <typename Container>
+Container sorted_copy(const Container& arr) {
+    Container copy = arr;
+    std::sort(copy.begin(), copy.end());
+    return copy;
+}
+
+template <typename Container>
+void print_statistics(const Container& arr) {
+    std::cout << "📊 Статистика:\n";
+    std::cout << "  Сумма:        " << compute_sum(arr) << '\n';
+    std::cout << "  Минимум:      " << find_min(arr) << '\n';
+    std::cout << "  Максимум:     " << find_max(arr) << '\n';
+    std::cout << "  Среднее:      " << compute_mean(arr) << '\n';
+    std::cout << "  Отсортирован: " << (is_sorted_ascending(arr) ? "Да" : "Нет") << '\n';
+    std::cout << '\n';
+}
+
+template <typename Container>
+void demonstrate_sorting(const Container& arr) {
+    auto sorted = sorted_copy(arr);
+    std::cout << "🔁 Исходный массив:\n";
+    print_array(arr, 3);
+    std::cout << "✅ Отсортированный массив:\n";
+    print_array(sorted, 3);
+}
+
+// --- Основная функция ---
+int main() {
+    // Вывод информации об авторе
+    print_author_info();
+
+    const std::array<NumberType, ARRAY_SIZE> numbers = {
+        150.0f, 2.6f, 31.3f, 44.5f, 5.757f, 303.0f, 567.0f, -190.0f, -30.0f, -56.758765454f
+    };
+
+    std::cout << "📦 Исходные данные:\n";
+    print_array(numbers);
+
+    print_statistics(numbers);
+    demonstrate_sorting(numbers);
+
+    // Пример с vector
+    std::cout << "🧩 Пример с std::vector:\n";
+    std::vector<NumberType> dynamic_numbers = {1.1f, 3.3f, 2.2f, 5.5f};
+    print_array(dynamic_numbers);
+    print_statistics(dynamic_numbers);
+
+    std::cout.flush();
+    return 0;
+}
+```
+
 ### 2. Строки
 
 **В C++ строки могут быть представлены двумя способами:** как массивы символов или с помощью класса `std::string` из стандартной библиотеки.
@@ -209,7 +335,156 @@ int main() {
 
 Эти основы помогут вам эффективно работать с последовательностями данных в C++ и выбирать подходящий метод для ваших задач.
 
+### 4. Сравнение с векторами (vector)
 
+**🔍 Основные различия**
+
+| Аспект | C-style (`int arr[5]`, `char str[]`) | Современный C++ (`std::array`, `std::vector`, `std::string`) |
+|-------|--------------------------------------|---------------------------------------------------------------|
+| **Размер** | Фиксированный (компиляция) | `std::array` — фиксированный, `std::vector`/`std::string` — динамический |
+| **Память** | Ручное управление или стек | Полностью автоматическое |
+| **Безопасность** | Низкая (риск переполнения, утечек) | Высокая (проверки границ, RAII) |
+| **Интерфейс** | Минимальный (указатели, `strlen`, `strcpy`) | Богатый (`.size()`, `.push_back()`, `.substr()`, итераторы, алгоритмы STL) |
+| **Читаемость** | Низкая | Высокая |
+
+---
+
+**📊 Сравнительная таблица**
+
+| Характеристика            | `int arr[N]` / `char[]` | `std::array` | `std::vector` | `std::string` |
+|--------------------------|-------------------------|--------------|---------------|---------------|
+| Размер известен на этапе компиляции | ✅ | ✅ | ❌ | ❌ |
+| Автоматическое управление памятью | ❌ | ✅ | ✅ | ✅ |
+| Поддержка `.size()` | ❌ | ✅ | ✅ | ✅ |
+| Динамическое изменение размера | ❌ | ❌ | ✅ | ✅ |
+| Безопасность | ❌ | ✅ | ✅ | ✅ |
+| Совместимость с STL | ⚠️ (через указатели) | ✅ | ✅ | ✅ |
+
+---
+
+**Наглядное сравнение в коде**
+
+```cpp
+/**
+ * @file comparison_demo.cpp
+ * @brief Сравнение C-массивов/строк, std::array, std::vector и std::string.
+ *
+ * Образовательный материал школы Maestro7IT: https://school-maestro7it.ru/
+ * Автор: Дуплей М.И. — старший преподаватель, аналитик, философ, музыкант, DevOps-инженер
+ * ORCID: https://orcid.org/0009-0007-7605-539X
+ * Лицензия: CC0 (общественное достояние)
+ */
+
+#include <iostream>
+#include <array>
+#include <vector>
+#include <string>
+#include <cstring>
+#include <iomanip>
+
+void print_separator(const std::string& title) {
+    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "[ИНФО] " << title << "\n";
+    std::cout << std::string(60, '=') << "\n";
+}
+
+void demo_c_style() {
+    print_separator("C-стиль: int arr[5] и char str[]");
+
+    int c_array[5] = {10, 20, 30, 40, 50};
+    std::cout << "Массив (C-стиль): ";
+    for (int i = 0; i < 5; ++i) std::cout << c_array[i] << " ";
+    std::cout << "\nРазмер: 5 (задан в коде, нет метода .size())\n";
+
+    char c_string[] = "Привет, C!";
+    std::cout << "Строка (C-стиль): " << c_string << "\n";
+    std::cout << "Длина: " << strlen(c_string) << " (вычисляется каждый раз, O(n))\n";
+    std::cout << "ВНИМАНИЕ: риск переполнения буфера, нет методов, завершается \\0.\n";
+}
+
+void demo_std_array() {
+    print_separator("std::array<int, 5> — безопасный массив фиксированного размера");
+
+    std::array<int, 5> arr = {10, 20, 30, 40, 50};
+    std::cout << "Содержимое: ";
+    for (const auto& x : arr) std::cout << x << " ";
+    std::cout << "\nРазмер: " << arr.size() << " (известен на этапе компиляции, O(1))\n";
+    std::cout << "ХОРОШО: безопасен, совместим со стандартными алгоритмами, есть .size().\n";
+}
+
+void demo_std_vector() {
+    print_separator("std::vector<int> — динамический массив");
+
+    std::vector<int> vec = {10, 20, 30};
+    std::cout << "Исходный: ";
+    for (const auto& x : vec) std::cout << x << " ";
+    std::cout << " | Размер: " << vec.size() << "\n";
+
+    vec.push_back(40);
+    vec.push_back(50);
+    std::cout << "После добавления: ";
+    for (const auto& x : vec) std::cout << x << " ";
+    std::cout << " | Размер: " << vec.size() << "\n";
+
+    std::cout << "ХОРОШО: размер меняется автоматически, память управляется самим контейнером.\n";
+}
+
+void demo_std_string() {
+    print_separator("std::string — современная строка C++");
+
+    std::string s = "Привет, C++!";
+    std::cout << "Строка: " << s << "\n";
+    std::cout << "Длина: " << s.length() << " (мгновенно, O(1))\n";
+    std::cout << "Подстрока: \"" << s.substr(7) << "\"\n";
+
+    s += " (расширено)";
+    std::cout << "После добавления: " << s << "\n";
+    std::cout << "ХОРОШО: автоматическое управление памятью, много методов, безопасно.\n";
+}
+
+void demo_comparison() {
+    print_separator("Сравнение возможностей");
+
+    std::cout << std::left
+              << std::setw(24) << "Возможность"
+              << std::setw(10) << "C-стиль"
+              << std::setw(12) << "std::array"
+              << std::setw(12) << "std::vector"
+              << "std::string" << "\n";
+    std::cout << std::string(80, '-') << "\n";
+
+    auto row = [](const char* f, const char* a, const char* b, const char* c, const char* d) {
+        std::cout << std::setw(24) << f
+                  << std::setw(10) << a
+                  << std::setw(12) << b
+                  << std::setw(12) << c
+                  << d << "\n";
+    };
+
+    row("Изменение размера",     "Нет",   "Нет",   "Да",    "Да");
+    row("Метод .size()",         "Нет",   "Да",    "Да",    "Да");
+    row("Безопасность",          "Нет",   "Да",    "Да",    "Да");
+    row("Совместимость с STL",   "Частичная", "Да", "Да",    "Да");
+    row("Автоматическая память", "Нет",   "Да",    "Да",    "Да");
+}
+
+int main() {
+    std::cout << "Демонстрация: сравнение контейнеров в C++\n";
+    std::cout << "Образовательный проект школы Maestro7IT — https://school-maestro7it.ru/\n\n";
+
+    demo_c_style();
+    demo_std_array();
+    demo_std_vector();
+    demo_std_string();
+    demo_comparison();
+
+    std::cout << "\n[РЕКОМЕНДАЦИЯ] от Maestro7IT:\n";
+    std::cout << "В 99% случаев используйте std::array, std::vector и std::string.\n";
+    std::cout << "C-стиль применяйте только при работе с устаревшими библиотеками или во встроенных системах.\n\n";
+
+    return 0;
+}
+```
 
 **Автор:** Дуплей Максим Игоревич
 
