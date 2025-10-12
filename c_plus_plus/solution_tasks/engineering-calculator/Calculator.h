@@ -106,4 +106,4 @@ private:
     static int getArity(const std::string& token); // 1 (для функций/унарных), 2 (для бинарных)
 };
 
-#endif
+#endif // CALCULATOR_H
