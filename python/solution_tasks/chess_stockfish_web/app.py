@@ -22,13 +22,19 @@ class ChessGame:
     
     def init_engine(self):
         try:
-            # Укажите путь к stockfish.exe, если он не в PATH
-            path = os.getenv('STOCKFISH_PATH', None)
-            # Only pass path if it's not None
-            if path:
-                self.engine = Stockfish(path=path)
+            # Check for local stockfish executable first
+            local_stockfish_path = os.path.join(os.path.dirname(__file__), 'stockfish.exe')
+            if os.path.exists(local_stockfish_path):
+                self.engine = Stockfish(path=local_stockfish_path)
             else:
-                self.engine = Stockfish()
+                # Check for STOCKFISH_PATH environment variable
+                path = os.getenv('STOCKFISH_PATH', None)
+                if path and os.path.exists(path):
+                    self.engine = Stockfish(path=path)
+                else:
+                    # Try to use stockfish from PATH
+                    self.engine = Stockfish()
+            
             self.engine.set_skill_level(self.skill_level)
             self.engine.set_depth(15)  # Increased depth for better moves
             self.initialized = True
@@ -45,12 +51,35 @@ class ChessGame:
     def make_move(self, move):
         if not self.initialized or not self.engine:
             return False
-        return self.engine.make_moves_from_current_position([move])
+        # make_moves_from_current_position returns None on success, False on failure
+        result = self.engine.make_moves_from_current_position([move])
+        return result is not False
     
     def is_move_correct(self, move):
+        """
+        Check if a move is correct.
+        Note: The stockfish library's is_move_correct method seems to have issues,
+        so we'll use a more reliable approach by checking if the move actually changes the position.
+        """
         if not self.initialized or not self.engine:
             return False
-        return self.engine.is_move_correct(move)
+            
+        # Save current position
+        fen_before = self.engine.get_fen_position()
+        
+        # Try to make the move
+        result = self.engine.make_moves_from_current_position([move])
+        
+        # Check if position changed
+        fen_after = self.engine.get_fen_position()
+        move_successful = (result is not False) and (fen_before != fen_after)
+        
+        # If move was successful, undo it to maintain current state
+        if move_successful:
+            # Reset to previous position
+            self.engine.set_fen_position(fen_before)
+        
+        return move_successful
     
     def get_best_move(self):
         if not self.initialized or not self.engine:
@@ -105,7 +134,10 @@ def handle_move(data):
         return
 
     if game.is_move_correct(uci_move):
-        game.make_move(uci_move)
+        if not game.make_move(uci_move):  # Check if move was applied successfully
+            emit('invalid_move', {'move': uci_move, 'message': 'Недопустимый ход'})
+            return
+            
         fen = game.get_fen()
 
         # Check game status
@@ -129,7 +161,10 @@ def handle_move(data):
         # AI move
         ai_move = game.get_best_move()
         if ai_move:
-            game.make_move(ai_move)
+            if not game.make_move(ai_move):  # Check if AI move was applied successfully
+                emit('position_update', {'fen': fen})
+                return
+                
             fen = game.get_fen()
             
             # Check game status after AI move
