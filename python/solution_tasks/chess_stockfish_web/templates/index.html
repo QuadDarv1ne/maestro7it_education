@@ -2,34 +2,39 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>♟️ chess_stockfish_web — Maestro7IT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>♟️ Chess Stockfish Web — Maestro7IT</title>
     <link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♟️</text></svg>">
 </head>
 <body>
     <div class="container">
-        <h1>♟️ chess_stockfish_web</h1>
+        <h1>♟️ Chess Stockfish Web</h1>
         <p>Создано в <a href="https://school-maestro7it.ru/" target="_blank">Maestro7IT</a></p>
 
         <div id="setup" class="setup">
-            <label>Сторона: 
+            <h2>Настройки игры</h2>
+            <label>Ваша сторона: 
                 <select id="color">
                     <option value="white">Белые</option>
                     <option value="black">Чёрные</option>
                 </select>
             </label>
-            <label>Уровень (0–20): 
+            <label>Уровень сложности (0–20): 
                 <input type="number" id="level" min="0" max="20" value="5">
             </label>
-            <button id="start">Начать игру</button>
+            <div>
+                <button id="start">Начать игру</button>
+            </div>
         </div>
 
         <div id="board" style="display:none; width: 512px; margin: 20px auto;"></div>
-        <div id="status"></div>
+        <div id="status">Готовы начать игру!</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.0/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chess@0.10.3/chess.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
     <script src="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
 </body>
