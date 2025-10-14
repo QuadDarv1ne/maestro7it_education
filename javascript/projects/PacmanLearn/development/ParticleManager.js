@@ -1,11 +1,12 @@
-import { PARTICLE_TYPES } from './Constants.js';
-
 class ParticleManager {
     constructor() {
         this.particles = [];
         this.pool = [];
         this.maxParticles = 200;
         this.particleTypes = PARTICLE_TYPES;
+        // Performance optimization settings
+        this.lastUpdate = 0;
+        this.updateInterval = 16; // ~60 FPS
         // Pre-allocate object pool for better performance
         this.initializePool();
     }
@@ -243,6 +244,13 @@ class ParticleManager {
     }
 
     updateParticles() {
+        // Limit update frequency for performance
+        const now = Date.now();
+        if (now - this.lastUpdate < this.updateInterval) {
+            return;
+        }
+        this.lastUpdate = now;
+        
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             
@@ -264,6 +272,9 @@ class ParticleManager {
     }
 
     drawParticles(ctx) {
+        // Early exit if no particles to draw
+        if (this.particles.length === 0) return;
+        
         // Use traditional for loop instead of forEach for better performance
         for (let i = 0; i < this.particles.length; i++) {
             const p = this.particles[i];
@@ -346,6 +357,16 @@ class ParticleManager {
     // Get count of active particles
     getActiveParticleCount() {
         return this.particles.length;
+    }
+    
+    // Update method (wrapper for updateParticles)
+    update() {
+        this.updateParticles();
+    }
+
+    // Draw method (wrapper for drawParticles)
+    draw(ctx) {
+        this.drawParticles(ctx);
     }
 }
 

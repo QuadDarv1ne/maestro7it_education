@@ -538,5 +538,93 @@
 
     <!-- Подключаем модульный JavaScript как модуль -->
     <script type="module" src="main.js"></script>
+    
+    <!-- Touch Controls for Mobile -->
+    <style>
+        .touch-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .touch-btn {
+            width: 60px;
+            height: 60px;
+            margin: 10px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .up-btn, .down-btn {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .up-btn {
+            top: -80px;
+        }
+        
+        .down-btn {
+            bottom: -80px;
+        }
+        
+        .left-btn, .right-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .left-btn {
+            left: -80px;
+        }
+        
+        .right-btn {
+            right: -80px;
+        }
+        
+        .action-btn {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+        }
+        
+        @media (max-width: 768px) {
+            .touch-controls {
+                display: flex;
+            }
+        }
+    </style>
+    
+    <div id="touch-controls" class="touch-controls">
+        <button id="up-btn" class="touch-btn up-btn">↑</button>
+        <button id="down-btn" class="touch-btn down-btn">↓</button>
+        <button id="left-btn" class="touch-btn left-btn">←</button>
+        <button id="right-btn" class="touch-btn right-btn">→</button>
+        <button id="action-btn" class="touch-btn action-btn">●</button>
+    </div>
 </body>
 </html>

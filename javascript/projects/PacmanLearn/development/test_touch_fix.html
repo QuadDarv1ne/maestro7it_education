@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест исправленных тач-контролов</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #121212;
+            color: #e0e0e0;
+        }
+        
+        .test-area {
+            margin: 20px 0;
+            padding: 20px;
+            background: #1e1e1e;
+            border-radius: 8px;
+        }
+        
+        .touch-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .touch-btn {
+            width: 60px;
+            height: 60px;
+            margin: 10px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .up-btn, .down-btn {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .up-btn {
+            top: -80px;
+        }
+        
+        .down-btn {
+            bottom: -80px;
+        }
+        
+        .left-btn, .right-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .left-btn {
+            left: -80px;
+        }
+        
+        .right-btn {
+            right: -80px;
+        }
+        
+        .action-btn {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+        }
+        
+        @media (max-width: 768px) {
+            .touch-controls {
+                display: flex;
+            }
+        }
+        
+        #log {
+            height: 200px;
+            overflow-y: auto;
+            background: #2d2d2d;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест исправленных тач-контролов</h1>
+    
+    <div class="test-area">
+        <h2>Статус:</h2>
+        <p>Тач-устройство: <span id="touch-status">Проверяется...</span></p>
+        <p>Кнопки созданы: <span id="buttons-status">Нет</span></p>
+    </div>
+    
+    <div class="test-area">
+        <h2>Лог событий:</h2>
+        <div id="log"></div>
+    </div>
+    
+    <div id="touch-controls" class="touch-controls">
+        <button id="up-btn" class="touch-btn up-btn">↑</button>
+        <button id="down-btn" class="touch-btn down-btn">↓</button>
+        <button id="left-btn" class="touch-btn left-btn">←</button>
+        <button id="right-btn" class="touch-btn right-btn">→</button>
+        <button id="action-btn" class="touch-btn action-btn">●</button>
+    </div>
+    
+    <script type="module">
+        // Import the game components
+        import { DIRECTIONS } from './Constants.js';
+        
+        // Log function
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Check if touch device
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        }
+        
+        // Update status
+        document.getElementById('touch-status').textContent = isTouchDevice() ? 'Да' : 'Нет';
+        
+        // Add event listeners with delay
+        setTimeout(() => {
+            const upBtn = document.getElementById('up-btn');
+            const downBtn = document.getElementById('down-btn');
+            const leftBtn = document.getElementById('left-btn');
+            const rightBtn = document.getElementById('right-btn');
+            const actionBtn = document.getElementById('action-btn');
+            
+            if (upBtn && downBtn && leftBtn && rightBtn && actionBtn) {
+                document.getElementById('buttons-status').textContent = 'Да';
+                
+                // Add touch and click event listeners
+                function addDirectionalListeners(btn, directionName, directionValue) {
+                    btn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        log(`Нажата кнопка ${directionName} (touchstart) - Значение: ${directionValue}`);
+                    });
+                    
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        log(`Нажата кнопка ${directionName} (click) - Значение: ${directionValue}`);
+                    });
+                }
+                
+                addDirectionalListeners(upBtn, 'ВВЕРХ', DIRECTIONS.UP);
+                addDirectionalListeners(downBtn, 'ВНИЗ', DIRECTIONS.DOWN);
+                addDirectionalListeners(leftBtn, 'ВЛЕВО', DIRECTIONS.LEFT);
+                addDirectionalListeners(rightBtn, 'ВПРАВО', DIRECTIONS.RIGHT);
+                
+                actionBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    log('Нажата кнопка ДЕЙСТВИЕ (touchstart)');
+                });
+                
+                actionBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    log('Нажата кнопка ДЕЙСТВИЕ (click)');
+                });
+                
+                log('Обработчики событий добавлены');
+                log(`DIRECTIONS.UP = ${DIRECTIONS.UP}`);
+                log(`DIRECTIONS.DOWN = ${DIRECTIONS.DOWN}`);
+                log(`DIRECTIONS.LEFT = ${DIRECTIONS.LEFT}`);
+                log(`DIRECTIONS.RIGHT = ${DIRECTIONS.RIGHT}`);
+            } else {
+                log('Не удалось найти все кнопки');
+            }
+        }, 100);
+        
+        log('Страница загружена');
+    </script>
+</body>
+</html>
