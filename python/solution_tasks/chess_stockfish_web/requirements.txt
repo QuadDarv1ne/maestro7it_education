@@ -1,0 +1,4 @@
+Flask
+Flask-SocketIO
+stockfish
+python-socketio[client]

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>♟️ chess_stockfish_web — Maestro7IT</title>
+    <link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>♟️ chess_stockfish_web</h1>
+        <p>Создано в <a href="https://school-maestro7it.ru/" target="_blank">Maestro7IT</a></p>
+
+        <div id="setup" class="setup">
+            <label>Сторона: 
+                <select id="color">
+                    <option value="white">Белые</option>
+                    <option value="black">Чёрные</option>
+                </select>
+            </label>
+            <label>Уровень (0–20): 
+                <input type="number" id="level" min="0" max="20" value="5">
+            </label>
+            <button id="start">Начать игру</button>
+        </div>
+
+        <div id="board" style="display:none; width: 512px; margin: 20px auto;"></div>
+        <div id="status"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chess@0.10.3/chess.min.js"></script>
+    <script src="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>
