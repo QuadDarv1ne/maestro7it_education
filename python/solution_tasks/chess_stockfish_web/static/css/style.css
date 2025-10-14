@@ -5,7 +5,9 @@ body {
     color: white;
     margin: 0;
     padding: 20px;
+    min-height: 100vh;
 }
+
 .container {
     max-width: 700px;
     margin: 0 auto;
@@ -13,32 +15,50 @@ body {
     background: rgba(0, 0, 0, 0.7);
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
 }
+
 h1 {
     color: #FFD700;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     margin-bottom: 5px;
 }
+
+h2 {
+    color: #4FC3F7;
+    margin-top: 0;
+}
+
 .setup {
     margin: 20px 0;
     padding: 20px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(5px);
 }
+
 .setup label {
     display: block;
-    margin: 10px 0;
+    margin: 15px 0;
     font-weight: bold;
+    font-size: 18px;
 }
+
 .setup select, .setup input {
-    padding: 8px;
+    padding: 10px;
     border-radius: 5px;
     border: 1px solid #444;
     background: #333;
     color: white;
     margin-left: 10px;
+    font-size: 16px;
+    width: 80px;
 }
+
+.setup input {
+    width: 60px;
+}
+
 button {
     padding: 12px 24px;
     font-size: 16px;
@@ -52,40 +72,96 @@ button {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
 }
+
 button:hover {
     background: linear-gradient(to bottom, #66BB6A, #388E3C);
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
 }
+
 button:active {
     transform: translateY(0);
 }
+
 #reset {
     background: linear-gradient(to bottom, #f44336, #d32f2f);
 }
+
 #reset:hover {
     background: linear-gradient(to bottom, #ef5350, #f44336);
 }
+
 #status {
     font-size: 18px;
     font-weight: bold;
     margin: 15px 0;
     min-height: 27px;
     text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
 }
+
 .win {
     color: #4CAF50;
 }
+
 .loss {
     color: #f44336;
 }
+
 .draw {
     color: #FFD700;
 }
+
 a {
     color: #4FC3F7;
     text-decoration: none;
 }
+
 a:hover {
     text-decoration: underline;
+}
+
+#instructions {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    text-align: left;
+}
+
+#instructions h3 {
+    margin-top: 0;
+    color: #4FC3F7;
+}
+
+#instructions ul {
+    padding-left: 20px;
+}
+
+#instructions li {
+    margin: 5px 0;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .container {
+        margin: 10px;
+        padding: 15px;
+    }
+    
+    #board {
+        width: 90vw !important;
+        height: 90vw !important;
+    }
+    
+    .setup label {
+        font-size: 16px;
+    }
+    
+    button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
 }
