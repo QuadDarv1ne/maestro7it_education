@@ -24,6 +24,11 @@
 
 #include <iostream>
 #include <limits>
+#include <locale>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 using namespace std;
 
@@ -38,6 +43,16 @@ bool getValidInt(int &value) {
 }
 
 int main() {
+
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);  // Вывод в UTF-8
+    SetConsoleCP(CP_UTF8);        // Ввод в UTF-8
+    // SetConsoleCP(1251);
+    // SetConsoleOutputCP(1251);
+    #else
+        setlocale(LC_ALL, "ru_RU.UTF-8");
+    #endif
+
     const int N = 4;
     int matrix[N][N];
 
