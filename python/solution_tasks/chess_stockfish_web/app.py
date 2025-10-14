@@ -4,15 +4,10 @@ from flask_socketio import SocketIO, emit, disconnect
 from stockfish import Stockfish
 import os
 import uuid
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'maestro7it-chess-secret'
-socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Store game instances per session
 games = {}
@@ -30,26 +25,22 @@ class ChessGame:
             # Check for local stockfish executable first
             local_stockfish_path = os.path.join(os.path.dirname(__file__), 'stockfish.exe')
             if os.path.exists(local_stockfish_path):
-                logger.info(f"Using local Stockfish executable: {local_stockfish_path}")
                 self.engine = Stockfish(path=local_stockfish_path)
             else:
                 # Check for STOCKFISH_PATH environment variable
                 path = os.getenv('STOCKFISH_PATH', None)
                 if path and os.path.exists(path):
-                    logger.info(f"Using Stockfish from STOCKFISH_PATH: {path}")
                     self.engine = Stockfish(path=path)
                 else:
                     # Try to use stockfish from PATH
-                    logger.info("Using Stockfish from system PATH")
                     self.engine = Stockfish()
             
             self.engine.set_skill_level(self.skill_level)
             self.engine.set_depth(15)  # Increased depth for better moves
             self.initialized = True
-            logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level}")
             return True
         except Exception as e:
-            logger.error(f"Ошибка инициализации Stockfish: {e}")
+            print(f"Stockfish initialization error: {e}")
             return False
     
     def get_fen(self):
@@ -100,91 +91,64 @@ def index():
     # Generate a unique session ID for each user
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
-    logger.info(f"HTTP session created with session_id: {session.get('session_id')}")
-    logger.info(f"HTTP session keys: {list(session.keys())}")
     return render_template('index.html')
 
 @socketio.on('connect')
 def handle_connect():
     # Create a session ID for Socket.IO connection if it doesn't exist
-    logger.info(f"WebSocket connect event received")
-    logger.info(f"Current session keys: {list(session.keys())}")
-    logger.info(f"Current session_id: {session.get('session_id')}")
-    
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
-        logger.info(f"Created new session_id for WebSocket: {session.get('session_id')}")
-    else:
-        logger.info(f"Using existing session_id for WebSocket: {session.get('session_id')}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
     session_id = session.get('session_id')
-    logger.info(f"WebSocket disconnect event received for session: {session_id}")
     if session_id and session_id in games:
         # Clean up game instance when user disconnects
         del games[session_id]
-        logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
 
 @socketio.on('init_game')
 def handle_init(data):
-    logger.info(f"Game initialization requested with data: {data}")
-    logger.info(f"Current session keys: {list(session.keys())}")
     session_id = session.get('session_id')
-    logger.info(f"Session ID: {session_id}")
     
     if not session_id:
-        logger.error("ERROR: No session ID found")
-        emit('error', {'message': 'Ошибка сессии'})
+        emit('error', {'message': 'Session error'})
         return
     
     try:
         player_color = data.get('color', 'white')
         skill_level = min(20, max(0, int(data.get('level', 5))))
         
-        logger.info(f"Creating game with color: {player_color}, skill level: {skill_level}")
-        
         # Create a new game instance for this session
         game = ChessGame(player_color, skill_level)
-        logger.info(f"Game initialization result: {game.initialized}")
         
         if game.initialized:
             games[session_id] = game
             fen = game.get_fen()
-            logger.info(f"Game initialized successfully. Initial FEN: {fen}")
             emit('game_initialized', {'fen': fen, 'player_color': player_color})
-            logger.info("Sent game_initialized event to client")
         else:
-            logger.error("ERROR: Failed to initialize Stockfish engine")
-            emit('error', {'message': 'Не удалось запустить Stockfish. Проверьте установку движка.'})
+            emit('error', {'message': 'Failed to start Stockfish engine'})
     except Exception as e:
-        logger.error(f"Error initializing game: {e}")
-        emit('error', {'message': 'Ошибка инициализации игры'})
+        emit('error', {'message': 'Game initialization error'})
 
 @socketio.on('make_move')
 def handle_move(data):
     try:
-        logger.info(f"Move request received: {data}")
-        logger.info(f"Current session keys: {list(session.keys())}")
         session_id = session.get('session_id')
-        logger.info(f"Session ID: {session_id}")
-        
         if not session_id or session_id not in games:
-            logger.error("Game not initialized for this session")
-            emit('error', {'message': 'Игра не инициализирована'})
+            emit('error', {'message': 'Game not initialized'})
             return
 
         game = games[session_id]
-        uci_move = data['move']  # например: 'e2e4'
+        uci_move = data['move']
 
         # Validate move format
         if not isinstance(uci_move, str) or len(uci_move) != 4:
-            emit('invalid_move', {'move': uci_move, 'message': 'Неверный формат хода'})
+            emit('invalid_move', {'move': uci_move, 'message': 'Invalid move format'})
             return
 
         if game.is_move_correct(uci_move):
-            if not game.make_move(uci_move):  # Check if move was applied successfully
-                emit('invalid_move', {'move': uci_move, 'message': 'Недопустимый ход'})
+            if not game.make_move(uci_move):
+                emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
                 return
                 
             fen = game.get_fen()
@@ -203,14 +167,13 @@ def handle_move(data):
             
             # Check for stalemate (simplified)
             if not game.engine.get_best_move():
-                # If no moves available and not in check, it's stalemate
                 emit('game_over', {'result': 'stalemate', 'fen': fen})
                 return
 
             # AI move
             ai_move = game.get_best_move()
             if ai_move:
-                if not game.make_move(ai_move):  # Check if AI move was applied successfully
+                if not game.make_move(ai_move):
                     emit('position_update', {'fen': fen})
                     return
                     
@@ -235,10 +198,9 @@ def handle_move(data):
             else:
                 emit('position_update', {'fen': fen})
         else:
-            emit('invalid_move', {'move': uci_move, 'message': 'Недопустимый ход'})
+            emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
     except Exception as e:
-        logger.error(f"Error processing move: {e}")
-        emit('error', {'message': 'Ошибка обработки хода'})
+        emit('error', {'message': 'Move processing error'})
 
 if __name__ == '__main__':
-    socketio.run(app, host='127.0.0.1', port=5001, debug=True)
+    socketio.run(app, host='127.0.0.1', port=5001, debug=False)
