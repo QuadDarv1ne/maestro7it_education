@@ -1,6 +1,6 @@
 # app.py
 from flask import Flask, render_template, session
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, disconnect
 from stockfish import Stockfish
 import os
 import uuid
@@ -24,7 +24,11 @@ class ChessGame:
         try:
             # Укажите путь к stockfish.exe, если он не в PATH
             path = os.getenv('STOCKFISH_PATH', None)
-            self.engine = Stockfish(path=path)
+            # Only pass path if it's not None
+            if path:
+                self.engine = Stockfish(path=path)
+            else:
+                self.engine = Stockfish()
             self.engine.set_skill_level(self.skill_level)
             self.engine.set_depth(15)  # Increased depth for better moves
             self.initialized = True
@@ -59,6 +63,12 @@ def index():
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
     return render_template('index.html')
+
+@socketio.on('connect')
+def handle_connect():
+    # Create a session ID for Socket.IO connection if it doesn't exist
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
 
 @socketio.on('init_game')
 def handle_init(data):
