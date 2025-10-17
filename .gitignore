@@ -1,8 +1,57 @@
-.vscode
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Окружение и зависимости
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Переменные окружения
 .env
-.idea
+.env.local
+.env.*.local
 
-venv
-
+# Windows DLL файлы
 kernel32.dll
 msvcrt.dll
+*.dll
+
+# Временные файлы
+*.tmp
+*.log
+*.cache
+.cache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Локальные конфигурации
+local_settings.py
+instance/
+.webassets-cache
+
+# Артефакты сборки
+dist/
+build/
+*.egg-info/
+.eggs/
