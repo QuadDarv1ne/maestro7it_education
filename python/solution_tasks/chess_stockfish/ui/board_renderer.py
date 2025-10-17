@@ -20,6 +20,9 @@
     - Плавная анимация и отзывчивость
 """
 
+import pygame
+from typing import Optional, Tuple, List
+
 BOARD_SIZE = 512
 SQUARE_SIZE = BOARD_SIZE // 8
 

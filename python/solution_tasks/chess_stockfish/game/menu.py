@@ -17,6 +17,9 @@
     - Красивое оформление консоли
 """
 
+from typing import Tuple
+from utills.game_stats import GameStatistics
+
 
 def show_difficulty_guide():
     """
@@ -30,6 +33,32 @@ def show_difficulty_guide():
     print("   11-15 : Сильный (мастер)")
     print("   16-20 : Гроссмейстер (чемпион)")
     print()
+
+
+def show_stats():
+    """Показать статистику игр."""
+    try:
+        stats = GameStatistics()
+        summary = stats.get_summary()
+        print(f"\n📊 Статистика игр:")
+        print(f"   Всего игр: {summary['total_games']}")
+        print(f"   Побед: {summary['total_wins']}")
+        print(f"   Поражений: {summary['total_losses']}")
+        print(f"   Ничьих: {summary['total_draws']}")
+        if summary['total_games'] > 0:
+            print(f"   Процент побед: {summary['win_rate']:.1f}%")
+        print()
+        
+        # Показать статистику по уровням
+        level_stats = stats.get_level_performance()
+        if level_stats:
+            print("📈 Статистика по уровням сложности:")
+            for level in sorted(level_stats.keys()):
+                ls = level_stats[level]
+                print(f"   Уровень {level}: {ls['wins']}/{ls['total']} побед ({ls['win_rate']:.1f}%)")
+            print()
+    except Exception as e:
+        print(f"⚠️  Не удалось загрузить статистику: {e}")
 
 
 def main_menu() -> Tuple[str, int]:
@@ -55,6 +84,9 @@ def main_menu() -> Tuple[str, int]:
     print("   ✓ Разные уровни сложности (0-20)")
     print("   ✓ История ходов и позиций")
     print("   ✓ Оптимизированная производительность\n")
+    
+    # Показать статистику
+    show_stats()
     
     show_difficulty_guide()
     

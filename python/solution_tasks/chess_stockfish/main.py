@@ -30,6 +30,12 @@ import pygame
 from typing import Optional, Tuple, List
 import time
 import os
+import sys
+
+# Import our game modules
+from game.menu import main_menu
+from game.chess_game import ChessGame
+from utills.game_stats import GameStatistics
 
 # ============================================================================
 # main.py
@@ -49,6 +55,40 @@ import os
 """
 
 
+def check_dependencies():
+    """
+    Проверяет наличие необходимых зависимостей.
+    
+    Возвращает:
+        bool: True если все зависимости установлены, False иначе
+    """
+    try:
+        import pygame
+        import stockfish
+        return True
+    except ImportError as e:
+        print(f"\n❌ Ошибка импорта: {e}")
+        print("\n💡 РЕШЕНИЕ: Установите необходимые зависимости:")
+        print("   pip install pygame stockfish python-chess")
+        return False
+
+
+def show_stats():
+    """Показать статистику игр."""
+    try:
+        stats = GameStatistics()
+        summary = stats.get_summary()
+        print(f"\n📊 Статистика игр:")
+        print(f"   Всего игр: {summary['total_games']}")
+        print(f"   Побед: {summary['total_wins']}")
+        print(f"   Поражений: {summary['total_losses']}")
+        if summary['total_games'] > 0:
+            print(f"   Процент побед: {summary['win_rate']:.1f}%")
+        print()
+    except Exception as e:
+        print(f"⚠️  Не удалось загрузить статистику: {e}")
+
+
 def main():
     """
     Главная функция - точка входа в приложение.
@@ -56,6 +96,13 @@ def main():
     Инициализирует Pygame, показывает меню и запускает игру.
     Обрабатывает исключения и выводит полезные сообщения об ошибках.
     """
+    # Проверка зависимостей
+    if not check_dependencies():
+        sys.exit(1)
+    
+    # Показать статистику перед началом игры
+    show_stats()
+    
     pygame.init()
     
     try:
@@ -64,8 +111,23 @@ def main():
         game.run()
         
         # Сохранить статистику игры
-        # stats = GameStatistics()
-        # stats.save_game(game.get_game_stats())
+        try:
+            stats = GameStatistics()
+            game_stats = game.get_game_stats()
+            stats.save_game(game_stats)
+            print("📊 Статистика игры сохранена")
+            
+            # Показать обновленную статистику
+            summary = stats.get_summary()
+            print(f"\n📈 Обновленная статистика:")
+            print(f"   Всего игр: {summary['total_games']}")
+            print(f"   Побед: {summary['total_wins']}")
+            print(f"   Поражений: {summary['total_losses']}")
+            if summary['total_games'] > 0:
+                print(f"   Процент побед: {summary['win_rate']:.1f}%")
+            print()
+        except Exception as e:
+            print(f"⚠️  Не удалось сохранить статистику: {e}")
         
     except RuntimeError as e:
         print(f"\n❌ Ошибка: {e}")

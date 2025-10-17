@@ -21,6 +21,27 @@
     - Информационный интерфейс с количеством ходов
 """
 
+import pygame
+from typing import Optional, Tuple, List
+import time
+import sys
+
+# Import our modules
+from engine.stockfish_wrapper import StockfishWrapper
+from ui.board_renderer import BoardRenderer
+
+# Constants from board_renderer
+BOARD_SIZE = 512
+SQUARE_SIZE = BOARD_SIZE // 8
+
+# Fonts from board_renderer
+try:
+    FONT = pygame.font.SysFont('Segoe UI Symbol', SQUARE_SIZE - 10)
+    SMALL_FONT = pygame.font.SysFont('Arial', 14)
+except Exception:
+    FONT = pygame.font.SysFont('Arial', SQUARE_SIZE - 10)
+    SMALL_FONT = pygame.font.SysFont('Arial', 14)
+
 
 class ChessGame:
     """
@@ -53,10 +74,15 @@ class ChessGame:
             self.engine = StockfishWrapper(skill_level=skill_level)
         except RuntimeError as e:
             raise e
+        except Exception as e:
+            raise RuntimeError(f"❌ Не удалось инициализировать игру: {e}")
         
         # Инициализация Pygame UI
-        self.screen = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE + 100))
-        pygame.display.set_caption(f"♟️  chess_stockfish — Maestro7IT (уровень {skill_level})")
+        try:
+            self.screen = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE + 100))
+            pygame.display.set_caption(f"♟️  chess_stockfish — Maestro7IT (уровень {skill_level})")
+        except Exception as e:
+            raise RuntimeError(f"❌ Не удалось инициализировать графический интерфейс: {e}")
         
         self.renderer = BoardRenderer(self.screen, player_color)
         self.clock = pygame.time.Clock()
@@ -110,11 +136,15 @@ class ChessGame:
         Возвращает:
             bool: True если ход игрока, False если ход компьютера
         """
-        side = self.engine.get_side_to_move()
-        return (
-            (self.player_color == 'white' and side == 'w') or
-            (self.player_color == 'black' and side == 'b')
-        )
+        try:
+            side = self.engine.get_side_to_move()
+            return (
+                (self.player_color == 'white' and side == 'w') or
+                (self.player_color == 'black' and side == 'b')
+            )
+        except Exception:
+            # Если не удалось получить сторону, предполагаем, что ход игрока
+            return True
     
     def _is_player_piece(self, piece: Optional[str]) -> bool:
         """
@@ -147,7 +177,12 @@ class ChessGame:
             return
         
         row, col = coords
-        board = self.engine.get_board_state()
+        try:
+            board = self.engine.get_board_state()
+        except Exception as e:
+            print(f"⚠️  Ошибка при получении состояния доски: {e}")
+            return
+        
         piece = board[row][col]
         
         # Выбор фигуры
@@ -161,15 +196,19 @@ class ChessGame:
             uci_move = (self._fen_square_to_uci(*from_sq) + 
                        self._fen_square_to_uci(*to_sq))
             
-            if self.engine.is_move_correct(uci_move):
-                if self.engine.make_move(uci_move):
-                    self.move_history.append(uci_move)
-                    self.renderer.set_last_move(from_sq, to_sq)
-                    self.renderer.clear_selected()
-                    self.last_move_time = time.time()
+            try:
+                if self.engine.is_move_correct(uci_move):
+                    if self.engine.make_move(uci_move):
+                        self.move_history.append(uci_move)
+                        self.renderer.set_last_move(from_sq, to_sq)
+                        self.renderer.clear_selected()
+                        self.last_move_time = time.time()
+                    else:
+                        print("❌ Не удалось выполнить ход")
                 else:
-                    print("❌ Не удалось выполнить ход")
-            else:
+                    self.renderer.clear_selected()
+            except Exception as e:
+                print(f"⚠️  Ошибка при обработке хода: {e}")
                 self.renderer.clear_selected()
     
     def handle_ai_move(self):
@@ -186,20 +225,25 @@ class ChessGame:
             return
         
         self.thinking = True
-        ai_move = self.engine.get_best_move(depth=self.skill_level + 10)
-        self.thinking = False
-        
-        if ai_move:
-            self.engine.make_move(ai_move)
-            self.move_history.append(ai_move)
-            
-            # Преобразование UCI хода в координаты для выделения
-            from_col = ord(ai_move[0]) - ord('a')
-            from_row = 8 - int(ai_move[1])
-            to_col = ord(ai_move[2]) - ord('a')
-            to_row = 8 - int(ai_move[3])
-            self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
-            self.last_move_time = time.time()
+        try:
+            ai_move = self.engine.get_best_move(depth=self.skill_level + 10)
+            if ai_move:
+                if self.engine.make_move(ai_move):
+                    self.move_history.append(ai_move)
+                    
+                    # Преобразование UCI хода в координаты для выделения
+                    from_col = ord(ai_move[0]) - ord('a')
+                    from_row = 8 - int(ai_move[1])
+                    to_col = ord(ai_move[2]) - ord('a')
+                    to_row = 8 - int(ai_move[3])
+                    self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
+                    self.last_move_time = time.time()
+                else:
+                    print("⚠️  Не удалось выполнить ход компьютера")
+        except Exception as e:
+            print(f"⚠️  Ошибка при получении хода компьютера: {e}")
+        finally:
+            self.thinking = False
     
     def check_game_state(self) -> bool:
         """
@@ -208,45 +252,52 @@ class ChessGame:
         Возвращает:
             bool: True если игра завершена
         """
-        is_over, reason = self.engine.is_game_over()
-        if is_over:
-            self.game_over = True
-            self.game_over_reason = reason
-            return True
+        try:
+            is_over, reason = self.engine.is_game_over()
+            if is_over:
+                self.game_over = True
+                self.game_over_reason = reason
+                return True
+        except Exception as e:
+            print(f"⚠️  Ошибка при проверке состояния игры: {e}")
         return False
     
     def draw_ui(self):
         """Отрисовка пользовательского интерфейса (информационная полоса внизу)."""
-        # Информационная панель внизу экрана
-        info_rect = pygame.Rect(0, BOARD_SIZE, BOARD_SIZE, 100)
-        pygame.draw.rect(self.screen, (50, 50, 50), info_rect)
-        pygame.draw.line(self.screen, (100, 100, 100), (0, BOARD_SIZE), (BOARD_SIZE, BOARD_SIZE), 2)
-        
-        if self.game_over:
-            # Экран окончания игры
-            text = SMALL_FONT.render(self.game_over_reason, True, (255, 100, 100))
-            self.screen.blit(text, (20, BOARD_SIZE + 15))
-            restart_text = SMALL_FONT.render("Нажмите 'R' для новой игры", True, (200, 200, 200))
-            self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
-        else:
-            # Статус хода
-            if self._is_player_turn():
-                status = "🎮 Ваш ход"
-                status_color = (100, 255, 100)
+        try:
+            # Информационная панель внизу экрана
+            info_rect = pygame.Rect(0, BOARD_SIZE, BOARD_SIZE, 100)
+            pygame.draw.rect(self.screen, (50, 50, 50), info_rect)
+            pygame.draw.line(self.screen, (100, 100, 100), (0, BOARD_SIZE), (BOARD_SIZE, BOARD_SIZE), 2)
+            
+            if self.game_over:
+                # Экран окончания игры
+                if self.game_over_reason:
+                    text = SMALL_FONT.render(self.game_over_reason, True, (255, 100, 100))
+                    self.screen.blit(text, (20, BOARD_SIZE + 15))
+                restart_text = SMALL_FONT.render("Нажмите 'R' для новой игры", True, (200, 200, 200))
+                self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
             else:
-                status = "🤖 Ход компьютера"
-                status_color = (100, 150, 255)
-            
-            text = SMALL_FONT.render(status, True, status_color)
-            self.screen.blit(text, (20, BOARD_SIZE + 15))
-            
-            # Информация о ходах
-            moves_text = SMALL_FONT.render(f"Ходов: {len(self.move_history)}", True, (200, 200, 200))
-            self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
-            
-            # Уровень сложности
-            level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
-            self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
+                # Статус хода
+                if self._is_player_turn():
+                    status = "🎮 Ваш ход"
+                    status_color = (100, 255, 100)
+                else:
+                    status = "🤖 Ход компьютера"
+                    status_color = (100, 150, 255)
+                
+                text = SMALL_FONT.render(status, True, status_color)
+                self.screen.blit(text, (20, BOARD_SIZE + 15))
+                
+                # Информация о ходах
+                moves_text = SMALL_FONT.render(f"Ходов: {len(self.move_history)}", True, (200, 200, 200))
+                self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
+                
+                # Уровень сложности
+                level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
+                self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
+        except Exception as e:
+            print(f"⚠️  Ошибка при отрисовке интерфейса: {e}")
     
     def get_game_stats(self) -> dict:
         """
@@ -255,16 +306,29 @@ class ChessGame:
         Возвращает:
             dict: Словарь со статистикой игры
         """
-        return {
-            'player_color': self.player_color,
-            'ai_color': self.ai_color,
-            'skill_level': self.skill_level,
-            'total_moves': len(self.move_history),
-            'move_history': self.move_history.copy(),
-            'fen': self.engine.get_fen(),
-            'game_over': self.game_over,
-            'game_reason': self.game_over_reason
-        }
+        try:
+            return {
+                'player_color': self.player_color,
+                'ai_color': self.ai_color,
+                'skill_level': self.skill_level,
+                'total_moves': len(self.move_history),
+                'move_history': self.move_history.copy(),
+                'fen': self.engine.get_fen(),
+                'game_over': self.game_over,
+                'game_reason': self.game_over_reason
+            }
+        except Exception as e:
+            print(f"⚠️  Ошибка при получении статистики игры: {e}")
+            return {
+                'player_color': self.player_color,
+                'ai_color': self.ai_color,
+                'skill_level': self.skill_level,
+                'total_moves': len(self.move_history),
+                'move_history': self.move_history.copy(),
+                'fen': '',
+                'game_over': self.game_over,
+                'game_reason': self.game_over_reason
+            }
     
     def run(self):
         """
@@ -281,43 +345,57 @@ class ChessGame:
         print(f"{'='*60}\n")
         
         while self.running:
-            # Обработка событий
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    x, y = pygame.mouse.get_pos()
-                    self.handle_click(x, y)
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r:
-                        # Перезагрузка игры
-                        print("🔄 Новая игра...")
-                        self.__init__(self.player_color, self.skill_level)
-                    elif event.key == pygame.K_ESCAPE:
+            try:
+                # Обработка событий
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
                         self.running = False
-            
-            # Отрисовка
-            self.screen.fill((0, 0, 0))
-            board = self.engine.get_board_state()
-            evaluation = self.engine.get_evaluation()
-            self.renderer.draw(board, evaluation, self.thinking)
-            self.draw_ui()
-            pygame.display.flip()
-            
-            # Логика игры
-            if not self.game_over:
-                self.check_game_state()
-                self.handle_ai_move()
-            
-            self.clock.tick(60)
+                    elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        x, y = pygame.mouse.get_pos()
+                        self.handle_click(x, y)
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_r:
+                            # Перезагрузка игры
+                            print("🔄 Новая игра...")
+                            self.__init__(self.player_color, self.skill_level)
+                        elif event.key == pygame.K_ESCAPE:
+                            self.running = False
+                
+                # Отрисовка
+                self.screen.fill((0, 0, 0))
+                try:
+                    board = self.engine.get_board_state()
+                    evaluation = self.engine.get_evaluation()
+                    self.renderer.draw(board, evaluation, self.thinking)
+                    self.draw_ui()
+                    pygame.display.flip()
+                except Exception as e:
+                    print(f"⚠️  Ошибка при отрисовке: {e}")
+                
+                # Логика игры
+                if not self.game_over:
+                    self.check_game_state()
+                    self.handle_ai_move()
+                
+                self.clock.tick(60)
+            except Exception as e:
+                print(f"⚠️  Критическая ошибка в игровом цикле: {e}")
+                self.running = False
         
         # Очистка при выходе
-        stats = self.get_game_stats()
-        print(f"\n{'='*60}")
-        print("📊 Статистика игры:")
-        print(f"   Всего ходов: {stats['total_moves']}")
-        print(f"   Результат: {stats['game_reason']}")
-        print(f"{'='*60}\n")
+        try:
+            stats = self.get_game_stats()
+            print(f"\n{'='*60}")
+            print("📊 Статистика игры:")
+            print(f"   Всего ходов: {stats['total_moves']}")
+            if stats['game_reason']:
+                print(f"   Результат: {stats['game_reason']}")
+            print(f"{'='*60}\n")
+        except Exception as e:
+            print(f"⚠️  Ошибка при выводе статистики: {e}")
         
-        self.engine.quit()
+        try:
+            self.engine.quit()
+        except Exception as e:
+            print(f"⚠️  Ошибка при завершении движка: {e}")
         pygame.quit()
