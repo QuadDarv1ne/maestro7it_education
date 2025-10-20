@@ -443,7 +443,22 @@ class ChessGame:
         try:
             # Get the best move with appropriate depth based on skill level
             depth = max(1, min(20, self.skill_level + 5))  # Limit depth between 1 and 20
-            ai_move = self.engine.get_best_move(depth=depth)
+            
+            # Try to get multiple move options for better decision making
+            ai_move = None
+            best_moves = self.engine.get_best_moves(3)
+            
+            # If we have multiple options, try to choose a more interesting move
+            if len(best_moves) > 1 and self.skill_level < 15:
+                # For lower skill levels, sometimes choose a suboptimal but more interesting move
+                import random
+                if random.random() < 0.3:  # 30% chance to choose a different move
+                    ai_move = best_moves[min(1, len(best_moves) - 1)]  # Choose second best
+                else:
+                    ai_move = best_moves[0]  # Choose best move
+            else:
+                # For higher skill levels or when only one move is available
+                ai_move = self.engine.get_best_move(depth=depth)
             
             if ai_move:
                 print(f"Ход компьютера: {ai_move}")
@@ -462,6 +477,10 @@ class ChessGame:
                         print(f"Ход компьютера выполнен: {ai_move}")
                         self.move_feedback = f"Ход компьютера: {ai_move}"
                         self.move_feedback_time = time.time()
+                        
+                        # Add educational feedback for interesting moves
+                        if len(best_moves) > 1 and ai_move != best_moves[0]:
+                            self.move_feedback += " (интересный выбор!)"
                     else:
                         print("⚠️  Не удалось выполнить ход компьютера")
                         self.move_feedback = "Не удалось выполнить ход компьютера"

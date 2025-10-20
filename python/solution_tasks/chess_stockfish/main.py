@@ -137,8 +137,14 @@ def main():
     pygame.init()
     
     try:
-        player_color, skill_level = main_menu()
-        game = ChessGame(player_color=player_color, skill_level=skill_level)
+        menu_result: tuple = main_menu()  # Type annotation to help linter
+        # Handle both old and new menu return types
+        if len(menu_result) == 3:
+            player_color, skill_level, theme = menu_result
+        else:
+            player_color, skill_level = menu_result
+            theme = 'classic'
+        game = ChessGame(player_color=player_color, skill_level=skill_level, theme=theme)
         game.run()
         
         # Сохранить статистику игры

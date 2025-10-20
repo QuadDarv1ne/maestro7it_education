@@ -53,6 +53,8 @@ class StockfishWrapper:
         self.skill_level = max(0, min(20, skill_level))
         self.depth = depth
         self.analysis_cache = {}
+        self.board_state_cache = None
+        self.board_state_cache_fen = None
         self.move_count = 0
         self.engine = None
         
@@ -108,17 +110,25 @@ class StockfishWrapper:
             
         try:
             fen = self.engine.get_fen_position()
+            # Check cache first
+            if self.board_state_cache_fen == fen and self.board_state_cache is not None:
+                return self.board_state_cache  # type: ignore
+            
             board_str = fen.split()[0]
             rows = board_str.split('/')
-            board = []
+            board: List[List[Optional[str]]] = []
             for row in rows:
-                new_row = []
+                new_row: List[Optional[str]] = []
                 for char in row:
                     if char.isdigit():
                         new_row.extend([None] * int(char))
                     else:
                         new_row.append(char)
                 board.append(new_row)
+            
+            # Update cache
+            self.board_state_cache = board
+            self.board_state_cache_fen = fen
             return board
         except Exception as e:
             print(f"⚠️  Ошибка при получении состояния доски: {e}")
@@ -172,6 +182,9 @@ class StockfishWrapper:
         try:
             self.engine.make_moves_from_current_position([uci_move])
             self.move_count += 1
+            # Clear cache after making a move
+            self.board_state_cache = None
+            self.board_state_cache_fen = None
             return True
         except Exception as e:
             print(f"⚠️  Ошибка при выполнении хода {uci_move}: {e}")

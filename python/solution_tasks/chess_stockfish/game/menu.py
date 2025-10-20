@@ -62,16 +62,17 @@ def show_stats():
         print(f"⚠️  Не удалось загрузить статистику: {e}")
 
 
-def main_menu() -> Tuple[str, int]:
+def main_menu() -> Tuple[str, int, str]:
     """
     Главное меню выбора параметров игры.
     
     Выводит приветствие, справку и запрашивает параметры игры.
     
     Возвращает:
-        Tuple[str, int]: Кортеж (color, skill_level)
+        Tuple[str, int, str]: Кортеж (color, skill_level, theme)
             - color: 'white' или 'black'
             - skill_level: уровень сложности (0-20)
+            - theme: цветовая тема
     """
     print("\n" + "="*70)
     print("♟️  chess_stockfish — УЛУЧШЕННАЯ ВЕРСИЯ — Maestro7IT Education")
