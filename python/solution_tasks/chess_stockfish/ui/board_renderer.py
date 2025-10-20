@@ -208,7 +208,11 @@ class EffectRenderer:
     def draw_move_hint_dot(self, rect: pygame.Rect):
         """Точка-подсказка для возможного хода."""
         center = rect.center
-        pygame.draw.circle(self.screen, (0, 0, 255, 200), center, 8)
+        # Draw a more visible hint with gradient effect
+        for i in range(5):
+            alpha = max(0, 200 - i * 30)
+            radius = max(1, 8 - i)
+            pygame.draw.circle(self.screen, (0, 0, 255, alpha), center, radius)
         pygame.draw.circle(self.screen, (255, 255, 255), center, 8, 2)
 
 
