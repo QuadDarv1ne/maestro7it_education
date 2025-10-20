@@ -14,6 +14,7 @@
     - Объяснения шахматных терминов
     - Стратегические советы
     - Исторические факты о шахматах
+    - Информация о дебютах и их характеристиках
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -80,6 +81,9 @@ class ChessEducator:
         self.move_counter = 0
         self.last_tip_time = 0
         self.tips_shown = set()
+        # Импортируем OpeningBook внутри класса чтобы избежать циклических импортов
+        from utils.opening_book import OpeningBook
+        self.opening_book = OpeningBook()
     
     def get_random_tip(self) -> str:
         """
@@ -154,7 +158,7 @@ class ChessEducator:
             self.last_tip_time = current_time
             
             # Alternate between different types of educational content
-            tip_type = move_count % 4
+            tip_type = move_count % 5  # Добавляем еще один тип контента
             
             if tip_type == 0:
                 return f"💡 Совет: {self.get_random_tip()}"
@@ -164,9 +168,19 @@ class ChessEducator:
                 # Choose a random piece to explain
                 piece = random.choice(list(PIECE_HINTS.keys()))
                 return f"♟️ {piece.capitalize()}: {self.get_piece_hint(piece)}"
-            else:
+            elif tip_type == 3:
                 # Choose a random term to explain
                 term = random.choice(list(CHESS_TERMS.keys()))
                 return f"📖 {term.capitalize()}: {self.get_term_explanation(term)}"
+            else:
+                # Дебютная информация
+                opening_suggestion = self.opening_book.get_opening_suggestion(move_count)
+                if opening_suggestion:
+                    opening_info = self.opening_book.get_opening_info(opening_suggestion)
+                    if opening_info:
+                        return f"🎯 Дебют: {opening_suggestion} - {opening_info['description']}"
+                # Если нет дебютной информации, показываем принцип
+                principle, explanation = self.opening_book.get_random_principle()
+                return f"🎯 Принцип: {principle} {explanation}"
         
         return None

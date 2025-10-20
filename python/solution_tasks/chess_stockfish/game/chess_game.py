@@ -25,6 +25,7 @@ import random
 from engine.stockfish_wrapper import StockfishWrapper
 from ui.board_renderer import BoardRenderer  # Убран init_fonts
 from utils.educational import ChessEducator
+from utils.opening_book import OpeningBook
 
 # Constants from board_renderer
 BOARD_SIZE = 512
@@ -43,6 +44,7 @@ class ChessGame:
         game_over (bool): Флаг окончания игры
         renderer (BoardRenderer): Рендерер для отображения доски
         educator (ChessEducator): Образовательный компонент для подсказок
+        opening_book (OpeningBook): Дебютная книга для образовательных целей
     """
     
     def __init__(self, player_color: str = 'white', skill_level: int = 5, theme: str = 'classic'):
@@ -91,6 +93,7 @@ class ChessGame:
         
         # Образовательные компоненты
         self.educator = ChessEducator()
+        self.opening_book = OpeningBook()
         
         # Состояние игры
         self.move_history = []
@@ -807,6 +810,12 @@ class ChessGame:
                     
                     # Make the move and verify it was successful
                     if self.engine.make_move(uci_move):
+                        # Добавляем ход в дебютную книгу
+                        self.opening_book.add_move(uci_move)
+                        
+                        # Проверяем текущий дебют
+                        current_opening = self.opening_book.get_current_opening()
+                        
                         # Проверяем состояние игры после хода
                         is_over, reason = self.engine.is_game_over()
                         if is_over and reason and "мат" in reason:
@@ -845,6 +854,11 @@ class ChessGame:
                         self.move_feedback = f"Ход {annotated_move} выполнен"
                         self.move_feedback_time = time.time()
                         
+                        # Добавляем информацию о дебюте, если она есть
+                        if current_opening:
+                            opening_name, opening_info = current_opening
+                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
+                        
                         # Записываем время хода в статистику
                         move_time = time.time() - move_start_time
                         self.game_stats['move_times'].append(move_time)
@@ -882,7 +896,7 @@ class ChessGame:
                         if educational_tip:
                             self.move_feedback += f" | {educational_tip}"
                             self.move_feedback_time = current_time
-                            
+                        
                         # Special move messages
                         if self.special_move_messages:
                             self.move_feedback += f" | {self.special_move_messages[0]}"
@@ -1415,6 +1429,9 @@ class ChessGame:
         self.combo_counter = 0
         self.special_move_messages = []
         
+        # Reset opening book
+        self.opening_book.reset_sequence()
+        
         print("[INFO] Игра сброшена до начальной позиции")
 
         
@@ -1897,6 +1914,12 @@ class ChessGame:
                 # Валидация хода
                 if self.engine.is_move_correct(ai_move):
                     if self.engine.make_move(ai_move):
+                        # Добавляем ход в дебютную книгу
+                        self.opening_book.add_move(ai_move)
+                        
+                        # Проверяем текущий дебют
+                        current_opening = self.opening_book.get_current_opening()
+                        
                         self.move_history.append(ai_move)
                         self.game_stats['ai_moves'] += 1
                         
@@ -1933,6 +1956,11 @@ class ChessGame:
                             self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
                         else:
                             self.move_feedback = f"Ход компьютера: {annotated_move}"
+                        
+                        # Добавляем информацию о дебюте, если она есть
+                        if current_opening:
+                            opening_name, opening_info = current_opening
+                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
                         
                         # Преобразование UCI хода в координаты для выделения
                         from_col = ord(ai_move[0]) - ord('a')
