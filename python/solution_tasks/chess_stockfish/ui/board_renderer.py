@@ -58,9 +58,9 @@ class ResourceCache:
     """Кэш для pygame ресурсов (шрифты, поверхности)."""
     
     def __init__(self):
-        self.fonts: Dict[Tuple[str, int], pygame.font.Font] = {}
+        self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
         self.surfaces: Dict[Tuple, pygame.Surface] = {}
-        self.pieces: Dict[Tuple[str, Tuple], pygame.Surface] = {}
+        self.pieces: Dict[Tuple[str, Tuple[int, int, int], int], pygame.Surface] = {}
     
     def get_font(self, name: str, size: int, bold: bool = False) -> pygame.font.Font:
         """Получить или создать шрифт."""
