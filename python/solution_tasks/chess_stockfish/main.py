@@ -1,5 +1,85 @@
 #!/usr/bin/env python3
 """
+Main entry point for the chess game.
+"""
+
+from game.chess_game import ChessGame
+
+def run_chess_game():
+    """Запустить игру в шахматы."""
+    try:
+        print("Добро пожаловать в шахматы!")
+        print("Выберите настройки игры:")
+        
+        # Выбор цвета
+        while True:
+            color_choice = input("Выберите цвет (w - белые, b - чёрные): ").lower().strip()
+            if color_choice in ['w', 'b', 'white', 'black']:
+                player_color = 'white' if color_choice.startswith('w') else 'black'
+                break
+            print("Пожалуйста, введите 'w' для белых или 'b' для чёрных.")
+        
+        # Выбор уровня сложности
+        while True:
+            try:
+                skill_level = int(input("Выберите уровень сложности (0-20, по умолчанию 5): ") or "5")
+                if 0 <= skill_level <= 20:
+                    break
+                print("Уровень должен быть от 0 до 20.")
+            except ValueError:
+                print("Пожалуйста, введите число от 0 до 20.")
+        
+        # Выбор темы
+        themes = ['classic', 'dark', 'blue', 'green', 'contrast']
+        print("Доступные темы:", ", ".join(themes))
+        theme_choice = input("Выберите тему (по умолчанию classic): ").strip().lower()
+        if theme_choice not in themes:
+            theme_choice = 'classic'
+        
+        print(f"\nНастройки игры:")
+        print(f"  Цвет: {player_color}")
+        print(f"  Уровень сложности: {skill_level}")
+        print(f"  Тема: {theme_choice}")
+        print("\nГорячие клавиши:")
+        print("  ЛКМ - выбрать/сделать ход")
+        print("  ПКМ - снять выделение")
+        print("  ←/→ - навигация по ходам")
+        print("  R - новая игра")
+        print("  T - подсказка")
+        print("  A - анализ позиции")
+        print("  S - сохранить партию")
+        print("  L - загрузить партию")
+        print("  G - резюме игры")
+        print("  D - детальный анализ")
+        print("  ESC - выход")
+        print("\nНажмите Enter для начала игры...")
+        input()
+        
+        # Создаем и запускаем игру
+        game = ChessGame(player_color=player_color, skill_level=skill_level, theme=theme_choice)
+        stats = game.run()
+        print("\n" + "="*50)
+        print("Игра завершена. Статистика:")
+        print("="*50)
+        print(f"Всего ходов: {stats.get('total_moves', 0)}")
+        print(f"Взятий игрока: {stats.get('player_captures', 0)}")
+        print(f"Взятий компьютера: {stats.get('ai_captures', 0)}")
+        print(f"Шахов: {stats.get('check_count', 0)}")
+        print(f"Среднее время хода: {stats.get('avg_move_time', 0):.2f} сек")
+        if stats.get('duration', 0) > 0:
+            print(f"Длительность игры: {int(stats.get('duration', 0))} сек")
+        print(f"Результат: {stats.get('result', 'ongoing')}")
+        if stats.get('game_reason'):
+            print(f"Причина окончания: {stats.get('game_reason')}")
+        
+    except KeyboardInterrupt:
+        print("\n\nИгра прервана пользователем.")
+    except Exception as e:
+        print(f"\nОшибка при запуске игры: {e}")
+
+if __name__ == "__main__":
+    run_chess_game()
+"""
 chess_stockfish — Полнофункциональная шахматная игра со Stockfish
 
 Описание:

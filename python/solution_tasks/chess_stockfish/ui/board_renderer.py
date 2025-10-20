@@ -16,6 +16,8 @@ from typing import Optional, Tuple, List, Dict, Set, Union
 from dataclasses import dataclass
 from enum import Enum
 import logging
+import math
+import time
 
 # ============================================================================ #
 # Константы и конфигурация
@@ -268,25 +270,125 @@ class EffectRenderer:
 
     def draw_piece_with_shadow(self, piece: str, rect: pygame.Rect,
                                color: Tuple[int, int, int], font: pygame.font.Font):
-        """Фигура с тенью (рендерunicode через кэш)."""
+        """Фигура с тенью (рендерunicode через кэш). Улучшенная 3D визуализация."""
         piece_surface = self.cache.get_piece_surface(piece, color, font)
         if not piece_surface:
             return
 
-        # Shadow (slightly offset and darker)
-        try:
-            shadow_color = (30, 30, 30)
-            shadow_surface = self.cache.get_piece_surface(piece, shadow_color, font)
-        except Exception:
-            shadow_surface = None
+        # Create a more realistic 3D effect with gradient shadows and highlights
+        # Bottom layer (darkest shadow with blur effect)
+        shadow_offset = 4
+        shadow_color = (max(0, color[0] - 50), max(0, color[1] - 50), max(0, color[2] - 50))
+        
+        # Create a blurred shadow effect
+        shadow_surface = pygame.Surface((piece_surface.get_width() + 8, piece_surface.get_height() + 8), pygame.SRCALPHA)
+        shadow_rect = pygame.Rect(0, 0, shadow_surface.get_width(), shadow_surface.get_height())
+        
+        # Draw multiple layers of shadow with decreasing alpha for blur effect
+        for i in range(3):
+            alpha = max(0, 80 - i * 30)
+            temp_color = (shadow_color[0], shadow_color[1], shadow_color[2], alpha)
+            temp_rect = pygame.Rect(
+                shadow_offset - 1 + i, 
+                shadow_offset - 1 + i, 
+                shadow_rect.width - 2*i, 
+                shadow_rect.height - 2*i
+            )
+            if temp_rect.width > 0 and temp_rect.height > 0:
+                pygame.draw.ellipse(shadow_surface, temp_color, temp_rect)
+        
+        # Position the shadow
+        shadow_position = (rect.centerx - shadow_surface.get_width()//2 + shadow_offset, 
+                          rect.centery - shadow_surface.get_height()//2 + shadow_offset)
+        self.screen.blit(shadow_surface, shadow_position)
 
-        if shadow_surface:
-            shadow_rect = shadow_surface.get_rect(center=(rect.centerx + 3, rect.centery + 3))
-            self.screen.blit(shadow_surface, shadow_rect)
+        # Middle layer (medium shadow)
+        mid_shadow_offset = 2
+        mid_shadow_color = (max(0, color[0] - 25), max(0, color[1] - 25), max(0, color[2] - 25))
+        mid_shadow_surface = self.cache.get_piece_surface(piece, mid_shadow_color, font)
+        
+        if mid_shadow_surface:
+            mid_shadow_rect = mid_shadow_surface.get_rect(center=(rect.centerx + mid_shadow_offset, rect.centery + mid_shadow_offset))
+            self.screen.blit(mid_shadow_surface, mid_shadow_rect)
 
-        # Main piece (centered)
+        # Main piece (top layer, brightest)
         piece_rect = piece_surface.get_rect(center=rect.center)
         self.screen.blit(piece_surface, piece_rect)
+        
+        # Add realistic highlight for 3D effect
+        highlight_offset = 1
+        highlight_color = (min(255, color[0] + 40), min(255, color[1] + 40), min(255, color[2] + 40))
+        
+        # Create a highlight surface with gradient
+        highlight_surface = pygame.Surface((piece_surface.get_width() // 2, piece_surface.get_height() // 2), pygame.SRCALPHA)
+        highlight_radius = min(highlight_surface.get_width(), highlight_surface.get_height()) // 2
+        
+        # Draw gradient highlight
+        for i in range(highlight_radius, 0, -1):
+            alpha = int(150 * (i / highlight_radius))
+            temp_color = (highlight_color[0], highlight_color[1], highlight_color[2], alpha)
+            pygame.draw.circle(highlight_surface, temp_color, (highlight_surface.get_width() // 2, highlight_surface.get_height() // 3), i)
+        
+        # Position the highlight on the top-left of the piece
+        highlight_position = (piece_rect.left + piece_rect.width // 4 - highlight_offset,
+                             piece_rect.top + piece_rect.height // 6 - highlight_offset)
+        self.screen.blit(highlight_surface, highlight_position)
+        
+        # Add secondary highlight for more depth
+        secondary_highlight_color = (min(255, color[0] + 20), min(255, color[1] + 20), min(255, color[2] + 20), 100)
+        secondary_highlight = pygame.Surface((piece_surface.get_width() // 4, piece_surface.get_height() // 4), pygame.SRCALPHA)
+        pygame.draw.ellipse(secondary_highlight, secondary_highlight_color, secondary_highlight.get_rect())
+        secondary_position = (piece_rect.right - piece_rect.width // 3, piece_rect.top + piece_rect.height // 4)
+        self.screen.blit(secondary_highlight, secondary_position)
+
+    def draw_check_indicator(self, rect: pygame.Rect):
+        """
+        Рисует индикатор шаха вокруг короля. Улучшенная анимация.
+        
+        Параметры:
+            rect: Прямоугольник клетки с королем под шахом
+        """
+        # Рисуем пульсирующий красный круг вокруг короля с анимацией
+        center_x = rect.centerx
+        center_y = rect.centery
+        base_radius = min(rect.width, rect.height) // 2 + 8
+        
+        # Создаем поверхность для пульсации с анимацией
+        pulse_surface = pygame.Surface((base_radius * 3, base_radius * 3), pygame.SRCALPHA)
+        
+        # Получаем время для анимации пульсации
+        current_time = time.time()
+        
+        # Анимация пульсации
+        pulse_phase = (current_time * 3) % (2 * math.pi)
+        pulse_multiplier = 1 + 0.3 * abs(math.sin(pulse_phase))
+        
+        # Рисуем несколько концентрических кругов для эффекта пульсации
+        for i in range(5):
+            pulse_radius = int((base_radius - i * 3) * pulse_multiplier)
+            if pulse_radius > 0:
+                # Создаем градиентный эффект
+                alpha = max(0, 220 - i * 40)
+                color = (255, 50, 50, alpha)  # Более насыщенный красный
+                pygame.draw.circle(pulse_surface, color, (base_radius * 3 // 2, base_radius * 3 // 2), pulse_radius, 3)
+        
+        # Добавляем внутренний круг для большего эффекта
+        inner_radius = int(base_radius * 0.6 * pulse_multiplier)
+        pygame.draw.circle(pulse_surface, (255, 100, 100, 150), (base_radius * 3 // 2, base_radius * 3 // 2), inner_radius, 2)
+        
+        # Добавляем эффект свечения
+        glow_surface = pygame.Surface((base_radius * 4, base_radius * 4), pygame.SRCALPHA)
+        glow_radius = int(base_radius * 1.5 * pulse_multiplier)
+        for i in range(3):
+            glow_alpha = max(0, 80 - i * 30)
+            glow_color = (255, 0, 0, glow_alpha)
+            pygame.draw.circle(glow_surface, glow_color, (base_radius * 2, base_radius * 2), glow_radius - i * 2)
+        
+        # Рисуем свечение позади пульсации
+        self.screen.blit(glow_surface, (center_x - base_radius * 2, center_y - base_radius * 2))
+        
+        # Рисуем пульсацию
+        self.screen.blit(pulse_surface, (center_x - base_radius * 3 // 2, center_y - base_radius * 3 // 2))
 
     def draw_move_hint_dot(self, rect: pygame.Rect):
         """Точка-подсказка для возможного хода (с градиентом альфа)."""
@@ -470,6 +572,8 @@ class BoardRenderer:
         # Шах
         if square == self.check_square:
             self.effect_renderer.draw_highlight(rect, self.theme.check, HighlightStyle.GLOW)
+            # Дополнительно рисуем индикатор шаха
+            self.effect_renderer.draw_check_indicator(rect)
 
         # Подсказки
         if square in self.move_hints:
@@ -510,11 +614,15 @@ class BoardRenderer:
     def draw(self, board_state: List[List[Optional[str]]],
              evaluation: Optional[float] = None,
              thinking: bool = False,
-             mouse_pos: Optional[Tuple[int, int]] = None):
+             mouse_pos: Optional[Tuple[int, int]] = None,
+             move_count: int = 0,
+             capture_count: Tuple[int, int] = (0, 0),
+             check_count: int = 0):
         """
         Главный метод отрисовки.
 
         Рисуем только dirty squares (и инфо-панель).
+        Добавлены дополнительные визуальные индикаторы.
         """
         # Обновим hover (и пометим нужные клетки)
         self.update_hover(mouse_pos)
@@ -550,6 +658,45 @@ class BoardRenderer:
 
         # Информационная панель (рисуется полностью)
         self._draw_info_panel(evaluation, thinking)
+        
+        # Дополнительные визуальные индикаторы
+        self._draw_additional_indicators(move_count, capture_count, check_count)
+        
+    def _draw_additional_indicators(self, move_count: int, capture_count: Tuple[int, int], check_count: int):
+        """
+        Отрисовка дополнительных визуальных индикаторов.
+        
+        Параметры:
+            move_count: Количество сделанных ходов
+            capture_count: Кортеж (взятия игрока, взятия ИИ)
+            check_count: Количество шахов
+        """
+        try:
+            # Индикатор количества ходов
+            if move_count > 0:
+                moves_rect = pygame.Rect(220, BOARD_SIZE + 10, 100, 20)
+                moves_text = f"Ходы: {move_count}"
+                moves_surface = self.info_font.render(moves_text, True, (200, 200, 100))
+                self.screen.blit(moves_surface, moves_rect)
+            
+            # Индикатор взятий
+            player_captures, ai_captures = capture_count
+            if player_captures > 0 or ai_captures > 0:
+                captures_rect = pygame.Rect(220, BOARD_SIZE + 35, 150, 20)
+                captures_text = f"Взятия: {player_captures} vs {ai_captures}"
+                captures_color = (100, 200, 100) if player_captures >= ai_captures else (200, 100, 100)
+                captures_surface = self.info_font.render(captures_text, True, captures_color)
+                self.screen.blit(captures_surface, captures_rect)
+            
+            # Индикатор шахов
+            if check_count > 0:
+                checks_rect = pygame.Rect(380, BOARD_SIZE + 10, 100, 20)
+                checks_text = f"Шахи: {check_count}"
+                checks_surface = self.info_font.render(checks_text, True, (255, 100, 100))
+                self.screen.blit(checks_surface, checks_rect)
+                
+        except Exception as e:
+            logging.warning(f"Ошибка при отрисовке дополнительных индикаторов: {e}")
 
     def _draw_info_panel(self, evaluation: Optional[float], thinking: bool):
         """Отрисовка информационной панели внизу."""
@@ -566,6 +713,116 @@ class BoardRenderer:
         # Draw theme indicator
         theme_text = self.info_font.render(f"Тема: {getattr(self, '_current_theme', 'classic')}", True, (200, 200, 200))
         self.screen.blit(theme_text, (BOARD_SIZE - 150, BOARD_SIZE + 35))
+        
+    def _draw_progress_bar(self, rect: pygame.Rect, progress: float, color: Tuple[int, int, int] = (100, 200, 100)):
+        """
+        Отрисовка прогресс бара.
+        
+        Параметры:
+            rect: Прямоугольник для прогресс бара
+            progress: Прогресс от 0.0 до 1.0
+            color: Цвет прогресса
+        """
+        # Отрисовка фона
+        pygame.draw.rect(self.screen, (50, 50, 50), rect)
+        pygame.draw.rect(self.screen, (100, 100, 100), rect, 1)
+        
+        # Отрисовка прогресса
+        progress_width = int(rect.width * max(0, min(1, progress)))
+        if progress_width > 0:
+            progress_rect = pygame.Rect(rect.left, rect.top, progress_width, rect.height)
+            pygame.draw.rect(self.screen, color, progress_rect)
+            
+            # Добавляем градиентный эффект
+            for i in range(0, progress_width, 2):
+                alpha = int(100 * (1 - i / progress_width))
+                highlight_color = (min(255, color[0] + 50), min(255, color[1] + 50), min(255, color[2] + 50), alpha)
+                # Создаем временную поверхность для градиента
+                highlight_surf = pygame.Surface((2, rect.height), pygame.SRCALPHA)
+                highlight_surf.fill(highlight_color)
+                self.screen.blit(highlight_surf, (rect.left + i, rect.top))
+                
+    def _draw_status_indicator(self, rect: pygame.Rect, status: str, color: Tuple[int, int, int] = (200, 200, 200)):
+        """
+        Отрисовка индикатора статуса с иконкой.
+        
+        Параметры:
+            rect: Прямоугольник для индикатора
+            status: Текст статуса
+            color: Цвет текста
+        """
+        # Отрисовка фона с закругленными углами
+        pygame.draw.rect(self.screen, (40, 40, 40), rect, border_radius=5)
+        pygame.draw.rect(self.screen, (80, 80, 80), rect, 1, border_radius=5)
+        
+        # Отрисовка текста
+        if self.info_font:
+            text = self.info_font.render(status, True, color)
+            text_rect = text.get_rect(center=rect.center)
+            self.screen.blit(text, text_rect)
+            
+    def _draw_enhanced_feedback(self, feedback: str, rect: pygame.Rect, feedback_type: str = "info"):
+        """
+        Отрисовка улучшенной обратной связи с визуальными эффектами.
+        
+        Параметры:
+            feedback: Текст обратной связи
+            rect: Прямоугольник для отрисовки
+            feedback_type: Тип обратной связи ("info", "warning", "success", "error")
+        """
+        # Определяем цвета в зависимости от типа обратной связи
+        colors = {
+            "info": (100, 200, 255),      # Голубой
+            "warning": (255, 200, 100),   # Желтый
+            "success": (100, 255, 100),   # Зеленый
+            "error": (255, 100, 100)      # Красный
+        }
+        
+        color = colors.get(feedback_type, colors["info"])
+        
+        # Отрисовка фона с градиентом
+        pygame.draw.rect(self.screen, (30, 30, 30), rect, border_radius=8)
+        pygame.draw.rect(self.screen, color, rect, 2, border_radius=8)
+        
+        # Добавляем внутреннюю тень
+        inner_rect = pygame.Rect(rect.left + 2, rect.top + 2, rect.width - 4, rect.height - 4)
+        pygame.draw.rect(self.screen, (20, 20, 20), inner_rect, border_radius=6)
+        
+        # Отрисовка текста с тенью
+        if self.info_font:
+            # Тень
+            shadow_text = self.info_font.render(feedback, True, (0, 0, 0))
+            self.screen.blit(shadow_text, (rect.left + 15, rect.top + 10))
+            
+            # Основной текст
+            text = self.info_font.render(feedback, True, color)
+            self.screen.blit(text, (rect.left + 13, rect.top + 8))
+            
+        # Добавляем иконку в зависимости от типа обратной связи
+        icon_rect = pygame.Rect(rect.right - 25, rect.top + 5, 20, 20)
+        if feedback_type == "success":
+            # Зеленая галочка
+            pygame.draw.line(self.screen, color, (icon_rect.left + 5, icon_rect.centery), 
+                           (icon_rect.centerx - 2, icon_rect.bottom - 5), 3)
+            pygame.draw.line(self.screen, color, (icon_rect.centerx - 2, icon_rect.bottom - 5), 
+                           (icon_rect.right - 5, icon_rect.top + 5), 3)
+        elif feedback_type == "warning":
+            # Желтый восклицательный знак
+            pygame.draw.circle(self.screen, color, (icon_rect.centerx, icon_rect.top + 5), 3)
+            pygame.draw.line(self.screen, color, (icon_rect.centerx, icon_rect.top + 10), 
+                           (icon_rect.centerx, icon_rect.bottom - 5), 3)
+        elif feedback_type == "error":
+            # Красный крестик
+            pygame.draw.line(self.screen, color, (icon_rect.left + 5, icon_rect.top + 5), 
+                           (icon_rect.right - 5, icon_rect.bottom - 5), 3)
+            pygame.draw.line(self.screen, color, (icon_rect.right - 5, icon_rect.top + 5), 
+                           (icon_rect.left + 5, icon_rect.bottom - 5), 3)
+        else:  # info
+            # Синий кружок с i
+            pygame.draw.circle(self.screen, color, icon_rect.center, 8, 2)
+            pygame.draw.line(self.screen, color, (icon_rect.centerx, icon_rect.top + 6), 
+                           (icon_rect.centerx, icon_rect.bottom - 6), 2)
+            pygame.draw.circle(self.screen, color, (icon_rect.centerx, icon_rect.top + 4), 2)
 
     def cleanup(self):
         """Очистка ресурсов (кэш)."""
