@@ -184,6 +184,34 @@ class ChessGame:
         
         return valid_moves
 
+    def _is_path_blocked(self, from_row: int, from_col: int, to_row: int, to_col: int, board: List[List[Optional[str]]]) -> bool:
+        """
+        Проверить, заблокирован ли путь между двумя клетками.
+        
+        Параметры:
+            from_row (int): Исходный ряд
+            from_col (int): Исходная колонна
+            to_row (int): Целевой ряд
+            to_col (int): Целевая колонна
+            board (List[List[Optional[str]]]): Состояние доски
+            
+        Возвращает:
+            bool: True если путь заблокирован, False если свободен
+        """
+        # Determine direction
+        row_step = 0 if from_row == to_row else (1 if to_row > from_row else -1)
+        col_step = 0 if from_col == to_col else (1 if to_col > from_col else -1)
+        
+        # Check each square along the path (excluding start and end)
+        current_row, current_col = from_row + row_step, from_col + col_step
+        while current_row != to_row or current_col != to_col:
+            if board[current_row][current_col] is not None:
+                return True  # Path is blocked
+            current_row += row_step
+            current_col += col_step
+        
+        return False  # Path is clear
+    
     def _get_move_hint(self, from_row: int, from_col: int, to_row: int, to_col: int) -> str:
         """
         Получить подсказку о причине недопустимости хода.
@@ -204,6 +232,13 @@ class ChessGame:
             if not piece:
                 return "Нет фигуры на этой клетке"
             
+            piece_name = {
+                'P': 'белая пешка', 'N': 'белый конь', 'B': 'белый слон', 
+                'R': 'белая ладья', 'Q': 'белый ферзь', 'K': 'белый король',
+                'p': 'чёрная пешка', 'n': 'чёрный конь', 'b': 'чёрный слон', 
+                'r': 'чёрная ладья', 'q': 'чёрный ферзь', 'k': 'чёрный король'
+            }.get(piece, piece)
+            
             # Special hints for pawns
             if piece.lower() == 'p':
                 from_uci = self._fen_square_to_uci(from_row, from_col)
@@ -218,17 +253,84 @@ class ChessGame:
                     is_starting_position = (is_white and from_row == 6) or (not is_white and from_row == 1)
                     
                     if not is_starting_position:
-                        return "Пешка может двигаться на две клетки только со стартовой позиции"
+                        return f"{piece_name} может двигаться на две клетки только со стартовой позиции"
                 
                 # Check if moving backward
                 is_white = piece.isupper()
                 moving_forward = (is_white and to_row < from_row) or (not is_white and to_row > from_row)
                 
                 if not moving_forward:
-                    return "Пешка может двигаться только вперед"
+                    return f"{piece_name} может двигаться только вперёд"
+                
+                # Check if trying to capture forward (pawns capture diagonally)
+                if from_col == to_col and board[to_row][to_col] is not None:
+                    return f"{piece_name} не может взять фигуру, двигаясь вперёд. Пешки берут по диагонали!"
+                
+                # Check if trying to move diagonally without capturing
+                if from_col != to_col and board[to_row][to_col] is None:
+                    return f"{piece_name} может двигаться по диагонали только для взятия фигуры"
             
-            return "Недопустимый ход для этой фигуры"
-        except Exception:
+            # Special hints for other pieces
+            elif piece.lower() == 'n':  # Knight
+                # Knights move in L-shape, check if the move is valid for a knight
+                row_diff = abs(from_row - to_row)
+                col_diff = abs(from_col - to_col)
+                if not ((row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)):
+                    return f"{piece_name} ходит буквой Г (две клетки в одном направлении и одна в перпендикулярном)"
+            
+            elif piece.lower() == 'b':  # Bishop
+                # Bishops move diagonally, check if the move is diagonal
+                row_diff = abs(from_row - to_row)
+                col_diff = abs(from_col - to_col)
+                if row_diff != col_diff:
+                    return f"{piece_name} ходит только по диагонали"
+                
+                # Check if path is blocked
+                if self._is_path_blocked(from_row, from_col, to_row, to_col, board):
+                    return f"Путь для {piece_name} заблокирован другой фигурой"
+            
+            elif piece.lower() == 'r':  # Rook
+                # Rooks move horizontally or vertically
+                if from_row != to_row and from_col != to_col:
+                    return f"{piece_name} ходит только по горизонтали или вертикали"
+                
+                # Check if path is blocked
+                if self._is_path_blocked(from_row, from_col, to_row, to_col, board):
+                    return f"Путь для {piece_name} заблокирован другой фигурой"
+            
+            elif piece.lower() == 'q':  # Queen
+                # Queens move like bishops or rooks
+                row_diff = abs(from_row - to_row)
+                col_diff = abs(from_col - to_col)
+                
+                # Not diagonal, horizontal, or vertical
+                if not ((from_row == to_row) or (from_col == to_col) or (row_diff == col_diff)):
+                    return f"{piece_name} ходит по горизонтали, вертикали или диагонали"
+                
+                # Check if path is blocked
+                if self._is_path_blocked(from_row, from_col, to_row, to_col, board):
+                    return f"Путь для {piece_name} заблокирован другой фигурой"
+            
+            elif piece.lower() == 'k':  # King
+                # Kings move one square in any direction
+                row_diff = abs(from_row - to_row)
+                col_diff = abs(from_col - to_col)
+                if row_diff > 1 or col_diff > 1:
+                    return f"{piece_name} ходит только на одну клетку в любом направлении"
+                
+                # Special hint for castling
+                if row_diff == 0 and col_diff == 2:
+                    return f"Рокировка возможна только из начальной позиции и при определённых условиях"
+            
+            # Check if trying to capture own piece
+            target_piece = board[to_row][to_col]
+            if target_piece and ((piece.isupper() and target_piece.isupper()) or 
+                               (piece.islower() and target_piece.islower())):
+                return f"{piece_name} не может взять свою же фигуру"
+            
+            return f"Недопустимый ход для {piece_name}"
+        except Exception as e:
+            print(f"Ошибка при получении подсказки: {e}")
             return "Недопустимый ход"
 
     def handle_click(self, x: int, y: int):

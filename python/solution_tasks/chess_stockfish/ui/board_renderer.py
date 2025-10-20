@@ -42,6 +42,35 @@ class BoardTheme:
     white_piece: Tuple[int, int, int] = (255, 255, 255)
     black_piece: Tuple[int, int, int] = (0, 0, 0)
 
+# Predefined themes
+THEMES = {
+    'classic': BoardTheme(),
+    'dark': BoardTheme(
+        light_square=(100, 100, 120),
+        dark_square=(60, 60, 80),
+        white_piece=(240, 240, 240),
+        black_piece=(200, 200, 200)
+    ),
+    'blue': BoardTheme(
+        light_square=(169, 216, 255),
+        dark_square=(70, 130, 180),
+        white_piece=(255, 255, 255),
+        black_piece=(25, 25, 112)
+    ),
+    'green': BoardTheme(
+        light_square=(180, 220, 180),
+        dark_square=(100, 160, 100),
+        white_piece=(255, 255, 255),
+        black_piece=(0, 80, 0)
+    ),
+    'contrast': BoardTheme(
+        light_square=(255, 255, 255),
+        dark_square=(0, 0, 0),
+        white_piece=(200, 0, 0),
+        black_piece=(200, 200, 0)
+    )
+}
+
 
 class HighlightStyle(Enum):
     """Стили выделения клеток."""
