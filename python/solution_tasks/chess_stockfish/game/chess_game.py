@@ -40,13 +40,14 @@ class ChessGame:
         game_over (bool): Флаг окончания игры
     """
     
-    def __init__(self, player_color: str = 'white', skill_level: int = 5):
+    def __init__(self, player_color: str = 'white', skill_level: int = 5, theme: str = 'classic'):
         """
         Инициализация новой игры.
         
         Параметры:
             player_color (str): Выбранная сторона ('white' или 'black')
             skill_level (int): Уровень сложности Stockfish (0-20)
+            theme (str): Цветовая тема доски
             
         Исключения:
             RuntimeError: Если не удалось инициализировать Stockfish
@@ -54,6 +55,7 @@ class ChessGame:
         self.player_color = player_color
         self.ai_color = 'black' if player_color == 'white' else 'white'
         self.skill_level = skill_level
+        self.theme = theme
         
         try:
             self.engine = StockfishWrapper(skill_level=skill_level)
@@ -75,6 +77,7 @@ class ChessGame:
         
         # Создаём рендерер (шрифты инициализируются автоматически)
         self.renderer = BoardRenderer(self.screen, player_color)
+        self.renderer.set_theme(theme)
         self.clock = pygame.time.Clock()
         self.running = True
         
