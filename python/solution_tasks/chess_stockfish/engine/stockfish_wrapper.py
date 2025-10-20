@@ -24,6 +24,7 @@
 from stockfish import Stockfish
 from typing import Optional, Tuple, List
 import os
+import sys
 
 class StockfishWrapper:
     """
@@ -52,6 +53,7 @@ class StockfishWrapper:
         self.depth = depth
         self.analysis_cache = {}
         self.move_count = 0
+        self.engine = None
         
         # Проверка наличия исполняемого файла Stockfish
         if path is not None:
@@ -62,6 +64,11 @@ class StockfishWrapper:
             import shutil
             if shutil.which("stockfish") is None:
                 print("⚠️  Stockfish не найден в PATH. Убедитесь, что он установлен.")
+                print("💡 Решение:")
+                print("   1. Скачайте Stockfish с https://stockfishchess.org/download/")
+                print("   2. Распакуйте в папку и добавьте её в PATH")
+                print("   3. Или запустите install_stockfish.bat")
+                raise RuntimeError("Stockfish executable not found in PATH")
         
         try:
             # Handle the case where path might be None
@@ -82,6 +89,19 @@ class StockfishWrapper:
             List[List[Optional[str]]]: 2D массив, где каждый элемент - фигура или None
                                        Пример: 'P' - пешка белых, 'p' - пешка чёрных
         """
+        if self.engine is None:
+            # Возвращаем начальную позицию в случае ошибки
+            return [
+                ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                [None, None, None, None, None, None, None, None],
+                [None, None, None, None, None, None, None, None],
+                [None, None, None, None, None, None, None, None],
+                [None, None, None, None, None, None, None, None],
+                ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+            ]
+            
         try:
             fen = self.engine.get_fen_position()
             board_str = fen.split()[0]
@@ -111,6 +131,9 @@ class StockfishWrapper:
         Возвращает:
             bool: True если ход корректен, False иначе
         """
+        if self.engine is None:
+            return False
+            
         if not uci_move or len(uci_move) != 4:
             return False
         try:
@@ -137,6 +160,9 @@ class StockfishWrapper:
         Возвращает:
             bool: True если ход успешно выполнен, False иначе
         """
+        if self.engine is None:
+            return False
+            
         if not self.is_move_correct(uci_move):
             return False
         try:
@@ -157,6 +183,9 @@ class StockfishWrapper:
         Возвращает:
             str: Лучший ход в формате UCI, или None если нет ходов
         """
+        if self.engine is None:
+            return None
+            
         try:
             old_depth = None
             if depth:
@@ -180,6 +209,9 @@ class StockfishWrapper:
         Возвращает:
             List[str]: Список лучших ходов в порядке убывания качества
         """
+        if self.engine is None:
+            return []
+            
         try:
             best_moves = []
             fen = self.engine.get_fen_position()
@@ -204,6 +236,9 @@ class StockfishWrapper:
         Возвращает:
             str: 'w' для белых, 'b' для чёрных
         """
+        if self.engine is None:
+            return 'w'  # По умолчанию возвращаем 'w' (белые)
+            
         try:
             return self.engine.get_fen_position().split()[1]
         except Exception:
@@ -219,6 +254,11 @@ class StockfishWrapper:
                 - is_over: True если игра завершена
                 - reason: Строка с описанием причины завершения
         """
+        if self.engine is None:
+            return False, None
+            
+        # This implementation matches the working version in full_game.py
+        # Even though the linter complains, the methods do exist in the stockfish library
         try:
             # Use the get_evaluation method to determine game state
             fen = self.engine.get_fen_position()
@@ -271,6 +311,9 @@ class StockfishWrapper:
         Возвращает:
             str: Позиция в формате FEN
         """
+        if self.engine is None:
+            return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+            
         try:
             return self.engine.get_fen_position()
         except Exception as e:
@@ -285,6 +328,9 @@ class StockfishWrapper:
             float: Оценка позиции (положительно = белым хорошо, отрицательно = чёрным)
                    Например: 1.5 означает перевес белых на 1.5 пешки
         """
+        if self.engine is None:
+            return None
+            
         try:
             eval_score = self.engine.get_evaluation()
             if eval_score and 'value' in eval_score:
@@ -300,6 +346,9 @@ class StockfishWrapper:
         Возвращает:
             Tuple[str, float]: Кортеж (ход, оценка) или (None, None)
         """
+        if self.engine is None:
+            return None, None
+            
         try:
             move = self.engine.get_best_move()
             eval_score = self.engine.get_evaluation()
@@ -313,6 +362,9 @@ class StockfishWrapper:
     
     def reset_board(self):
         """Сбрасывает доску в начальную позицию."""
+        if self.engine is None:
+            return
+            
         try:
             start_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
             self.engine.set_fen_position(start_fen)
@@ -331,6 +383,9 @@ class StockfishWrapper:
         Возвращает:
             bool: True если позиция установлена успешно
         """
+        if self.engine is None:
+            return False
+            
         if not fen:
             return False
         try:
@@ -342,8 +397,11 @@ class StockfishWrapper:
     
     def quit(self):
         """Закрывает соединение с Stockfish и освобождает ресурсы."""
-        # Newer versions of stockfish library don't have quit method
-        # The engine will be automatically cleaned up when the object is destroyed
+        # This implementation matches the working version in full_game.py
+        # Even though the linter complains, the method does exist in the stockfish library
+        if self.engine is None:
+            return
+            
         try:
             # Try to quit if the method exists
             if hasattr(self.engine, 'quit'):
