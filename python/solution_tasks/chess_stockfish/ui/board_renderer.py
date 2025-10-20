@@ -243,6 +243,38 @@ class EffectRenderer:
             radius = max(1, 8 - i)
             pygame.draw.circle(self.screen, (0, 0, 255, alpha), center, radius)
         pygame.draw.circle(self.screen, (255, 255, 255), center, 8, 2)
+    
+    def draw_evaluation_bar(self, rect: pygame.Rect, evaluation: float):
+        """Отрисовка полосы оценки позиции."""
+        # Draw background
+        pygame.draw.rect(self.screen, (50, 50, 50), rect)
+        pygame.draw.rect(self.screen, (100, 100, 100), rect, 1)
+        
+        # Clamp evaluation to reasonable range
+        clamped_eval = max(-10.0, min(10.0, evaluation))
+        
+        # Calculate white advantage (0 to 1)
+        white_advantage = (clamped_eval + 10.0) / 20.0
+        
+        # Draw white advantage bar
+        white_width = int(rect.width * white_advantage)
+        white_rect = pygame.Rect(rect.left, rect.top, white_width, rect.height)
+        pygame.draw.rect(self.screen, (255, 255, 255), white_rect)
+        
+        # Draw center marker
+        center_x = rect.left + rect.width // 2
+        pygame.draw.line(self.screen, (200, 200, 200), 
+                        (center_x, rect.top), 
+                        (center_x, rect.bottom), 1)
+        
+        # Draw evaluation text
+        if abs(evaluation) > 0.1:
+            font = pygame.font.SysFont('Arial', 12, bold=True)
+            eval_text = f"{evaluation:+.1f}"
+            text_color = (100, 255, 100) if evaluation > 0 else (255, 100, 100) if evaluation < 0 else (200, 200, 200)
+            text_surface = font.render(eval_text, True, text_color)
+            text_rect = text_surface.get_rect(center=rect.center)
+            self.screen.blit(text_surface, text_rect)
 
 
 # ============================================================================
@@ -459,15 +491,19 @@ class BoardRenderer:
     
     def _draw_info_panel(self, evaluation: Optional[float], thinking: bool):
         """Отрисовка информационной панели."""
+        # Draw evaluation bar
         if evaluation is not None:
-            eval_text = f"Оценка: {evaluation:+.1f}"
-            color = (100, 255, 100) if evaluation > 0 else (255, 100, 100)
-            text_surface = self.info_font.render(eval_text, True, color)
-            self.screen.blit(text_surface, (10, BOARD_SIZE + 10))
+            eval_bar_rect = pygame.Rect(10, BOARD_SIZE + 10, 200, 20)
+            self.effect_renderer.draw_evaluation_bar(eval_bar_rect, evaluation)
         
+        # Draw thinking indicator
         if thinking:
             thinking_text = self.info_font.render("⟳ Думаю...", True, (255, 200, 0))
             self.screen.blit(thinking_text, (BOARD_SIZE - 150, BOARD_SIZE + 10))
+        
+        # Draw theme indicator
+        theme_text = self.info_font.render(f"Тема: {getattr(self, '_current_theme', 'classic')}", True, (200, 200, 200))
+        self.screen.blit(theme_text, (BOARD_SIZE - 150, BOARD_SIZE + 35))
     
     def cleanup(self):
         """Очистка ресурсов."""
