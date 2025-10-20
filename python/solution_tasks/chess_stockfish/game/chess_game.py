@@ -183,7 +183,54 @@ class ChessGame:
                     valid_moves.append((to_row, to_col))
         
         return valid_moves
-    
+
+    def _get_move_hint(self, from_row: int, from_col: int, to_row: int, to_col: int) -> str:
+        """
+        Получить подсказку о причине недопустимости хода.
+        
+        Параметры:
+            from_row (int): Исходный ряд
+            from_col (int): Исходная колонна
+            to_row (int): Целевой ряд
+            to_col (int): Целевая колонна
+            
+        Возвращает:
+            str: Подсказка о причине недопустимости хода
+        """
+        try:
+            board = self.engine.get_board_state()
+            piece = board[from_row][from_col]
+            
+            if not piece:
+                return "Нет фигуры на этой клетке"
+            
+            # Special hints for pawns
+            if piece.lower() == 'p':
+                from_uci = self._fen_square_to_uci(from_row, from_col)
+                to_uci = self._fen_square_to_uci(to_row, to_col)
+                uci_move = from_uci + to_uci
+                
+                # Check if it's a pawn trying to move two squares from non-starting position
+                if abs(from_row - to_row) == 2:
+                    # White pawn starting position is row 6 in FEN (rank 2)
+                    # Black pawn starting position is row 1 in FEN (rank 7)
+                    is_white = piece.isupper()
+                    is_starting_position = (is_white and from_row == 6) or (not is_white and from_row == 1)
+                    
+                    if not is_starting_position:
+                        return "Пешка может двигаться на две клетки только со стартовой позиции"
+                
+                # Check if moving backward
+                is_white = piece.isupper()
+                moving_forward = (is_white and to_row < from_row) or (not is_white and to_row > from_row)
+                
+                if not moving_forward:
+                    return "Пешка может двигаться только вперед"
+            
+            return "Недопустимый ход для этой фигуры"
+        except Exception:
+            return "Недопустимый ход"
+
     def handle_click(self, x: int, y: int):
         """
         Обработка клика по доске для выбора и перемещения фигур.
@@ -259,7 +306,9 @@ class ChessGame:
                     print(f"❌ Некорректный ход: {uci_move}")
                     self.renderer.set_selected(None)
                     self.renderer.set_move_hints([])
-                    self.move_feedback = "Некорректный ход"
+                    # Provide specific feedback about why the move is invalid
+                    hint = self._get_move_hint(from_sq[0], from_sq[1], row, col)
+                    self.move_feedback = hint
                     self.move_feedback_time = time.time()
             except Exception as e:
                 print(f"⚠️  Ошибка при обработке хода: {e}")
