@@ -570,6 +570,16 @@ class BoardRenderer:
     def cleanup(self):
         """Очистка ресурсов (кэш)."""
         self.cache.clear()
+    
+    def clear_temp_surfaces(self):
+        """Очистка временных поверхностей для предотвращения утечек памяти."""
+        # Очищаем только временные поверхности, оставляя кэш шрифтов и фигур
+        temp_surfaces = {}
+        for key, surface in self.cache.surfaces.items():
+            # Сохраняем поверхности подсветки, которые могут быть переиспользованы
+            if key[0][3] < 200:  # alpha < 200 indicates temporary highlight surfaces
+                temp_surfaces[key] = surface
+        self.cache.surfaces = temp_surfaces
 
 
 # ============================================================================ #

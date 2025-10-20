@@ -55,6 +55,8 @@ class StockfishWrapper:
         self.analysis_cache = {}
         self.board_state_cache = None
         self.board_state_cache_fen = None
+        self.evaluation_cache = None
+        self.evaluation_cache_fen = None
         self.move_count = 0
         self.engine = None
         
@@ -185,6 +187,8 @@ class StockfishWrapper:
             # Clear cache after making a move
             self.board_state_cache = None
             self.board_state_cache_fen = None
+            self.evaluation_cache = None
+            self.evaluation_cache_fen = None
             return True
         except Exception as e:
             print(f"⚠️  Ошибка при выполнении хода {uci_move}: {e}")
@@ -349,9 +353,19 @@ class StockfishWrapper:
             return None
             
         try:
+            # Check cache first
+            if self.evaluation_cache is not None and self.evaluation_cache_fen is not None:
+                current_fen = self.engine.get_fen_position()
+                if current_fen == self.evaluation_cache_fen:
+                    return self.evaluation_cache
+            
             eval_score = self.engine.get_evaluation()
             if eval_score and 'value' in eval_score:
-                return eval_score['value'] / 100.0
+                evaluation = eval_score['value'] / 100.0
+                # Update cache
+                self.evaluation_cache = evaluation
+                self.evaluation_cache_fen = self.engine.get_fen_position()
+                return evaluation
         except Exception:
             pass
         return None

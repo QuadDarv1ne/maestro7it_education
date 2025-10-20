@@ -31,15 +31,18 @@ class GameStatistics:
     Сохраняет информацию о сыгранных партиях для дальнейшего анализа.
     """
     
-    def __init__(self, stats_file: str = 'game_stats.json'):
+    def __init__(self, stats_file: str = 'game_stats.json', max_games: int = 1000):
         """
         Инициализация статистики.
         
         Параметры:
             stats_file (str): Путь к файлу со статистикой
+            max_games (int): Максимальное количество игр для хранения
         """
         self.stats_file = stats_file
+        self.max_games = max_games
         self.stats = self._load_stats()
+        self._trim_old_games()
     
     def _load_stats(self) -> dict:
         """
@@ -91,6 +94,7 @@ class GameStatistics:
             # Если игра не завершена, считаем поражением
             self.stats['total_losses'] += 1
         
+        self._trim_old_games()
         self._save_stats()
     
     def _save_stats(self):
@@ -220,6 +224,15 @@ class GameStatistics:
                 level_stats[level]['avg_moves'] = 0
         
         return level_stats
+    
+    def _trim_old_games(self):
+        """
+        Удалить старые игры, если их больше max_games.
+        """
+        if len(self.stats['games']) > self.max_games:
+            # Сортируем по времени и оставляем только последние max_games игр
+            sorted_games = sorted(self.stats['games'], key=lambda x: x['timestamp'], reverse=True)
+            self.stats['games'] = sorted_games[:self.max_games]
     
     def clear_stats(self):
         """Очистить всю статистику."""
