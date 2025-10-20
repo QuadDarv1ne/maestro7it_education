@@ -118,11 +118,20 @@ def main_menu() -> Tuple[str, int]:
         except ValueError:
             print("❌ Пожалуйста, введите число от 0 до 20")
     
+    # Выбор темы
+    print("\n🎨 Доступные темы: classic, dark, blue, green, contrast")
+    theme_input = input("Выберите тему (по умолчанию classic): ").strip().lower()
+    if theme_input in ('classic', 'dark', 'blue', 'green', 'contrast'):
+        theme = theme_input
+    else:
+        theme = 'classic'
+    
     # Подтверждение
     print(f"\n✅ Игра начинается:")
     print(f"   Вы: {player_color.upper()}")
     print(f"   ПК: {('BLACK' if player_color == 'white' else 'WHITE')}")
     print(f"   Уровень: {level}/20")
+    print(f"   Тема: {theme}")
     print(f"\n{'='*70}\n")
     
-    return player_color, level
+    return player_color, level, theme
