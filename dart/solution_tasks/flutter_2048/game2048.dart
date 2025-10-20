@@ -15,12 +15,21 @@ class Game2048 extends ChangeNotifier {
   int _bestScore = 0;
   bool _isGameOver = false;
   bool _hasWon = false;
+  bool _isMoving = false; // Track if a move is in progress
+
+  // Animation tracking
+  List<List<bool>> _mergedTiles = List.generate(
+    _gridSize,
+    (_) => List.filled(_gridSize, false),
+  );
 
   List<List<int>> get grid => _grid;
   int get score => _score;
   int get bestScore => _bestScore;
   bool get isGameOver => _isGameOver;
   bool get hasWon => _hasWon;
+  bool get isMoving => _isMoving;
+  List<List<bool>> get mergedTiles => _mergedTiles;
 
   Game2048() {
     _loadGame();
@@ -107,14 +116,19 @@ class Game2048 extends ChangeNotifier {
   }
 
   void move(Direction direction) {
-    if (_isGameOver || _hasWon) return;
+    if (_isGameOver || _hasWon || _isMoving) return;
+
+    _isMoving = true;
+    // Reset merged tiles tracking
+    _mergedTiles = List.generate(_gridSize, (_) => List.filled(_gridSize, false));
+    notifyListeners();
 
     final newGrid = List.generate(_gridSize, (_) => List.filled(_gridSize, 0));
     bool moved = false;
 
     for (int i = 0; i < _gridSize; i++) {
       final List<int> row = _getRow(direction, i);
-      final List<int> mergedRow = _mergeRow(row);
+      final List<int> mergedRow = _mergeRow(row, direction, i); // Pass direction and index for tracking
 
       if (row.toString() != mergedRow.toString()) {
         moved = true;
@@ -125,8 +139,16 @@ class Game2048 extends ChangeNotifier {
 
     if (moved) {
       _grid = newGrid;
-      _addNewTile();
-      _checkGameState();
+      // Delay adding new tile to allow animations to complete
+      Future.delayed(Duration(milliseconds: 150), () {
+        _addNewTile();
+        _checkGameState();
+        _isMoving = false;
+        notifyListeners();
+      });
+    } else {
+      _isMoving = false;
+      notifyListeners();
     }
   }
 
@@ -169,10 +191,11 @@ class Game2048 extends ChangeNotifier {
     }
   }
 
-  List<int> _mergeRow(List<int> row) {
+  List<int> _mergeRow(List<int> row, Direction direction, int index) {
     final nonZero = row.where((num) => num != 0).toList();
     final merged = <int>[];
     bool skipNext = false;
+    List<int> positions = []; // Track original positions of merged tiles
 
     for (int i = 0; i < nonZero.length; i++) {
       if (skipNext) {
@@ -183,13 +206,41 @@ class Game2048 extends ChangeNotifier {
       if (i < nonZero.length - 1 && nonZero[i] == nonZero[i + 1]) {
         merged.add(nonZero[i] * 2);
         _score += nonZero[i] * 2;
+        // Mark the position of the merged tile
+        positions.add(merged.length - 1);
         skipNext = true;
       } else {
         merged.add(nonZero[i]);
+        positions.add(merged.length - 1);
       }
     }
 
-    return merged..addAll(List.filled(_gridSize - merged.length, 0));
+    // Fill remaining positions with zeros
+    final result = merged..addAll(List.filled(_gridSize - merged.length, 0));
+
+    // Update merged tiles tracking based on direction
+    for (int i = 0; i < positions.length; i++) {
+      int pos = positions[i];
+      if (nonZero.length > 0 && i < nonZero.length - 1 && nonZero[i] == nonZero[i + 1]) {
+        // Mark merged tile position
+        switch (direction) {
+          case Direction.up:
+            if (pos < _gridSize) _mergedTiles[pos][index] = true;
+            break;
+          case Direction.down:
+            if (pos < _gridSize) _mergedTiles[_gridSize - 1 - pos][index] = true;
+            break;
+          case Direction.left:
+            if (pos < _gridSize) _mergedTiles[index][pos] = true;
+            break;
+          case Direction.right:
+            if (pos < _gridSize) _mergedTiles[index][_gridSize - 1 - pos] = true;
+            break;
+        }
+      }
+    }
+
+    return result;
   }
 
   void reset() {
@@ -197,6 +248,8 @@ class Game2048 extends ChangeNotifier {
     _score = 0;
     _isGameOver = false;
     _hasWon = false;
+    _isMoving = false;
+    _mergedTiles = List.generate(_gridSize, (_) => List.filled(_gridSize, false));
     _addNewTile();
     _addNewTile();
     notifyListeners();

@@ -94,6 +94,8 @@ class ChessGame:
         self.game_over_reason = None
         self.last_move_time = 0
         self.ai_move_delay = 0.7  # Задержка перед ходом ИИ для реалистичности
+        self.move_feedback = ""  # Feedback message for the player
+        self.move_feedback_time = 0
     
     def _coord_to_fen_square(self, x: int, y: int) -> Optional[Tuple[int, int]]:
         """
@@ -160,6 +162,30 @@ class ChessGame:
         is_white = piece.isupper()
         return (self.player_color == 'white') == is_white
     
+    def _get_valid_moves(self, from_row: int, from_col: int) -> List[Tuple[int, int]]:
+        """
+        Получить список допустимых ходов для фигуры на заданной позиции.
+        
+        Параметры:
+            from_row (int): Ряд фигуры
+            from_col (int): Колонна фигуры
+            
+        Возвращает:
+            List[Tuple[int, int]]: Список допустимых позиций для хода
+        """
+        valid_moves = []
+        from_uci = self._fen_square_to_uci(from_row, from_col)
+        
+        # Для каждой возможной целевой позиции проверяем допустимость хода
+        for to_row in range(8):
+            for to_col in range(8):
+                to_uci = self._fen_square_to_uci(to_row, to_col)
+                uci_move = from_uci + to_uci
+                if self.engine.is_move_correct(uci_move):
+                    valid_moves.append((to_row, to_col))
+        
+        return valid_moves
+    
     def handle_click(self, x: int, y: int):
         """
         Обработка клика по доске для выбора и перемещения фигур.
@@ -173,6 +199,9 @@ class ChessGame:
         
         coords = self._coord_to_fen_square(x, y)
         if coords is None:
+            # Клик вне доски - очищаем выделение и подсказки
+            self.renderer.clear_selected()
+            self.renderer.clear_move_hints()
             return
         
         row, col = coords
@@ -185,15 +214,29 @@ class ChessGame:
         piece = board[row][col]
         
         # Выбор фигуры
-        if self._is_player_piece(piece):
+        if self._is_player_piece(piece) and piece is not None:
             self.renderer.set_selected((row, col))
+            # Показываем подсказки возможных ходов
+            valid_moves = self._get_valid_moves(row, col)
+            self.renderer.set_move_hints(valid_moves)
+            # Provide feedback about the selected piece
+            piece_name = {
+                'P': 'пешка', 'N': 'конь', 'B': 'слон', 'R': 'ладья', 
+                'Q': 'ферзь', 'K': 'король', 'p': 'пешка', 'n': 'конь', 
+                'b': 'слон', 'r': 'ладья', 'q': 'ферзь', 'k': 'король'
+            }.get(piece, piece)
+            self.move_feedback = f"Выбрана {piece_name}"
+            self.move_feedback_time = time.time()
         # Перемещение выбранной фигуры
         elif self.renderer.selected_square:
             from_sq = self.renderer.selected_square
             to_sq = (row, col)
             
-            uci_move = (self._fen_square_to_uci(*from_sq) + 
-                       self._fen_square_to_uci(*to_sq))
+            from_uci = self._fen_square_to_uci(*from_sq)
+            to_uci = self._fen_square_to_uci(*to_sq)
+            uci_move = from_uci + to_uci
+            
+            print(f"Попытка хода: {uci_move} (из {from_sq} в {to_sq})")
             
             try:
                 # Validate the move using our improved method
@@ -203,16 +246,33 @@ class ChessGame:
                         self.move_history.append(uci_move)
                         self.renderer.set_last_move(from_sq, to_sq)
                         self.renderer.clear_selected()
+                        self.renderer.clear_move_hints()
                         self.last_move_time = time.time()
+                        print(f"Ход выполнен: {uci_move}")
+                        self.move_feedback = f"Ход {uci_move} выполнен"
+                        self.move_feedback_time = time.time()
                     else:
                         print("❌ Не удалось выполнить ход")
                         self.renderer.clear_selected()
+                        self.renderer.clear_move_hints()
+                        self.move_feedback = "Не удалось выполнить ход"
+                        self.move_feedback_time = time.time()
                 else:
-                    print("❌ Некорректный ход")
+                    print(f"❌ Некорректный ход: {uci_move}")
                     self.renderer.clear_selected()
+                    self.renderer.clear_move_hints()
+                    self.move_feedback = "Некорректный ход"
+                    self.move_feedback_time = time.time()
             except Exception as e:
                 print(f"⚠️  Ошибка при обработке хода: {e}")
                 self.renderer.clear_selected()
+                self.renderer.clear_move_hints()
+                self.move_feedback = "Ошибка при выполнении хода"
+                self.move_feedback_time = time.time()
+        else:
+            # Клик по пустой клетке без выбранной фигуры - очищаем выделение
+            self.renderer.clear_selected()
+            self.renderer.clear_move_hints()
     
     def handle_ai_move(self):
         """
@@ -234,6 +294,7 @@ class ChessGame:
             ai_move = self.engine.get_best_move(depth=depth)
             
             if ai_move:
+                print(f"Ход компьютера: {ai_move}")
                 # Validate the move before making it
                 if self.engine.is_move_correct(ai_move):
                     if self.engine.make_move(ai_move):
@@ -246,14 +307,25 @@ class ChessGame:
                         to_row = 8 - int(ai_move[3])
                         self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
                         self.last_move_time = time.time()
+                        print(f"Ход компьютера выполнен: {ai_move}")
+                        self.move_feedback = f"Ход компьютера: {ai_move}"
+                        self.move_feedback_time = time.time()
                     else:
                         print("⚠️  Не удалось выполнить ход компьютера")
+                        self.move_feedback = "Не удалось выполнить ход компьютера"
+                        self.move_feedback_time = time.time()
                 else:
                     print("⚠️  Компьютер предложил некорректный ход")
+                    self.move_feedback = "Компьютер предложил некорректный ход"
+                    self.move_feedback_time = time.time()
             else:
                 print("⚠️  Компьютер не смог найти ход")
+                self.move_feedback = "Компьютер не смог найти ход"
+                self.move_feedback_time = time.time()
         except Exception as e:
             print(f"⚠️  Ошибка при получении хода компьютера: {e}")
+            self.move_feedback = "Ошибка при получении хода компьютера"
+            self.move_feedback_time = time.time()
         finally:
             self.thinking = False
     
@@ -269,6 +341,8 @@ class ChessGame:
             if is_over:
                 self.game_over = True
                 self.game_over_reason = reason
+                self.move_feedback = reason
+                self.move_feedback_time = time.time()
                 return True
         except Exception as e:
             print(f"⚠️  Ошибка при проверке состояния игры: {e}")
@@ -310,6 +384,16 @@ class ChessGame:
                     # Уровень сложности
                     level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
                     self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
+                    
+                    # Подсказка
+                    hint_text = SMALL_FONT.render("Подсказка: Кликните по фигуре для показа возможных ходов", True, (150, 150, 150))
+                    self.screen.blit(hint_text, (20, BOARD_SIZE + 75))
+                    
+                    # Move feedback (show for 3 seconds)
+                    if self.move_feedback and time.time() - self.move_feedback_time < 3:
+                        feedback_color = (255, 255, 100)  # Yellow feedback
+                        feedback_text = SMALL_FONT.render(self.move_feedback, True, feedback_color)
+                        self.screen.blit(feedback_text, (BOARD_SIZE // 2 - feedback_text.get_width() // 2, BOARD_SIZE + 30))
         except Exception as e:
             print(f"⚠️  Ошибка при отрисовке интерфейса: {e}")
     
@@ -344,6 +428,19 @@ class ChessGame:
                 'game_reason': self.game_over_reason
             }
     
+    def reset_game(self):
+        """Сбросить игру к начальному состоянию."""
+        print("🔄 Новая игра...")
+        # Сохраняем статистику перед сбросом
+        try:
+            stats = self.get_game_stats()
+            # Здесь можно сохранить статистику, если нужно
+        except Exception as e:
+            print(f"⚠️  Ошибка при сохранении статистики перед сбросом: {e}")
+        
+        # Переинициализируем игру с теми же параметрами
+        self.__init__(self.player_color, self.skill_level)
+    
     def run(self):
         """
         Запустить основной цикл игры.
@@ -370,8 +467,7 @@ class ChessGame:
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_r:
                             # Перезагрузка игры
-                            print("🔄 Новая игра...")
-                            self.__init__(self.player_color, self.skill_level)
+                            self.reset_game()
                         elif event.key == pygame.K_ESCAPE:
                             self.running = False
                 
@@ -394,7 +490,8 @@ class ChessGame:
                 self.clock.tick(60)
             except Exception as e:
                 print(f"⚠️  Критическая ошибка в игровом цикле: {e}")
-                self.running = False
+                # Не завершаем игру полностью, а пытаемся продолжить
+                continue
         
         # Очистка при выходе
         try:

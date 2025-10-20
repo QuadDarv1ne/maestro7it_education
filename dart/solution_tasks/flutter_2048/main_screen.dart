@@ -3,7 +3,33 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'game2048.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
+  @override
+  _MainScreenState createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final game = Provider.of<Game2048>(context);
@@ -32,7 +58,20 @@ class MainScreen extends StatelessWidget {
                 Column(
                   children: [
                     Text('Счет', style: TextStyle(fontSize: 16)),
-                    Text('${game.score}', style: TextStyle(fontSize: 24)),
+                    AnimatedSwitcher(
+                      duration: Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) {
+                        return ScaleTransition(
+                          scale: animation,
+                          child: child,
+                        );
+                      },
+                      child: Text(
+                        '${game.score}',
+                        key: ValueKey<int>(game.score),
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ],
                 ),
                 Column(
@@ -48,34 +87,62 @@ class MainScreen extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(16),
               child: GestureDetector(
+                onVerticalDragUpdate: (details) {
+                  // Visual feedback during drag
+                  if (details.delta.dy.abs() > details.delta.dx.abs()) {
+                    if (!_animationController.isAnimating) {
+                      _animationController.forward();
+                    }
+                  }
+                },
                 onVerticalDragEnd: (details) {
-                  if (details.primaryVelocity! < 0) {
+                  _animationController.reverse();
+                  if (details.primaryVelocity! < -500) {
                     game.move(Direction.up);
-                  } else if (details.primaryVelocity! > 0) {
+                  } else if (details.primaryVelocity! > 500) {
                     game.move(Direction.down);
                   }
                 },
+                onHorizontalDragUpdate: (details) {
+                  // Visual feedback during drag
+                  if (details.delta.dx.abs() > details.delta.dy.abs()) {
+                    if (!_animationController.isAnimating) {
+                      _animationController.forward();
+                    }
+                  }
+                },
                 onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity! < 0) {
+                  _animationController.reverse();
+                  if (details.primaryVelocity! < -500) {
                     game.move(Direction.left);
-                  } else if (details.primaryVelocity! > 0) {
+                  } else if (details.primaryVelocity! > 500) {
                     game.move(Direction.right);
                   }
                 },
-                child: GridView.builder(
-                  physics: NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                  ),
-                  itemCount: 16,
-                  itemBuilder: (context, index) {
-                    int x = index ~/ 4;
-                    int y = index % 4;
-                    int number = game.grid[x][y];
-                    return Tile(number: number);
+                child: AnimatedBuilder(
+                  animation: _scaleAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _scaleAnimation.value,
+                      child: child,
+                    );
                   },
+                  child: GridView.builder(
+                    physics: NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                    ),
+                    itemCount: 16,
+                    itemBuilder: (context, index) {
+                      int x = index ~/ 4;
+                      int y = index % 4;
+                      int number = game.grid[x][y];
+                      bool isMerged = game.mergedTiles[x][y];
+                      return Tile(number: number, isMerged: isMerged);
+                    },
+                  ),
                 ),
               ),
             ),
@@ -88,15 +155,27 @@ class MainScreen extends StatelessWidget {
 
 class Tile extends StatelessWidget {
   final int number;
-  const Tile({required this.number});
+  final bool isMerged;
+  
+  const Tile({required this.number, this.isMerged = false});
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: Duration(milliseconds: 150),
+      duration: Duration(milliseconds: isMerged ? 300 : 150),
+      curve: isMerged ? Curves.elasticOut : Curves.easeInOut,
       decoration: BoxDecoration(
         color: _getTileColor(number),
         borderRadius: BorderRadius.circular(8),
+        boxShadow: isMerged
+            ? [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                )
+              ]
+            : [],
       ),
       child: Center(
         child: Text(

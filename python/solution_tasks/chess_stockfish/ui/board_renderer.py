@@ -32,26 +32,43 @@ DARK_SQUARE = (181, 136, 99)        # Тёмные клетки (красное 
 HIGHLIGHT_COLOR = (124, 252, 0, 180)  # Зелёный - выбранная клетка
 LAST_MOVE_COLOR = (205, 210, 106, 150)  # Жёлтый - последний ход
 CHECK_COLOR = (255, 0, 0, 180)      # Красный - шах
+MOVE_HINT_COLOR = (0, 0, 255, 100)  # Синий - возможные ходы
 
 # Initialize fonts after pygame.init() is called
 FONT = None
 SMALL_FONT = None
+MOVE_HINT_FONT = None
 
 def init_fonts():
     """Initialize fonts after pygame is initialized."""
-    global FONT, SMALL_FONT
+    global FONT, SMALL_FONT, MOVE_HINT_FONT
     try:
         FONT = pygame.font.SysFont('Segoe UI Symbol', SQUARE_SIZE - 10)
         SMALL_FONT = pygame.font.SysFont('Arial', 14)
+        MOVE_HINT_FONT = pygame.font.SysFont('Arial', 10)
     except Exception:
         FONT = pygame.font.SysFont('Arial', SQUARE_SIZE - 10)
         SMALL_FONT = pygame.font.SysFont('Arial', 14)
+        MOVE_HINT_FONT = pygame.font.SysFont('Arial', 10)
 
 # Unicode символы фигур
 PIECE_UNICODE = {
     'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',  # Белые
     'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'   # Чёрные
 }
+
+# Pre-create highlight surfaces for better performance
+HIGHLIGHT_SURFACES = {}
+
+
+def get_highlight_surface(color, size=SQUARE_SIZE):
+    """Create or retrieve a cached highlight surface for better performance."""
+    key = (color, size)
+    if key not in HIGHLIGHT_SURFACES:
+        highlight = pygame.Surface((size, size), pygame.SRCALPHA)
+        highlight.fill(color)
+        HIGHLIGHT_SURFACES[key] = highlight
+    return HIGHLIGHT_SURFACES[key]
 
 
 class BoardRenderer:
@@ -64,6 +81,7 @@ class BoardRenderer:
         selected_square (Tuple): Выбранная клетка (ряд, колонна)
         last_move (Tuple): Последний выполненный ход (from_sq, to_sq)
         check_square (Tuple): Клетка короля в шахе
+        move_hints (List): Подсказки возможных ходов
     """
     
     def __init__(self, screen: pygame.Surface, player_color: str = 'white'):
@@ -80,6 +98,7 @@ class BoardRenderer:
         self.last_move = None
         self.check_square = None
         self.show_coords = True
+        self.move_hints = []  # Список возможных ходов для отображения подсказок
         
         # Initialize fonts if not already done
         if FONT is None or SMALL_FONT is None:
@@ -100,6 +119,14 @@ class BoardRenderer:
     def set_check(self, square: Optional[Tuple[int, int]]):
         """Установить клетку короля в шахе для выделения красным."""
         self.check_square = square
+    
+    def set_move_hints(self, hints: List[Tuple[int, int]]):
+        """Установить подсказки возможных ходов."""
+        self.move_hints = hints
+    
+    def clear_move_hints(self):
+        """Очистить подсказки возможных ходов."""
+        self.move_hints = []
     
     def _fen_to_display(self, row: int, col: int) -> Tuple[int, int]:
         """
@@ -142,10 +169,16 @@ class BoardRenderer:
             evaluation (float): Текущая оценка позиции для отображения
             thinking (bool): Показать, что компьютер думает
         """
+        # Pre-calculate display positions for better performance
+        display_positions = {}
+        for row in range(8):
+            for col in range(8):
+                display_positions[(row, col)] = self._fen_to_display(row, col)
+        
         # Отрисовка клеток доски
         for row in range(8):
             for col in range(8):
-                disp_row, disp_col = self._fen_to_display(row, col)
+                disp_row, disp_col = display_positions[(row, col)]
                 
                 # Базовый цвет клетки
                 color = LIGHT_SQUARE if (row + col) % 2 == 0 else DARK_SQUARE
@@ -156,21 +189,27 @@ class BoardRenderer:
                 # Выделение последнего хода (жёлтая подсветка)
                 if self.last_move:
                     if (row, col) in self.last_move:
-                        highlight = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
-                        highlight.fill(LAST_MOVE_COLOR)
+                        highlight = get_highlight_surface(LAST_MOVE_COLOR)
                         self.screen.blit(highlight, rect.topleft)
                 
                 # Выделение выбранной клетки (зелёная подсветка)
                 if self.selected_square == (row, col):
-                    highlight = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
-                    highlight.fill(HIGHLIGHT_COLOR)
+                    highlight = get_highlight_surface(HIGHLIGHT_COLOR)
                     self.screen.blit(highlight, rect.topleft)
                 
                 # Выделение шаха (красная подсветка)
                 if self.check_square == (row, col):
-                    highlight = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
-                    highlight.fill(CHECK_COLOR)
+                    highlight = get_highlight_surface(CHECK_COLOR)
                     self.screen.blit(highlight, rect.topleft)
+                
+                # Подсказки возможных ходов (синие кружки)
+                if (row, col) in self.move_hints:
+                    highlight = get_highlight_surface(MOVE_HINT_COLOR)
+                    self.screen.blit(highlight, rect.topleft)
+                    # Рисуем кружок в центре клетки
+                    center_x = rect.centerx
+                    center_y = rect.centery
+                    pygame.draw.circle(self.screen, (0, 0, 255, 200), (center_x, center_y), 8)
                 
                 # Отрисовка фигур с Unicode символами
                 piece = board_state[row][col]
@@ -183,7 +222,7 @@ class BoardRenderer:
                     text_rect = text.get_rect(center=rect.center)
                     self.screen.blit(text, text_rect)
                 
-                # Отрисовка координат (буквы и цифры)
+                # Отрисовка координат (буквы и цифры) - только по краям
                 if self.show_coords and SMALL_FONT is not None:
                     if disp_col == 0:  # Левая граница - номера рядов
                         rank_text = SMALL_FONT.render(str(8 - row), True, (100, 100, 100))

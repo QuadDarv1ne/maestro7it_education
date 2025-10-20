@@ -25,6 +25,7 @@ from stockfish import Stockfish
 from typing import Optional, Tuple, List
 import os
 import sys
+import shutil
 
 class StockfishWrapper:
     """
@@ -56,13 +57,11 @@ class StockfishWrapper:
         self.engine = None
         
         # Проверка наличия исполняемого файла Stockfish
-        if path is not None:
-            if not os.path.exists(path):
-                raise RuntimeError(f"❌ Файл Stockfish не найден по пути: {path}")
-        else:
+        stockfish_path = path
+        if stockfish_path is None:
             # Попробуем найти Stockfish в PATH
-            import shutil
-            if shutil.which("stockfish") is None:
+            stockfish_path = shutil.which("stockfish")
+            if stockfish_path is None:
                 print("⚠️  Stockfish не найден в PATH. Убедитесь, что он установлен.")
                 print("💡 Решение:")
                 print("   1. Скачайте Stockfish с https://stockfishchess.org/download/")
@@ -70,12 +69,17 @@ class StockfishWrapper:
                 print("   3. Или запустите install_stockfish.bat")
                 raise RuntimeError("Stockfish executable not found in PATH")
         
+        # Проверим, что файл существует, если указан конкретный путь
+        if path is not None and not os.path.exists(path):
+            raise RuntimeError(f"❌ Файл Stockfish не найден по пути: {path}")
+        
         try:
             # Handle the case where path might be None
             if path is not None:
                 self.engine = Stockfish(path=path)
             else:
-                self.engine = Stockfish()
+                # Используем найденный путь или путь по умолчанию
+                self.engine = Stockfish(path=stockfish_path) if stockfish_path else Stockfish()
             self.engine.set_skill_level(self.skill_level)
             self.engine.set_depth(self.depth)
         except Exception as e:

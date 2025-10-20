@@ -53,6 +53,7 @@ class GameStatistics:
                 with open(self.stats_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception:
+                # Если файл поврежден, создаем новый
                 return {'games': [], 'total_wins': 0, 'total_losses': 0, 'total_draws': 0}
         return {'games': [], 'total_wins': 0, 'total_losses': 0, 'total_draws': 0}
     
@@ -95,6 +96,12 @@ class GameStatistics:
     def _save_stats(self):
         """Сохранить статистику в файл."""
         try:
+            # Создаем резервную копию перед сохранением
+            if os.path.exists(self.stats_file):
+                backup_file = self.stats_file + '.backup'
+                import shutil
+                shutil.copy2(self.stats_file, backup_file)
+            
             with open(self.stats_file, 'w', encoding='utf-8') as f:
                 json.dump(self.stats, f, indent=2, ensure_ascii=False)
         except Exception as e:
