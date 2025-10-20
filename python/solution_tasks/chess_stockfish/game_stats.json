@@ -1,0 +1,15 @@
+{
+  "games": [
+    {
+      "timestamp": "2025-10-20T18:26:54.661436",
+      "player_color": "white",
+      "skill_level": 6,
+      "total_moves": 2,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppp1ppp/8/4p3/8/2P5/PP1PPPPP/RNBQKBNR w KQkq - 0 2"
+    }
+  ],
+  "total_wins": 0,
+  "total_losses": 1,
+  "total_draws": 0
+}
