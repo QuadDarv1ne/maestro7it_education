@@ -515,6 +515,25 @@ class ChessGame:
                 self.move_feedback = reason
                 self.move_feedback_time = time.time()
                 return True
+            
+            # Check for check state for educational purposes
+            evaluation = self.engine.get_evaluation()
+            if evaluation and evaluation.get('type') == 'mate':
+                mate_in = evaluation.get('value', 0)
+                side = self.engine.get_side_to_move()
+                if mate_in > 0:  # Mate in N moves
+                    if (side == 'w' and self.player_color == 'white') or (side == 'b' and self.player_color == 'black'):
+                        self.move_feedback = f"⚠️  Вам поставлен мат в {mate_in} ходов!"
+                    else:
+                        self.move_feedback = f"✅  Вы поставили мат в {mate_in} ходов!"
+                    self.move_feedback_time = time.time()
+                elif mate_in < 0:  # Mate in N moves for opponent
+                    mate_in = abs(mate_in)
+                    if (side == 'w' and self.player_color == 'white') or (side == 'b' and self.player_color == 'black'):
+                        self.move_feedback = f"✅  Вы поставите мат в {mate_in} ходов!"
+                    else:
+                        self.move_feedback = f"⚠️  Вам поставят мат в {mate_in} ходов!"
+                    self.move_feedback_time = time.time()
         except Exception as e:
             print(f"⚠️  Ошибка при проверке состояния игры: {e}")
         return False
