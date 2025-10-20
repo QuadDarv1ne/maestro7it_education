@@ -246,24 +246,26 @@ class EffectRenderer:
             # draw border on surf then blit
             inner_rect = pygame.Rect(0, 0, rect.width, rect.height)
             try:
-                pygame.draw.rect(surf, rgba, inner_rect, border_width, border_radius=5)
+                # Reduced border width for less intrusive highlights
+                pygame.draw.rect(surf, rgba, inner_rect, max(1, border_width // 2), border_radius=3)
             except TypeError:
-                pygame.draw.rect(surf, rgba, inner_rect, border_width)
+                pygame.draw.rect(surf, rgba, inner_rect, max(1, border_width // 2))
             self.screen.blit(surf, rect.topleft)
 
         elif style == HighlightStyle.GLOW:
-            # multi-layer glow
+            # Simplified glow effect to reduce artifacts
             glow_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
             base_alpha = rgba[3]
-            for i in range(5):
-                a = max(0, base_alpha - i * (base_alpha // 5 + 5))
-                inset = i * 3
+            # Reduced number of glow layers
+            for i in range(3):
+                a = max(0, base_alpha - i * (base_alpha // 3 + 10))
+                inset = i * 2  # Reduced inset
                 rr = pygame.Rect(inset, inset, rect.width - inset * 2, rect.height - inset * 2)
                 if rr.width <= 0 or rr.height <= 0:
                     continue
                 glow_color = (rgba[0], rgba[1], rgba[2], a)
                 try:
-                    pygame.draw.rect(glow_surf, glow_color, rr, border_radius=5)
+                    pygame.draw.rect(glow_surf, glow_color, rr, border_radius=3)
                 except TypeError:
                     pygame.draw.rect(glow_surf, glow_color, rr)
             self.screen.blit(glow_surf, rect.topleft)
@@ -277,16 +279,16 @@ class EffectRenderer:
 
         # Create a more realistic 3D effect with gradient shadows and highlights
         # Bottom layer (darkest shadow with blur effect)
-        shadow_offset = 4
-        shadow_color = (max(0, color[0] - 50), max(0, color[1] - 50), max(0, color[2] - 50))
+        shadow_offset = 3
+        shadow_color = (max(0, color[0] - 40), max(0, color[1] - 40), max(0, color[2] - 40))
         
         # Create a blurred shadow effect
-        shadow_surface = pygame.Surface((piece_surface.get_width() + 8, piece_surface.get_height() + 8), pygame.SRCALPHA)
+        shadow_surface = pygame.Surface((piece_surface.get_width() + 6, piece_surface.get_height() + 6), pygame.SRCALPHA)
         shadow_rect = pygame.Rect(0, 0, shadow_surface.get_width(), shadow_surface.get_height())
         
         # Draw multiple layers of shadow with decreasing alpha for blur effect
-        for i in range(3):
-            alpha = max(0, 80 - i * 30)
+        for i in range(2):
+            alpha = max(0, 60 - i * 30)
             temp_color = (shadow_color[0], shadow_color[1], shadow_color[2], alpha)
             temp_rect = pygame.Rect(
                 shadow_offset - 1 + i, 
@@ -303,8 +305,8 @@ class EffectRenderer:
         self.screen.blit(shadow_surface, shadow_position)
 
         # Middle layer (medium shadow)
-        mid_shadow_offset = 2
-        mid_shadow_color = (max(0, color[0] - 25), max(0, color[1] - 25), max(0, color[2] - 25))
+        mid_shadow_offset = 1
+        mid_shadow_color = (max(0, color[0] - 20), max(0, color[1] - 20), max(0, color[2] - 20))
         mid_shadow_surface = self.cache.get_piece_surface(piece, mid_shadow_color, font)
         
         if mid_shadow_surface:
@@ -317,15 +319,15 @@ class EffectRenderer:
         
         # Add realistic highlight for 3D effect
         highlight_offset = 1
-        highlight_color = (min(255, color[0] + 40), min(255, color[1] + 40), min(255, color[2] + 40))
+        highlight_color = (min(255, color[0] + 30), min(255, color[1] + 30), min(255, color[2] + 30))
         
         # Create a highlight surface with gradient
-        highlight_surface = pygame.Surface((piece_surface.get_width() // 2, piece_surface.get_height() // 2), pygame.SRCALPHA)
+        highlight_surface = pygame.Surface((piece_surface.get_width() // 3, piece_surface.get_height() // 3), pygame.SRCALPHA)
         highlight_radius = min(highlight_surface.get_width(), highlight_surface.get_height()) // 2
         
         # Draw gradient highlight
         for i in range(highlight_radius, 0, -1):
-            alpha = int(150 * (i / highlight_radius))
+            alpha = int(120 * (i / highlight_radius))
             temp_color = (highlight_color[0], highlight_color[1], highlight_color[2], alpha)
             pygame.draw.circle(highlight_surface, temp_color, (highlight_surface.get_width() // 2, highlight_surface.get_height() // 3), i)
         
@@ -335,10 +337,10 @@ class EffectRenderer:
         self.screen.blit(highlight_surface, highlight_position)
         
         # Add secondary highlight for more depth
-        secondary_highlight_color = (min(255, color[0] + 20), min(255, color[1] + 20), min(255, color[2] + 20), 100)
-        secondary_highlight = pygame.Surface((piece_surface.get_width() // 4, piece_surface.get_height() // 4), pygame.SRCALPHA)
+        secondary_highlight_color = (min(255, color[0] + 15), min(255, color[1] + 15), min(255, color[2] + 15), 80)
+        secondary_highlight = pygame.Surface((piece_surface.get_width() // 5, piece_surface.get_height() // 5), pygame.SRCALPHA)
         pygame.draw.ellipse(secondary_highlight, secondary_highlight_color, secondary_highlight.get_rect())
-        secondary_position = (piece_rect.right - piece_rect.width // 3, piece_rect.top + piece_rect.height // 4)
+        secondary_position = (piece_rect.right - piece_rect.width // 3, piece_rect.top + piece_rect.height // 5)
         self.screen.blit(secondary_highlight, secondary_position)
 
     def draw_check_indicator(self, rect: pygame.Rect):
@@ -351,59 +353,62 @@ class EffectRenderer:
         # Рисуем пульсирующий красный круг вокруг короля с анимацией
         center_x = rect.centerx
         center_y = rect.centery
-        base_radius = min(rect.width, rect.height) // 2 + 8
+        base_radius = min(rect.width, rect.height) // 2 + 6  # Reduced size
         
         # Создаем поверхность для пульсации с анимацией
-        pulse_surface = pygame.Surface((base_radius * 3, base_radius * 3), pygame.SRCALPHA)
+        pulse_surface = pygame.Surface((base_radius * 2, base_radius * 2), pygame.SRCALPHA)
         
         # Получаем время для анимации пульсации
         current_time = time.time()
         
         # Анимация пульсации
-        pulse_phase = (current_time * 3) % (2 * math.pi)
-        pulse_multiplier = 1 + 0.3 * abs(math.sin(pulse_phase))
+        pulse_phase = (current_time * 2) % (2 * math.pi)  # Slower pulse
+        pulse_multiplier = 1 + 0.2 * abs(math.sin(pulse_phase))  # Reduced pulse intensity
         
         # Рисуем несколько концентрических кругов для эффекта пульсации
-        for i in range(5):
-            pulse_radius = int((base_radius - i * 3) * pulse_multiplier)
+        for i in range(3):  # Reduced number of layers
+            pulse_radius = int((base_radius - i * 2) * pulse_multiplier)
             if pulse_radius > 0:
                 # Создаем градиентный эффект
-                alpha = max(0, 220 - i * 40)
-                color = (255, 50, 50, alpha)  # Более насыщенный красный
-                pygame.draw.circle(pulse_surface, color, (base_radius * 3 // 2, base_radius * 3 // 2), pulse_radius, 3)
+                alpha = max(0, 180 - i * 50)  # Reduced alpha for subtlety
+                color = (255, 80, 80, alpha)  # Softer red
+                pygame.draw.circle(pulse_surface, color, (base_radius, base_radius), pulse_radius, 2)
         
         # Добавляем внутренний круг для большего эффекта
-        inner_radius = int(base_radius * 0.6 * pulse_multiplier)
-        pygame.draw.circle(pulse_surface, (255, 100, 100, 150), (base_radius * 3 // 2, base_radius * 3 // 2), inner_radius, 2)
+        inner_radius = int(base_radius * 0.5 * pulse_multiplier)
+        pygame.draw.circle(pulse_surface, (255, 120, 120, 120), (base_radius, base_radius), inner_radius, 1)
         
         # Добавляем эффект свечения
-        glow_surface = pygame.Surface((base_radius * 4, base_radius * 4), pygame.SRCALPHA)
-        glow_radius = int(base_radius * 1.5 * pulse_multiplier)
-        for i in range(3):
-            glow_alpha = max(0, 80 - i * 30)
+        glow_surface = pygame.Surface((base_radius * 3, base_radius * 3), pygame.SRCALPHA)
+        glow_radius = int(base_radius * 1.2 * pulse_multiplier)
+        for i in range(2):  # Reduced glow layers
+            glow_alpha = max(0, 60 - i * 20)  # Reduced glow intensity
             glow_color = (255, 0, 0, glow_alpha)
-            pygame.draw.circle(glow_surface, glow_color, (base_radius * 2, base_radius * 2), glow_radius - i * 2)
+            pygame.draw.circle(glow_surface, glow_color, (base_radius * 3 // 2, base_radius * 3 // 2), glow_radius - i)
         
         # Рисуем свечение позади пульсации
-        self.screen.blit(glow_surface, (center_x - base_radius * 2, center_y - base_radius * 2))
+        self.screen.blit(glow_surface, (center_x - base_radius * 3 // 2, center_y - base_radius * 3 // 2))
         
         # Рисуем пульсацию
-        self.screen.blit(pulse_surface, (center_x - base_radius * 3 // 2, center_y - base_radius * 3 // 2))
+        self.screen.blit(pulse_surface, (center_x - base_radius, center_y - base_radius))
 
     def draw_move_hint_dot(self, rect: pygame.Rect):
         """Точка-подсказка для возможного хода (с градиентом альфа)."""
         w, h = rect.width, rect.height
         hint_surf = pygame.Surface((w, h), pygame.SRCALPHA)
         cx, cy = w // 2, h // 2
-        max_radius = min(w, h) // 6
+        max_radius = min(w, h) // 8  # Reduced size for less intrusive hints
+        
+        # Create a smoother gradient effect
         for i in range(max_radius, 0, -1):
-            alpha = int(180 * (i / max_radius))
-            pygame.draw.circle(hint_surf, (0, 100, 255, alpha), (cx, cy), i)
-        # white ring
-        try:
-            pygame.draw.circle(hint_surf, (255, 255, 255), (cx, cy), max_radius, 2)
-        except Exception:
-            pass
+            alpha = int(150 * (i / max_radius))  # Slightly reduced alpha
+            color = (50, 150, 255, alpha)  # More blue-ish color
+            pygame.draw.circle(hint_surf, color, (cx, cy), i)
+        
+        # Add a subtle white border
+        border_radius = max_radius + 1
+        pygame.draw.circle(hint_surf, (255, 255, 255, 100), (cx, cy), border_radius, 1)
+        
         self.screen.blit(hint_surf, rect.topleft)
 
     def draw_evaluation_bar(self, rect: pygame.Rect, evaluation: float):
