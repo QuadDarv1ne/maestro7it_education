@@ -16,7 +16,7 @@
     - Система уровней и рейтинга
 """
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 import json
 import os
 
@@ -390,7 +390,9 @@ class AchievementSystem:
         """
         if level is None:
             level = self.level
-        return LEVELS.get(level)
+        if level in LEVELS:
+            return LEVELS[level]
+        return None
     
     def get_progress_to_next_level(self) -> Tuple[int, int, int]:
         """
