@@ -517,23 +517,28 @@ class ChessGame:
                 return True
             
             # Check for check state for educational purposes
-            evaluation = self.engine.get_evaluation()
-            if evaluation and evaluation.get('type') == 'mate':
-                mate_in = evaluation.get('value', 0)
-                side = self.engine.get_side_to_move()
-                if mate_in > 0:  # Mate in N moves
-                    if (side == 'w' and self.player_color == 'white') or (side == 'b' and self.player_color == 'black'):
-                        self.move_feedback = f"⚠️  Вам поставлен мат в {mate_in} ходов!"
-                    else:
-                        self.move_feedback = f"✅  Вы поставили мат в {mate_in} ходов!"
-                    self.move_feedback_time = time.time()
-                elif mate_in < 0:  # Mate in N moves for opponent
-                    mate_in = abs(mate_in)
-                    if (side == 'w' and self.player_color == 'white') or (side == 'b' and self.player_color == 'black'):
-                        self.move_feedback = f"✅  Вы поставите мат в {mate_in} ходов!"
-                    else:
-                        self.move_feedback = f"⚠️  Вам поставят мат в {mate_in} ходов!"
-                    self.move_feedback_time = time.time()
+            # Get raw evaluation from engine (not the processed float version)
+            try:
+                eval_score = self.engine.engine.get_evaluation()
+                if eval_score and isinstance(eval_score, dict) and eval_score.get('type') == 'mate':
+                    mate_in = eval_score.get('value', 0)
+                    side = self.engine.get_side_to_move()
+                    if mate_in > 0:  # Mate in N moves
+                        if (side == 'w' and self.player_color == 'white') or (side == 'b' and self.player_color == 'black'):
+                            self.move_feedback = f"⚠️  Вам поставлен мат в {mate_in} ходов!"
+                        else:
+                            self.move_feedback = f"✅  Вы поставили мат в {mate_in} ходов!"
+                        self.move_feedback_time = time.time()
+                    elif mate_in < 0:  # Mate in N moves for opponent
+                        mate_in = abs(mate_in)
+                        if (side == 'w' and self.player_color == 'white') or (side == 'b' and self.player_color == 'black'):
+                            self.move_feedback = f"✅  Вы поставите мат в {mate_in} ходов!"
+                        else:
+                            self.move_feedback = f"⚠️  Вам поставят мат в {mate_in} ходов!"
+                        self.move_feedback_time = time.time()
+            except Exception:
+                # Ignore errors in mate detection, it's just for educational purposes
+                pass
         except Exception as e:
             print(f"⚠️  Ошибка при проверке состояния игры: {e}")
         return False
