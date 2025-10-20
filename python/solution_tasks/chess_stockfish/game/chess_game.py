@@ -1,5 +1,5 @@
 # ============================================================================
-# game/chess_game.py
+# game/chess_game.py (Обновлённая версия)
 # ============================================================================
 
 """
@@ -7,18 +7,11 @@
 
 Описание:
     Содержит главный класс ChessGame, который управляет игровым процессом.
-    Отвечает за:
-    - Управление взаимодействием игрока и ИИ
-    - Обработку кликов и ввода
-    - Управление состоянием игры
-    - Отображение информации
     
-Возможности:
-    - Поддержка игры за белых и чёрных
-    - Разные уровни сложности Stockfish (0-20)
-    - Отслеживание истории ходов
-    - Отображение оценки позиции в реальном времени
-    - Информационный интерфейс с количеством ходов
+Изменения в этой версии:
+    - Удалён импорт и вызов init_fonts() (инициализация теперь в BoardRenderer)
+    - Обновлены методы для работы с новым API BoardRenderer
+    - Улучшена обработка ошибок
 """
 
 import pygame
@@ -28,15 +21,11 @@ import sys
 
 # Import our modules
 from engine.stockfish_wrapper import StockfishWrapper
-from ui.board_renderer import BoardRenderer, init_fonts
+from ui.board_renderer import BoardRenderer  # Убран init_fonts
 
 # Constants from board_renderer
 BOARD_SIZE = 512
 SQUARE_SIZE = BOARD_SIZE // 8
-
-# Fonts will be initialized after pygame.init() is called
-FONT = None
-SMALL_FONT = None
 
 
 class ChessGame:
@@ -75,17 +64,22 @@ class ChessGame:
         
         # Инициализация Pygame UI
         try:
+            # Инициализируем pygame если ещё не инициализирован
+            if not pygame.get_init():
+                pygame.init()
+            
             self.screen = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE + 100))
             pygame.display.set_caption(f"♟️  chess_stockfish — Maestro7IT (уровень {skill_level})")
         except Exception as e:
             raise RuntimeError(f"❌ Не удалось инициализировать графический интерфейс: {e}")
         
-        # Initialize fonts
-        init_fonts()
-        
+        # Создаём рендерер (шрифты инициализируются автоматически)
         self.renderer = BoardRenderer(self.screen, player_color)
         self.clock = pygame.time.Clock()
         self.running = True
+        
+        # Инициализируем шрифты для UI панели
+        self._init_ui_fonts()
         
         # Состояние игры
         self.move_history = []
@@ -97,9 +91,20 @@ class ChessGame:
         self.move_feedback = ""  # Feedback message for the player
         self.move_feedback_time = 0
     
+    def _init_ui_fonts(self):
+        """Инициализация шрифтов для UI элементов."""
+        try:
+            self.ui_font = pygame.font.SysFont('Arial', 14)
+            self.ui_font_small = pygame.font.SysFont('Arial', 12)
+        except Exception as e:
+            print(f"⚠️  Не удалось загрузить шрифты UI: {e}")
+            self.ui_font = pygame.font.Font(None, 14)
+            self.ui_font_small = pygame.font.Font(None, 12)
+    
     def _coord_to_fen_square(self, x: int, y: int) -> Optional[Tuple[int, int]]:
         """
         Преобразует экранные координаты клика в FEN координаты.
+        Использует новый метод coord_mapper из BoardRenderer.
         
         Параметры:
             x (int): X координата клика
@@ -108,14 +113,7 @@ class ChessGame:
         Возвращает:
             Tuple: (row, col) в FEN или None если клик вне доски
         """
-        if y > BOARD_SIZE:
-            return None
-        disp_row = y // SQUARE_SIZE
-        disp_col = x // SQUARE_SIZE
-        if disp_row >= 8 or disp_col >= 8:
-            return None
-        row, col = self.renderer._display_to_fen(disp_row, disp_col)
-        return (row, col)
+        return self.renderer.coord_mapper.pixel_to_square(x, y)
     
     def _fen_square_to_uci(self, row: int, col: int) -> str:
         """
@@ -200,8 +198,8 @@ class ChessGame:
         coords = self._coord_to_fen_square(x, y)
         if coords is None:
             # Клик вне доски - очищаем выделение и подсказки
-            self.renderer.clear_selected()
-            self.renderer.clear_move_hints()
+            self.renderer.set_selected(None)
+            self.renderer.set_move_hints([])
             return
         
         row, col = coords
@@ -245,34 +243,34 @@ class ChessGame:
                     if self.engine.make_move(uci_move):
                         self.move_history.append(uci_move)
                         self.renderer.set_last_move(from_sq, to_sq)
-                        self.renderer.clear_selected()
-                        self.renderer.clear_move_hints()
+                        self.renderer.set_selected(None)
+                        self.renderer.set_move_hints([])
                         self.last_move_time = time.time()
                         print(f"Ход выполнен: {uci_move}")
                         self.move_feedback = f"Ход {uci_move} выполнен"
                         self.move_feedback_time = time.time()
                     else:
                         print("❌ Не удалось выполнить ход")
-                        self.renderer.clear_selected()
-                        self.renderer.clear_move_hints()
+                        self.renderer.set_selected(None)
+                        self.renderer.set_move_hints([])
                         self.move_feedback = "Не удалось выполнить ход"
                         self.move_feedback_time = time.time()
                 else:
                     print(f"❌ Некорректный ход: {uci_move}")
-                    self.renderer.clear_selected()
-                    self.renderer.clear_move_hints()
+                    self.renderer.set_selected(None)
+                    self.renderer.set_move_hints([])
                     self.move_feedback = "Некорректный ход"
                     self.move_feedback_time = time.time()
             except Exception as e:
                 print(f"⚠️  Ошибка при обработке хода: {e}")
-                self.renderer.clear_selected()
-                self.renderer.clear_move_hints()
+                self.renderer.set_selected(None)
+                self.renderer.set_move_hints([])
                 self.move_feedback = "Ошибка при выполнении хода"
                 self.move_feedback_time = time.time()
         else:
             # Клик по пустой клетке без выбранной фигуры - очищаем выделение
-            self.renderer.clear_selected()
-            self.renderer.clear_move_hints()
+            self.renderer.set_selected(None)
+            self.renderer.set_move_hints([])
     
     def handle_ai_move(self):
         """
@@ -354,46 +352,52 @@ class ChessGame:
             # Информационная панель внизу экрана
             info_rect = pygame.Rect(0, BOARD_SIZE, BOARD_SIZE, 100)
             pygame.draw.rect(self.screen, (50, 50, 50), info_rect)
-            pygame.draw.line(self.screen, (100, 100, 100), (0, BOARD_SIZE), (BOARD_SIZE, BOARD_SIZE), 2)
+            pygame.draw.line(self.screen, (100, 100, 100), (0, BOARD_SIZE), 
+                           (BOARD_SIZE, BOARD_SIZE), 2)
             
-            # Only render text if fonts are initialized
-            if SMALL_FONT is not None:
-                if self.game_over:
-                    # Экран окончания игры
-                    if self.game_over_reason:
-                        text = SMALL_FONT.render(self.game_over_reason, True, (255, 100, 100))
-                        self.screen.blit(text, (20, BOARD_SIZE + 15))
-                    restart_text = SMALL_FONT.render("Нажмите 'R' для новой игры", True, (200, 200, 200))
-                    self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
-                else:
-                    # Статус хода
-                    if self._is_player_turn():
-                        status = "🎮 Ваш ход"
-                        status_color = (100, 255, 100)
-                    else:
-                        status = "🤖 Ход компьютера"
-                        status_color = (100, 150, 255)
-                    
-                    text = SMALL_FONT.render(status, True, status_color)
+            if self.game_over:
+                # Экран окончания игры
+                if self.game_over_reason:
+                    text = self.ui_font.render(self.game_over_reason, True, (255, 100, 100))
                     self.screen.blit(text, (20, BOARD_SIZE + 15))
-                    
-                    # Информация о ходах
-                    moves_text = SMALL_FONT.render(f"Ходов: {len(self.move_history)}", True, (200, 200, 200))
-                    self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
-                    
-                    # Уровень сложности
-                    level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
-                    self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
-                    
-                    # Подсказка
-                    hint_text = SMALL_FONT.render("Подсказка: Кликните по фигуре для показа возможных ходов", True, (150, 150, 150))
-                    self.screen.blit(hint_text, (20, BOARD_SIZE + 75))
-                    
-                    # Move feedback (show for 3 seconds)
-                    if self.move_feedback and time.time() - self.move_feedback_time < 3:
-                        feedback_color = (255, 255, 100)  # Yellow feedback
-                        feedback_text = SMALL_FONT.render(self.move_feedback, True, feedback_color)
-                        self.screen.blit(feedback_text, (BOARD_SIZE // 2 - feedback_text.get_width() // 2, BOARD_SIZE + 30))
+                restart_text = self.ui_font.render("Нажмите 'R' для новой игры", 
+                                                   True, (200, 200, 200))
+                self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
+            else:
+                # Статус хода
+                if self._is_player_turn():
+                    status = "🎮 Ваш ход"
+                    status_color = (100, 255, 100)
+                else:
+                    status = "🤖 Ход компьютера"
+                    status_color = (100, 150, 255)
+                
+                text = self.ui_font.render(status, True, status_color)
+                self.screen.blit(text, (20, BOARD_SIZE + 15))
+                
+                # Информация о ходах
+                moves_text = self.ui_font.render(f"Ходов: {len(self.move_history)}", 
+                                                True, (200, 200, 200))
+                self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
+                
+                # Уровень сложности
+                level_text = self.ui_font.render(f"Уровень: {self.skill_level}/20", 
+                                                True, (200, 200, 200))
+                self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
+                
+                # Подсказка
+                hint_text = self.ui_font_small.render(
+                    "Подсказка: Кликните по фигуре для показа возможных ходов", 
+                    True, (150, 150, 150))
+                self.screen.blit(hint_text, (20, BOARD_SIZE + 75))
+                
+                # Move feedback (show for 3 seconds)
+                if self.move_feedback and time.time() - self.move_feedback_time < 3:
+                    feedback_color = (255, 255, 100)  # Yellow feedback
+                    feedback_text = self.ui_font.render(self.move_feedback, True, feedback_color)
+                    self.screen.blit(feedback_text, 
+                                   (BOARD_SIZE // 2 - feedback_text.get_width() // 2, 
+                                    BOARD_SIZE + 30))
         except Exception as e:
             print(f"⚠️  Ошибка при отрисовке интерфейса: {e}")
     
@@ -438,6 +442,10 @@ class ChessGame:
         except Exception as e:
             print(f"⚠️  Ошибка при сохранении статистики перед сбросом: {e}")
         
+        # Очищаем ресурсы старого рендерера
+        if hasattr(self, 'renderer'):
+            self.renderer.cleanup()
+        
         # Переинициализируем игру с теми же параметрами
         self.__init__(self.player_color, self.skill_level)
     
@@ -457,6 +465,8 @@ class ChessGame:
         
         while self.running:
             try:
+                mouse_pos = pygame.mouse.get_pos()
+                
                 # Обработка событий
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -472,11 +482,11 @@ class ChessGame:
                             self.running = False
                 
                 # Отрисовка
-                self.screen.fill((0, 0, 0))
+                self.screen.fill((30, 30, 30))  # Dark background for better contrast
                 try:
                     board = self.engine.get_board_state()
                     evaluation = self.engine.get_evaluation()
-                    self.renderer.draw(board, evaluation, self.thinking)
+                    self.renderer.draw(board, evaluation, self.thinking, mouse_pos)
                     self.draw_ui()
                     pygame.display.flip()
                 except Exception as e:
@@ -506,7 +516,10 @@ class ChessGame:
             print(f"⚠️  Ошибка при выводе статистики: {e}")
         
         try:
+            if hasattr(self, 'renderer'):
+                self.renderer.cleanup()
             self.engine.quit()
         except Exception as e:
             print(f"⚠️  Ошибка при завершении движка: {e}")
+        
         pygame.quit()
