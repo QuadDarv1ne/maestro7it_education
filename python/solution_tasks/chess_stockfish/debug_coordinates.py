@@ -33,8 +33,8 @@ def test_coordinate_conversion():
     
     for fen_row, fen_col in test_cases:
         uci = chr(ord('a') + fen_col) + str(8 - fen_row)
-        disp_row, disp_col = renderer._fen_to_display(fen_row, fen_col)
-        back_row, back_col = renderer._display_to_fen(disp_row, disp_col)
+        disp_row, disp_col = renderer.coord_mapper.fen_to_display(fen_row, fen_col)
+        back_row, back_col = renderer.coord_mapper.display_to_fen(disp_row, disp_col)
         print(f"FEN ({fen_row},{fen_col}) -> UCI {uci} -> Display ({disp_row},{disp_col}) -> Back ({back_row},{back_col})")
     
     # Test with black perspective
@@ -43,8 +43,8 @@ def test_coordinate_conversion():
     
     for fen_row, fen_col in test_cases:
         uci = chr(ord('a') + fen_col) + str(8 - fen_row)
-        disp_row, disp_col = renderer_black._fen_to_display(fen_row, fen_col)
-        back_row, back_col = renderer_black._display_to_fen(disp_row, disp_col)
+        disp_row, disp_col = renderer_black.coord_mapper.fen_to_display(fen_row, fen_col)
+        back_row, back_col = renderer_black.coord_mapper.display_to_fen(disp_row, disp_col)
         print(f"FEN ({fen_row},{fen_col}) -> UCI {uci} -> Display ({disp_row},{disp_col}) -> Back ({back_row},{back_col})")
     
     pygame.quit()
@@ -71,15 +71,15 @@ def test_click_coordinates():
             print(f"Клик ({x},{y}) вне доски")
             continue
             
-        disp_row = y // SQUARE_SIZE
-        disp_col = x // SQUARE_SIZE
-        
-        if disp_row >= 8 or disp_col >= 8:
-            print(f"Клик ({x},{y}) вне доски (координаты: {disp_row},{disp_col})")
+        coords = renderer.coord_mapper.pixel_to_square(x, y)
+        if coords is None:
+            print(f"Клик ({x},{y}) вне доски")
             continue
             
-        fen_row, fen_col = renderer._display_to_fen(disp_row, disp_col)
+        fen_row, fen_col = coords
         uci = chr(ord('a') + fen_col) + str(8 - fen_row)
+        disp_row = y // SQUARE_SIZE
+        disp_col = x // SQUARE_SIZE
         print(f"Клик ({x},{y}) -> Display ({disp_row},{disp_col}) -> FEN ({fen_row},{fen_col}) -> UCI {uci}")
     
     pygame.quit()
