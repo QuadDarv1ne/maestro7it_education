@@ -22,6 +22,7 @@ import sys
 # Import our modules
 from engine.stockfish_wrapper import StockfishWrapper
 from ui.board_renderer import BoardRenderer  # Убран init_fonts
+from utils.educational import ChessEducator
 
 # Constants from board_renderer
 BOARD_SIZE = 512
@@ -83,6 +84,9 @@ class ChessGame:
         
         # Инициализируем шрифты для UI панели
         self._init_ui_fonts()
+        
+        # Образовательные компоненты
+        self.educator = ChessEducator()
         
         # Состояние игры
         self.move_history = []
@@ -377,6 +381,10 @@ class ChessGame:
             }.get(piece, piece)
             self.move_feedback = f"Выбрана {piece_name}"
             self.move_feedback_time = time.time()
+            
+            # Add educational hint about the piece
+            piece_hint = self.educator.get_piece_hint(piece_name)
+            self.move_feedback += f" | {piece_hint}"
         # Перемещение выбранной фигуры
         elif self.renderer.selected_square:
             from_sq = self.renderer.selected_square
@@ -401,6 +409,13 @@ class ChessGame:
                         print(f"Ход выполнен: {uci_move}")
                         self.move_feedback = f"Ход {uci_move} выполнен"
                         self.move_feedback_time = time.time()
+                        
+                        # Add educational feedback
+                        educational_tip = self.educator.get_educational_feedback(
+                            len(self.move_history), time.time())
+                        if educational_tip:
+                            self.move_feedback += f" | {educational_tip}"
+                            self.move_feedback_time = time.time()
                     else:
                         print("❌ Не удалось выполнить ход")
                         self.renderer.set_selected(None)
@@ -477,6 +492,17 @@ class ChessGame:
                         print(f"Ход компьютера выполнен: {ai_move}")
                         self.move_feedback = f"Ход компьютера: {ai_move}"
                         self.move_feedback_time = time.time()
+                        
+                        # Add educational feedback about interesting moves
+                        if len(best_moves) > 1 and ai_move != best_moves[0]:
+                            self.move_feedback += " (интересный выбор!)"
+                        
+                        # Add general educational feedback
+                        educational_tip = self.educator.get_educational_feedback(
+                            len(self.move_history), time.time())
+                        if educational_tip:
+                            self.move_feedback += f" | {educational_tip}"
+                            self.move_feedback_time = time.time()
                         
                         # Add educational feedback for interesting moves
                         if len(best_moves) > 1 and ai_move != best_moves[0]:
@@ -585,7 +611,7 @@ class ChessGame:
                 
                 # Подсказка
                 hint_text = self.ui_font_small.render(
-                    "Подсказка: Кликните по фигуре для показа возможных ходов", 
+                    "Подсказка: Кликните по фигуре для показа возможных ходов | Нажмите 'T' для совета", 
                     True, (150, 150, 150))
                 self.screen.blit(hint_text, (20, BOARD_SIZE + 75))
                 
@@ -678,6 +704,16 @@ class ChessGame:
                             self.reset_game()
                         elif event.key == pygame.K_ESCAPE:
                             self.running = False
+                        elif event.key == pygame.K_t:
+                            # Show educational tip
+                            tip = self.educator.get_educational_feedback(
+                                len(self.move_history), time.time())
+                            if tip:
+                                self.move_feedback = tip
+                                self.move_feedback_time = time.time()
+                            else:
+                                self.move_feedback = "💡 " + self.educator.get_random_tip()
+                                self.move_feedback_time = time.time()
                 
                 # Отрисовка
                 self.screen.fill((30, 30, 30))  # Dark background for better contrast
