@@ -331,6 +331,14 @@ class BoardRenderer:
             self.coord_mapper = CoordinateMapper(color)
             self._mark_all_dirty()
     
+    def set_theme(self, theme_name: str):
+        """Изменить цветовую тему доски."""
+        if theme_name in THEMES:
+            self.theme = THEMES[theme_name]
+            self.effect_renderer.theme = self.theme
+            self._current_theme = theme_name
+            self._mark_all_dirty()
+    
     def set_selected(self, square: Optional[Tuple[int, int]]):
         """Установить выбранную клетку."""
         if self.selected_square != square:
