@@ -47,13 +47,19 @@ HIGHLIGHT_COLOR = (124, 252, 0, 180)
 LAST_MOVE_COLOR = (205, 210, 106, 150)
 CHECK_COLOR = (255, 0, 0, 180)
 
-# Инициализация шрифтов
-try:
-    FONT = pygame.font.SysFont('Segoe UI Symbol', SQUARE_SIZE - 10)
-    SMALL_FONT = pygame.font.SysFont('Arial', 14)
-except Exception:
-    FONT = pygame.font.SysFont('Arial', SQUARE_SIZE - 10)
-    SMALL_FONT = pygame.font.SysFont('Arial', 14)
+# Initialize fonts after pygame.init() is called
+FONT = None
+SMALL_FONT = None
+
+def init_fonts():
+    """Initialize fonts after pygame is initialized."""
+    global FONT, SMALL_FONT
+    try:
+        FONT = pygame.font.SysFont('Segoe UI Symbol', SQUARE_SIZE - 10)
+        SMALL_FONT = pygame.font.SysFont('Arial', 14)
+    except Exception:
+        FONT = pygame.font.SysFont('Arial', SQUARE_SIZE - 10)
+        SMALL_FONT = pygame.font.SysFont('Arial', 14)
 
 # Unicode символы фигур
 PIECE_UNICODE = {
@@ -107,7 +113,10 @@ class StockfishWrapper:
         self.move_count = 0
         
         try:
-            self.engine = Stockfish(path=path)
+            if path is not None:
+                self.engine = Stockfish(path=path)
+            else:
+                self.engine = Stockfish()
             self.engine.set_skill_level(self.skill_level)
             self.engine.set_depth(self.depth)
         except Exception as e:
@@ -156,12 +165,13 @@ class StockfishWrapper:
     def get_best_move(self, depth: Optional[int] = None) -> Optional[str]:
         """Получает лучший ход в текущей позиции."""
         try:
+            old_depth = None
             if depth:
-                old_depth = self.depth
+                old_depth = self.engine.depth
                 self.engine.set_depth(depth)
             move = self.engine.get_best_move()
-            if depth:
-                self.engine.set_depth(old_depth)
+            if depth and old_depth is not None:
+                self.engine.set_depth(int(old_depth))
             return move
         except Exception as e:
             print(f"⚠️  Ошибка при получении хода: {e}")
@@ -174,16 +184,45 @@ class StockfishWrapper:
     def is_game_over(self) -> Tuple[bool, Optional[str]]:
         """Проверяет, закончена ли игра и причину окончания."""
         try:
-            if self.engine.is_mate():
+            # Use the get_evaluation method to determine game state
+            fen = self.engine.get_fen_position()
+            board_state = fen.split()[0]
+            
+            # Check for mate using evaluation
+            eval_result = self.engine.get_evaluation()
+            if eval_result and eval_result['type'] == 'mate':
                 side = self.get_side_to_move()
                 winner = "чёрные" if side == 'w' else "белые"
                 return True, f"🏆 Шах и мат! Победили {winner}"
             
-            if self.engine.is_stalemate():
-                return True, "🤝 Пат! Ничья"
+            # Check for stalemate by seeing if there are any legal moves
+            # If evaluation is very low and no legal moves, it's stalemate
+            if eval_result and eval_result['type'] == 'cp' and abs(eval_result['value']) < 10000:
+                # Try to get a move - if none exists, it's stalemate
+                move = self.engine.get_best_move()
+                if move is None:
+                    return True, "🤝 Пат! Ничья"
             
-            if self.engine.is_insufficient_material():
+            # Check for insufficient material
+            pieces = [p for p in board_state if p.lower() in 'pnbrqk']
+            white_pieces = [p for p in pieces if p.isupper()]
+            black_pieces = [p for p in pieces if p.islower()]
+            
+            # King vs King
+            if len(white_pieces) == 1 and len(black_pieces) == 1:
                 return True, "🤝 Недостаточно материала для мата. Ничья"
+            
+            # King + Bishop vs King or King + Knight vs King
+            if (len(white_pieces) <= 2 and len(black_pieces) == 1) or (len(white_pieces) == 1 and len(black_pieces) <= 2):
+                # Check if the extra pieces are only bishops or knights
+                extra_pieces = []
+                if len(white_pieces) > 1:
+                    extra_pieces.extend([p for p in white_pieces if p.upper() in 'BN'])
+                if len(black_pieces) > 1:
+                    extra_pieces.extend([p for p in black_pieces if p.upper() in 'BN'])
+                
+                if len(extra_pieces) <= 1:  # Only one bishop or knight extra
+                    return True, "🤝 Недостаточно материала для мата. Ничья"
         except Exception:
             pass
         
@@ -214,8 +253,13 @@ class StockfishWrapper:
     
     def quit(self):
         """Закрывает соединение с Stockfish."""
+        # Newer versions of stockfish library don't have quit method
+        # The engine will be automatically cleaned up when the object is destroyed
         try:
-            self.engine.quit()
+            # Try to quit if the method exists
+            if hasattr(self.engine, 'quit'):
+                # self.engine.quit()  # Removed due to compatibility issues
+                pass
         except Exception:
             pass
 
@@ -316,7 +360,7 @@ class BoardRenderer:
                 
                 # Отрисовка фигур
                 piece = board_state[row][col]
-                if piece:
+                if piece and FONT is not None:
                     text_color = (255, 255, 255) if piece.isupper() else (0, 0, 0)
                     try:
                         text = FONT.render(PIECE_UNICODE[piece], True, text_color)
@@ -326,7 +370,7 @@ class BoardRenderer:
                     self.screen.blit(text, text_rect)
                 
                 # Отрисовка координат
-                if self.show_coords:
+                if self.show_coords and SMALL_FONT is not None:
                     if disp_col == 0:
                         rank_text = SMALL_FONT.render(str(8 - row), True, (100, 100, 100))
                         self.screen.blit(rank_text, (disp_col * SQUARE_SIZE + 2, 
@@ -337,13 +381,13 @@ class BoardRenderer:
                                                      disp_row * SQUARE_SIZE + SQUARE_SIZE - 14))
         
         # Отрисовка информации
-        if evaluation is not None:
+        if evaluation is not None and SMALL_FONT is not None:
             eval_text = f"Оценка: {evaluation:+.1f}"
             color = (100, 255, 100) if evaluation > 0 else (255, 100, 100)
             text_surface = SMALL_FONT.render(eval_text, True, color)
             self.screen.blit(text_surface, (10, 10))
         
-        if thinking:
+        if thinking and SMALL_FONT is not None:
             thinking_text = SMALL_FONT.render("⟳ Компьютер думает...", True, (255, 200, 0))
             self.screen.blit(thinking_text, (BOARD_SIZE - 200, 10))
 
@@ -491,27 +535,28 @@ class ChessGame:
         pygame.draw.rect(self.screen, (50, 50, 50), info_rect)
         pygame.draw.line(self.screen, (100, 100, 100), (0, BOARD_SIZE), (BOARD_SIZE, BOARD_SIZE), 2)
         
-        if self.game_over:
-            text = SMALL_FONT.render(self.game_over_reason, True, (255, 100, 100))
-            self.screen.blit(text, (20, BOARD_SIZE + 15))
-            restart_text = SMALL_FONT.render("Нажмите 'R' для новой игры", True, (200, 200, 200))
-            self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
-        else:
-            if self._is_player_turn():
-                status = "🎮 Ваш ход"
-                status_color = (100, 255, 100)
+        if SMALL_FONT is not None:
+            if self.game_over:
+                text = SMALL_FONT.render(self.game_over_reason, True, (255, 100, 100))
+                self.screen.blit(text, (20, BOARD_SIZE + 15))
+                restart_text = SMALL_FONT.render("Нажмите 'R' для новой игры", True, (200, 200, 200))
+                self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
             else:
-                status = "🤖 Ход компьютера"
-                status_color = (100, 150, 255)
-            
-            text = SMALL_FONT.render(status, True, status_color)
-            self.screen.blit(text, (20, BOARD_SIZE + 15))
-            
-            moves_text = SMALL_FONT.render(f"Ходов: {len(self.move_history)}", True, (200, 200, 200))
-            self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
-            
-            level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
-            self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
+                if self._is_player_turn():
+                    status = "🎮 Ваш ход"
+                    status_color = (100, 255, 100)
+                else:
+                    status = "🤖 Ход компьютера"
+                    status_color = (100, 150, 255)
+                
+                text = SMALL_FONT.render(status, True, status_color)
+                self.screen.blit(text, (20, BOARD_SIZE + 15))
+                
+                moves_text = SMALL_FONT.render(f"Ходов: {len(self.move_history)}", True, (200, 200, 200))
+                self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
+                
+                level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
+                self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
     
     def get_game_stats(self) -> dict:
         """Получить статистику текущей игры."""
@@ -669,6 +714,9 @@ def main():
     Обрабатывает исключения и выводит полезные сообщения об ошибках.
     """
     pygame.init()
+    
+    # Initialize fonts
+    init_fonts()
     
     try:
         player_color, skill_level = main_menu()

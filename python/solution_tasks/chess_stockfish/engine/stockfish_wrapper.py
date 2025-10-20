@@ -114,7 +114,16 @@ class StockfishWrapper:
         if not uci_move or len(uci_move) != 4:
             return False
         try:
-            return self.engine.is_move_correct(uci_move)
+            # Get the FEN before attempting the move
+            original_fen = self.engine.get_fen_position()
+            # Try to make the move
+            self.engine.make_moves_from_current_position([uci_move])
+            # Get the FEN after the move
+            new_fen = self.engine.get_fen_position()
+            # Undo the move to restore the original position
+            self.engine.set_fen_position(original_fen)
+            # If the FEN changed, the move was valid
+            return original_fen != new_fen
         except Exception:
             return False
     
@@ -210,19 +219,46 @@ class StockfishWrapper:
                 - is_over: True если игра завершена
                 - reason: Строка с описанием причины завершения
         """
-        # This implementation matches the working version in full_game.py
-        # Even though the linter complains, the methods do exist in the stockfish library
         try:
-            if self.engine.is_mate():
+            # Use the get_evaluation method to determine game state
+            fen = self.engine.get_fen_position()
+            board_state = fen.split()[0]
+            
+            # Check for mate using evaluation
+            eval_result = self.engine.get_evaluation()
+            if eval_result and eval_result['type'] == 'mate':
                 side = self.get_side_to_move()
                 winner = "чёрные" if side == 'w' else "белые"
                 return True, f"🏆 Шах и мат! Победили {winner}"
             
-            if self.engine.is_stalemate():
-                return True, "🤝 Пат! Ничья"
+            # Check for stalemate by seeing if there are any legal moves
+            # If evaluation is very low and no legal moves, it's stalemate
+            if eval_result and eval_result['type'] == 'cp' and abs(eval_result['value']) < 10000:
+                # Try to get a move - if none exists, it's stalemate
+                move = self.engine.get_best_move()
+                if move is None:
+                    return True, "🤝 Пат! Ничья"
             
-            if self.engine.is_insufficient_material():
+            # Check for insufficient material
+            pieces = [p for p in board_state if p.lower() in 'pnbrqk']
+            white_pieces = [p for p in pieces if p.isupper()]
+            black_pieces = [p for p in pieces if p.islower()]
+            
+            # King vs King
+            if len(white_pieces) == 1 and len(black_pieces) == 1:
                 return True, "🤝 Недостаточно материала для мата. Ничья"
+            
+            # King + Bishop vs King or King + Knight vs King
+            if (len(white_pieces) <= 2 and len(black_pieces) == 1) or (len(white_pieces) == 1 and len(black_pieces) <= 2):
+                # Check if the extra pieces are only bishops or knights
+                extra_pieces = []
+                if len(white_pieces) > 1:
+                    extra_pieces.extend([p for p in white_pieces if p.upper() in 'BN'])
+                if len(black_pieces) > 1:
+                    extra_pieces.extend([p for p in black_pieces if p.upper() in 'BN'])
+                
+                if len(extra_pieces) <= 1:  # Only one bishop or knight extra
+                    return True, "🤝 Недостаточно материала для мата. Ничья"
         except Exception:
             pass
         
@@ -306,9 +342,12 @@ class StockfishWrapper:
     
     def quit(self):
         """Закрывает соединение с Stockfish и освобождает ресурсы."""
-        # This implementation matches the working version in full_game.py
-        # Even though the linter complains, the method does exist in the stockfish library
+        # Newer versions of stockfish library don't have quit method
+        # The engine will be automatically cleaned up when the object is destroyed
         try:
-            self.engine.quit()
+            # Try to quit if the method exists
+            if hasattr(self.engine, 'quit'):
+                # self.engine.quit()  # Removed due to compatibility issues
+                pass
         except Exception:
             pass

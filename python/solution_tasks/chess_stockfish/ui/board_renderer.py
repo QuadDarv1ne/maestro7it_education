@@ -33,12 +33,19 @@ HIGHLIGHT_COLOR = (124, 252, 0, 180)  # Зелёный - выбранная кл
 LAST_MOVE_COLOR = (205, 210, 106, 150)  # Жёлтый - последний ход
 CHECK_COLOR = (255, 0, 0, 180)      # Красный - шах
 
-try:
-    FONT = pygame.font.SysFont('Segoe UI Symbol', SQUARE_SIZE - 10)
-    SMALL_FONT = pygame.font.SysFont('Arial', 14)
-except Exception:
-    FONT = pygame.font.SysFont('Arial', SQUARE_SIZE - 10)
-    SMALL_FONT = pygame.font.SysFont('Arial', 14)
+# Initialize fonts after pygame.init() is called
+FONT = None
+SMALL_FONT = None
+
+def init_fonts():
+    """Initialize fonts after pygame is initialized."""
+    global FONT, SMALL_FONT
+    try:
+        FONT = pygame.font.SysFont('Segoe UI Symbol', SQUARE_SIZE - 10)
+        SMALL_FONT = pygame.font.SysFont('Arial', 14)
+    except Exception:
+        FONT = pygame.font.SysFont('Arial', SQUARE_SIZE - 10)
+        SMALL_FONT = pygame.font.SysFont('Arial', 14)
 
 # Unicode символы фигур
 PIECE_UNICODE = {
@@ -73,6 +80,10 @@ class BoardRenderer:
         self.last_move = None
         self.check_square = None
         self.show_coords = True
+        
+        # Initialize fonts if not already done
+        if FONT is None or SMALL_FONT is None:
+            init_fonts()
     
     def set_selected(self, square: Tuple[int, int]):
         """Установить выбранную клетку."""
@@ -163,7 +174,7 @@ class BoardRenderer:
                 
                 # Отрисовка фигур с Unicode символами
                 piece = board_state[row][col]
-                if piece:
+                if piece and FONT is not None:
                     text_color = (255, 255, 255) if piece.isupper() else (0, 0, 0)
                     try:
                         text = FONT.render(PIECE_UNICODE[piece], True, text_color)
@@ -173,7 +184,7 @@ class BoardRenderer:
                     self.screen.blit(text, text_rect)
                 
                 # Отрисовка координат (буквы и цифры)
-                if self.show_coords:
+                if self.show_coords and SMALL_FONT is not None:
                     if disp_col == 0:  # Левая граница - номера рядов
                         rank_text = SMALL_FONT.render(str(8 - row), True, (100, 100, 100))
                         self.screen.blit(rank_text, (disp_col * SQUARE_SIZE + 2, 
@@ -184,12 +195,12 @@ class BoardRenderer:
                                                      disp_row * SQUARE_SIZE + SQUARE_SIZE - 14))
         
         # Отрисовка дополнительной информации
-        if evaluation is not None:
+        if evaluation is not None and SMALL_FONT is not None:
             eval_text = f"Оценка: {evaluation:+.1f}"
             color = (100, 255, 100) if evaluation > 0 else (255, 100, 100)
             text_surface = SMALL_FONT.render(eval_text, True, color)
             self.screen.blit(text_surface, (10, 10))
         
-        if thinking:
+        if thinking and SMALL_FONT is not None:
             thinking_text = SMALL_FONT.render("⟳ Компьютер думает...", True, (255, 200, 0))
             self.screen.blit(thinking_text, (BOARD_SIZE - 200, 10))

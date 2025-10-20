@@ -35,7 +35,7 @@ import sys
 # Import our game modules
 from game.menu import main_menu
 from game.chess_game import ChessGame
-from utills.game_stats import GameStatistics
+from utils.game_stats import GameStatistics
 
 # ============================================================================
 # main.py

@@ -68,20 +68,24 @@ class GameStatistics:
             'player_color': game_stats['player_color'],
             'skill_level': game_stats['skill_level'],
             'total_moves': game_stats['total_moves'],
-            'result': game_stats['game_reason'],
+            'result': game_stats['game_reason'] or 'Неизвестно',
             'fen': game_stats['fen']
         }
         
         self.stats['games'].append(game_record)
         
         # Обновить счёт побед/поражений/ничьих
-        if game_stats['game_reason'] and 'Победили' in str(game_stats['game_reason']):
-            if f"Победили {game_stats['player_color']}" in str(game_stats['game_reason']):
-                self.stats['total_wins'] += 1
+        if game_stats['game_reason']:
+            if 'Победили' in game_stats['game_reason']:
+                if f"Победили {game_stats['player_color']}" in game_stats['game_reason']:
+                    self.stats['total_wins'] += 1
+                else:
+                    self.stats['total_losses'] += 1
+            elif 'Пат' in game_stats['game_reason'] or 'Ничья' in game_stats['game_reason']:
+                self.stats['total_draws'] += 1
             else:
+                # Other result, count as loss
                 self.stats['total_losses'] += 1
-        elif game_stats['game_reason'] and ('Пат' in str(game_stats['game_reason']) or 'Ничья' in str(game_stats['game_reason'])):
-            self.stats['total_draws'] += 1
         else:
             # Если игра не завершена, считаем поражением
             self.stats['total_losses'] += 1

@@ -28,19 +28,15 @@ import sys
 
 # Import our modules
 from engine.stockfish_wrapper import StockfishWrapper
-from ui.board_renderer import BoardRenderer
+from ui.board_renderer import BoardRenderer, init_fonts
 
 # Constants from board_renderer
 BOARD_SIZE = 512
 SQUARE_SIZE = BOARD_SIZE // 8
 
-# Fonts from board_renderer
-try:
-    FONT = pygame.font.SysFont('Segoe UI Symbol', SQUARE_SIZE - 10)
-    SMALL_FONT = pygame.font.SysFont('Arial', 14)
-except Exception:
-    FONT = pygame.font.SysFont('Arial', SQUARE_SIZE - 10)
-    SMALL_FONT = pygame.font.SysFont('Arial', 14)
+# Fonts will be initialized after pygame.init() is called
+FONT = None
+SMALL_FONT = None
 
 
 class ChessGame:
@@ -83,6 +79,9 @@ class ChessGame:
             pygame.display.set_caption(f"♟️  chess_stockfish — Maestro7IT (уровень {skill_level})")
         except Exception as e:
             raise RuntimeError(f"❌ Не удалось инициализировать графический интерфейс: {e}")
+        
+        # Initialize fonts
+        init_fonts()
         
         self.renderer = BoardRenderer(self.screen, player_color)
         self.clock = pygame.time.Clock()
@@ -197,7 +196,9 @@ class ChessGame:
                        self._fen_square_to_uci(*to_sq))
             
             try:
+                # Validate the move using our improved method
                 if self.engine.is_move_correct(uci_move):
+                    # Make the move and verify it was successful
                     if self.engine.make_move(uci_move):
                         self.move_history.append(uci_move)
                         self.renderer.set_last_move(from_sq, to_sq)
@@ -205,7 +206,9 @@ class ChessGame:
                         self.last_move_time = time.time()
                     else:
                         print("❌ Не удалось выполнить ход")
+                        self.renderer.clear_selected()
                 else:
+                    print("❌ Некорректный ход")
                     self.renderer.clear_selected()
             except Exception as e:
                 print(f"⚠️  Ошибка при обработке хода: {e}")
@@ -226,20 +229,29 @@ class ChessGame:
         
         self.thinking = True
         try:
-            ai_move = self.engine.get_best_move(depth=self.skill_level + 10)
+            # Get the best move with appropriate depth based on skill level
+            depth = max(1, min(20, self.skill_level + 5))  # Limit depth between 1 and 20
+            ai_move = self.engine.get_best_move(depth=depth)
+            
             if ai_move:
-                if self.engine.make_move(ai_move):
-                    self.move_history.append(ai_move)
-                    
-                    # Преобразование UCI хода в координаты для выделения
-                    from_col = ord(ai_move[0]) - ord('a')
-                    from_row = 8 - int(ai_move[1])
-                    to_col = ord(ai_move[2]) - ord('a')
-                    to_row = 8 - int(ai_move[3])
-                    self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
-                    self.last_move_time = time.time()
+                # Validate the move before making it
+                if self.engine.is_move_correct(ai_move):
+                    if self.engine.make_move(ai_move):
+                        self.move_history.append(ai_move)
+                        
+                        # Преобразование UCI хода в координаты для выделения
+                        from_col = ord(ai_move[0]) - ord('a')
+                        from_row = 8 - int(ai_move[1])
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
+                        self.last_move_time = time.time()
+                    else:
+                        print("⚠️  Не удалось выполнить ход компьютера")
                 else:
-                    print("⚠️  Не удалось выполнить ход компьютера")
+                    print("⚠️  Компьютер предложил некорректный ход")
+            else:
+                print("⚠️  Компьютер не смог найти ход")
         except Exception as e:
             print(f"⚠️  Ошибка при получении хода компьютера: {e}")
         finally:
@@ -270,32 +282,34 @@ class ChessGame:
             pygame.draw.rect(self.screen, (50, 50, 50), info_rect)
             pygame.draw.line(self.screen, (100, 100, 100), (0, BOARD_SIZE), (BOARD_SIZE, BOARD_SIZE), 2)
             
-            if self.game_over:
-                # Экран окончания игры
-                if self.game_over_reason:
-                    text = SMALL_FONT.render(self.game_over_reason, True, (255, 100, 100))
-                    self.screen.blit(text, (20, BOARD_SIZE + 15))
-                restart_text = SMALL_FONT.render("Нажмите 'R' для новой игры", True, (200, 200, 200))
-                self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
-            else:
-                # Статус хода
-                if self._is_player_turn():
-                    status = "🎮 Ваш ход"
-                    status_color = (100, 255, 100)
+            # Only render text if fonts are initialized
+            if SMALL_FONT is not None:
+                if self.game_over:
+                    # Экран окончания игры
+                    if self.game_over_reason:
+                        text = SMALL_FONT.render(self.game_over_reason, True, (255, 100, 100))
+                        self.screen.blit(text, (20, BOARD_SIZE + 15))
+                    restart_text = SMALL_FONT.render("Нажмите 'R' для новой игры", True, (200, 200, 200))
+                    self.screen.blit(restart_text, (20, BOARD_SIZE + 50))
                 else:
-                    status = "🤖 Ход компьютера"
-                    status_color = (100, 150, 255)
-                
-                text = SMALL_FONT.render(status, True, status_color)
-                self.screen.blit(text, (20, BOARD_SIZE + 15))
-                
-                # Информация о ходах
-                moves_text = SMALL_FONT.render(f"Ходов: {len(self.move_history)}", True, (200, 200, 200))
-                self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
-                
-                # Уровень сложности
-                level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
-                self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
+                    # Статус хода
+                    if self._is_player_turn():
+                        status = "🎮 Ваш ход"
+                        status_color = (100, 255, 100)
+                    else:
+                        status = "🤖 Ход компьютера"
+                        status_color = (100, 150, 255)
+                    
+                    text = SMALL_FONT.render(status, True, status_color)
+                    self.screen.blit(text, (20, BOARD_SIZE + 15))
+                    
+                    # Информация о ходах
+                    moves_text = SMALL_FONT.render(f"Ходов: {len(self.move_history)}", True, (200, 200, 200))
+                    self.screen.blit(moves_text, (20, BOARD_SIZE + 50))
+                    
+                    # Уровень сложности
+                    level_text = SMALL_FONT.render(f"Уровень: {self.skill_level}/20", True, (200, 200, 200))
+                    self.screen.blit(level_text, (BOARD_SIZE - 150, BOARD_SIZE + 15))
         except Exception as e:
             print(f"⚠️  Ошибка при отрисовке интерфейса: {e}")
     
