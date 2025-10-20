@@ -103,6 +103,20 @@ class ChessGame:
         self.move_feedback_time = 0
         self.frame_count = 0  # Счетчик кадров для очистки временных поверхностей
         self.highlight_hint = None  # For T key hint highlighting
+        
+        # Улучшенная система кэширования
+        self._cache = {
+            'board_state': None,
+            'board_fen': None,
+            'valid_moves': {},  # Кэш для допустимых ходов
+            'uci_conversions': {},  # Кэш для преобразований координат
+            'last_evaluation': None,
+            'last_eval_fen': None
+        }
+        
+        # Оптимизация рендеринга
+        self.last_ui_update = 0
+        self.ui_update_interval = 1.0/30  # 30 FPS для UI
     
     def _init_ui_fonts(self):
         """Инициализация шрифтов для UI элементов."""
@@ -130,7 +144,7 @@ class ChessGame:
     
     def _fen_square_to_uci(self, row: int, col: int) -> str:
         """
-        Преобразует FEN координаты в UCI формат.
+        Преобразует FEN координаты в UCI формат с кэшированием.
         
         Параметры:
             row (int): Ряд (0-7)
@@ -151,41 +165,167 @@ class ChessGame:
         self._uci_cache[cache_key] = uci
         return uci
     
-    def _is_player_turn(self) -> bool:
+    def get_board_state(self):
         """
-        Проверяет, является ли текущий ход ходом игрока.
+        Получение состояния доски с кэшированием.
         
         Возвращает:
-            bool: True если ход игрока, False если ход компьютера
+            List[List[Optional[str]]]: Состояние доски
         """
         try:
-            side = self.engine.get_side_to_move()
-            return (
-                (self.player_color == 'white' and side == 'w') or
-                (self.player_color == 'black' and side == 'b')
-            )
+            current_fen = self.engine.get_fen()
+            if self._cache['board_fen'] == current_fen and self._cache['board_state'] is not None:
+                return self._cache['board_state']
+                
+            board = self.engine.get_board_state()
+            self._cache['board_state'] = board
+            self._cache['board_fen'] = current_fen
+            return board
         except Exception:
-            # Если не удалось получить сторону, предполагаем, что ход игрока
-            return True
+            # Возвращаем пустую доску в случае ошибки
+            return [[None for _ in range(8)] for _ in range(8)]
     
-    def _is_player_piece(self, piece: Optional[str]) -> bool:
+    def get_cached_evaluation(self):
         """
-        Проверяет, принадлежит ли фигура игроку.
+        Получение кэшированной оценки позиции.
         
-        Параметры:
-            piece (str): Символ фигуры
-            
         Возвращает:
-            bool: True если фигура принадлежит игроку
+            float: Оценка позиции
         """
-        if not piece:
-            return False
-        is_white = piece.isupper()
-        return (self.player_color == 'white') == is_white
+        try:
+            current_fen = self.engine.get_fen()
+            if self._cache['last_eval_fen'] == current_fen and self._cache['last_evaluation'] is not None:
+                return self._cache['last_evaluation']
+                
+            evaluation = self.engine.get_evaluation()
+            self._cache['last_evaluation'] = evaluation
+            self._cache['last_eval_fen'] = current_fen
+            return evaluation
+        except Exception:
+            return None
     
+    def _get_pawn_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
+        """Генерация возможных ходов для пешки."""
+        moves = []
+        is_white = piece.isupper()
+        
+        # Направление движения
+        direction = -1 if is_white else 1
+        
+        # Ход вперед на одну клетку
+        new_row = row + direction
+        if 0 <= new_row < 8 and board[new_row][col] is None:
+            moves.append((new_row, col))
+            
+            # Ход вперед на две клетки с начальной позиции
+            start_row = 6 if is_white else 1
+            if row == start_row:
+                new_row_2 = row + 2 * direction
+                if 0 <= new_row_2 < 8 and board[new_row][col] is None and board[new_row_2][col] is None:
+                    moves.append((new_row_2, col))
+        
+        # Взятие по диагонали
+        for dc in [-1, 1]:
+            new_col = col + dc
+            new_row = row + direction
+            if 0 <= new_row < 8 and 0 <= new_col < 8:
+                target = board[new_row][new_col]
+                if target is not None and ((is_white and target.islower()) or (not is_white and target.isupper())):
+                    moves.append((new_row, new_col))
+                    
+        return moves
+
+    def _get_knight_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
+        """Генерация возможных ходов для коня."""
+        moves = []
+        is_white = piece.isupper()
+        
+        # Все возможные ходы коня
+        knight_moves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+        
+        for dr, dc in knight_moves:
+            new_row, new_col = row + dr, col + dc
+            if 0 <= new_row < 8 and 0 <= new_col < 8:
+                target = board[new_row][new_col]
+                if target is None or ((is_white and target.islower()) or (not is_white and target.isupper())):
+                    moves.append((new_row, new_col))
+                    
+        return moves
+
+    def _get_bishop_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
+        """Генерация возможных ходов для слона."""
+        moves = []
+        is_white = piece.isupper()
+        
+        # Диагональные направления
+        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        
+        for dr, dc in directions:
+            new_row, new_col = row + dr, col + dc
+            while 0 <= new_row < 8 and 0 <= new_col < 8:
+                target = board[new_row][new_col]
+                if target is None:
+                    moves.append((new_row, new_col))
+                else:
+                    if (is_white and target.islower()) or (not is_white and target.isupper()):
+                        moves.append((new_row, new_col))
+                    break
+                new_row += dr
+                new_col += dc
+                    
+        return moves
+
+    def _get_rook_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
+        """Генерация возможных ходов для ладьи."""
+        moves = []
+        is_white = piece.isupper()
+        
+        # Горизонтальные и вертикальные направления
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+        for dr, dc in directions:
+            new_row, new_col = row + dr, col + dc
+            while 0 <= new_row < 8 and 0 <= new_col < 8:
+                target = board[new_row][new_col]
+                if target is None:
+                    moves.append((new_row, new_col))
+                else:
+                    if (is_white and target.islower()) or (not is_white and target.isupper()):
+                        moves.append((new_row, new_col))
+                    break
+                new_row += dr
+                new_col += dc
+                    
+        return moves
+
+    def _get_queen_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
+        """Генерация возможных ходов для ферзя."""
+        # Ферзь = слон + ладья
+        bishop_moves = self._get_bishop_moves(row, col, piece, board)
+        rook_moves = self._get_rook_moves(row, col, piece, board)
+        return bishop_moves + rook_moves
+
+    def _get_king_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
+        """Генерация возможных ходов для короля."""
+        moves = []
+        is_white = piece.isupper()
+        
+        # Все направления для короля
+        directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        
+        for dr, dc in directions:
+            new_row, new_col = row + dr, col + dc
+            if 0 <= new_row < 8 and 0 <= new_col < 8:
+                target = board[new_row][new_col]
+                if target is None or ((is_white and target.islower()) or (not is_white and target.isupper())):
+                    moves.append((new_row, new_col))
+                    
+        return moves
+
     def _get_valid_moves(self, from_row: int, from_col: int) -> List[Tuple[int, int]]:
         """
         Получить список допустимых ходов для фигуры на заданной позиции.
+        Оптимизированная версия с использованием правил движения фигур.
         
         Параметры:
             from_row (int): Ряд фигуры
@@ -197,18 +337,68 @@ class ChessGame:
         valid_moves = []
         from_uci = self._fen_square_to_uci(from_row, from_col)
         
-        # Для каждой возможной целевой позиции проверяем допустимость хода
-        # Оптимизация: проверяем только разумные ходы вместо всех 64 клеток
-        for to_row in range(8):
-            for to_col in range(8):
-                # Пропускаем исходную позицию
-                if from_row == to_row and from_col == to_col:
-                    continue
+        try:
+            board_state = self.get_board_state()
+            # Ensure board_state is of the correct type
+            if not isinstance(board_state, list) or len(board_state) != 8:
+                # Fallback to engine's board state if our cache has issues
+                board_state = self.engine.get_board_state()
+            
+            # Convert to proper type if needed
+            if isinstance(board_state, list) and len(board_state) == 8:
+                # Ensure each row is properly typed
+                typed_board: List[List[Optional[str]]] = []
+                for row in board_state:
+                    if isinstance(row, list) and len(row) == 8:
+                        typed_row: List[Optional[str]] = []
+                        for cell in row:
+                            if cell is None or isinstance(cell, str):
+                                typed_row.append(cell)
+                            else:
+                                typed_row.append(None)
+                        typed_board.append(typed_row)
+                    else:
+                        # Fallback to engine's board state if there are issues
+                        board_state = self.engine.get_board_state()
+                        typed_board = board_state
+                        break
+            else:
+                # Fallback to engine's board state if there are issues
+                board_state = self.engine.get_board_state()
+                typed_board = board_state
+            
+            piece = typed_board[from_row][from_col]
+            if not piece:
+                return valid_moves
+                
+            piece_lower = piece.lower()
+            
+            # Оптимизация: генерируем только возможные ходы для каждой фигуры
+            if piece_lower == 'p':  # Пешка
+                candidate_moves = self._get_pawn_moves(from_row, from_col, piece, typed_board)
+            elif piece_lower == 'n':  # Конь
+                candidate_moves = self._get_knight_moves(from_row, from_col, piece, typed_board)
+            elif piece_lower == 'b':  # Слон
+                candidate_moves = self._get_bishop_moves(from_row, from_col, piece, typed_board)
+            elif piece_lower == 'r':  # Ладья
+                candidate_moves = self._get_rook_moves(from_row, from_col, piece, typed_board)
+            elif piece_lower == 'q':  # Ферзь
+                candidate_moves = self._get_queen_moves(from_row, from_col, piece, typed_board)
+            elif piece_lower == 'k':  # Король
+                candidate_moves = self._get_king_moves(from_row, from_col, piece, typed_board)
+            else:
+                candidate_moves = []
+                
+            # Проверяем допустимость ходов через движок
+            for to_row, to_col in candidate_moves:
                 to_uci = self._fen_square_to_uci(to_row, to_col)
                 uci_move = from_uci + to_uci
                 if self.engine.is_move_correct(uci_move):
                     valid_moves.append((to_row, to_col))
-        
+                    
+        except Exception as e:
+            print(f"Ошибка при расчете допустимых ходов: {e}")
+            
         return valid_moves
 
     def _is_path_blocked(self, from_row: int, from_col: int, to_row: int, to_col: int, board: List[List[Optional[str]]]) -> bool:
@@ -363,6 +553,38 @@ class ChessGame:
         except Exception as e:
             print(f"Ошибка при получении подсказки: {e}")
             return "Недопустимый ход"
+
+    def _is_player_turn(self) -> bool:
+        """
+        Проверяет, является ли текущий ход ходом игрока.
+        
+        Возвращает:
+            bool: True если ход игрока, False если ход компьютера
+        """
+        try:
+            side = self.engine.get_side_to_move()
+            return (
+                (self.player_color == 'white' and side == 'w') or
+                (self.player_color == 'black' and side == 'b')
+            )
+        except Exception:
+            # Если не удалось получить сторону, предполагаем, что ход игрока
+            return True
+    
+    def _is_player_piece(self, piece: Optional[str]) -> bool:
+        """
+        Проверяет, принадлежит ли фигура игроку.
+        
+        Параметры:
+            piece (str): Символ фигуры
+            
+        Возвращает:
+            bool: True если фигура принадлежит игроку
+        """
+        if not piece:
+            return False
+        is_white = piece.isupper()
+        return (self.player_color == 'white') == is_white
 
     def handle_click(self, x: int, y: int):
         """
