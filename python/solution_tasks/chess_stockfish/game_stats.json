@@ -7,9 +7,145 @@
       "total_moves": 2,
       "result": "Неизвестно",
       "fen": "rnbqkbnr/ppp1pppp/8/3p4/5P2/8/PPPPP1PP/RNBQKBNR w KQkq - 0 2"
+    },
+    {
+      "timestamp": "2025-10-21T14:32:52.960819",
+      "player_color": "white",
+      "skill_level": 5,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T14:46:17.624733",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T14:54:10.718060",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T14:54:37.086165",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T14:54:54.672683",
+      "player_color": "white",
+      "skill_level": 6,
+      "total_moves": 2,
+      "result": "Неизвестно",
+      "fen": "rnbqkb1r/pppppppp/5n2/8/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 1 2"
+    },
+    {
+      "timestamp": "2025-10-21T14:59:45.184837",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T15:04:05.771719",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T15:11:36.320128",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T15:13:56.162760",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T15:25:44.958564",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 50,
+      "result": "Неизвестно",
+      "fen": "r3k3/ppp3p1/4Kp2/2B5/2b2Pp1/2P3n1/PP2n2r/RN6 w q - 3 26"
+    },
+    {
+      "timestamp": "2025-10-21T15:44:34.530546",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T15:50:13.370107",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T15:53:27.461725",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T17:10:13.593773",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 6,
+      "result": "Неизвестно",
+      "fen": "r1bqkbnr/ppp1pppp/2n5/8/4pB2/3P4/PPP2PPP/RN1QKBNR w KQkq - 0 4"
+    },
+    {
+      "timestamp": "2025-10-21T17:14:45.373802",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 2,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppp1ppp/8/4p3/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+    },
+    {
+      "timestamp": "2025-10-21T17:26:23.082778",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 4,
+      "result": "Неизвестно",
+      "fen": "rnbqkb1r/ppp1pppp/5n2/3p4/2P5/1P6/P2PPPPP/RNBQKBNR w KQkq - 0 3"
+    },
+    {
+      "timestamp": "2025-10-21T19:05:00.818294",
+      "player_color": "white",
+      "skill_level": 5,
+      "total_moves": 10,
+      "result": "Неизвестно",
+      "fen": "rnbqk2r/ppp2ppp/8/2bnp3/8/3PPP2/PP4PP/RNBQKBNR w KQkq - 0 6"
     }
   ],
   "total_wins": 0,
-  "total_losses": 1,
+  "total_losses": 18,
   "total_draws": 0
 }

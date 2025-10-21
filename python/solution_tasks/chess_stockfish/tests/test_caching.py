@@ -3,8 +3,14 @@
 Test script for caching mechanisms in the chess game.
 """
 
-from game.chess_game import ChessGame
+import sys
+import os
 import time
+
+# Add the project root to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from game.chess_game import ChessGame
 
 def test_valid_moves_cache():
     """Test valid moves caching functionality."""
@@ -92,9 +98,9 @@ def main():
         
         print("All caching tests completed successfully!")
         print("\nPerformance improvements implemented:")
-        print("1. Valid moves caching with 500ms expiration")
-        print("2. King position caching with 1s expiration")
-        print("3. Educational feedback caching with 10s expiration")
+        print("1. Valid moves caching with 1s expiration")
+        print("2. King position caching with 2s expiration")
+        print("3. Educational feedback caching with 30s expiration")
         print("4. Piece hint caching")
         print("5. Enhanced cache clearing mechanisms")
         print("6. Periodic cache cleanup every 30 seconds")

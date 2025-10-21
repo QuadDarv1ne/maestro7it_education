@@ -107,7 +107,8 @@ class SoundManager:
             self.sounds["win"] = self._create_tone_sound(523, 0.4)     # До 523 Гц
             self.sounds["lose"] = self._create_tone_sound(196, 0.6)    # Соль 196 Гц
             self.sounds["draw"] = self._create_tone_sound(392, 0.4)    # Соль 392 Гц
-            self.sounds["button"] = self._create_tone_sound(800, 0.1)   # Звук кнопки
+            # Улучшенный звук кнопки - более приятный и мягкий
+            self.sounds["button"] = self._create_soft_click_sound(0.15)
         except Exception as e:
             logging.warning(f"Failed to create tone sounds: {e}")
             
@@ -303,3 +304,35 @@ class SoundManager:
             bool: True если фоновая музыка включена
         """
         return self.music_enabled and self._initialized
+
+    def _create_soft_click_sound(self, duration: float) -> pygame.mixer.Sound:
+        """
+        Создание мягкого звука клика для интерфейса.
+        
+        Параметры:
+            duration (float): Длительность в секундах
+            
+        Возвращает:
+            pygame.mixer.Sound: Созданный звук
+        """
+        import numpy as np
+        
+        sample_rate = 22050
+        frames = int(duration * sample_rate)
+        arr = np.zeros((frames, 2))  # Стерео
+        
+        # Создаем мягкий звук с огибающей и несколькими частотами
+        for i in range(frames):
+            t = i / sample_rate
+            # Огибающая для плавного звучания
+            envelope = np.exp(-t * 20)  # Быстрый спад
+            if t < duration:
+                # Комбинация частот для более приятного звука
+                wave1 = np.sin(2 * np.pi * 400 * t)  # Основная частота
+                wave2 = 0.5 * np.sin(2 * np.pi * 800 * t)  # Высокая частота
+                wave3 = 0.3 * np.sin(2 * np.pi * 200 * t)  # Низкая частота
+                wave = envelope * 2048 * (wave1 + wave2 + wave3)
+                arr[i][0] = wave  # Левый канал
+                arr[i][1] = wave  # Правый канал
+            
+        return pygame.sndarray.make_sound(arr.astype(np.int16))
