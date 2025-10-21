@@ -22,7 +22,6 @@
 
 import pygame
 from typing import Tuple, Optional
-from game.chess_game import ChessGame
 
 # Цвета для меню
 MENU_BG = (30, 30, 40, 220)  # Полупрозрачный темно-синий фон
@@ -158,9 +157,37 @@ class InGameMenu:
             self.sound_manager.toggle_music()
         elif action == "toggle_sound" and self.sound_manager:
             self.sound_manager.toggle_sound()
+        elif action == "settings":
+            # Показать меню настроек
+            return self._show_settings_menu()
             
         self.hide()
         return action
+        
+    def _show_settings_menu(self) -> str:
+        """
+        Показать меню настроек.
+        
+        Возвращает:
+            str: Результат действия меню настроек
+        """
+        # Сохраняем текущие элементы меню
+        original_items = self.menu_items[:]
+        
+        # Создаем элементы меню настроек
+        settings_items = [
+            {"text": "Сторона: Белые", "action": "toggle_side", "enabled": True},
+            {"text": "Сложность: 5", "action": "change_difficulty", "enabled": True},
+            {"text": "Тема: classic", "action": "change_theme", "enabled": True},
+            {"text": "Назад", "action": "back", "enabled": True}
+        ]
+        
+        # Обновляем меню настроек
+        self.menu_items = settings_items
+        self.selected_item = 0
+        
+        # Показываем меню настроек
+        return "settings_menu"
         
     def draw(self):
         """Отрисовка меню."""
