@@ -21,8 +21,10 @@
 
 import pygame
 import os
+import time
 from typing import Dict, Optional
 import logging
+
 
 class SoundManager:
     """
@@ -44,6 +46,9 @@ class SoundManager:
         self.sounds: Dict[str, pygame.mixer.Sound] = {}
         self._initialized = False
         self.background_music = None
+        self.sound_queue = []  # Очередь для предотвращения наложения звуков
+        self.last_sound_time = 0  # Время последнего воспроизведения звука
+        self.sound_cooldown = 0.1  # Минимальная задержка между звуками
         
         # Инициализируем систему звука
         self._init_sound_system()
@@ -90,28 +95,70 @@ class SoundManager:
             logging.warning(f"Failed to load sound {filename}: {e}")
             return None
             
-    def load_sounds(self):
-        """Загрузка всех звуковых эффектов."""
-        if not self._initialized:
+    def play_sound(self, sound_name: str):
+        """
+        Воспроизведение звукового эффекта.
+        
+        Параметры:
+            sound_name (str): Имя звука для воспроизведения
+        """
+        if not self.sound_enabled or not self._initialized:
             return
             
-        # Загружаем стандартные системные звуки если файлы не найдены
-        try:
-            # Основные игровые звуки
-            self.sounds["move"] = self._create_tone_sound(440, 0.1)  # Ля 440 Гц
-            self.sounds["capture"] = self._create_tone_sound(220, 0.2)  # Ля 220 Гц
-            self.sounds["check"] = self._create_tone_sound(880, 0.3)   # Ля 880 Гц
-            self.sounds["checkmate"] = self._create_tone_sound(1760, 0.5)  # Ля 1760 Гц
-            self.sounds["castle"] = self._create_tone_sound(330, 0.2)   # Ми 330 Гц
-            self.sounds["promote"] = self._create_tone_sound(660, 0.3)  # Ми 660 Гц
-            self.sounds["win"] = self._create_tone_sound(523, 0.4)     # До 523 Гц
-            self.sounds["lose"] = self._create_tone_sound(196, 0.6)    # Соль 196 Гц
-            self.sounds["draw"] = self._create_tone_sound(392, 0.4)    # Соль 392 Гц
-            # Улучшенный звук кнопки - более приятный и мягкий
-            self.sounds["button"] = self._create_soft_click_sound(0.15)
-        except Exception as e:
-            logging.warning(f"Failed to create tone sounds: {e}")
+        current_time = time.time()
+        
+        # Проверяем cooldown для предотвращения наложения звуков
+        if current_time - self.last_sound_time < self.sound_cooldown:
+            return
             
+        try:
+            if sound_name in self.sounds:
+                # Останавливаем предыдущий звук того же типа, если он еще играет
+                if sound_name in self.sound_queue:
+                    self.sounds[sound_name].stop()
+                
+                self.sounds[sound_name].play()
+                self.last_sound_time = current_time
+                # Добавляем звук в очередь для отслеживания
+                self.sound_queue.append(sound_name)
+            else:
+                logging.warning(f"Sound '{sound_name}' not found")
+        except Exception as e:
+            logging.warning(f"Failed to play sound '{sound_name}': {e}")
+
+    def _create_soft_click_sound(self, duration: float) -> pygame.mixer.Sound:
+        """
+        Создание мягкого звука клика для интерфейса.
+        
+        Параметры:
+            duration (float): Длительность в секундах
+            
+        Возвращает:
+            pygame.mixer.Sound: Созданный звук
+        """
+        import numpy as np
+        
+        sample_rate = 22050
+        frames = int(duration * sample_rate)
+        arr = np.zeros((frames, 2))  # Стерео
+        
+        # Создаем более приятный звук с гармоническими обертонами
+        for i in range(frames):
+            t = i / sample_rate
+            # Огибающая для плавного звучания
+            envelope = np.exp(-t * 30)  # Быстрый спад для четкости
+            if t < duration:
+                # Комбинация частот для более приятного звука
+                wave1 = np.sin(2 * np.pi * 440 * t)  # Основная частота (ля)
+                wave2 = 0.5 * np.sin(2 * np.pi * 880 * t)  # Высокая частота (октава)
+                wave3 = 0.3 * np.sin(2 * np.pi * 220 * t)  # Низкая частота (октава вниз)
+                wave4 = 0.2 * np.sin(2 * np.pi * 1760 * t)  # Очень высокая частота
+                wave = envelope * 4096 * (wave1 + wave2 + wave3 + wave4)
+                arr[i][0] = wave  # Левый канал
+                arr[i][1] = wave  # Правый канал
+            
+        return pygame.sndarray.make_sound(arr.astype(np.int16))
+
     def _create_tone_sound(self, frequency: int, duration: float) -> pygame.mixer.Sound:
         """
         Создание звукового сигнала заданной частоты и длительности.
@@ -129,31 +176,44 @@ class SoundManager:
         frames = int(duration * sample_rate)
         arr = np.zeros((frames, 2))  # Стерео
         
-        # Генерируем синусоидальную волну
+        # Генерируем синусоидальную волну с огибающей для плавного звучания
         for i in range(frames):
-            wave = 4096 * np.sin(2 * np.pi * frequency * i / sample_rate)
+            t = i / sample_rate
+            # Огибающая для плавного нарастания и спада
+            if t < duration * 0.1:  # Первые 10% времени - нарастание
+                envelope = t / (duration * 0.1)
+            elif t > duration * 0.9:  # Последние 10% времени - спад
+                envelope = 1.0 - (t - duration * 0.9) / (duration * 0.1)
+            else:  # Середина - максимальная громкость
+                envelope = 1.0
+                
+            wave = envelope * 4096 * np.sin(2 * np.pi * frequency * t)
             arr[i][0] = wave  # Левый канал
             arr[i][1] = wave  # Правый канал
             
         return pygame.sndarray.make_sound(arr.astype(np.int16))
-        
-    def play_sound(self, sound_name: str):
-        """
-        Воспроизведение звукового эффекта.
-        
-        Параметры:
-            sound_name (str): Имя звука для воспроизведения
-        """
-        if not self.sound_enabled or not self._initialized:
+
+    def load_sounds(self):
+        """Загрузка всех звуковых эффектов."""
+        if not self._initialized:
             return
             
+        # Загружаем стандартные системные звуки если файлы не найдены
         try:
-            if sound_name in self.sounds:
-                self.sounds[sound_name].play()
-            else:
-                logging.warning(f"Sound '{sound_name}' not found")
+            # Основные игровые звуки
+            self.sounds["move"] = self._create_tone_sound(440, 0.15)  # Ля 440 Гц, 150 мс
+            self.sounds["capture"] = self._create_tone_sound(220, 0.25)  # Ля 220 Гц, 250 мс
+            self.sounds["check"] = self._create_tone_sound(880, 0.35)   # Ля 880 Гц, 350 мс
+            self.sounds["checkmate"] = self._create_tone_sound(1760, 0.6)  # Ля 1760 Гц, 600 мс
+            self.sounds["castle"] = self._create_tone_sound(330, 0.2)   # Ми 330 Гц, 200 мс
+            self.sounds["promote"] = self._create_tone_sound(660, 0.4)  # Ми 660 Гц, 400 мс
+            self.sounds["win"] = self._create_tone_sound(523, 0.5)     # До 523 Гц, 500 мс
+            self.sounds["lose"] = self._create_tone_sound(196, 0.7)    # Соль 196 Гц, 700 мс
+            self.sounds["draw"] = self._create_tone_sound(392, 0.4)    # Соль 392 Гц, 400 мс
+            # Улучшенный звук кнопки - более приятный и мягкий
+            self.sounds["button"] = self._create_soft_click_sound(0.1)
         except Exception as e:
-            logging.warning(f"Failed to play sound '{sound_name}': {e}")
+            logging.warning(f"Failed to create tone sounds: {e}")
             
     def play_background_music(self):
         """
@@ -305,34 +365,3 @@ class SoundManager:
         """
         return self.music_enabled and self._initialized
 
-    def _create_soft_click_sound(self, duration: float) -> pygame.mixer.Sound:
-        """
-        Создание мягкого звука клика для интерфейса.
-        
-        Параметры:
-            duration (float): Длительность в секундах
-            
-        Возвращает:
-            pygame.mixer.Sound: Созданный звук
-        """
-        import numpy as np
-        
-        sample_rate = 22050
-        frames = int(duration * sample_rate)
-        arr = np.zeros((frames, 2))  # Стерео
-        
-        # Создаем мягкий звук с огибающей и несколькими частотами
-        for i in range(frames):
-            t = i / sample_rate
-            # Огибающая для плавного звучания
-            envelope = np.exp(-t * 20)  # Быстрый спад
-            if t < duration:
-                # Комбинация частот для более приятного звука
-                wave1 = np.sin(2 * np.pi * 400 * t)  # Основная частота
-                wave2 = 0.5 * np.sin(2 * np.pi * 800 * t)  # Высокая частота
-                wave3 = 0.3 * np.sin(2 * np.pi * 200 * t)  # Низкая частота
-                wave = envelope * 2048 * (wave1 + wave2 + wave3)
-                arr[i][0] = wave  # Левый канал
-                arr[i][1] = wave  # Правый канал
-            
-        return pygame.sndarray.make_sound(arr.astype(np.int16))

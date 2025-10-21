@@ -64,6 +64,15 @@ THEMES = {
         dark_square=(100, 160, 100),
         white_piece=(255, 255, 255),
         black_piece=(0, 80, 0)
+    ),
+    'contrast': BoardTheme(  # Добавляем новую тему с высоким контрастом
+        light_square=(255, 255, 255),
+        dark_square=(0, 0, 0),
+        white_piece=(0, 0, 0),
+        black_piece=(255, 255, 255),
+        highlight=(0, 255, 0, 200),
+        last_move=(255, 255, 0, 180),
+        check=(255, 0, 0, 200)
     )
 }
 
@@ -85,8 +94,8 @@ class ResourceCache:
     Улучшенный кэш с автоматической очисткой и оптимизацией памяти.
     """
     
-    MAX_SURFACE_CACHE_SIZE = 20  # Уменьшено с 30 для более агрессивной очистки
-    MAX_PIECE_CACHE_SIZE = 15    # Уменьшено с 20 для более агрессивной очистки
+    MAX_SURFACE_CACHE_SIZE = 50  # Увеличиваем с 20 для лучшей производительности
+    MAX_PIECE_CACHE_SIZE = 30    # Увеличиваем с 15 для лучшей производительности
     
     def __init__(self):
         self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
@@ -122,7 +131,7 @@ class ResourceCache:
                 self._cleanup_surfaces()
                     
             # Очищаем кэш чаще для лучшей производительности
-            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.7:  # Уменьшено с 0.8
+            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.8:  # Увеличено с 0.7
                 self._cleanup_surfaces()
             
             surf = pygame.Surface((key[1][0], key[1][1]), pygame.SRCALPHA)
@@ -150,7 +159,7 @@ class ResourceCache:
                 self._cleanup_pieces()
                     
             # Очищаем кэш чаще для лучшей производительности
-            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.7:  # Уменьшено с 0.8
+            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.8:  # Увеличено с 0.7
                 self._cleanup_pieces()
                 
             try:
@@ -169,9 +178,9 @@ class ResourceCache:
         if not self.surface_usage:
             return
         
-        # Удаляем 40% наименее используемых (увеличено с 25%)
+        # Удаляем 50% наименее используемых (увеличено с 40%)
         sorted_items = sorted(self.surface_usage.items(), key=lambda x: x[1])
-        to_remove = max(1, len(sorted_items) // 3)  # Увеличено с 4 до 3
+        to_remove = max(1, len(sorted_items) // 2)  # Увеличено с 3 до 2
         
         for key, _ in sorted_items[:to_remove]:
             self.surfaces.pop(key, None)
@@ -183,7 +192,7 @@ class ResourceCache:
             return
             
         sorted_items = sorted(self.piece_usage.items(), key=lambda x: x[1])
-        to_remove = max(1, len(sorted_items) // 3)  # Увеличено с 4 до 3
+        to_remove = max(1, len(sorted_items) // 2)  # Увеличено с 3 до 2
         
         for key, _ in sorted_items[:to_remove]:
             self.pieces.pop(key, None)
@@ -318,7 +327,7 @@ class EffectRenderer:
         return (c[0], c[1], c[2], 255)  # type: ignore
 
     def draw_rounded_rect(self, surface: pygame.Surface, rect: pygame.Rect, 
-                         color: Tuple[int, int, int], corner_radius: int = 4):
+                         color: Tuple[int, int, int], corner_radius: int = 6):
         """Оптимизированный прямоугольник со скруглёнными углами."""
         corner_radius = max(0, min(corner_radius, min(rect.width, rect.height) // 2))
         try:
@@ -328,59 +337,77 @@ class EffectRenderer:
 
     def draw_highlight(self, surface: pygame.Surface, rect: pygame.Rect, 
                       color: Union[Tuple[int, ...], List[int]],
-                      style: HighlightStyle, border_width: int = 2):
+                      style: HighlightStyle, border_width: int = 3):
         """Упрощённая отрисовка подсветки для лучшей производительности."""
         rgba = self._ensure_rgba(color)
         
         if style == HighlightStyle.FILL:
             # Простая заливка без временных поверхностей
             try:
-                pygame.draw.rect(surface, rgba, rect, 0, border_radius=2)
+                pygame.draw.rect(surface, rgba, rect, 0, border_radius=3)
             except TypeError:
                 pygame.draw.rect(surface, rgba, rect)
 
         elif style == HighlightStyle.BORDER:
             # Упрощённая рамка без артефактов
             try:
-                pygame.draw.rect(surface, rgba, rect, border_width, border_radius=2)
+                pygame.draw.rect(surface, rgba, rect, border_width, border_radius=3)
             except TypeError:
                 pygame.draw.rect(surface, rgba, rect, border_width)
 
         elif style == HighlightStyle.GLOW:
             # Упрощённое свечение без временных поверхностей
-            glow_color = (rgba[0], rgba[1], rgba[2], rgba[3] // 3)
+            glow_color = (rgba[0], rgba[1], rgba[2], rgba[3] // 2)
             try:
-                pygame.draw.rect(surface, glow_color, rect, border_radius=3)
+                pygame.draw.rect(surface, glow_color, rect, border_radius=4)
             except TypeError:
                 pygame.draw.rect(surface, glow_color, rect)
 
     def draw_piece_with_shadow(self, surface: pygame.Surface, piece: str, 
                                rect: pygame.Rect, color: Tuple[int, int, int], 
                                font: pygame.font.Font):
-        """Упрощённая отрисовка фигуры для лучшей производительности."""
+        """Улучшенная отрисовка фигуры с тенью для лучшей визуализации."""
         piece_surface = self.cache.get_piece_surface(piece, color, font)
         if not piece_surface:
             return
 
-        # Основная фигура без тени для лучшей производительности
+        # Добавляем тень для лучшей визуализации
+        shadow_offset = 2
+        shadow_color = (0, 0, 0, 100) if color == (255, 255, 255) else (255, 255, 255, 100)
+        
+        # Рисуем тень
+        shadow_surface = pygame.Surface((piece_surface.get_width(), piece_surface.get_height()), pygame.SRCALPHA)
+        shadow_surface.fill((0, 0, 0, 0))
+        shadow_surface.blit(piece_surface, (0, 0))
+        
+        # Применяем цвет тени
+        shadow_surface.fill(shadow_color, special_flags=pygame.BLEND_RGBA_MULT)
+        
+        surface.blit(shadow_surface, (rect.centerx - piece_surface.get_width()//2 + shadow_offset, 
+                                    rect.centery - piece_surface.get_height()//2 + shadow_offset))
+        
+        # Основная фигура
         surface.blit(piece_surface, (rect.centerx - piece_surface.get_width()//2, 
                                     rect.centery - piece_surface.get_height()//2))
 
     def draw_check_indicator(self, surface: pygame.Surface, rect: pygame.Rect):
-        """Оптимизированный индикатор шаха для лучшей производительности."""
+        """Улучшенный индикатор шаха для лучшей визуализации."""
         center = rect.center
-        radius = min(rect.width, rect.height) // 2 + 4
+        radius = min(rect.width, rect.height) // 2 + 6
         
-        # Один красный круг без анимации для лучшей производительности
-        pygame.draw.circle(surface, (255, 0, 0, 180), center, radius, 2)
+        # Анимированный красный круг
+        pygame.draw.circle(surface, (255, 0, 0, 200), center, radius, 3)
+        # Внутренний круг для лучшего визуального эффекта
+        pygame.draw.circle(surface, (255, 100, 100, 100), center, radius - 3)
 
     def draw_move_hint_dot(self, surface: pygame.Surface, rect: pygame.Rect):
-        """Оптимизированная точка-подсказка для лучшей производительности."""
+        """Улучшенная точка-подсказка для лучшей визуализации."""
         center = rect.center
-        radius = min(rect.width, rect.height) // 4
+        radius = min(rect.width, rect.height) // 5
         
-        # Простой круг без градиентов
-        pygame.draw.circle(surface, (50, 150, 255, 180), center, radius)
+        # Градиентная точка для лучшего визуального эффекта
+        pygame.draw.circle(surface, (50, 150, 255, 220), center, radius)
+        pygame.draw.circle(surface, (100, 200, 255, 150), center, radius - 2)
 
 
 # ============================================================================ #

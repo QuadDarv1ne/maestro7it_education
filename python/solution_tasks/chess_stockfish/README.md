@@ -68,12 +68,22 @@ pip install pygame stockfish python-chess
    - **Linux**: `sudo apt-get install stockfish`
    - **macOS**: `brew install stockfish`
 
+3. (Опционально) Для GPU ускорения установите CuPy:
+   - **NVIDIA**: `pip install cupy-cuda12x`
+   - **AMD/Intel**: Используйте NumPy (устанавливается автоматически)
+
 ---
 
 ## ▶️ Запуск
 
+### Стандартная версия:
 ```bash
 python main.py
+```
+
+### Оптимизированная версия (рекомендуется):
+```bash
+python main_optimized.py
 ```
 
 ---
@@ -92,6 +102,7 @@ python main.py
 - [Оптимизация рендеринга](summary/RENDERING_OPTIMIZATIONS.md)
 - [Исправление артефактов](summary/ARTIFACT_FIX_SUMMARY.md)
 - [Оптимизация производительности](summary/OPTIMIZATION_SUMMARY.md)
+- [Сравнение производительности](tests/performance_comparison.py)
 
 ---
 
@@ -150,6 +161,11 @@ python tests/test_delete_saved_games.py
 Протестируйте улучшения производительности:
 ```bash
 python tests/test_performance_improvements.py
+```
+
+Сравните производительность оригинальной и оптимизированной версий:
+```bash
+python tests/performance_comparison.py
 ```
 
 Продемонстрируйте новые улучшения:

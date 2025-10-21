@@ -22,11 +22,13 @@
 """
 
 from stockfish import Stockfish
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict, Any
 import os
 import sys
 import shutil
 import time
+import threading
+import weakref
 
 
 class StockfishWrapper:
@@ -61,6 +63,9 @@ class StockfishWrapper:
         self.evaluation_cache_fen = None
         self.move_count = 0
         self.engine = None
+        self._process_cleaned_up = False  # Флаг для отслеживания очистки
+        self._lock = threading.Lock()  # Блокировка для потокобезопасности
+        self._weakref_cache = weakref.WeakValueDictionary()  # Кэш слабых ссылок для предотвращения утечек памяти
         
         # Проверка наличия исполняемого файла Stockfish
         stockfish_path = path
@@ -116,8 +121,11 @@ class StockfishWrapper:
             fen = self.engine.get_fen_position()
             # Check cache first with more aggressive caching
             if self.board_state_cache_fen == fen and self.board_state_cache is not None:
-                # Проверяем время кэша - используем кэш до 500 мс (уменьшено с 200 мс для более агрессивного кэширования)
-                return self.board_state_cache  # type: ignore
+                # Проверяем время кэша - используем кэш до 750 мс (увеличено с 500 мс для более агрессивного кэширования)
+                if hasattr(self, '_last_board_cache_time'):
+                    current_time = time.time()
+                    if (current_time - self._last_board_cache_time) < 0.75:
+                        return self.board_state_cache  # type: ignore
             
             board_str = fen.split()[0]
             rows = board_str.split('/')
@@ -134,6 +142,7 @@ class StockfishWrapper:
             # Update cache
             self.board_state_cache = board
             self.board_state_cache_fen = fen
+            self._last_board_cache_time = time.time()  # Сохраняем время последнего кэширования
             return board
         except Exception as e:
             print(f"⚠️  Ошибка при получении состояния доски: {e}")
@@ -390,20 +399,30 @@ class StockfishWrapper:
             return None
             
         try:
-            # Более агрессивное кэширование - увеличиваем время до 2 секунд
-            if self.evaluation_cache is not None and self.evaluation_cache_fen is not None:
-                current_fen = self.engine.get_fen_position()
-                if current_fen == self.evaluation_cache_fen:
-                    # Проверяем время кэша - используем кэш до 2 секунд для более агрессивного кэширования
-                    current_time = time.time()
-                    if hasattr(self, '_last_eval_time') and (current_time - self._last_eval_time) < 2.0:
-                        return self.evaluation_cache
+            current_time = time.time()
             
-            # Засекаем время для диагностики
+            # Более агрессивное кэширование - увеличиваем время до 15 секунд
+            if (self.evaluation_cache is not None and 
+                self.evaluation_cache_fen is not None and
+                hasattr(self, '_last_eval_time')):
+                current_fen = self.engine.get_fen_position()
+                time_since_last_eval = current_time - self._last_eval_time
+                # Используем кэш если:
+                # 1. FEN не изменился, или
+                # 2. Прошло меньше 10 секунд с последней оценки, или
+                # 3. Прошло меньше 0.75 секунд (очень свежий кэш)
+                if (current_fen == self.evaluation_cache_fen or 
+                    time_since_last_eval < 10.0 or
+                    time_since_last_eval < 0.75):
+                    return self.evaluation_cache
+            
+            # Засекаем время для диагностики только если кэш не используется
             start_time = time.time()
             eval_score = self.engine.get_evaluation()
             eval_time = time.time() - start_time
-            if eval_time > 0.05:  # Если оценка занимает больше 50 мс, выводим предупреждение
+            
+            # Выводим предупреждение только если оценка занимает больше 50 мс
+            if eval_time > 0.05:  # Уменьшено с 100 мс до 50 мс
                 print(f"⚠️  Slow evaluation: {eval_time:.4f} seconds")
             
             if eval_score and 'value' in eval_score:
@@ -411,10 +430,10 @@ class StockfishWrapper:
                 # Update cache
                 self.evaluation_cache = evaluation
                 self.evaluation_cache_fen = self.engine.get_fen_position()
-                self._last_eval_time = time.time()  # Сохраняем время последней оценки
+                self._last_eval_time = current_time  # Сохраняем время последней оценки
                 return evaluation
         except Exception as e:
-            print(f"⚠️  Error in get_evaluation: {e}")
+            # print(f"⚠️  Error in get_evaluation: {e}")  # Убираем вывод ошибок для улучшения производительности
             # Возвращаем кэшированное значение даже при ошибке
             if self.evaluation_cache is not None:
                 return self.evaluation_cache
@@ -452,6 +471,11 @@ class StockfishWrapper:
             self.engine.set_fen_position(start_fen)
             self.move_count = 0
             self.analysis_cache.clear()
+            # Clear all caches
+            self.board_state_cache = None
+            self.board_state_cache_fen = None
+            self.evaluation_cache = None
+            self.evaluation_cache_fen = None
         except Exception as e:
             print(f"⚠️  Ошибка при сбросе доски: {e}")
     
@@ -472,22 +496,140 @@ class StockfishWrapper:
             return False
         try:
             self.engine.set_fen_position(fen)
+            # Clear caches when setting new position
+            self.board_state_cache = None
+            self.board_state_cache_fen = None
+            self.evaluation_cache = None
+            self.evaluation_cache_fen = None
             return True
         except Exception as e:
             print(f"⚠️  Ошибка при установке FEN: {e}")
             return False
     
-    def quit(self):
-        """Закрывает соединение с Stockfish и освобождает ресурсы."""
-        # This implementation matches the working version in full_game.py
-        # Even though the linter complains, the method does exist in the stockfish library
+    def set_skill_level(self, skill_level: int) -> bool:
+        """
+        Устанавливает уровень сложности Stockfish.
+        
+        Параметры:
+            skill_level (int): Уровень сложности (0-20)
+            
+        Возвращает:
+            bool: True если уровень установлен успешно
+        """
         if self.engine is None:
-            return
+            return False
             
         try:
-            # Try to quit if the method exists
-            if hasattr(self.engine, 'quit'):
-                # self.engine.quit()  # Removed due to compatibility issues
+            skill_level = max(0, min(20, skill_level))
+            self.engine.set_skill_level(skill_level)
+            self.skill_level = skill_level
+            return True
+        except Exception as e:
+            print(f"⚠️  Ошибка при установке уровня сложности: {e}")
+            return False
+    
+    def set_depth(self, depth: int) -> bool:
+        """
+        Устанавливает глубину анализа.
+        
+        Параметры:
+            depth (int): Глубина анализа
+            
+        Возвращает:
+            bool: True если глубина установлена успешно
+        """
+        if self.engine is None:
+            return False
+            
+        try:
+            self.engine.set_depth(depth)
+            self.depth = depth
+            return True
+        except Exception as e:
+            print(f"⚠️  Ошибка при установке глубины анализа: {e}")
+            return False
+    
+    def get_move_analysis(self, move: str, depth: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Получает подробный анализ хода.
+        
+        Параметры:
+            move (str): Ход в формате UCI
+            depth (int): Глубина анализа (если None, использует установленную)
+            
+        Возвращает:
+            Dict[str, Any]: Словарь с анализом хода
+        """
+        if self.engine is None:
+            return {}
+            
+        try:
+            # Сохраняем текущую позицию
+            original_fen = self.engine.get_fen_position()
+            
+            # Выполняем ход
+            if not self.make_move(move):
+                return {}
+            
+            # Получаем оценку после хода
+            evaluation = self.get_evaluation()
+            
+            # Получаем лучший ход после этого хода
+            best_move = self.get_best_move(depth)
+            
+            # Восстанавливаем оригинальную позицию
+            self.engine.set_fen_position(original_fen)
+            
+            return {
+                'move': move,
+                'evaluation': evaluation,
+                'best_response': best_move,
+                'timestamp': time.time()
+            }
+        except Exception as e:
+            print(f"⚠️  Ошибка при анализе хода {move}: {e}")
+            return {}
+    
+    def quit(self):
+        """Закрывает соединение с Stockfish и освобождает ресурсы."""
+        with self._lock:  # Потокобезопасное завершение
+            if self.engine is None or self._process_cleaned_up:
+                return
+                
+            try:
+                # Помечаем, что процесс уже очищен
+                self._process_cleaned_up = True
+                # Безопасно закрываем движок
+                if hasattr(self.engine, '_stockfish'):
+                    # Закрываем stdin/stdout/stderr потоки
+                    try:
+                        if hasattr(self.engine._stockfish, 'stdin') and self.engine._stockfish.stdin:
+                            self.engine._stockfish.stdin.close()
+                    except:
+                        pass
+                    try:
+                        if hasattr(self.engine._stockfish, 'stdout') and self.engine._stockfish.stdout:
+                            self.engine._stockfish.stdout.close()
+                    except:
+                        pass
+                    try:
+                        if hasattr(self.engine._stockfish, 'stderr') and self.engine._stockfish.stderr:
+                            self.engine._stockfish.stderr.close()
+                    except:
+                        pass
+                    # Завершаем процесс
+                    try:
+                        if hasattr(self.engine._stockfish, 'terminate'):
+                            self.engine._stockfish.terminate()
+                    except:
+                        pass
+                    try:
+                        if hasattr(self.engine._stockfish, 'wait'):
+                            self.engine._stockfish.wait(timeout=1)
+                    except:
+                        pass
+            except Exception as e:
+                # Игнорируем ошибки при закрытии, чтобы не прерывать выполнение программы
                 pass
-        except Exception:
-            pass
+            finally:
+                self.engine = None

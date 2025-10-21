@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main entry point for the chess game.
+Main entry point for the optimized chess game.
 """
 
 import pygame
@@ -10,7 +10,7 @@ from typing import Tuple, Union
 
 # Import our game modules
 from game.menu import main_menu
-from game.chess_game import ChessGame
+from game.chess_game_optimized import ChessGameOptimized  # Используем оптимизированную версию
 from utils.game_stats import GameStatistics
 
 
@@ -117,7 +117,8 @@ def main():
                 player_color, skill_level = menu_result
                 theme = 'classic'
             
-            game = ChessGame(player_color=player_color, skill_level=skill_level, theme=theme)
+            # Используем оптимизированную версию игры
+            game = ChessGameOptimized(player_color=player_color, skill_level=skill_level, theme=theme)
             result = game.run()
             
             # Проверяем, нужно ли вернуться в главное меню

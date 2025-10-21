@@ -142,7 +142,7 @@ class ChessGame:
         self.frame_count = 0  # Счетчик кадров для очистки временных поверхностей
         self.highlight_hint = None  # For T key hint highlighting
         
-        # Улучшенная система кэширования
+        # Улучшенная система кэширования с более эффективным управлением
         self._cache = {
             'board_state': None,
             'board_fen': None,
@@ -155,13 +155,13 @@ class ChessGame:
         # Дополнительные кэши для оптимизации производительности
         self._valid_moves_cache = {}  # Кэш для вычисленных допустимых ходов
         self._valid_moves_cache_time = {}  # Время последнего обновления кэша ходов
-        self._valid_moves_cache_duration = 2.0  # Увеличиваем кэш ходов до 2 секунды для лучшей производительности
+        self._valid_moves_cache_duration = 5.0  # Увеличиваем кэш ходов до 5 секунд для лучшей производительности
         self._valid_moves_board_hash = {}  # Хэш доски для каждого кэшированного хода
         
         # Расширенный кэш для AI ходов с более агрессивной стратегией
         self._ai_move_cache = {}  # Кэш для AI ходов
         self._ai_move_cache_time = {}  # Время последнего обновления кэша AI
-        self._ai_move_cache_duration = 15.0  # Увеличиваем кэш AI до 15 секунд
+        self._ai_move_cache_duration = 30.0  # Увеличиваем кэш AI до 30 секунд
         self._ai_move_board_hash = {}  # Хэш доски для каждого кэшированного AI хода
         
         # Графические оптимизации
@@ -173,8 +173,8 @@ class ChessGame:
         # Таймеры для оптимизации обновлений
         self.last_board_update = 0
         self.last_ui_update = 0
-        self.board_update_interval = 1.0/60  # Повышена частота обновления доски до 60 FPS
-        self.ui_update_interval = 1.0/30     # Повышена частота обновления UI до 30 FPS
+        self.board_update_interval = 1.0/120  # Повышена частота обновления доски до 120 FPS
+        self.ui_update_interval = 1.0/60     # Повышена частота обновления UI до 60 FPS
         
         # Инициализация графических ресурсов
         self._init_fonts_optimized()
@@ -184,12 +184,12 @@ class ChessGame:
         # Оптимизация AI
         self.ai_move_cache = {}  # Кэш для AI ходов
         self.last_ai_move_time = 0
-        self.ai_move_cooldown = 0.01  # Минимальная задержка между AI ходами (уменьшена)
+        self.ai_move_cooldown = 0.005  # Минимальная задержка между AI ходами (уменьшена)
         
         # Дополнительные оптимизации
         self.board_state_cache = None  # Кэш состояния доски для быстрого доступа
         self.board_state_cache_time = 0
-        self.board_state_cache_duration = 0.2  # Увеличиваем кэш до 200 мс для лучшей производительности
+        self.board_state_cache_duration = 0.5  # Увеличиваем кэш до 500 мс для лучшей производительности
         self.board_state_last_fen = None  # Последний FEN для проверки изменений
         
         # Расширенная статистика игры
@@ -219,7 +219,7 @@ class ChessGame:
         self.saved_games = []
         
         # Многопоточность
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)  # Увеличиваем количество потоков
         self.ai_move_queue = Queue()
         self.render_queue = Queue()
         self.ai_thread = None
@@ -237,7 +237,13 @@ class ChessGame:
         # Асинхронная оценка позиции
         self._async_eval_future = None
         self._last_async_eval_time = 0
-        self._async_eval_interval = 0.5  # Обновляем оценку раз в 500 мс
+        self._async_eval_interval = 0.1  # Обновляем оценку раз в 100 мс
+        
+        # Прогрессивная оценка позиции для плавного обновления
+        self._displayed_evaluation = 0.0  # Текущее отображаемое значение
+        self._target_evaluation = 0.0     # Целевое значение оценки
+        self._eval_update_time = 0        # Время последнего обновления
+        self._eval_interpolation_duration = 0.1  # Длительность интерполяции в секундах
 
     def _init_ui_fonts(self):
         """Инициализация шрифтов для UI элементов."""
@@ -400,23 +406,74 @@ class ChessGame:
     
     def get_cached_evaluation(self):
         """
-        Получение кэшированной оценки позиции.
+        Получение кэшированной оценки позиции с более агрессивным кэшированием.
         
         Возвращает:
             float: Оценка позиции
         """
         try:
             current_fen = self.engine.get_fen()
-            if self._cache['last_eval_fen'] == current_fen and self._cache['last_evaluation'] is not None:
-                return self._cache['last_evaluation']
+            current_time = time.time()
+            
+            # Проверяем кэш с более агрессивной стратегией
+            if (self._cache['last_eval_fen'] == current_fen and 
+                self._cache['last_evaluation'] is not None and
+                hasattr(self, '_last_eval_cache_time')):
+                # Используем кэш до 60 секунд для ещё более агрессивного кэширования
+                if (current_time - self._last_eval_cache_time) < 60.0:
+                    return self._cache['last_evaluation']
                 
             evaluation = self.engine.get_evaluation()
             self._cache['last_evaluation'] = evaluation
             self._cache['last_eval_fen'] = current_fen
+            self._last_eval_cache_time = current_time
             return evaluation
         except Exception:
+            # Возвращаем кэшированное значение даже при ошибке
+            if self._cache['last_evaluation'] is not None:
+                return self._cache['last_evaluation']
             return None
-    
+
+    def get_interpolated_evaluation(self):
+        """
+        Получение интерполированной оценки позиции для плавного обновления.
+        
+        Возвращает:
+            float: Интерполированная оценка позиции
+        """
+        current_time = time.time()
+        
+        # Получаем реальное значение оценки (с кэшированием)
+        real_evaluation = self.get_cached_evaluation()
+        
+        # Если это первое значение, устанавливаем его как целевое
+        if self._target_evaluation == 0.0 and real_evaluation is not None:
+            self._target_evaluation = real_evaluation
+            self._displayed_evaluation = real_evaluation
+            self._eval_update_time = current_time
+            return real_evaluation
+        
+        # Если реальное значение изменилось, обновляем целевое значение
+        if real_evaluation is not None and real_evaluation != self._target_evaluation:
+            self._target_evaluation = real_evaluation
+            self._eval_update_time = current_time
+        
+        # Интерполируем значение к целевому
+        if self._target_evaluation != self._displayed_evaluation:
+            elapsed = current_time - self._eval_update_time
+            if elapsed >= self._eval_interpolation_duration:
+                # Интерполяция завершена
+                self._displayed_evaluation = self._target_evaluation
+            else:
+                # Линейная интерполяция
+                progress = elapsed / self._eval_interpolation_duration
+                self._displayed_evaluation = (
+                    self._displayed_evaluation + 
+                    (self._target_evaluation - self._displayed_evaluation) * progress
+                )
+        
+        return self._displayed_evaluation
+
     def _get_pawn_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
         """Генерация возможных ходов для пешки."""
         moves = []
@@ -562,7 +619,7 @@ class ChessGame:
             cached_board_hash = self._valid_moves_board_hash.get(cache_key, None)
             
             # Используем кэш если:
-            # 1. Время кэша еще не истекло (1 секунда)
+            # 1. Время кэша еще не истекло (5 секунд)
             # 2. Позиция на доске не изменилась
             # 3. Или время кэша очень свежее (меньше 0.1 секунды) - для быстрых кликов
             is_time_valid = (current_time - cache_time < self._valid_moves_cache_duration)
@@ -620,6 +677,8 @@ class ChessGame:
             
         return valid_moves
 
+
+        
     def _is_path_blocked(self, from_row: int, from_col: int, to_row: int, to_col: int, board: List[List[Optional[str]]]) -> bool:
         """
         Проверить, заблокирован ли путь между двумя клетками.
@@ -819,218 +878,249 @@ class ChessGame:
             x (int): X координата клика
             y (int): Y координата клика
         """
-        if self.game_over or self.thinking or not self._is_player_turn():
-            return
-        
-        coords = self._coord_to_fen_square(x, y)
-        if coords is None:
-            # Клик вне доски - очищаем выделение и подсказки
-            self.renderer.set_selected(None)
-            self.renderer.set_move_hints([])
-            return
-        
-        row, col = coords
-        # Очистка кэша доски перед получением нового состояния
-        if hasattr(self, '_cached_board'):
-            delattr(self, '_cached_board')
         try:
-            board = self.engine.get_board_state()
-        except Exception as e:
-            print(f"⚠️  Ошибка при получении состояния доски: {e}")
-            return
-        
-        piece = board[row][col]
-        
-        # Выбор фигуры
-        if self._is_player_piece(piece) and piece is not None:
-            self.renderer.set_selected((row, col))
-            # Показываем подсказки возможных ходов
-            valid_moves = self._get_valid_moves(row, col)
-            self.renderer.set_move_hints(valid_moves)
-            # Provide feedback about the selected piece
-            piece_name = {
-                'P': 'пешка', 'N': 'конь', 'B': 'слон', 'R': 'ладья', 
-                'Q': 'ферзь', 'K': 'король', 'p': 'пешка', 'n': 'конь', 
-                'b': 'слон', 'r': 'ладья', 'q': 'ферзь', 'k': 'король'
-            }.get(piece, piece)
-            self.move_feedback = f"Выбрана {piece_name}"
-            self.move_feedback_time = time.time()
+            if self.game_over or self.thinking or not self._is_player_turn():
+                return
             
-            # Add educational hint about the piece (используем кэш)
-            if hasattr(self, '_piece_hint_cache') and piece in self._piece_hint_cache:
-                piece_hint = self._piece_hint_cache[piece]
-            else:
-                piece_hint = self.educator.get_piece_hint(piece_name)
-                # Сохраняем в кэш для будущего использования
-                if not hasattr(self, '_piece_hint_cache'):
-                    self._piece_hint_cache = {}
-                self._piece_hint_cache[piece] = piece_hint
-            self.move_feedback += f" | {piece_hint}"
-        # Перемещение выбранной фигуры
-        elif self.renderer.selected_square:
-            from_sq = self.renderer.selected_square
-            to_sq = (row, col)
+            coords = self._coord_to_fen_square(x, y)
+            if coords is None:
+                # Клик вне доски - очищаем выделение и подсказки
+                self.renderer.set_selected(None)
+                self.renderer.set_move_hints([])
+                return
             
-            from_uci = self._fen_square_to_uci(*from_sq)
-            to_uci = self._fen_square_to_uci(*to_sq)
-            uci_move = from_uci + to_uci
-            
-            print(f"Попытка хода: {uci_move} (из {from_sq} в {to_sq})")
-            
-            # Засекаем время начала хода для статистики
-            move_start_time = time.time()
-            
+            row, col = coords
+            # Очистка кэша доски перед получением нового состояния
+            if hasattr(self, '_cached_board'):
+                delattr(self, '_cached_board')
             try:
-                # Validate the move using our improved method
-                if self.engine.is_move_correct(uci_move):
-                    # Проверяем, является ли ход взятием фигуры
-                    target_piece = board[to_sq[0]][to_sq[1]]
-                    is_capture = target_piece is not None
-                    
-                    # Проверяем, будет ли шах после хода
-                    is_check = False
-                    is_mate = False
-                    is_castling = uci_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']
-                    
-                    # Make the move and verify it was successful
-                    if self.engine.make_move(uci_move):
-                        # Добавляем ход в дебютную книгу
-                        self.opening_book.add_move(uci_move)
+                board = self.engine.get_board_state()
+            except Exception as e:
+                print(f"⚠️  Ошибка при получении состояния доски: {e}")
+                self.move_feedback = "Ошибка при получении состояния доски"
+                self.move_feedback_time = time.time()
+                return
+            
+            piece = board[row][col]
+            
+            # Выбор фигуры
+            if self._is_player_piece(piece) and piece is not None:
+                self.renderer.set_selected((row, col))
+                # Показываем подсказки возможных ходов
+                valid_moves = self._get_valid_moves(row, col)
+                self.renderer.set_move_hints(valid_moves)
+                # Provide feedback about the selected piece
+                piece_name = {
+                    'P': 'пешка', 'N': 'конь', 'B': 'слон', 'R': 'ладья', 
+                    'Q': 'ферзь', 'K': 'король', 'p': 'пешка', 'n': 'конь', 
+                    'b': 'слон', 'r': 'ладья', 'q': 'ферзь', 'k': 'король'
+                }.get(piece, piece)
+                self.move_feedback = f"Выбрана {piece_name}"
+                self.move_feedback_time = time.time()
+                
+                # Add educational hint about the piece (используем кэш)
+                if hasattr(self, '_piece_hint_cache') and piece in self._piece_hint_cache:
+                    piece_hint = self._piece_hint_cache[piece]
+                else:
+                    piece_hint = self.educator.get_piece_hint(piece_name)
+                    # Сохраняем в кэш для будущего использования
+                    if not hasattr(self, '_piece_hint_cache'):
+                        self._piece_hint_cache = {}
+                    self._piece_hint_cache[piece] = piece_hint
+                self.move_feedback += f" | {piece_hint}"
+            # Перемещение выбранной фигуры
+            elif self.renderer.selected_square:
+                from_sq = self.renderer.selected_square
+                to_sq = (row, col)
+                
+                from_uci = self._fen_square_to_uci(*from_sq)
+                to_uci = self._fen_square_to_uci(*to_sq)
+                uci_move = from_uci + to_uci
+                
+                print(f"Попытка хода: {uci_move} (из {from_sq} в {to_sq})")
+                
+                # Засекаем время начала хода для статистики
+                move_start_time = time.time()
+                
+                try:
+                    # Validate the move using our improved method
+                    if self.engine.is_move_correct(uci_move):
+                        # Проверяем, является ли ход взятием фигуры
+                        target_piece = board[to_sq[0]][to_sq[1]]
+                        is_capture = target_piece is not None
                         
-                        # Проверяем текущий дебют
-                        current_opening = self.opening_book.get_current_opening()
+                        # Проверяем, будет ли шах после хода
+                        is_check = False
+                        is_mate = False
+                        is_castling = uci_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']
                         
-                        # Проверяем состояние игры после хода
-                        is_over, reason = self.engine.is_game_over()
-                        if is_over and reason and "мат" in reason:
-                            is_mate = True
-                        
-                        # Проверяем шах
-                        try:
-                            eval_result = self.engine.get_evaluation()
-                            if eval_result and isinstance(eval_result, dict):
-                                is_check = eval_result.get('check', False)
-                        except:
-                            pass
-                        
-                        # Аннотируем ход
-                        annotated_move = self._annotate_move(uci_move, is_capture, is_check, is_mate, is_castling)
-                        
-                        self.move_history.append(uci_move)
-                        self.move_annotations.append(annotated_move)
-                        self.game_stats['player_moves'] += 1
-                        if is_capture:
-                            self.game_stats['player_capture_count'] += 1
-                            self.last_move_was_capture = True
-                            self.combo_counter += 1
-                            # Combo message
-                            if self.combo_counter >= 2:
-                                self.special_move_messages.append(f"Комбо x{self.combo_counter}!")
-                        else:
-                            self.last_move_was_capture = False
-                            self.combo_counter = 0  # Сброс комбо при обычном ходе
-                        
-                        self.renderer.set_last_move(from_sq, to_sq)
-                        self.renderer.set_selected(None)
-                        self.renderer.set_move_hints([])
-                        self.last_move_time = time.time()
-                        print(f"Ход выполнен: {annotated_move}")
-                        self.move_feedback = f"Ход {annotated_move} выполнен"
-                        self.move_feedback_time = time.time()
-                        
-                        # Добавляем информацию о дебюте, если она есть
-                        if current_opening:
-                            opening_name, opening_info = current_opening
-                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
-                        
-                        # Записываем время хода в статистику
-                        move_time = time.time() - move_start_time
-                        self.game_stats['move_times'].append(move_time)
-                        
-                        # Получаем оценку позиции для статистики
-                        evaluation = self.engine.get_evaluation()
-                        if evaluation is not None:
-                            self.game_stats['evaluations'].append(evaluation)
-                        
-                        # Add educational feedback (с кэшированием)
-                        move_count = len(self.move_history)
-                        current_time = time.time()
-                        
-                        # Создаем ключ для кэширования образовательных подсказок
-                        edu_cache_key = move_count
-                        edu_cache_duration = 30.0  # Увеличиваем кэш до 30 секунд для лучшей производительности
-                        
-                        # Проверяем кэш образовательных подсказок
-                        educational_tip = None
-                        if hasattr(self, '_edu_feedback_cache') and hasattr(self, '_edu_feedback_cache_time'):
-                            if (edu_cache_key in self._edu_feedback_cache and 
-                                current_time - self._edu_feedback_cache_time[edu_cache_key] < edu_cache_duration):
-                                educational_tip = self._edu_feedback_cache[edu_cache_key]
-                        
-                        # Если нет кэшированной подсказки, получаем новую
-                        if educational_tip is None:
-                            educational_tip = self.educator.get_educational_feedback(move_count, current_time)
-                            # Сохраняем в кэш
-                            if not hasattr(self, '_edu_feedback_cache'):
-                                self._edu_feedback_cache = {}
-                                self._edu_feedback_cache_time = {}
-                            self._edu_feedback_cache[edu_cache_key] = educational_tip
-                            self._edu_feedback_cache_time[edu_cache_key] = current_time
-                        
-                        if educational_tip:
-                            self.move_feedback += f" | {educational_tip}"
-                            self.move_feedback_time = current_time
-                        
-                        # Special move messages
-                        if self.special_move_messages:
-                            self.move_feedback += f" | {self.special_move_messages[0]}"
-                            self.special_move_messages.pop(0)
+                        # Make the move and verify it was successful
+                        if self.engine.make_move(uci_move):
+                            # Добавляем ход в дебютную книгу
+                            self.opening_book.add_move(uci_move)
                             
-                        # Помечаем всю доску как "грязную" для полного обновления и предотвращения артефактов
-                        self.renderer._mark_all_dirty()
-                        # Принудительное обновление экрана для предотвращения исчезновения доски при клике
-                        pygame.display.flip()
+                            # Проверяем текущий дебют
+                            current_opening = self.opening_book.get_current_opening()
+                            
+                            # Проверяем состояние игры после хода
+                            is_over, reason = self.engine.is_game_over()
+                            if is_over and reason and "мат" in reason:
+                                is_mate = True
+                            
+                            # Проверяем шах
+                            try:
+                                eval_result = self.engine.get_evaluation()
+                                if eval_result and isinstance(eval_result, dict):
+                                    is_check = eval_result.get('check', False)
+                            except:
+                                pass
+                            
+                            # Аннотируем ход
+                            annotated_move = self._annotate_move(uci_move, is_capture, is_check, is_mate, is_castling)
+                            
+                            self.move_history.append(uci_move)
+                            self.move_annotations.append(annotated_move)
+                            self.game_stats['player_moves'] += 1
+                            if is_capture:
+                                self.game_stats['player_capture_count'] += 1
+                                self.last_move_was_capture = True
+                                self.combo_counter += 1
+                                # Combo message
+                                if self.combo_counter >= 2:
+                                    self.special_move_messages.append(f"Комбо x{self.combo_counter}!")
+                                    # Проигрываем специальный звук для комбо
+                                    if self.sound_manager:
+                                        self.sound_manager.play_sound("capture")
+                            else:
+                                self.last_move_was_capture = False
+                                self.combo_counter = 0  # Сброс комбо при обычном ходе
+                            
+                            self.renderer.set_last_move(from_sq, to_sq)
+                            self.renderer.set_selected(None)
+                            self.renderer.set_move_hints([])
+                            self.last_move_time = time.time()
+                            print(f"Ход выполнен: {annotated_move}")
+                            self.move_feedback = f"Ход {annotated_move} выполнен"
+                            self.move_feedback_time = time.time()
+                            
+                            # Проигрываем звук хода
+                            if self.sound_manager:
+                                if is_capture:
+                                    self.sound_manager.play_sound("capture")
+                                elif is_castling:
+                                    self.sound_manager.play_sound("castle")
+                                else:
+                                    self.sound_manager.play_sound("move")
+                            
+                            # Добавляем информацию о дебюте, если она есть
+                            if current_opening:
+                                opening_name, opening_info = current_opening
+                                self.move_feedback += f" | 🎯 Дебют: {opening_name}"
+                            
+                            # Записываем время хода в статистику
+                            move_time = time.time() - move_start_time
+                            self.game_stats['move_times'].append(move_time)
+                            
+                            # Получаем оценку позиции для статистики
+                            evaluation = self.get_cached_evaluation()
+                            if evaluation is not None:
+                                self.game_stats['evaluations'].append(evaluation)
+                            
+                            # Add educational feedback (с кэшированием)
+                            move_count = len(self.move_history)
+                            current_time = time.time()
+                            
+                            # Создаем ключ для кэширования образовательных подсказок
+                            edu_cache_key = move_count
+                            edu_cache_duration = 30.0  # Увеличиваем кэш до 30 секунд для лучшей производительности
+                            
+                            # Проверяем кэш образовательных подсказок
+                            educational_tip = None
+                            if hasattr(self, '_edu_feedback_cache') and hasattr(self, '_edu_feedback_cache_time'):
+                                if (edu_cache_key in self._edu_feedback_cache and 
+                                    current_time - self._edu_feedback_cache_time[edu_cache_key] < edu_cache_duration):
+                                    educational_tip = self._edu_feedback_cache[edu_cache_key]
+                            
+                            # Если нет кэшированной подсказки, получаем новую
+                            if educational_tip is None:
+                                educational_tip = self.educator.get_educational_feedback(move_count, current_time)
+                                # Сохраняем в кэш
+                                if not hasattr(self, '_edu_feedback_cache'):
+                                    self._edu_feedback_cache = {}
+                                    self._edu_feedback_cache_time = {}
+                                self._edu_feedback_cache[edu_cache_key] = educational_tip
+                                self._edu_feedback_cache_time[edu_cache_key] = current_time
+                            
+                            if educational_tip:
+                                self.move_feedback += f" | {educational_tip}"
+                                self.move_feedback_time = current_time
+                            
+                            # Special move messages
+                            if self.special_move_messages:
+                                self.move_feedback += f" | {self.special_move_messages[0]}"
+                                self.special_move_messages.pop(0)
+                                
+                            # Помечаем всю доску как "грязную" для полного обновления и предотвращения артефактов
+                            self.renderer._mark_all_dirty()
+                            # Принудительное обновление экрана для предотвращения исчезновения доски при клике
+                            pygame.display.flip()
+                        else:
+                            print("❌ Не удалось выполнить ход")
+                            self.renderer.set_selected(None)
+                            self.renderer.set_move_hints([])
+                            self.move_feedback = "Не удалось выполнить ход"
+                            self.move_feedback_time = time.time()
+                            # Проигрываем звук ошибки
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("button")
+                            # Помечаем всю доску как "грязную" для полного обновления
+                            self.renderer._mark_all_dirty()
+                            # Принудительное обновление экрана для предотвращения исчезновения доски при клике
+                            pygame.display.flip()
+                            # Принудительное обновление экрана для предотвращения исчезновения доски при клике
+                            pygame.display.flip()
                     else:
-                        print("❌ Не удалось выполнить ход")
+                        print(f"❌ Некорректный ход: {uci_move}")
                         self.renderer.set_selected(None)
                         self.renderer.set_move_hints([])
-                        self.move_feedback = "Не удалось выполнить ход"
+                        # Provide specific feedback about why the move is invalid
+                        hint = self._get_move_hint(from_sq[0], from_sq[1], row, col)
+                        self.move_feedback = hint
                         self.move_feedback_time = time.time()
+                        # Проигрываем звук ошибки
+                        if self.sound_manager:
+                            self.sound_manager.play_sound("button")
                         # Помечаем всю доску как "грязную" для полного обновления
                         self.renderer._mark_all_dirty()
                         # Принудительное обновление экрана для предотвращения исчезновения доски при клике
                         pygame.display.flip()
-                        # Принудительное обновление экрана для предотвращения исчезновения доски при клике
-                        pygame.display.flip()
-                else:
-                    print(f"❌ Некорректный ход: {uci_move}")
+                except Exception as e:
+                    print(f"⚠️  Ошибка при обработке хода: {e}")
                     self.renderer.set_selected(None)
                     self.renderer.set_move_hints([])
-                    # Provide specific feedback about why the move is invalid
-                    hint = self._get_move_hint(from_sq[0], from_sq[1], row, col)
-                    self.move_feedback = hint
+                    self.move_feedback = "Ошибка при выполнении хода"
                     self.move_feedback_time = time.time()
+                    # Проигрываем звук ошибки
+                    if self.sound_manager:
+                        self.sound_manager.play_sound("button")
                     # Помечаем всю доску как "грязную" для полного обновления
                     self.renderer._mark_all_dirty()
-                    # Принудительное обновление экрана для предотвращения исчезновения доски при клике
-                    pygame.display.flip()
-            except Exception as e:
-                print(f"⚠️  Ошибка при обработке хода: {e}")
+            else:
+                # Клик по пустой клетке без выбранной фигуры - очищаем выделение
                 self.renderer.set_selected(None)
                 self.renderer.set_move_hints([])
-                self.move_feedback = "Ошибка при выполнении хода"
-                self.move_feedback_time = time.time()
                 # Помечаем всю доску как "грязную" для полного обновления
                 self.renderer._mark_all_dirty()
-        else:
-            # Клик по пустой клетке без выбранной фигуры - очищаем выделение
-            self.renderer.set_selected(None)
-            self.renderer.set_move_hints([])
-            # Помечаем всю доску как "грязную" для полного обновления
-            self.renderer._mark_all_dirty()
-            # Принудительное обновление экрана для предотвращения исчезновения доски при клике
-            pygame.display.flip()
-    
+                # Принудительное обновление экрана для предотвращения исчезновения доски при клике
+                pygame.display.flip()
+        except Exception as e:
+            print(f"⚠️  Критическая ошибка при обработке клика: {e}")
+            self.move_feedback = "Критическая ошибка при обработке клика"
+            self.move_feedback_time = time.time()
+            # Проигрываем звук ошибки
+            if self.sound_manager:
+                self.sound_manager.play_sound("button")
+
     def handle_ai_move(self):
         """
         Получить и выполнить ход ИИ (Stockfish).
@@ -1287,7 +1377,7 @@ class ChessGame:
             # Get raw evaluation from engine (not the processed float version)
             try:
                 if self.engine.engine is not None:
-                    eval_score = self.engine.engine.get_evaluation()
+                    eval_score = self.get_cached_evaluation()
                     if eval_score and isinstance(eval_score, dict) and eval_score.get('type') == 'mate':
                         mate_in = eval_score.get('value', 0)
                         side = self.engine.get_side_to_move()
@@ -1549,22 +1639,215 @@ class ChessGame:
             'player_capture_count': 0,
             'ai_capture_count': 0,
             'check_count': 0,
-            'move_times': [],  # Время, затраченное на каждый ход
-            'evaluations': []  # Оценки позиции
+            'move_times': [],
+            'evaluations': []
         }
+    
+    def _annotate_move(self, uci_move: str, is_capture: bool = False, is_check: bool = False, 
+                      is_mate: bool = False, is_castling: bool = False) -> str:
+        """
+        Аннотировать ход с помощью специальных символов.
         
-        # Reset gameplay enhancements
-        self.last_move_was_capture = False
-        self.combo_counter = 0
-        self.special_move_messages = []
+        Параметры:
+            uci_move (str): Ход в формате UCI
+            is_capture (bool): Было ли взятие
+            is_check (bool): Был ли шах
+            is_mate (bool): Был ли мат
+            is_castling (bool): Была ли рокировка
+            
+        Возвращает:
+            str: Аннотированный ход
+        """
+        annotation = uci_move
         
-        # Reset opening book
-        self.opening_book.reset_sequence()
-        
-        print("[INFO] Игра сброшена до начальной позиции")
+        # Добавляем символы аннотации
+        if is_castling:
+            # Короткая рокировка - O-O, длинная - O-O-O
+            if uci_move in ['e1g1', 'e8g8']:  # Короткая рокировка
+                annotation = "O-O"
+            elif uci_move in ['e1c1', 'e8c8']:  # Длинная рокировка
+                annotation = "O-O-O"
+            
+        if is_capture:
+            annotation += "x"  # Символ взятия
+            
+        if is_check and not is_mate:
+            annotation += "+"  # Символ шаха
+        elif is_mate:
+            annotation += "#"  # Символ мата
+            
+        return annotation
 
+    def _get_game_analysis(self):
+        """
+        Получить полный анализ сыгранной партии.
         
-        print("[INFO] Игра сброшена до начальной позиции")
+        Возвращает:
+            dict: Словарь с анализом партии
+        """
+        try:
+            analysis = {
+                'total_moves': len(self.move_history),
+                'player_moves': self.game_stats['player_moves'],
+                'ai_moves': self.game_stats['ai_moves'],
+                'captures': {
+                    'player': self.game_stats['player_capture_count'],
+                    'ai': self.game_stats['ai_capture_count']
+                },
+                'checks': self.game_stats['check_count'],
+                'avg_move_time': 0,
+                'evaluation_trend': [],
+                'mistakes': [],
+                'brilliant_moves': [],
+                'blunders': [],
+                'tactical_motifs': [],
+                'opening_played': None,
+                'middlegame_assessment': 'равная',
+                'endgame_assessment': 'равная',
+                'overall_assessment': 'равная'
+            }
+            
+            # Вычисляем среднее время хода
+            if self.game_stats['move_times']:
+                analysis['avg_move_time'] = sum(self.game_stats['move_times']) / len(self.game_stats['move_times'])
+            
+            # Анализируем оценки позиции
+            if self.game_stats['evaluations']:
+                analysis['evaluation_trend'] = self.game_stats['evaluations'][:]
+                
+                # Определяем лучшие и худшие ходы
+                for i, eval_score in enumerate(self.game_stats['evaluations']):
+                    if i > 0:
+                        prev_eval = self.game_stats['evaluations'][i-1]
+                        # Проверяем на большие изменения оценки (возможные ошибки)
+                        if abs(eval_score - prev_eval) > 1.5:
+                            if ((self.player_color == 'white' and eval_score < prev_eval) or 
+                                (self.player_color == 'black' and eval_score > prev_eval)):
+                                analysis['mistakes'].append({
+                                    'move_number': i,
+                                    'evaluation_change': eval_score - prev_eval
+                                })
+                            elif ((self.player_color == 'white' and eval_score > prev_eval) or 
+                                  (self.player_color == 'black' and eval_score < prev_eval)):
+                                analysis['brilliant_moves'].append({
+                                    'move_number': i,
+                                    'evaluation_change': eval_score - prev_eval
+                                })
+            
+            # Определяем дебют
+            current_opening = self.opening_book.get_current_opening()
+            if current_opening:
+                analysis['opening_played'] = current_opening[0]
+            
+            # Определяем общую оценку партии
+            if analysis['mistakes']:
+                analysis['overall_assessment'] = 'с ошибками'
+            elif analysis['brilliant_moves']:
+                analysis['overall_assessment'] = 'с хорошими ходами'
+            else:
+                analysis['overall_assessment'] = 'равная'
+                
+            # Добавляем тактические мотивы
+            tactical_patterns = []
+            for move in self.move_history:
+                if 'x' in move:
+                    tactical_patterns.append('взятие')
+                if '+' in move:
+                    tactical_patterns.append('шах')
+                if '#' in move:
+                    tactical_patterns.append('мат')
+                if move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']:
+                    tactical_patterns.append('рокировка')
+                    
+            analysis['tactical_motifs'] = list(set(tactical_patterns))
+            
+            return analysis
+        except Exception as e:
+            print(f"Ошибка при анализе партии: {e}")
+            return {
+                'total_moves': len(self.move_history),
+                'player_moves': self.game_stats['player_moves'],
+                'ai_moves': self.game_stats['ai_moves'],
+                'captures': {
+                    'player': self.game_stats['player_capture_count'],
+                    'ai': self.game_stats['ai_capture_count']
+                },
+                'checks': self.game_stats['check_count'],
+                'avg_move_time': 0,
+                'evaluation_trend': [],
+                'mistakes': [],
+                'brilliant_moves': [],
+                'blunders': [],
+                'tactical_motifs': [],
+                'opening_played': None,
+                'middlegame_assessment': 'равная',
+                'endgame_assessment': 'равная',
+                'overall_assessment': 'ошибка анализа'
+            }
+
+    def _get_move_statistics(self):
+        """
+        Получить статистику по ходам.
+        
+        Возвращает:
+            dict: Словарь со статистикой ходов
+        """
+        try:
+            stats = {
+                'total_moves': len(self.move_history),
+                'player_moves': self.game_stats['player_moves'],
+                'ai_moves': self.game_stats['ai_moves'],
+                'capture_moves': self.game_stats['player_capture_count'] + self.game_stats['ai_capture_count'],
+                'check_moves': self.game_stats['check_count'],
+                'castling_moves': 0,
+                'promotion_moves': 0,
+                'most_active_pieces': {},
+                'move_efficiency': 0.0
+            }
+            
+            # Подсчитываем специальные ходы
+            for move in self.move_history:
+                if move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']:
+                    stats['castling_moves'] += 1
+                # Проверяем на превращение (ход заканчивается на цифру 1 или 8)
+                if len(move) >= 4 and move[3] in ['1', '8']:
+                    stats['promotion_moves'] += 1
+                    
+            # Определяем самые активные фигуры (приблизительно)
+            piece_moves = {}
+            for move in self.move_history:
+                if len(move) >= 2:
+                    # Определяем фигуру по начальной позиции (упрощенный подход)
+                    start_square = move[0:2]
+                    piece_type = start_square[0]  # Буква файла
+                    if piece_type in piece_moves:
+                        piece_moves[piece_type] += 1
+                    else:
+                        piece_moves[piece_type] = 1
+                        
+            stats['most_active_pieces'] = piece_moves
+            
+            # Вычисляем эффективность ходов
+            total_moves = stats['total_moves']
+            if total_moves > 0:
+                # Эффективность = (ходы без ошибок) / общие ходы
+                mistakes_count = len(self.game_stats.get('mistakes', []))
+                stats['move_efficiency'] = (total_moves - mistakes_count) / total_moves * 100
+                
+            return stats
+        except Exception as e:
+            print(f"Ошибка при подсчете статистики ходов: {e}")
+            return {
+                'total_moves': len(self.move_history),
+                'player_moves': self.game_stats['player_moves'],
+                'ai_moves': self.game_stats['ai_moves'],
+                'capture_moves': 0,
+                'check_moves': self.game_stats['check_count'],
+                'castling_moves': 0,
+                'promotion_moves': 0,
+                'most_active_pieces': {},
+                'move_efficiency': 0.0
+            }
     
     def _get_changed_squares(self, old_board, new_board):
         """Получить список измененных клеток."""
@@ -1628,14 +1911,25 @@ class ChessGame:
         # Оптимизация: уменьшаем частоту обновления оценки позиции
         evaluation = None
         current_time = time.time()
-        if not hasattr(self, '_last_eval_update') or (current_time - self._last_eval_update) > 0.5:
-            # Обновляем оценку только раз в 500 мс
-            evaluation = self.engine.get_evaluation()
-            self._last_eval_update = current_time
+        if not hasattr(self, '_last_eval_update') or (current_time - self._last_eval_update) > 2.0:
+            # Обновляем оценку только раз в 2000 мс для снижения нагрузки
+            # Используем асинхронное обновление для предотвращения блокировки UI
+            if not hasattr(self, '_async_eval_future') or self._async_eval_future is None:
+                # Запускаем асинхронное вычисление оценки
+                self._async_eval_future = self.executor.submit(self.engine.get_evaluation)
+                self._last_eval_update = current_time
+            else:
+                # Проверяем, готов ли результат
+                if self._async_eval_future.done():
+                    try:
+                        evaluation = self._async_eval_future.result(timeout=0.1)
+                        self._cached_evaluation = evaluation
+                        self._async_eval_future = None
+                    except:
+                        evaluation = self._cached_evaluation
         elif hasattr(self, '_cached_evaluation'):
             evaluation = self._cached_evaluation
         
-        self._cached_evaluation = evaluation
         mouse_pos = pygame.mouse.get_pos()
         self.renderer.draw(board_state, evaluation=evaluation, thinking=self.thinking, 
                          mouse_pos=mouse_pos, move_count=len(self.move_history),
@@ -1754,7 +2048,7 @@ class ChessGame:
                 annotated_move = self._annotate_move(best_move, is_capture, is_check, is_mate, is_castling)
                 
                 # Получаем оценку позиции
-                evaluation = self.engine.get_evaluation()
+                evaluation = self.get_cached_evaluation()
                 
                 if evaluation is not None:
                     # Определяем сторону с преимуществом
@@ -1792,6 +2086,182 @@ class ChessGame:
         except Exception as e:
             print(f"Ошибка при анализе позиции: {e}")
             self.move_feedback = "Ошибка анализа"
+            self.move_feedback_time = time.time()
+        finally:
+            self.thinking = False
+
+    def _get_position_analysis(self):
+        """
+        Получить подробный анализ текущей позиции.
+        
+        Возвращает:
+            dict: Словарь с анализом позиции
+        """
+        try:
+            analysis = {
+                'evaluation': None,
+                'best_move': None,
+                'material_balance': 0,
+                'piece_activity': 0,
+                'king_safety': 0,
+                'pawn_structure': 0,
+                'tactical_threats': [],
+                'strategic_ideas': []
+            }
+            
+            # Получаем оценку позиции
+            evaluation = self.get_cached_evaluation()
+            if evaluation is not None:
+                analysis['evaluation'] = evaluation
+                
+            # Получаем лучший ход
+            best_move = self.engine.get_best_move()
+            if best_move:
+                analysis['best_move'] = best_move
+                
+            # Анализируем материальный баланс
+            board_state = self.engine.get_board_state()
+            material_count = {'white': 0, 'black': 0}
+            
+            piece_values = {
+                'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 0,
+                'p': -1, 'n': -3, 'b': -3, 'r': -5, 'q': -9, 'k': 0
+            }
+            
+            for row in board_state:
+                for piece in row:
+                    if piece and piece in piece_values:
+                        if piece.isupper():
+                            material_count['white'] += piece_values[piece]
+                        else:
+                            material_count['black'] += abs(piece_values[piece])
+                            
+            analysis['material_balance'] = material_count['white'] - material_count['black']
+            
+            # Определяем стратегические идеи на основе оценки
+            if evaluation is not None:
+                if abs(evaluation) > 2.0:
+                    analysis['strategic_ideas'].append("Сильное материальное/позиционное преимущество")
+                elif abs(evaluation) > 1.0:
+                    analysis['strategic_ideas'].append("Умеренное преимущество")
+                else:
+                    analysis['strategic_ideas'].append("Позиция примерно равная")
+                    
+                # Определяем, кто имеет преимущество
+                if evaluation > 0.5:
+                    if self.player_color == 'white':
+                        analysis['strategic_ideas'].append("У вас преимущество")
+                    else:
+                        analysis['strategic_ideas'].append("У компьютера преимущество")
+                elif evaluation < -0.5:
+                    if self.player_color == 'black':
+                        analysis['strategic_ideas'].append("У вас преимущество")
+                    else:
+                        analysis['strategic_ideas'].append("У компьютера преимущество")
+                        
+            # Добавляем образовательные советы
+            if len(self.move_history) > 0:
+                recent_moves = self.move_history[-3:]  # Последние 3 хода
+                if len(recent_moves) >= 2:
+                    # Проверяем на тактические мотивы
+                    if any('x' in move for move in recent_moves):
+                        analysis['tactical_threats'].append("Обратите внимание на возможные тактические удары")
+                        
+                    # Проверяем развитие фигур
+                    if len(recent_moves) < 6:  # Ранняя стадия игры
+                        analysis['strategic_ideas'].append("Развивайте фигуры и рокируйтесь")
+                        
+            return analysis
+        except Exception as e:
+            print(f"Ошибка при анализе позиции: {e}")
+            return {
+                'evaluation': None,
+                'best_move': None,
+                'material_balance': 0,
+                'piece_activity': 0,
+                'king_safety': 0,
+                'pawn_structure': 0,
+                'tactical_threats': [],
+                'strategic_ideas': [f"Ошибка анализа: {str(e)}"]
+            }
+
+    def _suggest_move(self):
+        """
+        Предложить лучший ход для текущей позиции с объяснением.
+        """
+        try:
+            if self.thinking or self.game_over or not self._is_player_turn():
+                return
+                
+            self.thinking = True
+            
+            # Получаем лучший ход от движка
+            best_move = self.engine.get_best_move()
+            
+            if best_move:
+                # Получаем оценку позиции до и после хода
+                eval_before = self.get_cached_evaluation()
+                
+                # Делаем временный ход для получения оценки после хода
+                self.engine.make_move(best_move)
+                eval_after = self.get_cached_evaluation()
+                # Отменяем ход
+                self.engine.reset_board()
+                for move in self.move_history:
+                    self.engine.make_move(move)
+                
+                # Преобразуем UCI ход в координаты
+                from_col = ord(best_move[0]) - ord('a')
+                from_row = 8 - int(best_move[1])
+                to_col = ord(best_move[2]) - ord('a')
+                to_row = 8 - int(best_move[3])
+                
+                # Получаем информацию о фигуре
+                board_state = self.engine.get_board_state()
+                piece = board_state[from_row][from_col] if 0 <= from_row < 8 and 0 <= from_col < 8 else None
+                
+                piece_names = {
+                    'P': 'пешка', 'N': 'конь', 'B': 'слон', 'R': 'ладья', 
+                    'Q': 'ферзь', 'K': 'король', 'p': 'пешка', 'n': 'конь', 
+                    'b': 'слон', 'r': 'ладья', 'q': 'ферзь', 'k': 'король'
+                }
+                
+                piece_name = piece_names.get(piece, 'фигура') if piece else 'фигура'
+                
+                # Формируем объяснение
+                explanation = f"Предлагаемый ход: {best_move} ({piece_name} с {best_move[0:2]} на {best_move[2:4]})"
+                
+                # Добавляем информацию о тактике
+                if 'x' in best_move:
+                    explanation += " (взятие)"
+                elif best_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']:
+                    explanation += " (рокировка)"
+                    
+                # Добавляем информацию о преимуществе
+                if eval_after is not None and eval_before is not None:
+                    improvement = eval_after - eval_before
+                    if abs(improvement) > 0.5:
+                        if (self.player_color == 'white' and improvement > 0) or (self.player_color == 'black' and improvement < 0):
+                            explanation += f" | Улучшает вашу позицию на {abs(improvement):.1f}"
+                        else:
+                            explanation += f" | Ухудшает позицию противника на {abs(improvement):.1f}"
+                
+                self.move_feedback = f"💡 Совет: {explanation}"
+                self.move_feedback_time = time.time()
+                
+                # Выделяем рекомендуемый ход
+                self.analysis_move = ((from_row, from_col), (to_row, to_col))
+                
+                # Проигрываем звук подсказки
+                if self.sound_manager:
+                    self.sound_manager.play_sound("button")
+            else:
+                self.move_feedback = "Не удалось получить совет по ходу"
+                self.move_feedback_time = time.time()
+                
+        except Exception as e:
+            print(f"Ошибка при получении совета: {e}")
+            self.move_feedback = "Ошибка при получении совета"
             self.move_feedback_time = time.time()
         finally:
             self.thinking = False
@@ -1901,7 +2371,10 @@ class ChessGame:
             # Если имя файла не указано, генерируем его автоматически
             if filename is None:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"chess_game_{timestamp}.json"
+                # Добавляем информацию о партии в имя файла для лучшей идентификации
+                player_color_abbr = "w" if self.player_color == "white" else "b"
+                move_count = len(self.move_history)
+                filename = f"chess_game_{timestamp}_{player_color_abbr}_{move_count}moves.json"
             
             # Убедимся, что папка saves существует
             saves_dir = os.path.join(os.path.dirname(__file__), "..", "saves")
@@ -1911,7 +2384,7 @@ class ChessGame:
             # Полный путь к файлу
             full_path = os.path.join(saves_dir, filename)
             
-            # Подготавливаем данные для сохранения
+            # Подготавливаем данные для сохранения с дополнительной информацией
             game_state = {
                 'player_color': self.player_color,
                 'skill_level': self.skill_level,
@@ -1920,16 +2393,23 @@ class ChessGame:
                 'fen': self.engine.get_fen(),
                 'timestamp': time.time(),
                 'stats': self.get_game_stats(),
-                'version': '1.0'
+                'version': '1.1',  # Обновляем версию для совместимости
+                'player_name': 'Player',  # Можно расширить для поддержки имен игроков
+                'game_mode': 'single_player',  # Можно расширить для разных режимов игры
+                'save_timestamp': datetime.now().isoformat(),  # Человекочитаемая временная метка
+                'board_orientation': self.player_color  # Ориентация доски при сохранении
             }
             
-            # Сохраняем в файл
+            # Сохраняем в файл с форматированием для лучшей читаемости
             with open(full_path, 'w', encoding='utf-8') as f:
-                json.dump(game_state, f, ensure_ascii=False, indent=2)
+                json.dump(game_state, f, ensure_ascii=False, indent=2, sort_keys=True)
             
             self.move_feedback = f"Партия сохранена в {filename}"
             self.move_feedback_time = time.time()
             print(f"Партия сохранена в файл: {full_path}")
+            
+            # Обновляем список сохраненных игр
+            self.saved_games.append(game_state)
             
         except Exception as e:
             print(f"Ошибка при сохранении партии в файл: {e}")
@@ -1961,8 +2441,9 @@ class ChessGame:
             with open(full_path, 'r', encoding='utf-8') as f:
                 game_state = json.load(f)
             
-            # Проверяем версию сохранения
-            if game_state.get('version') != '1.0':
+            # Проверяем версию сохранения для обратной совместимости
+            file_version = game_state.get('version', '1.0')
+            if file_version not in ['1.0', '1.1']:
                 self.move_feedback = "Несовместимый формат файла сохранения"
                 self.move_feedback_time = time.time()
                 return
@@ -2005,10 +2486,20 @@ class ChessGame:
                 'advantage_changes': 0
             }
             
+            # Обновляем ориентацию доски, если она сохранена
+            if 'board_orientation' in game_state:
+                board_orientation = game_state['board_orientation']
+                if board_orientation != self.player_color:
+                    self.renderer.set_player_color(board_orientation)
+            
             self.move_feedback = f"Партия загружена из {filename}"
             self.move_feedback_time = time.time()
             print(f"Партия загружена из файла: {full_path}")
             
+            # Обновляем список сохраненных игр
+            if game_state not in self.saved_games:
+                self.saved_games.append(game_state)
+                
         except Exception as e:
             print(f"Ошибка при загрузке партии из файла: {e}")
             self.move_feedback = "Ошибка загрузки из файла"
@@ -2016,20 +2507,67 @@ class ChessGame:
 
     def _list_saved_games(self):
         """
-        Получить список сохраненных партий.
+        Получить список сохраненных партий с дополнительной информацией.
         
         Возвращает:
-            list: Список имен файлов сохраненных партий
+            list: Список имен файлов сохраненных партий с информацией
         """
         try:
             import os
+            import json
+            from datetime import datetime
             
             saves_dir = os.path.join(os.path.dirname(__file__), "..", "saves")
             if not os.path.exists(saves_dir):
                 return []
             
             # Получаем список файлов с расширением .json
-            saved_files = [f for f in os.listdir(saves_dir) if f.endswith('.json')]
+            saved_files = []
+            for f in os.listdir(saves_dir):
+                if f.endswith('.json'):
+                    try:
+                        # Читаем информацию из файла для отображения
+                        full_path = os.path.join(saves_dir, f)
+                        with open(full_path, 'r', encoding='utf-8') as file:
+                            game_data = json.load(file)
+                        
+                        # Извлекаем информацию для отображения
+                        player_color = game_data.get('player_color', 'white')
+                        move_count = len(game_data.get('move_history', []))
+                        timestamp = game_data.get('timestamp', 0)
+                        skill_level = game_data.get('skill_level', 5)
+                        
+                        # Форматируем дату
+                        try:
+                            date_str = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+                        except:
+                            date_str = "Неизвестно"
+                        
+                        # Создаем отображаемое имя с информацией
+                        color_symbol = "♛" if player_color == "white" else "♚"
+                        display_info = f"{color_symbol} {move_count} ходов | Ур.{skill_level} | {date_str}"
+                        
+                        saved_files.append({
+                            'filename': f,
+                            'display_info': display_info,
+                            'player_color': player_color,
+                            'move_count': move_count,
+                            'skill_level': skill_level,
+                            'date': date_str
+                        })
+                    except Exception:
+                        # Если не удалось прочитать файл, добавляем базовую информацию
+                        saved_files.append({
+                            'filename': f,
+                            'display_info': f,
+                            'player_color': 'unknown',
+                            'move_count': 0,
+                            'skill_level': 0,
+                            'date': 'unknown'
+                        })
+            
+            # Сортируем по дате (новые первыми)
+            saved_files.sort(key=lambda x: x['date'], reverse=True)
             return saved_files
         except Exception as e:
             print(f"Ошибка при получении списка сохраненных партий: {e}")
@@ -2060,6 +2598,10 @@ class ChessGame:
             self.move_feedback = f"Партия {filename} удалена"
             self.move_feedback_time = time.time()
             print(f"Партия удалена: {full_path}")
+            
+            # Удаляем из списка сохраненных игр
+            self.saved_games = [game for game in self.saved_games if game.get('filename') != filename]
+            
             return True
             
         except Exception as e:
@@ -2271,33 +2813,8 @@ class ChessGame:
         except Exception as e:
             print(f"Ошибка при вычислении хода ИИ: {e}")
             return None
-            
-    def _render_board_state(self, board_state):
-        """Рендеринг состояния доски с использованием GPU ускорения (если доступно)."""
-        try:
-            if self.cuda_available and cp is not None and hasattr(cp, 'array'):
-                # Используем GPU для ускорения вычислений
-                # Преобразуем данные в массивы
-                board_array = cp.array([[ord(c) if c else 0 for c in row] for row in board_state])
-                
-                # Выполняем вычисления на GPU/CPU
-                # Это упрощенный пример - в реальном приложении здесь будут более сложные вычисления
-                if hasattr(cp, 'asnumpy'):
-                    # Для CuPy
-                    processed_board = cp.asnumpy(board_array)  # Преобразуем обратно в numpy для Pygame
-                else:
-                    # Для NumPy
-                    processed_board = cp.asarray(board_array)  # Уже является numpy массивом
-                    
-                # Передаем результат для отрисовки
-                return processed_board
-            else:
-                # Используем CPU для вычислений
-                return board_state
-        except Exception as e:
-            print(f"Ошибка при рендеринге с GPU: {e}")
-            return board_state
-            
+        except KeyboardInterrupt:
+            raise
     def _render_board_state(self, board_state):
         """Рендеринг состояния доски с использованием GPU ускорения (если доступно)."""
         try:
@@ -2459,7 +2976,7 @@ class ChessGame:
                         self.game_stats['move_times'].append(move_time)
                         
                         # Получаем оценку позиции для статистики
-                        evaluation = self.engine.get_evaluation()
+                        evaluation = self.get_cached_evaluation()
                         if evaluation is not None:
                             self.game_stats['evaluations'].append(evaluation)
                         
@@ -2503,7 +3020,7 @@ class ChessGame:
         if current_time - self.last_ai_move_time < self.ai_move_cooldown:
             return
         
-        # Уменьшенная задержка для более быстрой игры
+        # Увеличиваем задержку для более быстрой игры
         if current_time - self.last_move_time < self.ai_move_delay:
             return
         
@@ -2517,21 +3034,21 @@ class ChessGame:
             # Очищаем старый кэш
             self._clear_old_ai_cache()
             
-            # Получаем лучший ход с оптимальной глубиной анализа
+            # Получаем лучший ход с оптимизированной глубиной анализа
             # Более агрессивное ограничение глубины для скорости
-            depth = max(1, min(8, self.skill_level))  # Уменьшено с skill_level + 3
+            depth = max(1, min(8, self.skill_level // 2 + 1))  # Уменьшаем глубину анализа
             
             # Для всех уровней сложности используем кэшированные ходы в первую очередь
             ai_move = None
             
             # Пытаемся получить ход из кэша с упрощенной глубиной
-            if self.skill_level < 15:
+            if self.skill_level < 10:
                 ai_move = self._get_cached_best_move(depth=1)  # Используем минимальную глубину
             
             # Если нет кэшированного хода, получаем новый с оптимизированной глубиной
             if not ai_move:
                 # Для более быстрого ответа используем меньшую глубину
-                fast_depth = max(1, min(4, self.skill_level))  # Ограничиваем глубину до 4
+                fast_depth = max(1, min(4, self.skill_level // 3 + 1))  # Еще больше уменьшаем глубину
                 ai_move = self._get_cached_best_move(depth=fast_depth)
             
             # Альтернативный метод: если все еще нет хода, используем минимальную глубину
@@ -2587,8 +3104,14 @@ class ChessGame:
                         if is_capture:
                             self.game_stats['ai_capture_count'] += 1
                             self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
+                            # Проигрываем звук взятия
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("capture")
                         else:
                             self.move_feedback = f"Ход компьютера: {annotated_move}"
+                            # Проигрываем звук хода
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("move")
                         
                         # Добавляем информацию о дебюте, если она есть
                         if current_opening:
@@ -2610,7 +3133,7 @@ class ChessGame:
                         self.game_stats['move_times'].append(move_time)
                         
                         # Получаем оценку позиции для статистики
-                        evaluation = self.engine.get_evaluation()
+                        evaluation = self.get_cached_evaluation()
                         if evaluation is not None:
                             self.game_stats['evaluations'].append(evaluation)
                         
@@ -2623,24 +3146,650 @@ class ChessGame:
                             
                         # Очищаем кэш состояния доски после хода
                         self.board_state_cache = None
+                        
+                        # Обновляем отображение
+                        self.renderer._mark_all_dirty()
                     else:
                         print("⚠️  Не удалось выполнить ход компьютера")
                         self.move_feedback = "Не удалось выполнить ход компьютера"
                         self.move_feedback_time = current_time
+                        # Проигрываем звук ошибки
+                        if self.sound_manager:
+                            self.sound_manager.play_sound("button")
                 else:
                     print("⚠️  Компьютер предложил некорректный ход")
                     self.move_feedback = "Компьютер предложил некорректный ход"
                     self.move_feedback_time = current_time
+                    # Проигрываем звук ошибки
+                    if self.sound_manager:
+                        self.sound_manager.play_sound("button")
             else:
                 print("⚠️  Компьютер не смог найти ход")
                 self.move_feedback = "Компьютер не смог найти ход"
                 self.move_feedback_time = time.time()
+                # Проигрываем звук ошибки
+                if self.sound_manager:
+                    self.sound_manager.play_sound("button")
         except Exception as e:
             print(f"⚠️  Ошибка при получении хода компьютера: {e}")
             self.move_feedback = "Ошибка при получении хода компьютера"
             self.move_feedback_time = time.time()
+            # Проигрываем звук ошибки
+            if self.sound_manager:
+                self.sound_manager.play_sound("button")
         finally:
             self.thinking = False
+
+    def _get_adaptive_depth(self):
+        """
+        Получить адаптивную глубину анализа в зависимости от сложности позиции.
+        
+        Возвращает:
+            int: Глубина анализа
+        """
+        # Базовая глубина зависит от уровня сложности
+        base_depth = max(1, min(15, self.skill_level))
+        
+        # Адаптируем глубину в зависимости от сложности позиции
+        try:
+            # Получаем оценку текущей позиции
+            evaluation = self.get_cached_evaluation()
+            
+            # Если позиция сложная (большие изменения оценки), увеличиваем глубину
+            if (evaluation is not None and 
+                hasattr(self, '_prev_evaluation') and 
+                self._prev_evaluation is not None and
+                isinstance(self._prev_evaluation, (int, float))):
+                eval_diff = abs(evaluation - self._prev_evaluation)
+                if eval_diff > 2.0:  # Большая разница в оценке
+                    base_depth = min(base_depth + 2, 20)  # Увеличиваем, но не более 20
+                elif eval_diff < 0.5:  # Стабильная позиция
+                    base_depth = max(base_depth - 1, 1)  # Уменьшаем для скорости
+                    
+            self._prev_evaluation = evaluation
+        except:
+            pass
+            
+        return base_depth
+
+    def _get_multi_pv_analysis(self, num_moves: int = 3):
+        """
+        Получить анализ нескольких лучших ходов.
+        
+        Параметры:
+            num_moves (int): Количество ходов для анализа
+            
+        Возвращает:
+            list: Список лучших ходов с оценками
+        """
+        try:
+            # Получаем текущую позицию
+            fen = self.engine.get_fen()
+            
+            # Получаем несколько лучших ходов
+            best_moves = []
+            
+            # Для каждого хода получаем оценку
+            for i in range(num_moves):
+                # Получаем лучший ход
+                move = self.engine.get_best_move()
+                if not move:
+                    break
+                    
+                # Получаем оценку после хода
+                eval_score = self.engine.get_evaluation()
+                
+                # Сохраняем ход и оценку
+                best_moves.append({
+                    'move': move,
+                    'evaluation': eval_score['value'] / 100.0 if isinstance(eval_score, dict) and 'value' in eval_score else 0,
+                    'move_number': len(self.move_history) + 1 + i
+                })
+                
+                # Делаем ход временно для анализа следующего
+                self.engine.make_move(move)
+                
+            # Восстанавливаем исходную позицию
+            self.engine.set_fen(fen)
+            
+            return best_moves
+        except Exception as e:
+            print(f"Ошибка при многовариантном анализе: {e}")
+            return []
+
+    def _evaluate_move_quality(self, move: str, player: str = 'player'):
+        """
+        Оценить качество хода.
+        
+        Параметры:
+            move (str): Ход в формате UCI
+            player (str): Игрок, сделавший ход ('player' или 'ai')
+            
+        Возвращает:
+            str: Качество хода ('excellent', 'good', 'inaccuracy', 'mistake', 'blunder')
+        """
+        try:
+            # Получаем оценку позиции до хода
+            eval_before = self.get_cached_evaluation()
+            
+            # Делаем временный ход для получения оценки после хода
+            fen_before = self.engine.get_fen()
+            self.engine.make_move(move)
+            eval_after = self.get_cached_evaluation()
+            
+            # Восстанавливаем позицию
+            self.engine.set_fen(fen_before)
+            
+            # Вычисляем изменение оценки
+            if eval_before is not None and eval_after is not None:
+                # Для белых: положительное изменение = улучшение
+                # Для черных: отрицательное изменение = улучшение
+                if player == 'player':
+                    improvement = eval_after - eval_before
+                    if self.player_color == 'black':
+                        improvement = -improvement
+                else:
+                    improvement = eval_before - eval_after
+                    if self.player_color == 'black':
+                        improvement = -improvement
+                
+                # Определяем качество хода
+                if improvement > 1.0:
+                    return 'excellent'  # Отличный ход
+                elif improvement > 0.5:
+                    return 'good'  # Хороший ход
+                elif improvement > -0.5:
+                    return 'inaccuracy'  # Неточность
+                elif improvement > -1.5:
+                    return 'mistake'  # Ошибка
+                else:
+                    return 'blunder'  # Грубая ошибка
+                    
+            return 'good'  # По умолчанию, если не можем оценить
+        except Exception as e:
+            print(f"Ошибка при оценке качества хода: {e}")
+            return 'good'
+
+    def _get_position_complexity(self):
+        """
+        Оценить сложность текущей позиции.
+        
+        Возвращает:
+            float: Сложность позиции от 0.0 (простая) до 1.0 (сложная)
+        """
+        try:
+            # Получаем оценку позиции
+            evaluation = self.get_cached_evaluation()
+            
+            # Определяем сложность на основе различных факторов
+            complexity = 0.5  # Базовая сложность
+            
+            # Фактор 1: Неопределенность оценки (ближе к 0 = сложнее)
+            if evaluation is not None:
+                complexity += 0.3 * (1.0 - min(1.0, abs(evaluation) / 5.0))
+            
+            # Фактор 2: Количество фигур на доске
+            board_state = self.get_board_state()
+            piece_count = sum(1 for row in board_state for piece in row if piece is not None)
+            complexity += 0.2 * (piece_count / 32.0)  # Нормализуем до 32 фигур
+            
+            # Фактор 3: Наличие тактических возможностей
+            # Проверяем наличие взятий и шахов
+            try:
+                best_move = self.engine.get_best_move()
+                if best_move and ('x' in best_move or '+' in best_move):
+                    complexity += 0.2
+            except:
+                pass
+            
+            # Ограничиваем диапазон от 0.0 до 1.0
+            return max(0.0, min(1.0, complexity))
+        except Exception as e:
+            print(f"Ошибка при оценке сложности позиции: {e}")
+            return 0.5
+
+    def _get_ai_move_with_analysis(self):
+        """
+        Получить ход ИИ с подробным анализом.
+        
+        Возвращает:
+            dict: Словарь с ходом и аналитической информацией
+        """
+        try:
+            # Получаем базовую информацию
+            fen = self.engine.get_fen()
+            evaluation_before = self.get_cached_evaluation()
+            
+            # Получаем лучший ход
+            best_move = self._get_cached_best_move()
+            
+            if not best_move:
+                return None
+            
+            # Получаем многовариантный анализ
+            multi_pv = self._get_multi_pv_analysis(3)
+            
+            # Оцениваем качество хода
+            move_quality = self._evaluate_move_quality(best_move, 'ai')
+            
+            # Определяем сложность позиции
+            position_complexity = self._get_position_complexity()
+            
+            # Получаем оценку после хода
+            self.engine.make_move(best_move)
+            evaluation_after = self.get_cached_evaluation()
+            self.engine.set_fen(fen)  # Восстанавливаем позицию
+            
+            # Формируем результат
+            analysis = {
+                'move': best_move,
+                'quality': move_quality,
+                'complexity': position_complexity,
+                'evaluation_before': evaluation_before,
+                'evaluation_after': evaluation_after,
+                'alternative_moves': multi_pv[1:] if len(multi_pv) > 1 else [],
+                'timestamp': time.time()
+            }
+            
+            return analysis
+        except Exception as e:
+            print(f"Ошибка при получении анализа хода ИИ: {e}")
+            # Возвращаем базовый ход в случае ошибки
+            best_move = self._get_cached_best_move()
+            if best_move:
+                return {'move': best_move, 'quality': 'unknown'}
+            return None
+
+    def handle_ai_move_enhanced(self):
+        """
+        Улучшенная обработка хода ИИ с расширенным анализом.
+        """
+        if self._is_player_turn() or self.game_over or self.thinking:
+            return
+        
+        # Проверка минимальной задержки
+        current_time = time.time()
+        if current_time - self.last_ai_move_time < self.ai_move_cooldown:
+            return
+        
+        # Уменьшенная задержка для более быстрой игры
+        if current_time - self.last_move_time < self.ai_move_delay:
+            return
+        
+        self.thinking = True
+        self.last_ai_move_time = current_time
+        
+        # Засекаем время начала хода для статистики
+        move_start_time = time.time()
+        
+        try:
+            # Очищаем старый кэш
+            self._clear_old_ai_cache()
+            
+            # Получаем ход ИИ с анализом
+            ai_analysis = self._get_ai_move_with_analysis()
+            
+            if ai_analysis and 'move' in ai_analysis:
+                ai_move = ai_analysis['move']
+                print(f"Ход компьютера: {ai_move}")
+                
+                # Получаем текущее состояние доски для проверки взятия
+                board_before = self.engine.get_board_state()
+                
+                # Валидация хода
+                if self.engine.is_move_correct(ai_move):
+                    if self.engine.make_move(ai_move):
+                        # Добавляем ход в дебютную книгу
+                        self.opening_book.add_move(ai_move)
+                        
+                        # Проверяем текущий дебют
+                        current_opening = self.opening_book.get_current_opening()
+                        
+                        self.move_history.append(ai_move)
+                        self.game_stats['ai_moves'] += 1
+                        
+                        # Проверяем, было ли взятие
+                        board_after = self.engine.get_board_state()
+                        # Преобразуем UCI ход в координаты
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        target_piece = board_before[to_row][to_col]
+                        is_capture = target_piece is not None
+                        # Проверяем, будет ли шах или мат после хода
+                        is_check = False
+                        is_mate = False
+                        is_castling = ai_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']
+                        
+                        # Проверяем состояние игры после хода
+                        is_over, reason = self.engine.is_game_over()
+                        if is_over and reason and "мат" in reason:
+                            is_mate = True
+                        
+                        # Проверяем шах
+                        try:
+                            eval_result = self.engine.get_evaluation()
+                            if eval_result and isinstance(eval_result, dict):
+                                is_check = eval_result.get('check', False)
+                        except:
+                            pass
+                        
+                        # Аннотируем ход
+                        annotated_move = self._annotate_move_internal(ai_move, is_capture, is_check, is_mate, is_castling)
+                        
+                        if is_capture:
+                            self.game_stats['ai_capture_count'] += 1
+                            self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
+                            # Проигрываем звук взятия
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("capture")
+                        else:
+                            self.move_feedback = f"Ход компьютера: {annotated_move}"
+                            # Проигрываем звук хода
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("move")
+                        
+                        # Добавляем информацию о дебюте, если она есть
+                        if current_opening:
+                            opening_name, opening_info = current_opening
+                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
+                        
+                        # Добавляем анализ качества хода, если доступен
+                        if 'quality' in ai_analysis:
+                            quality_text = {
+                                'excellent': 'отличный ход!',
+                                'good': 'хороший ход',
+                                'inaccuracy': 'неточность',
+                                'mistake': 'ошибка',
+                                'blunder': 'грубая ошибка!'
+                            }
+                            quality_desc = quality_text.get(ai_analysis['quality'], '')
+                            if quality_desc:
+                                self.move_feedback += f" ({quality_desc})"
+                        
+                        # Преобразование UCI хода в координаты для выделения
+                        from_col = ord(ai_move[0]) - ord('a')
+                        from_row = 8 - int(ai_move[1])
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
+                        self.last_move_time = current_time
+                        print(f"Ход компьютера выполнен: {annotated_move}")
+                        self.move_feedback_time = current_time
+                        
+                        # Записываем время хода в статистику
+                        move_time = time.time() - move_start_time
+                        self.game_stats['move_times'].append(move_time)
+                        
+                        # Получаем оценку позиции для статистики
+                        evaluation = self.get_cached_evaluation()
+                        if evaluation is not None:
+                            self.game_stats['evaluations'].append(evaluation)
+                        
+                        # Добавляем образовательную обратную связь
+                        educational_tip = self.educator.get_educational_feedback(
+                            len(self.move_history), current_time)
+                        if educational_tip:
+                            self.move_feedback += f" | {educational_tip}"
+                            self.move_feedback_time = current_time
+                            
+                        # Очищаем кэш состояния доски после хода
+                        self.board_state_cache = None
+                        
+                        # Обновляем отображение
+                        self.renderer._mark_all_dirty()
+                    else:
+                        print("⚠️  Не удалось выполнить ход компьютера")
+                        self.move_feedback = "Не удалось выполнить ход компьютера"
+                        self.move_feedback_time = current_time
+                        # Проигрываем звук ошибки
+                        if self.sound_manager:
+                            self.sound_manager.play_sound("button")
+                else:
+                    print("⚠️  Компьютер предложил некорректный ход")
+                    self.move_feedback = "Компьютер предложил некорректный ход"
+                    self.move_feedback_time = current_time
+                    # Проигрываем звук ошибки
+                    if self.sound_manager:
+                        self.sound_manager.play_sound("button")
+            else:
+                print("⚠️  Компьютер не смог найти ход")
+                self.move_feedback = "Компьютер не смог найти ход"
+                self.move_feedback_time = time.time()
+                # Проигрываем звук ошибки
+                if self.sound_manager:
+                    self.sound_manager.play_sound("button")
+        except Exception as e:
+            print(f"⚠️  Ошибка при получении хода компьютера: {e}")
+            self.move_feedback = "Ошибка при получении хода компьютера"
+            self.move_feedback_time = time.time()
+            # Проигрываем звук ошибки
+            if self.sound_manager:
+                self.sound_manager.play_sound("button")
+        finally:
+            self.thinking = False
+
+    def _annotate_move_internal(self, uci_move: str, is_capture: bool = False, is_check: bool = False, 
+                      is_mate: bool = False, is_castling: bool = False) -> str:
+        """
+        Аннотировать ход с помощью специальных символов.
+        Внутренняя версия для избежания конфликта с существующим методом.
+        
+        Параметры:
+            uci_move (str): Ход в формате UCI
+            is_capture (bool): Было ли взятие
+            is_check (bool): Был ли шах
+            is_mate (bool): Был ли мат
+            is_castling (bool): Была ли рокировка
+            
+        Возвращает:
+            str: Аннотированный ход
+        """
+        annotation = uci_move
+        
+        # Добавляем символы аннотации
+        if is_castling:
+            # Короткая рокировка - O-O, длинная - O-O-O
+            if uci_move in ['e1g1', 'e8g8']:  # Короткая рокировка
+                annotation = "O-O"
+            elif uci_move in ['e1c1', 'e8c8']:  # Длинная рокировка
+                annotation = "O-O-O"
+            
+        if is_capture:
+            annotation += "x"  # Символ взятия
+            
+        if is_check and not is_mate:
+            annotation += "+"  # Символ шаха
+        elif is_mate:
+            annotation += "#"  # Символ мата
+            
+        return annotation
+
+    def handle_ai_move_optimized(self):
+        """
+        Оптимизированная обработка хода ИИ (Stockfish) с улучшенной производительностью.
+        """
+        if self._is_player_turn() or self.game_over or self.thinking:
+            return
+        
+        # Проверка минимальной задержки
+        current_time = time.time()
+        if current_time - self.last_ai_move_time < self.ai_move_cooldown:
+            return
+        
+        # Увеличиваем задержку для более быстрой игры
+        if current_time - self.last_move_time < self.ai_move_delay:
+            return
+        
+        self.thinking = True
+        self.last_ai_move_time = current_time
+        
+        # Засекаем время начала хода для статистики
+        move_start_time = time.time()
+        
+        try:
+            # Очищаем старый кэш
+            self._clear_old_ai_cache()
+            
+            # Получаем лучший ход с оптимизированной глубиной анализа
+            # Более агрессивное ограничение глубины для скорости
+            depth = max(1, min(8, self.skill_level // 2 + 1))  # Уменьшаем глубину анализа
+            
+            # Для всех уровней сложности используем кэшированные ходы в первую очередь
+            ai_move = None
+            
+            # Пытаемся получить ход из кэша с упрощенной глубиной
+            if self.skill_level < 10:
+                ai_move = self._get_cached_best_move(depth=1)  # Используем минимальную глубину
+            
+            # Если нет кэшированного хода, получаем новый с оптимизированной глубиной
+            if not ai_move:
+                # Для более быстрого ответа используем меньшую глубину
+                fast_depth = max(1, min(4, self.skill_level // 3 + 1))  # Еще больше уменьшаем глубину
+                ai_move = self._get_cached_best_move(depth=fast_depth)
+            
+            # Альтернативный метод: если все еще нет хода, используем минимальную глубину
+            if not ai_move:
+                ai_move = self._get_cached_best_move(depth=1)
+            
+            if ai_move:
+                print(f"Ход компьютера: {ai_move}")
+                
+                # Получаем текущее состояние доски для проверки взятия
+                board_before = self.engine.get_board_state()
+                
+                # Валидация хода
+                if self.engine.is_move_correct(ai_move):
+                    if self.engine.make_move(ai_move):
+                        # Добавляем ход в дебютную книгу
+                        self.opening_book.add_move(ai_move)
+                        
+                        # Проверяем текущий дебют
+                        current_opening = self.opening_book.get_current_opening()
+                        
+                        self.move_history.append(ai_move)
+                        self.game_stats['ai_moves'] += 1
+                        
+                        # Проверяем, было ли взятие
+                        board_after = self.engine.get_board_state()
+                        # Преобразуем UCI ход в координаты
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        target_piece = board_before[to_row][to_col]
+                        is_capture = target_piece is not None
+                        # Проверяем, будет ли шах или мат после хода
+                        is_check = False
+                        is_mate = False
+                        is_castling = ai_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']
+                        
+                        # Проверяем состояние игры после хода
+                        is_over, reason = self.engine.is_game_over()
+                        if is_over and reason and "мат" in reason:
+                            is_mate = True
+                        
+                        # Проверяем шах
+                        try:
+                            eval_result = self.engine.get_evaluation()
+                            if eval_result and isinstance(eval_result, dict):
+                                is_check = eval_result.get('check', False)
+                        except:
+                            pass
+                        
+                        # Аннотируем ход
+                        annotated_move = self._annotate_move(ai_move, is_capture, is_check, is_mate, is_castling)
+                        
+                        if is_capture:
+                            self.game_stats['ai_capture_count'] += 1
+                            self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
+                            # Проигрываем звук взятия
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("capture")
+                        else:
+                            self.move_feedback = f"Ход компьютера: {annotated_move}"
+                            # Проигрываем звук хода
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("move")
+                        
+                        # Добавляем информацию о дебюте, если она есть
+                        if current_opening:
+                            opening_name, opening_info = current_opening
+                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
+                        
+                        # Преобразование UCI хода в координаты для выделения
+                        from_col = ord(ai_move[0]) - ord('a')
+                        from_row = 8 - int(ai_move[1])
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
+                        self.last_move_time = current_time
+                        print(f"Ход компьютера выполнен: {annotated_move}")
+                        self.move_feedback_time = current_time
+                        
+                        # Записываем время хода в статистику
+                        move_time = time.time() - move_start_time
+                        self.game_stats['move_times'].append(move_time)
+                        
+                        # Получаем оценку позиции для статистики (с более агрессивным кэшированием)
+                        evaluation = self.get_cached_evaluation()
+                        if evaluation is not None:
+                            self.game_stats['evaluations'].append(evaluation)
+                        
+                        # Добавляем образовательную обратную связь
+                        educational_tip = self.educator.get_educational_feedback(
+                            len(self.move_history), current_time)
+                        if educational_tip:
+                            self.move_feedback += f" | {educational_tip}"
+                            self.move_feedback_time = current_time
+                            
+                        # Очищаем кэш состояния доски после хода
+                        self.board_state_cache = None
+                        
+                        # Обновляем отображение
+                        self.renderer._mark_all_dirty()
+                    else:
+                        print("⚠️  Не удалось выполнить ход компьютера")
+                        self.move_feedback = "Не удалось выполнить ход компьютера"
+                        self.move_feedback_time = current_time
+                        # Проигрываем звук ошибки
+                        if self.sound_manager:
+                            self.sound_manager.play_sound("button")
+                else:
+                    print("⚠️  Компьютер предложил некорректный ход")
+                    self.move_feedback = "Компьютер предложил некорректный ход"
+                    self.move_feedback_time = current_time
+                    # Проигрываем звук ошибки
+                    if self.sound_manager:
+                        self.sound_manager.play_sound("button")
+            else:
+                print("⚠️  Компьютер не смог найти ход")
+                self.move_feedback = "Компьютер не смог найти ход"
+                self.move_feedback_time = time.time()
+                # Проигрываем звук ошибки
+                if self.sound_manager:
+                    self.sound_manager.play_sound("button")
+        except Exception as e:
+            print(f"⚠️  Ошибка при получении хода компьютера: {e}")
+            self.move_feedback = "Ошибка при получении хода компьютера"
+            self.move_feedback_time = time.time()
+            # Проигрываем звук ошибки
+            if self.sound_manager:
+                self.sound_manager.play_sound("button")
+        finally:
+            self.thinking = False
+
+            if uci_move in ['e1g1', 'e8g8']:  # Короткая рокировка
+                annotation = "O-O"
+            elif uci_move in ['e1c1', 'e8c8']:  # Длинная рокировка
+                annotation = "O-O-O"
+            
+        if is_capture:
+            annotation += "x"  # Символ взятия
+            
+        if is_check and not is_mate:
+            annotation += "+"  # Символ шаха
+        elif is_mate:
+            annotation += "#"  # Символ мата
+            
+        return annotation
 
     def run(self):
         """
@@ -2673,10 +3822,10 @@ class ChessGame:
             last_ai_update = time.time()
             
             # Интервалы обновлений (оптимизированы для производительности)
-            board_update_interval = 1.0/120  # Увеличиваем до 120 FPS для более плавной анимации
-            ui_update_interval = 1.0/60     # Увеличиваем до 60 FPS для более отзывчивого UI
-            # Уменьшаем интервал обновления ИИ для более быстрой реакции
-            ai_update_interval = 0.02       # Уменьшено с 0.05 до 0.02 (50 раз в секунду)
+            board_update_interval = 1.0/60  # Уменьшаем до 60 FPS для экономии ресурсов
+            ui_update_interval = 1.0/30     # Уменьшаем до 30 FPS для экономии ресурсов
+            # Уменьшаем частоту обновления ИИ для снижения нагрузки
+            ai_update_interval = 0.1        # Уменьшено с 0.02 до 0.1 (10 раз в секунду)
             
             # Флаги для отслеживания изменений
             board_needs_update = True
@@ -2867,7 +4016,7 @@ class ChessGame:
                             ui_needs_update = True
                         # Показать детальную оценку позиции
                         elif event.key == pygame.K_e:
-                            evaluation = self.engine.get_evaluation()
+                            evaluation = self.get_cached_evaluation()
                             if evaluation is not None:
                                 # Определяем сторону с преимуществом
                                 if evaluation > 0.5:
@@ -3008,7 +4157,7 @@ class ChessGame:
                         self.screen.set_clip(board_rect)
                         
                         # Отрисовка через рендерер с улучшенной очисткой
-                        evaluation = self.get_cached_evaluation()
+                        evaluation = self.get_interpolated_evaluation()
                         self.renderer.draw(current_board_state, evaluation=evaluation, thinking=self.thinking, 
                                          mouse_pos=mouse_pos, move_count=len(self.move_history),
                                          capture_count=(self.game_stats['player_capture_count'], 
@@ -3061,8 +4210,13 @@ class ChessGame:
                     self.clock.tick(30)
                     continue
 
-                # === Ограничение FPS ===
-                self.clock.tick(120)  # Увеличиваем до 120 FPS для более плавной игры
+                # === Адаптивное ограничение FPS ===
+                # В режиме простоя ограничиваем FPS до 30 для экономии ресурсов
+                if not has_events and not board_needs_update and not ui_needs_update:
+                    self.clock.tick(30)
+                else:
+                    # В активном режиме ограничиваем до 60 FPS для баланса производительности и плавности
+                    self.clock.tick(60)
 
         finally:
             # Останавливаем многопоточную обработку
