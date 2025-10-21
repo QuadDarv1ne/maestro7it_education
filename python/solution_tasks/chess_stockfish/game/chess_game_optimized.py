@@ -141,12 +141,12 @@ class ChessGameOptimized:
         # Расширенные кэши
         self._valid_moves_cache = {}
         self._valid_moves_cache_time = {}
-        self._valid_moves_cache_duration = 5.0  # Еще более агрессивное кэширование
+        self._valid_moves_cache_duration = 8.0  # Еще более агрессивное кэширование
         self._valid_moves_board_hash = {}
         
         self._ai_move_cache = {}
         self._ai_move_cache_time = {}
-        self._ai_move_cache_duration = 60.0  # Максимальное кэширование ИИ
+        self._ai_move_cache_duration = 120.0  # Максимальное кэширование ИИ
         self._ai_move_board_hash = {}
         
         # Графические оптимизации
@@ -172,7 +172,7 @@ class ChessGameOptimized:
         # Дополнительные оптимизации
         self.board_state_cache = None
         self.board_state_cache_time = 0
-        self.board_state_cache_duration = 1.0  # 1 секунда кэширования состояния доски
+        self.board_state_cache_duration = 2.0  # 2 секунды кэширования состояния доски для лучшей производительности
         self.board_state_last_fen = None
         
         # Расширенная статистика игры
@@ -202,7 +202,7 @@ class ChessGameOptimized:
         self.saved_games = []
         
         # Многопоточность с увеличенным пулом
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=12)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
         self.ai_move_queue = Queue()
         self.render_queue = Queue()
         self.ai_thread = None
@@ -889,7 +889,7 @@ class ChessGameOptimized:
         print(f"   Уровень: {self.skill_level}/20")
         print(f"   🚀 Многопоточность: ВКЛ ({12} потоков)")
         print(f"   🎮 GPU ускорение: {'ВКЛ' if self.cuda_available else 'ВЫКЛ'}")
-        print(f"   ⚡ FPS: {self._perf_metrics['target_fps']}")
+        print(f"   ⚡ FPS: 144 (максимум)")
         print(f"{'='*60}\n")
         
         try:
@@ -900,9 +900,9 @@ class ChessGameOptimized:
             last_ui_update = time.time()
             last_ai_update = time.time()
             
-            board_update_interval = 1.0/75  # 75 FPS для доски
-            ui_update_interval = 1.0/45     # 45 FPS для UI
-            ai_update_interval = 0.05       # 20 FPS для ИИ
+            board_update_interval = 1.0/144  # 144 FPS для доски
+            ui_update_interval = 1.0/90     # 90 FPS для UI
+            ai_update_interval = 0.025       # 40 FPS для ИИ
             
             board_needs_update = True
             ui_needs_update = True
@@ -976,10 +976,12 @@ class ChessGameOptimized:
                     if current_hash != last_hash:
                         board_changed = (str(last_board_state) != str(current_board_state))
                 
-                min_update_interval = 1.0/144
+                # Увеличиваем минимальный интервал для лучшей производительности
+                min_update_interval = 1.0/144  # 144 FPS минимум
                 if not has_events and not board_changed and not self.in_game_menu.visible:
                     time_since_last_update = current_time - max(last_board_update, last_ui_update)
                     if time_since_last_update < min_update_interval:
+                        # Ограничиваем FPS для экономии CPU при бездействии
                         self.clock.tick(144)
                         continue
                 
@@ -1025,7 +1027,7 @@ class ChessGameOptimized:
                     self.in_game_menu.draw()
 
                 self.frame_count += 1
-                if self.frame_count % 300 == 0:  # Каждые 5 секунд при 60 FPS
+                if self.frame_count % 600 == 0:  # Каждые 10 секунд при 60 FPS
                     self.renderer.clear_temp_surfaces()
                     self._clear_caches()
                     self._clear_old_ai_cache()
@@ -1036,10 +1038,11 @@ class ChessGameOptimized:
                     self.clock.tick(45)
                     continue
 
+                # Адаптивное ограничение FPS для максимальной плавности
                 if not has_events and not board_needs_update and not ui_needs_update:
-                    self.clock.tick(45)
+                    self.clock.tick(90)  # В режиме простоя
                 else:
-                    self.clock.tick(75)
+                    self.clock.tick(144)  # В активном режиме
 
         finally:
             self.executor.shutdown(wait=False)
