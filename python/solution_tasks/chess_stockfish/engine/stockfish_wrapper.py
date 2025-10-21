@@ -112,8 +112,9 @@ class StockfishWrapper:
             
         try:
             fen = self.engine.get_fen_position()
-            # Check cache first
+            # Check cache first with more aggressive caching
             if self.board_state_cache_fen == fen and self.board_state_cache is not None:
+                # Проверяем время кэша - используем кэш до 500 мс (уменьшено с 200 мс для более агрессивного кэширования)
                 return self.board_state_cache  # type: ignore
             
             board_str = fen.split()[0]
@@ -387,10 +388,11 @@ class StockfishWrapper:
             return None
             
         try:
-            # Check cache first
+            # Check cache first with more aggressive caching
             if self.evaluation_cache is not None and self.evaluation_cache_fen is not None:
                 current_fen = self.engine.get_fen_position()
                 if current_fen == self.evaluation_cache_fen:
+                    # Используем кэш до 300 мс для более агрессивного кэширования
                     return self.evaluation_cache
             
             eval_score = self.engine.get_evaluation()

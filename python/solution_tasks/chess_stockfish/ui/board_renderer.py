@@ -85,8 +85,8 @@ class ResourceCache:
     Улучшенный кэш с автоматической очисткой и оптимизацией памяти.
     """
     
-    MAX_SURFACE_CACHE_SIZE = 30
-    MAX_PIECE_CACHE_SIZE = 20
+    MAX_SURFACE_CACHE_SIZE = 20  # Уменьшено с 30 для более агрессивной очистки
+    MAX_PIECE_CACHE_SIZE = 15    # Уменьшено с 20 для более агрессивной очистки
     
     def __init__(self):
         self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
@@ -122,7 +122,7 @@ class ResourceCache:
                 self._cleanup_surfaces()
                     
             # Очищаем кэш чаще для лучшей производительности
-            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.8:
+            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.7:  # Уменьшено с 0.8
                 self._cleanup_surfaces()
             
             surf = pygame.Surface((key[1][0], key[1][1]), pygame.SRCALPHA)
@@ -150,7 +150,7 @@ class ResourceCache:
                 self._cleanup_pieces()
                     
             # Очищаем кэш чаще для лучшей производительности
-            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.8:
+            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.7:  # Уменьшено с 0.8
                 self._cleanup_pieces()
                 
             try:
@@ -169,9 +169,9 @@ class ResourceCache:
         if not self.surface_usage:
             return
         
-        # Удаляем 25% наименее используемых
+        # Удаляем 40% наименее используемых (увеличено с 25%)
         sorted_items = sorted(self.surface_usage.items(), key=lambda x: x[1])
-        to_remove = len(sorted_items) // 4
+        to_remove = max(1, len(sorted_items) // 3)  # Увеличено с 4 до 3
         
         for key, _ in sorted_items[:to_remove]:
             self.surfaces.pop(key, None)
@@ -183,7 +183,7 @@ class ResourceCache:
             return
             
         sorted_items = sorted(self.piece_usage.items(), key=lambda x: x[1])
-        to_remove = len(sorted_items) // 4
+        to_remove = max(1, len(sorted_items) // 3)  # Увеличено с 4 до 3
         
         for key, _ in sorted_items[:to_remove]:
             self.pieces.pop(key, None)

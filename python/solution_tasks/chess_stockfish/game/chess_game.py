@@ -132,8 +132,14 @@ class ChessGame:
         # Дополнительные кэши для оптимизации производительности
         self._valid_moves_cache = {}  # Кэш для вычисленных допустимых ходов
         self._valid_moves_cache_time = {}  # Время последнего обновления кэша ходов
-        self._valid_moves_cache_duration = 1.0  # Увеличиваем кэш ходов до 1 секунды для лучшей производительности
+        self._valid_moves_cache_duration = 2.0  # Увеличиваем кэш ходов до 2 секунды для лучшей производительности
         self._valid_moves_board_hash = {}  # Хэш доски для каждого кэшированного хода
+        
+        # Расширенный кэш для AI ходов с более агрессивной стратегией
+        self._ai_move_cache = {}  # Кэш для AI ходов
+        self._ai_move_cache_time = {}  # Время последнего обновления кэша AI
+        self._ai_move_cache_duration = 15.0  # Увеличиваем кэш AI до 15 секунд
+        self._ai_move_board_hash = {}  # Хэш доски для каждого кэшированного AI хода
         
         # Графические оптимизации
         self.last_board_hash = None
@@ -1603,11 +1609,11 @@ class ChessGame:
         
         # Проверяем кэш с более агрессивной стратегией
         current_time = time.time()
-        if cache_key in self.ai_move_cache:
-            cached_move, cache_time = self.ai_move_cache[cache_key]
-            # Используем кэш, если он не старше 15 секунд ИЛИ если это очень свежий кэш (меньше 1 секунды)
+        if cache_key in self._ai_move_cache:
+            cached_move, cache_time = self._ai_move_cache[cache_key]
+            # Используем кэш, если он не старше 20 секунд ИЛИ если это очень свежий кэш (меньше 1 секунды)
             # Увеличиваем время жизни кэша для еще более агрессивного кэширования
-            is_time_valid = (current_time - cache_time < 15.0)  # Увеличено с 10.0 до 15.0
+            is_time_valid = (current_time - cache_time < 20.0)  # Увеличено с 15.0 до 20.0
             is_fresh_cache = (current_time - cache_time < 1.0)  # Увеличено с 0.5 до 1.0
             
             if is_time_valid or is_fresh_cache:
@@ -1616,14 +1622,14 @@ class ChessGame:
         # Для более быстрого получения хода, используем меньшую глубину при высоких уровнях сложности
         if depth is None:
             # Более агрессивное ограничение глубины
-            depth = max(1, min(8, self.skill_level))  # Уменьшено максимальное значение
+            depth = max(1, min(6, self.skill_level))  # Уменьшено максимальное значение
         
         # Получаем ход от движка
         best_move = self.engine.get_best_move(depth=depth)
         
         # Сохраняем в кэш
         if best_move:
-            self.ai_move_cache[cache_key] = (best_move, current_time)
+            self._ai_move_cache[cache_key] = (best_move, current_time)
             
         return best_move
 
@@ -1632,17 +1638,17 @@ class ChessGame:
         current_time = time.time()
         expired_keys = []
         
-        for key, (_, cache_time) in self.ai_move_cache.items():
-            # Удаляем записи старше 30 секунд (увеличиваем с 10 секунд)
-            if current_time - cache_time > 30.0:
+        for key, (_, cache_time) in self._ai_move_cache.items():
+            # Удаляем записи старше 40 секунд (увеличиваем с 30 секунд)
+            if current_time - cache_time > 40.0:
                 expired_keys.append(key)
                 
         for key in expired_keys:
-            del self.ai_move_cache[key]
+            del self._ai_move_cache[key]
             
     def _clear_ai_cache(self):
         """Полная очистка кэша AI."""
-        self.ai_move_cache.clear()
+        self._ai_move_cache.clear()
 
     def _analyze_position(self):
         """
@@ -2170,7 +2176,7 @@ class ChessGame:
             
             # Получаем лучший ход с оптимальной глубиной анализа
             # Более агрессивное ограничение глубины для скорости
-            depth = max(1, min(10, self.skill_level + 1))  # Уменьшено с skill_level + 3
+            depth = max(1, min(8, self.skill_level))  # Уменьшено с skill_level + 3
             
             # Для всех уровней сложности используем кэшированные ходы в первую очередь
             ai_move = None
@@ -2182,7 +2188,7 @@ class ChessGame:
             # Если нет кэшированного хода, получаем новый с оптимизированной глубиной
             if not ai_move:
                 # Для более быстрого ответа используем меньшую глубину
-                fast_depth = max(1, min(5, self.skill_level))  # Ограничиваем глубину до 5
+                fast_depth = max(1, min(4, self.skill_level))  # Ограничиваем глубину до 4
                 ai_move = self._get_cached_best_move(depth=fast_depth)
             
             # Альтернативный метод: если все еще нет хода, используем минимальную глубину
@@ -2318,10 +2324,10 @@ class ChessGame:
         last_ai_update = time.time()
         
         # Интервалы обновлений (оптимизированы для производительности)
-        board_update_interval = 1.0/60  # Увеличиваем до 60 FPS для более плавной анимации
-        ui_update_interval = 1.0/30     # Увеличиваем до 30 FPS для более отзывчивого UI
+        board_update_interval = 1.0/120  # Увеличиваем до 120 FPS для более плавной анимации
+        ui_update_interval = 1.0/60     # Увеличиваем до 60 FPS для более отзывчивого UI
         # Уменьшаем интервал обновления ИИ для более быстрой реакции
-        ai_update_interval = 0.05       # Уменьшено с 0.1 до 0.05 (20 раз в секунду)
+        ai_update_interval = 0.02       # Уменьшено с 0.05 до 0.02 (50 раз в секунду)
         
         # Флаги для отслеживания изменений
         board_needs_update = True
@@ -2689,7 +2695,7 @@ class ChessGame:
 
             # === Очистка кэша для предотвращения утечек памяти ===
             self.frame_count += 1
-            if self.frame_count % 900 == 0:  # Каждые 15 секунд при 30 FPS
+            if self.frame_count % 600 == 0:  # Каждые 10 секунд при 60 FPS (уменьшено с 900)
                 self.renderer.clear_temp_surfaces()
                 self._clear_caches()
                 self._clear_old_ai_cache()
@@ -2697,9 +2703,13 @@ class ChessGame:
             # === Обновление экрана только при необходимости ===
             if board_needs_update or ui_needs_update or has_events or board_changed or self.in_game_menu.visible:
                 pygame.display.flip()
+            else:
+                # В режиме простоя ограничиваем FPS до 30 для экономии ресурсов
+                self.clock.tick(30)
+                continue
 
             # === Ограничение FPS ===
-            self.clock.tick(60)
+            self.clock.tick(120)  # Увеличиваем до 120 FPS для более плавной игры
 
         # === Завершение работы ===
         self.renderer.cleanup()
