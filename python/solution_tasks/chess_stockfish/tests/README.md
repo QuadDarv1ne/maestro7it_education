@@ -72,6 +72,13 @@
 - Упрощенные визуальные эффекты
 - Корректность отображения кругов вокруг фигур
 
+## Сводки и документация
+
+Дополнительная документация и сводки по проекту находятся в директории [summary/](file:///c:/Users/maksi/OneDrive/Documents/GitHub/maestro7it_education/python/solution_tasks/chess_stockfish/summary):
+- [Сводка оптимизаций](../summary/OPTIMIZATION_SUMMARY.md)
+- [Сводка визуальных исправлений](../summary/VISUAL_FIXES_SUMMARY.md)
+- [Сводка по кэшированию](../summary/CLEANUP_SUMMARY.md)
+
 ## Запуск тестов
 
 Для запуска любого теста, используйте команду:

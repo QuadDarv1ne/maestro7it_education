@@ -29,6 +29,14 @@
 - Обучение популярным дебютным принципам
 - Практика основных дебютных последовательностей
 
+## Сводки и документация
+
+Дополнительная документация и сводки по проекту находятся в директории [summary/](file:///c:/Users/maksi/OneDrive/Documents/GitHub/maestro7it_education/python/solution_tasks/chess_stockfish/summary):
+- [Сводка всех улучшений](../summary/FINAL_IMPROVEMENTS_SUMMARY.md)
+- [Сводка по достижениям](../summary/ACHIEVEMENTS_SUMMARY.md)
+- [Сводка по тренажеру эндшпиля](../summary/ENDGAME_TRAINER_SUMMARY.md)
+- [Сводка по дебютной книге](../summary/OPENING_BOOK_SUMMARY.md)
+
 ## Запуск демонстраций
 
 Для запуска любого демонстрационного скрипта, используйте команду:
