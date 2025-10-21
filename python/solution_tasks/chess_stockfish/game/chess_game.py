@@ -28,6 +28,9 @@ from utils.educational import ChessEducator
 from utils.opening_book import OpeningBook
 from utils.sound_manager import SoundManager  # Добавляем импорт SoundManager
 
+# Import our modules
+from game.in_game_menu import InGameMenu  # Добавляем импорт InGameMenu
+
 # Constants from board_renderer
 BOARD_SIZE = 512
 SQUARE_SIZE = BOARD_SIZE // 8
@@ -101,6 +104,9 @@ class ChessGame:
         self.sound_manager.load_sounds()
         # Начинаем воспроизведение фоновой музыки
         self.sound_manager.play_background_music()
+        
+        # Инициализируем игровое меню
+        self.in_game_menu = InGameMenu(self.screen, self.sound_manager)
         
         # Состояние игры
         self.move_history = []
@@ -2027,12 +2033,13 @@ class ChessGame:
         print(f"   Вы играете: {self.player_color.upper()}")
         print(f"   Компьютер: {self.ai_color.upper()}")
         print(f"   Уровень: {self.skill_level}/20")
-        print(f"   Горячие клавиши: R - новая игра, ESC - выход, T - подсказка")
+        print(f"   Горячие клавиши: R - новая игра, ESC - меню, T - подсказка")
         print(f"   Дополнительно: ПКМ - снять выделение, ←/→ - навигация по ходам")
         print(f"   Доп. функции: A - анализ, S - сохранить, L - загрузить, D - детальный анализ, G - резюме игры")
         print(f"{'='*60}\n")
         
         running = True
+        menu_active = False  # Флаг активности меню
         
         # Таймеры для оптимизированных обновлений
         last_board_update = time.time()
@@ -2063,6 +2070,34 @@ class ChessGame:
                 if event.type == pygame.QUIT:
                     running = False
 
+                # Обработка событий меню, если оно активно
+                if self.in_game_menu.visible:
+                    menu_action = self.in_game_menu.handle_event(event)
+                    if menu_action:
+                        if menu_action == "resume":
+                            # Продолжить игру (меню уже скрыто)
+                            pass
+                        elif menu_action == "new_game":
+                            # Новая игра - сбросить текущую игру
+                            self.reset_game()
+                            board_needs_update = True
+                            ui_needs_update = True
+                            last_board_state = None
+                            move_navigation_mode = False
+                            current_move_index = -1
+                            self.analysis_mode = False
+                            self.analysis_move = None
+                        elif menu_action == "settings":
+                            # Пока не реализовано - можно добавить позже
+                            pass
+                        elif menu_action == "main_menu":
+                            # Вернуться в главное меню
+                            return "main_menu"
+                        elif menu_action == "quit":
+                            # Выйти из игры
+                            running = False
+                    continue  # Пропустить остальную обработку событий, если меню активно
+
                 elif event.type == pygame.KEYDOWN:
                     # Сброс игры
                     if event.key == pygame.K_r:
@@ -2074,6 +2109,9 @@ class ChessGame:
                         current_move_index = -1
                         self.analysis_mode = False
                         self.analysis_move = None
+                    # Открыть меню
+                    elif event.key == pygame.K_ESCAPE:
+                        self.in_game_menu.show()
                     # Подсказка (ход Stockfish)
                     elif event.key == pygame.K_t:
                         if not self.game_over and self._is_player_turn():
@@ -2226,6 +2264,10 @@ class ChessGame:
                 last_ui_update = current_time
                 ui_needs_update = False
 
+            # Отрисовка меню, если оно активно
+            if self.in_game_menu.visible:
+                self.in_game_menu.draw()
+
             # === Очистка кэша для предотвращения утечек памяти ===
             self.frame_count += 1
             if self.frame_count % 1800 == 0:  # Каждые 30 секунд при 60 FPS
@@ -2234,7 +2276,7 @@ class ChessGame:
                 self._clear_old_ai_cache()
 
             # === Обновление экрана только при необходимости ===
-            if board_needs_update or ui_needs_update or has_events or board_changed:
+            if board_needs_update or ui_needs_update or has_events or board_changed or self.in_game_menu.visible:
                 pygame.display.flip()
 
             # === Ограничение FPS ===
