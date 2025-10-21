@@ -26,6 +26,7 @@ from engine.stockfish_wrapper import StockfishWrapper
 from ui.board_renderer import BoardRenderer  # Убран init_fonts
 from utils.educational import ChessEducator
 from utils.opening_book import OpeningBook
+from utils.sound_manager import SoundManager  # Добавляем импорт SoundManager
 
 # Constants from board_renderer
 BOARD_SIZE = 512
@@ -94,6 +95,12 @@ class ChessGame:
         # Образовательные компоненты
         self.educator = ChessEducator()
         self.opening_book = OpeningBook()
+        
+        # Инициализируем менеджер звуков
+        self.sound_manager = SoundManager()
+        self.sound_manager.load_sounds()
+        # Начинаем воспроизведение фоновой музыки
+        self.sound_manager.play_background_music()
         
         # Состояние игры
         self.move_history = []
