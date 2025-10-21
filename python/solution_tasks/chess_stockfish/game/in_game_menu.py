@@ -68,17 +68,20 @@ class InGameMenu:
         self.selected_item = 0
         self.visible = False
         self.result = None  # Результат действия меню
+        self.last_selected_item = -1  # Для отслеживания изменений выбора
         
     def show(self):
         """Показать меню."""
         self.visible = True
         self.selected_item = 0
         self.result = None
+        self.last_selected_item = -1
         
     def hide(self):
         """Скрыть меню."""
         self.visible = False
         self.result = None
+        self.last_selected_item = -1
         
     def handle_event(self, event) -> Optional[str]:
         """
@@ -100,8 +103,10 @@ class InGameMenu:
                 # Пропускаем недоступные элементы
                 while not self.menu_items[self.selected_item]["enabled"]:
                     self.selected_item = (self.selected_item - 1) % len(self.menu_items)
-                if self.sound_manager:
+                # Проигрываем звук только при изменении выбора
+                if self.sound_manager and self.selected_item != self.last_selected_item:
                     self.sound_manager.play_sound("button")
+                    self.last_selected_item = self.selected_item
                     
             elif event.key == pygame.K_DOWN:
                 # Перемещение вниз по меню
@@ -109,14 +114,17 @@ class InGameMenu:
                 # Пропускаем недоступные элементы
                 while not self.menu_items[self.selected_item]["enabled"]:
                     self.selected_item = (self.selected_item + 1) % len(self.menu_items)
-                if self.sound_manager:
+                # Проигрываем звук только при изменении выбора
+                if self.sound_manager and self.selected_item != self.last_selected_item:
                     self.sound_manager.play_sound("button")
+                    self.last_selected_item = self.selected_item
                     
             elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                 # Выбор элемента меню
                 item = self.menu_items[self.selected_item]
                 if item["enabled"]:
                     action = item["action"]
+                    # Проигрываем звук только при выборе элемента
                     if self.sound_manager:
                         self.sound_manager.play_sound("button")
                     return self._execute_action(action)
@@ -124,6 +132,7 @@ class InGameMenu:
             elif event.key == pygame.K_ESCAPE:
                 # Закрыть меню
                 self.hide()
+                # Проигрываем звук только при закрытии меню
                 if self.sound_manager:
                     self.sound_manager.play_sound("button")
                 return "resume"
@@ -137,6 +146,7 @@ class InGameMenu:
                     item_y <= mouse_y <= item_y + 40 and
                     item["enabled"]):
                     self.selected_item = i
+                    # Проигрываем звук только при выборе элемента мышью
                     if self.sound_manager:
                         self.sound_manager.play_sound("button")
                     return self._execute_action(item["action"])
@@ -185,6 +195,7 @@ class InGameMenu:
         # Обновляем меню настроек
         self.menu_items = settings_items
         self.selected_item = 0
+        self.last_selected_item = -1
         
         # Показываем меню настроек
         return "settings_menu"
