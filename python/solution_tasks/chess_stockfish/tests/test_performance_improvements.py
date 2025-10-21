@@ -83,7 +83,7 @@ def test_cache_clearing():
     # Check that caches are populated
     assert len(game._valid_moves_cache) > 0, "Valid moves cache should be populated"
     assert game.board_state_cache is not None, "Board state cache should be populated"
-    assert len(game.ai_move_cache) > 0, "AI move cache should be populated"
+    assert len(game._ai_move_cache) > 0, "AI move cache should be populated"
     
     # Clear caches
     game._clear_caches()
@@ -91,7 +91,7 @@ def test_cache_clearing():
     
     # Check that caches are cleared
     assert len(game._valid_moves_cache) == 0, "Valid moves cache should be cleared"
-    assert len(game.ai_move_cache) == 0, "AI move cache should be cleared"
+    assert len(game._ai_move_cache) == 0, "AI move cache should be cleared"
     
     print("   ✓ Cache clearing works correctly")
     print("Cache clearing test passed!\n")

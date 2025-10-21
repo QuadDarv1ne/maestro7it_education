@@ -26,6 +26,8 @@ from typing import Optional, Tuple, List
 import os
 import sys
 import shutil
+import time
+
 
 class StockfishWrapper:
     """
@@ -388,21 +390,34 @@ class StockfishWrapper:
             return None
             
         try:
-            # Check cache first with more aggressive caching
+            # Более агрессивное кэширование - увеличиваем время до 2 секунд
             if self.evaluation_cache is not None and self.evaluation_cache_fen is not None:
                 current_fen = self.engine.get_fen_position()
                 if current_fen == self.evaluation_cache_fen:
-                    # Используем кэш до 300 мс для более агрессивного кэширования
-                    return self.evaluation_cache
+                    # Проверяем время кэша - используем кэш до 2 секунд для более агрессивного кэширования
+                    current_time = time.time()
+                    if hasattr(self, '_last_eval_time') and (current_time - self._last_eval_time) < 2.0:
+                        return self.evaluation_cache
             
+            # Засекаем время для диагностики
+            start_time = time.time()
             eval_score = self.engine.get_evaluation()
+            eval_time = time.time() - start_time
+            if eval_time > 0.05:  # Если оценка занимает больше 50 мс, выводим предупреждение
+                print(f"⚠️  Slow evaluation: {eval_time:.4f} seconds")
+            
             if eval_score and 'value' in eval_score:
                 evaluation = eval_score['value'] / 100.0
                 # Update cache
                 self.evaluation_cache = evaluation
                 self.evaluation_cache_fen = self.engine.get_fen_position()
+                self._last_eval_time = time.time()  # Сохраняем время последней оценки
                 return evaluation
-        except Exception:
+        except Exception as e:
+            print(f"⚠️  Error in get_evaluation: {e}")
+            # Возвращаем кэшированное значение даже при ошибке
+            if self.evaluation_cache is not None:
+                return self.evaluation_cache
             pass
         return None
     

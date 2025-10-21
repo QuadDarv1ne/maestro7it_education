@@ -143,9 +143,33 @@
       "total_moves": 10,
       "result": "Неизвестно",
       "fen": "rnbqk2r/ppp2ppp/8/2bnp3/8/3PPP2/PP4PP/RNBQKBNR w KQkq - 0 6"
+    },
+    {
+      "timestamp": "2025-10-21T19:54:53.298462",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 0,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T20:05:14.649516",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 1,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+    },
+    {
+      "timestamp": "2025-10-21T20:11:49.489481",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 1,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/5P2/PPPPP1PP/RNBQKBNR b KQkq - 0 1"
     }
   ],
   "total_wins": 0,
-  "total_losses": 18,
+  "total_losses": 21,
   "total_draws": 0
 }
