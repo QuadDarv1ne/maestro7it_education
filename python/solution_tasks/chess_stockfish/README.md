@@ -75,9 +75,8 @@ python main.py
 - [Документация по оптимизациям](docs/code_optimizations.md)
 - [Исправление проблемы с координатами](docs/coordinate_fix.md)
 - [Графические улучшения](docs/graphics_improvements.md)
-- [Исправление визуальных артефактов](VISUAL_FIXES_SUMMARY.md)
-- [Сводка всех улучшений](IMPROVEMENTS_SUMMARY.md)
-- [Сводка улучшений на русском](IMPROVEMENTS_SUMMARY_RU.md)
+- [Исправление визуальных артефактов](summary/VISUAL_FIXES_SUMMARY.md)
+- [Сводка всех улучшений](summary/FINAL_IMPROVEMENTS_SUMMARY.md)
 
 ---
 
@@ -85,22 +84,22 @@ python main.py
 
 Запустите автоматизированные тесты:
 ```bash
-python automated_test.py
+python tests/automated_test.py
 ```
 
 Протестируйте звуковую систему:
 ```bash
-python test_sound_manager.py
+python tests/test_sound_manager.py
 ```
 
 Протестируйте исправления визуальных артефактов:
 ```bash
-python test_visual_fixes.py
+python tests/test_visual_fixes.py
 ```
 
 Продемонстрируйте новые улучшения:
 ```bash
-python demonstrate_improvements.py
+python demos/demonstrate_improvements.py
 ```
 
 ---

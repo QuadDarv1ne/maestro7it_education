@@ -7,8 +7,8 @@ import sys
 import os
 import time
 
-# Add the project directory to the path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 def test_sound_manager():
     """Test the SoundManager functionality."""

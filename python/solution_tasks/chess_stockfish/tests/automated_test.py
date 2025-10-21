@@ -3,9 +3,13 @@
 Automated test script to verify chess_stockfish components without user interaction
 """
 
-import pygame
 import sys
 import os
+
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+import pygame
 
 def test_pygame():
     """Test Pygame initialization."""
