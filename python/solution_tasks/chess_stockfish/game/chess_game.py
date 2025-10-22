@@ -26,13 +26,14 @@ import concurrent.futures
 import threading
 from queue import Queue, Empty
 
-# Import our modules
+# Import our game modules
 from engine.stockfish_wrapper import StockfishWrapper
 from ui.board_renderer import BoardRenderer  # Убран init_fonts
 from utils.educational import ChessEducator
 from utils.opening_book import OpeningBook
 from utils.sound_manager import SoundManager  # Добавляем импорт SoundManager
 from game.in_game_menu import InGameMenu  # Добавляем импорт InGameMenu
+from utils.performance_monitor import get_performance_monitor, PerformanceTimer  # Добавляем импорт монитора производительности
 
 # Попытка импортировать CUDA для GPU ускорения (если доступно)
 CUDA_AVAILABLE = False
@@ -84,6 +85,10 @@ class ChessGame:
         Исключения:
             RuntimeError: Если не удалось инициализировать Stockfish
         """
+        # Инициализируем монитор производительности
+        self.performance_monitor = get_performance_monitor()
+        self.performance_monitor.start_monitoring(0.5)  # Мониторим каждые 0.5 секунды
+        
         self.player_color = player_color
         self.ai_color = 'black' if player_color == 'white' else 'white'
         self.skill_level = skill_level
@@ -136,7 +141,7 @@ class ChessGame:
         self.game_over = False
         self.game_over_reason = None
         self.last_move_time = 0
-        self.ai_move_delay = 0.1  # Уменьшена задержка перед ходом ИИ для более быстрой игры
+        self.ai_move_delay = 0.05  # Уменьшена задержка перед ходом ИИ для более быстрой игры
         self.move_feedback = ""  # Feedback message for the player
         self.move_feedback_time = 0
         self.frame_count = 0  # Счетчик кадров для очистки временных поверхностей
@@ -155,14 +160,17 @@ class ChessGame:
         # Дополнительные кэши для оптимизации производительности
         self._valid_moves_cache = {}  # Кэш для вычисленных допустимых ходов
         self._valid_moves_cache_time = {}  # Время последнего обновления кэша ходов
-        self._valid_moves_cache_duration = 8.0  # Увеличиваем кэш ходов до 8 секунд для лучшей производительности
+        self._valid_moves_cache_duration = 5.0  # Уменьшаем кэш ходов до 5 секунд для лучшей производительности
         self._valid_moves_board_hash = {}  # Хэш доски для каждого кэшированного хода
         
         # Расширенный кэш для AI ходов с более агрессивной стратегией
         self._ai_move_cache = {}  # Кэш для AI ходов
         self._ai_move_cache_time = {}  # Время последнего обновления кэша AI
-        self._ai_move_cache_duration = 60.0  # Увеличиваем кэш AI до 60 секунд для лучшей производительности
+        self._ai_move_cache_duration = 30.0  # Уменьшаем кэш AI до 30 секунд для лучшей производительности
         self._ai_move_board_hash = {}  # Хэш доски для каждого кэшированного AI хода
+        
+        # Ограничение размера кэшей для предотвращения утечек памяти
+        self._max_cache_size = 100
         
         # Графические оптимизации
         self.last_board_hash = None
@@ -173,8 +181,8 @@ class ChessGame:
         # Таймеры для оптимизации обновлений
         self.last_board_update = 0
         self.last_ui_update = 0
-        self.board_update_interval = 1.0/120  # Повышена частота обновления доски до 120 FPS
-        self.ui_update_interval = 1.0/60     # Повышена частота обновления UI до 60 FPS
+        self.board_update_interval = 1.0/60  # Снижаем частоту обновления доски до 60 FPS для экономии ресурсов
+        self.ui_update_interval = 1.0/30     # Снижаем частоту обновления UI до 30 FPS для экономии ресурсов
         
         # Инициализация графических ресурсов
         self._init_fonts_optimized()
@@ -184,12 +192,12 @@ class ChessGame:
         # Оптимизация AI
         self.ai_move_cache = {}  # Кэш для AI ходов
         self.last_ai_move_time = 0
-        self.ai_move_cooldown = 0.005  # Минимальная задержка между AI ходами (уменьшена)
+        self.ai_move_cooldown = 0.01  # Минимальная задержка между AI ходами
         
         # Дополнительные оптимизации
         self.board_state_cache = None  # Кэш состояния доски для быстрого доступа
         self.board_state_cache_time = 0
-        self.board_state_cache_duration = 1.0  # Увеличиваем кэш до 1 секунды для лучшей производительности
+        self.board_state_cache_duration = 0.5  # Уменьшаем кэш до 0.5 секунды для лучшей производительности
         self.board_state_last_fen = None  # Последний FEN для проверки изменений
         
         # Расширенная статистика игры
@@ -219,7 +227,7 @@ class ChessGame:
         self.saved_games = []
         
         # Многопоточность
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)  # Увеличиваем количество потоков для лучшей производительности
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)  # Уменьшаем количество потоков для лучшей производительности
         self.ai_move_queue = Queue()
         self.render_queue = Queue()
         self.ai_thread = None
@@ -237,13 +245,52 @@ class ChessGame:
         # Асинхронная оценка позиции
         self._async_eval_future = None
         self._last_async_eval_time = 0
-        self._async_eval_interval = 0.1  # Обновляем оценку раз в 100 мс
+        self._async_eval_interval = 0.2  # Обновляем оценку раз в 200 мс
         
         # Прогрессивная оценка позиции для плавного обновления
         self._displayed_evaluation = 0.0  # Текущее отображаемое значение
         self._target_evaluation = 0.0     # Целевое значение оценки
         self._eval_update_time = 0        # Время последнего обновления
-        self._eval_interpolation_duration = 0.1  # Длительность интерполяции в секундах
+        self._eval_interpolation_duration = 0.2  # Длительность интерполяции в секундах
+
+    def _clear_old_cache_entries(self):
+        """Очистка старых записей в кэше для предотвращения утечек памяти."""
+        current_time = time.time()
+        
+        # Очистка кэша допустимых ходов
+        expired_keys = [key for key, cache_time in self._valid_moves_cache_time.items() 
+                       if current_time - cache_time > self._valid_moves_cache_duration]
+        for key in expired_keys:
+            self._valid_moves_cache.pop(key, None)
+            self._valid_moves_cache_time.pop(key, None)
+            self._valid_moves_board_hash.pop(key, None)
+        
+        # Очистка кэша AI ходов
+        expired_keys = [key for key, cache_time in self._ai_move_cache_time.items() 
+                       if current_time - cache_time > self._ai_move_cache_duration]
+        for key in expired_keys:
+            self._ai_move_cache.pop(key, None)
+            self._ai_move_cache_time.pop(key, None)
+            self._ai_move_board_hash.pop(key, None)
+        
+        # Ограничение размера кэшей
+        if len(self._valid_moves_cache) > self._max_cache_size:
+            # Удаляем половину наименее используемых записей
+            sorted_items = sorted(self._valid_moves_cache_time.items(), key=lambda x: x[1])
+            for i in range(len(sorted_items) // 2):
+                key = sorted_items[i][0]
+                self._valid_moves_cache.pop(key, None)
+                self._valid_moves_cache_time.pop(key, None)
+                self._valid_moves_board_hash.pop(key, None)
+        
+        if len(self._ai_move_cache) > self._max_cache_size:
+            # Удаляем половину наименее используемых записей
+            sorted_items = sorted(self._ai_move_cache_time.items(), key=lambda x: x[1])
+            for i in range(len(sorted_items) // 2):
+                key = sorted_items[i][0]
+                self._ai_move_cache.pop(key, None)
+                self._ai_move_cache_time.pop(key, None)
+                self._ai_move_board_hash.pop(key, None)
 
     def _init_ui_fonts(self):
         """Инициализация шрифтов для UI элементов."""
@@ -368,42 +415,7 @@ class ChessGame:
         uci = chr(ord('a') + col) + str(8 - row)
         self._uci_cache[cache_key] = uci
         return uci
-    
-    def get_board_state(self) -> List[List[Optional[str]]]:
-        """
-        Получение состояния доски с кэшированием.
-        
-        Возвращает:
-            List[List[Optional[str]]]: Состояние доски
-        """
-        try:
-            current_time = time.time()
-            current_fen = self.engine.get_fen()
-            
-            # Проверяем кэш с более сложной стратегией
-            if (self.board_state_cache is not None and 
-                current_time - self.board_state_cache_time < self.board_state_cache_duration and
-                (self.board_state_last_fen == current_fen or 
-                 current_time - self.board_state_cache_time < 0.05)):  # Очень свежий кэш
-                return self.board_state_cache
-            
-            # Получаем новое состояние доски
-            board = self.engine.get_board_state()
-            
-            # Обновляем кэш
-            self.board_state_cache = board
-            self.board_state_cache_time = current_time
-            self.board_state_last_fen = current_fen
-            
-            return board
-        except Exception:
-            # Возвращаем пустую доску в случае ошибки
-            empty_board: List[List[Optional[str]]] = [[None for _ in range(8)] for _ in range(8)]
-            self.board_state_cache = empty_board
-            self.board_state_cache_time = time.time()
-            self.board_state_last_fen = None
-            return empty_board
-    
+
     def get_cached_evaluation(self):
         """
         Получение кэшированной оценки позиции с более агрессивным кэшированием.
@@ -419,8 +431,8 @@ class ChessGame:
             if (self._cache['last_eval_fen'] == current_fen and 
                 self._cache['last_evaluation'] is not None and
                 hasattr(self, '_last_eval_cache_time')):
-                # Используем кэш до 60 секунд для ещё более агрессивного кэширования
-                if (current_time - self._last_eval_cache_time) < 60.0:
+                # Используем кэш до 120 секунд для ещё более агрессивного кэширования
+                if (current_time - self._last_eval_cache_time) < 120.0:
                     return self._cache['last_evaluation']
                 
             evaluation = self.engine.get_evaluation()
@@ -465,132 +477,16 @@ class ChessGame:
                 # Интерполяция завершена
                 self._displayed_evaluation = self._target_evaluation
             else:
-                # Линейная интерполяция
+                # Линейная интерполяция с ускорением для более плавного обновления
                 progress = elapsed / self._eval_interpolation_duration
+                # Используем квадратичную функцию для более плавного обновления
+                progress = progress * progress * (3 - 2 * progress)
                 self._displayed_evaluation = (
                     self._displayed_evaluation + 
                     (self._target_evaluation - self._displayed_evaluation) * progress
                 )
         
         return self._displayed_evaluation
-
-    def _get_pawn_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
-        """Генерация возможных ходов для пешки."""
-        moves = []
-        is_white = piece.isupper()
-        
-        # Направление движения
-        direction = -1 if is_white else 1
-        
-        # Ход вперед на одну клетку
-        new_row = row + direction
-        if 0 <= new_row < 8 and board[new_row][col] is None:
-            moves.append((new_row, col))
-            
-            # Ход вперед на две клетки с начальной позиции
-            start_row = 6 if is_white else 1
-            if row == start_row:
-                new_row_2 = row + 2 * direction
-                if 0 <= new_row_2 < 8 and board[new_row][col] is None and board[new_row_2][col] is None:
-                    moves.append((new_row_2, col))
-        
-        # Взятие по диагонали
-        for dc in [-1, 1]:
-            new_col = col + dc
-            new_row = row + direction
-            if 0 <= new_row < 8 and 0 <= new_col < 8:
-                target = board[new_row][new_col]
-                if target is not None and ((is_white and target.islower()) or (not is_white and target.isupper())):
-                    moves.append((new_row, new_col))
-                    
-        return moves
-
-    def _get_knight_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
-        """Генерация возможных ходов для коня."""
-        moves = []
-        is_white = piece.isupper()
-        
-        # Все возможные ходы коня
-        knight_moves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
-        
-        for dr, dc in knight_moves:
-            new_row, new_col = row + dr, col + dc
-            if 0 <= new_row < 8 and 0 <= new_col < 8:
-                target = board[new_row][new_col]
-                if target is None or ((is_white and target.islower()) or (not is_white and target.isupper())):
-                    moves.append((new_row, new_col))
-                    
-        return moves
-
-    def _get_bishop_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
-        """Генерация возможных ходов для слона."""
-        moves = []
-        is_white = piece.isupper()
-        
-        # Диагональные направления
-        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-        
-        for dr, dc in directions:
-            new_row, new_col = row + dr, col + dc
-            while 0 <= new_row < 8 and 0 <= new_col < 8:
-                target = board[new_row][new_col]
-                if target is None:
-                    moves.append((new_row, new_col))
-                else:
-                    if (is_white and target.islower()) or (not is_white and target.isupper()):
-                        moves.append((new_row, new_col))
-                    break
-                new_row += dr
-                new_col += dc
-                    
-        return moves
-
-    def _get_rook_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
-        """Генерация возможных ходов для ладьи."""
-        moves = []
-        is_white = piece.isupper()
-        
-        # Горизонтальные и вертикальные направления
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        
-        for dr, dc in directions:
-            new_row, new_col = row + dr, col + dc
-            while 0 <= new_row < 8 and 0 <= new_col < 8:
-                target = board[new_row][new_col]
-                if target is None:
-                    moves.append((new_row, new_col))
-                else:
-                    if (is_white and target.islower()) or (not is_white and target.isupper()):
-                        moves.append((new_row, new_col))
-                    break
-                new_row += dr
-                new_col += dc
-                    
-        return moves
-
-    def _get_queen_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
-        """Генерация возможных ходов для ферзя."""
-        # Ферзь = слон + ладья
-        bishop_moves = self._get_bishop_moves(row, col, piece, board)
-        rook_moves = self._get_rook_moves(row, col, piece, board)
-        return bishop_moves + rook_moves
-
-    def _get_king_moves(self, row: int, col: int, piece: str, board: List[List[Optional[str]]]) -> List[Tuple[int, int]]:
-        """Генерация возможных ходов для короля."""
-        moves = []
-        is_white = piece.isupper()
-        
-        # Все направления для короля
-        directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-        
-        for dr, dc in directions:
-            new_row, new_col = row + dr, col + dc
-            if 0 <= new_row < 8 and 0 <= new_col < 8:
-                target = board[new_row][new_col]
-                if target is None or ((is_white and target.islower()) or (not is_white and target.isupper())):
-                    moves.append((new_row, new_col))
-                    
-        return moves
 
     def _get_valid_moves(self, from_row: int, from_col: int) -> List[Tuple[int, int]]:
         """
@@ -619,12 +515,12 @@ class ChessGame:
             cached_board_hash = self._valid_moves_board_hash.get(cache_key, None)
             
             # Используем кэш если:
-            # 1. Время кэша еще не истекло (5 секунд)
+            # 1. Время кэша еще не истекло (10 секунд для более агрессивного кэширования)
             # 2. Позиция на доске не изменилась
-            # 3. Или время кэша очень свежее (меньше 0.1 секунды) - для быстрых кликов
-            is_time_valid = (current_time - cache_time < self._valid_moves_cache_duration)
+            # 3. Или время кэша очень свежее (меньше 0.2 секунды) - для быстрых кликов
+            is_time_valid = (current_time - cache_time < 10.0)
             is_position_valid = (cached_board_hash == board_hash)
-            is_fresh_cache = (current_time - cache_time < 0.1)
+            is_fresh_cache = (current_time - cache_time < 0.2)
             
             if is_time_valid and (is_position_valid or is_fresh_cache):
                 return self._valid_moves_cache[cache_key][:]  # Возвращаем копию, чтобы избежать модификации кэша
@@ -642,30 +538,13 @@ class ChessGame:
                 self._valid_moves_board_hash[cache_key] = board_hash
                 return valid_moves
                 
-            piece_lower = piece.lower()
-            
-            # Оптимизация: генерируем только возможные ходы для каждой фигуры
-            if piece_lower == 'p':  # Пешка
-                candidate_moves = self._get_pawn_moves(from_row, from_col, piece, board_state)
-            elif piece_lower == 'n':  # Конь
-                candidate_moves = self._get_knight_moves(from_row, from_col, piece, board_state)
-            elif piece_lower == 'b':  # Слон
-                candidate_moves = self._get_bishop_moves(from_row, from_col, piece, board_state)
-            elif piece_lower == 'r':  # Ладья
-                candidate_moves = self._get_rook_moves(from_row, from_col, piece, board_state)
-            elif piece_lower == 'q':  # Ферзь
-                candidate_moves = self._get_queen_moves(from_row, from_col, piece, board_state)
-            elif piece_lower == 'k':  # Король
-                candidate_moves = self._get_king_moves(from_row, from_col, piece, board_state)
-            else:
-                candidate_moves = []
-                
-            # Проверяем допустимость ходов через движок
-            for to_row, to_col in candidate_moves:
-                to_uci = self._fen_square_to_uci(to_row, to_col)
-                uci_move = from_uci + to_uci
-                if self.engine.is_move_correct(uci_move):
-                    valid_moves.append((to_row, to_col))
+            # Получаем все возможные ходы через движок (оригинальный метод)
+            for to_row in range(8):
+                for to_col in range(8):
+                    to_uci = self._fen_square_to_uci(to_row, to_col)
+                    uci_move = from_uci + to_uci
+                    if self.engine.is_move_correct(uci_move):
+                        valid_moves.append((to_row, to_col))
                     
         except Exception as e:
             print(f"Ошибка при расчете допустимых ходов: {e}")
@@ -677,8 +556,41 @@ class ChessGame:
             
         return valid_moves
 
-
+    def get_board_state(self) -> List[List[Optional[str]]]:
+        """
+        Получение состояния доски с кэшированием.
         
+        Возвращает:
+            List[List[Optional[str]]]: Состояние доски
+        """
+        try:
+            current_time = time.time()
+            current_fen = self.engine.get_fen()
+            
+            # Проверяем кэш с более сложной стратегией
+            if (self.board_state_cache is not None and 
+                current_time - self.board_state_cache_time < self.board_state_cache_duration and
+                (self.board_state_last_fen == current_fen or 
+                 current_time - self.board_state_cache_time < 0.2)):  # Увеличиваем время свежего кэша
+                return self.board_state_cache
+            
+            # Получаем новое состояние доски
+            board = self.engine.get_board_state()
+            
+            # Обновляем кэш
+            self.board_state_cache = board
+            self.board_state_cache_time = current_time
+            self.board_state_last_fen = current_fen
+            
+            return board
+        except Exception:
+            # Возвращаем пустую доску в случае ошибки
+            empty_board: List[List[Optional[str]]] = [[None for _ in range(8)] for _ in range(8)]
+            self.board_state_cache = empty_board
+            self.board_state_cache_time = time.time()
+            self.board_state_last_fen = None
+            return empty_board
+
     def _is_path_blocked(self, from_row: int, from_col: int, to_row: int, to_col: int, board: List[List[Optional[str]]]) -> bool:
         """
         Проверить, заблокирован ли путь между двумя клетками.
@@ -1961,8 +1873,8 @@ class ChessGame:
             cached_move, cache_time = self._ai_move_cache[cache_key]
             # Используем кэш, если он не старше 20 секунд ИЛИ если это очень свежий кэш (меньше 1 секунды)
             # Увеличиваем время жизни кэша для еще более агрессивного кэширования
-            is_time_valid = (current_time - cache_time < 20.0)  # Увеличено с 15.0 до 20.0
-            is_fresh_cache = (current_time - cache_time < 1.0)  # Увеличено с 0.5 до 1.0
+            is_time_valid = (current_time - cache_time < 40.0)  # Увеличено с 20.0 до 40.0
+            is_fresh_cache = (current_time - cache_time < 2.0)  # Увеличено с 1.0 до 2.0
             
             if is_time_valid or is_fresh_cache:
                 return cached_move
@@ -2610,41 +2522,6 @@ class ChessGame:
             self.move_feedback_time = time.time()
             return False
 
-    def _annotate_move(self, uci_move: str, is_capture: bool = False, is_check: bool = False, 
-                      is_mate: bool = False, is_castling: bool = False) -> str:
-        """
-        Аннотировать ход с помощью специальных символов.
-        
-        Параметры:
-            uci_move (str): Ход в формате UCI
-            is_capture (bool): Было ли взятие
-            is_check (bool): Был ли шах
-            is_mate (bool): Был ли мат
-            is_castling (bool): Была ли рокировка
-            
-        Возвращает:
-            str: Аннотированный ход
-        """
-        annotation = uci_move
-        
-        # Добавляем символы аннотации
-        if is_castling:
-            # Короткая рокировка - O-O, длинная - O-O-O
-            if uci_move in ['e1g1', 'e8g8']:  # Короткая рокировка
-                annotation = "O-O"
-            elif uci_move in ['e1c1', 'e8c8']:  # Длинная рокировка
-                annotation = "O-O-O"
-            
-        if is_capture:
-            annotation += "x"  # Символ взятия
-            
-        if is_check and not is_mate:
-            annotation += "+"  # Символ шаха
-        elif is_mate:
-            annotation += "#"  # Символ мата
-            
-        return annotation
-    
     def _get_game_summary(self) -> str:
         """
         Получить краткое резюме игры.
@@ -3589,193 +3466,6 @@ class ChessGame:
         # Добавляем символы аннотации
         if is_castling:
             # Короткая рокировка - O-O, длинная - O-O-O
-            if uci_move in ['e1g1', 'e8g8']:  # Короткая рокировка
-                annotation = "O-O"
-            elif uci_move in ['e1c1', 'e8c8']:  # Длинная рокировка
-                annotation = "O-O-O"
-            
-        if is_capture:
-            annotation += "x"  # Символ взятия
-            
-        if is_check and not is_mate:
-            annotation += "+"  # Символ шаха
-        elif is_mate:
-            annotation += "#"  # Символ мата
-            
-        return annotation
-
-    def handle_ai_move_optimized(self):
-        """
-        Оптимизированная обработка хода ИИ (Stockfish) с улучшенной производительностью.
-        """
-        if self._is_player_turn() or self.game_over or self.thinking:
-            return
-        
-        # Проверка минимальной задержки
-        current_time = time.time()
-        if current_time - self.last_ai_move_time < self.ai_move_cooldown:
-            return
-        
-        # Увеличиваем задержку для более быстрой игры
-        if current_time - self.last_move_time < self.ai_move_delay:
-            return
-        
-        self.thinking = True
-        self.last_ai_move_time = current_time
-        
-        # Засекаем время начала хода для статистики
-        move_start_time = time.time()
-        
-        try:
-            # Очищаем старый кэш
-            self._clear_old_ai_cache()
-            
-            # Получаем лучший ход с оптимизированной глубиной анализа
-            # Более агрессивное ограничение глубины для скорости
-            depth = max(1, min(8, self.skill_level // 2 + 1))  # Уменьшаем глубину анализа
-            
-            # Для всех уровней сложности используем кэшированные ходы в первую очередь
-            ai_move = None
-            
-            # Пытаемся получить ход из кэша с упрощенной глубиной
-            if self.skill_level < 10:
-                ai_move = self._get_cached_best_move(depth=1)  # Используем минимальную глубину
-            
-            # Если нет кэшированного хода, получаем новый с оптимизированной глубиной
-            if not ai_move:
-                # Для более быстрого ответа используем меньшую глубину
-                fast_depth = max(1, min(4, self.skill_level // 3 + 1))  # Еще больше уменьшаем глубину
-                ai_move = self._get_cached_best_move(depth=fast_depth)
-            
-            # Альтернативный метод: если все еще нет хода, используем минимальную глубину
-            if not ai_move:
-                ai_move = self._get_cached_best_move(depth=1)
-            
-            if ai_move:
-                print(f"Ход компьютера: {ai_move}")
-                
-                # Получаем текущее состояние доски для проверки взятия
-                board_before = self.engine.get_board_state()
-                
-                # Валидация хода
-                if self.engine.is_move_correct(ai_move):
-                    if self.engine.make_move(ai_move):
-                        # Добавляем ход в дебютную книгу
-                        self.opening_book.add_move(ai_move)
-                        
-                        # Проверяем текущий дебют
-                        current_opening = self.opening_book.get_current_opening()
-                        
-                        self.move_history.append(ai_move)
-                        self.game_stats['ai_moves'] += 1
-                        
-                        # Проверяем, было ли взятие
-                        board_after = self.engine.get_board_state()
-                        # Преобразуем UCI ход в координаты
-                        to_col = ord(ai_move[2]) - ord('a')
-                        to_row = 8 - int(ai_move[3])
-                        target_piece = board_before[to_row][to_col]
-                        is_capture = target_piece is not None
-                        # Проверяем, будет ли шах или мат после хода
-                        is_check = False
-                        is_mate = False
-                        is_castling = ai_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']
-                        
-                        # Проверяем состояние игры после хода
-                        is_over, reason = self.engine.is_game_over()
-                        if is_over and reason and "мат" in reason:
-                            is_mate = True
-                        
-                        # Проверяем шах
-                        try:
-                            eval_result = self.engine.get_evaluation()
-                            if eval_result and isinstance(eval_result, dict):
-                                is_check = eval_result.get('check', False)
-                        except:
-                            pass
-                        
-                        # Аннотируем ход
-                        annotated_move = self._annotate_move(ai_move, is_capture, is_check, is_mate, is_castling)
-                        
-                        if is_capture:
-                            self.game_stats['ai_capture_count'] += 1
-                            self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
-                            # Проигрываем звук взятия
-                            if self.sound_manager:
-                                self.sound_manager.play_sound("capture")
-                        else:
-                            self.move_feedback = f"Ход компьютера: {annotated_move}"
-                            # Проигрываем звук хода
-                            if self.sound_manager:
-                                self.sound_manager.play_sound("move")
-                        
-                        # Добавляем информацию о дебюте, если она есть
-                        if current_opening:
-                            opening_name, opening_info = current_opening
-                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
-                        
-                        # Преобразование UCI хода в координаты для выделения
-                        from_col = ord(ai_move[0]) - ord('a')
-                        from_row = 8 - int(ai_move[1])
-                        to_col = ord(ai_move[2]) - ord('a')
-                        to_row = 8 - int(ai_move[3])
-                        self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
-                        self.last_move_time = current_time
-                        print(f"Ход компьютера выполнен: {annotated_move}")
-                        self.move_feedback_time = current_time
-                        
-                        # Записываем время хода в статистику
-                        move_time = time.time() - move_start_time
-                        self.game_stats['move_times'].append(move_time)
-                        
-                        # Получаем оценку позиции для статистики (с более агрессивным кэшированием)
-                        evaluation = self.get_cached_evaluation()
-                        if evaluation is not None:
-                            self.game_stats['evaluations'].append(evaluation)
-                        
-                        # Добавляем образовательную обратную связь
-                        educational_tip = self.educator.get_educational_feedback(
-                            len(self.move_history), current_time)
-                        if educational_tip:
-                            self.move_feedback += f" | {educational_tip}"
-                            self.move_feedback_time = current_time
-                            
-                        # Очищаем кэш состояния доски после хода
-                        self.board_state_cache = None
-                        
-                        # Обновляем отображение
-                        self.renderer._mark_all_dirty()
-                    else:
-                        print("⚠️  Не удалось выполнить ход компьютера")
-                        self.move_feedback = "Не удалось выполнить ход компьютера"
-                        self.move_feedback_time = current_time
-                        # Проигрываем звук ошибки
-                        if self.sound_manager:
-                            self.sound_manager.play_sound("button")
-                else:
-                    print("⚠️  Компьютер предложил некорректный ход")
-                    self.move_feedback = "Компьютер предложил некорректный ход"
-                    self.move_feedback_time = current_time
-                    # Проигрываем звук ошибки
-                    if self.sound_manager:
-                        self.sound_manager.play_sound("button")
-            else:
-                print("⚠️  Компьютер не смог найти ход")
-                self.move_feedback = "Компьютер не смог найти ход"
-                self.move_feedback_time = time.time()
-                # Проигрываем звук ошибки
-                if self.sound_manager:
-                    self.sound_manager.play_sound("button")
-        except Exception as e:
-            print(f"⚠️  Ошибка при получении хода компьютера: {e}")
-            self.move_feedback = "Ошибка при получении хода компьютера"
-            self.move_feedback_time = time.time()
-            # Проигрываем звук ошибки
-            if self.sound_manager:
-                self.sound_manager.play_sound("button")
-        finally:
-            self.thinking = False
-
             if uci_move in ['e1g1', 'e8g8']:  # Короткая рокировка
                 annotation = "O-O"
             elif uci_move in ['e1c1', 'e8c8']:  # Длинная рокировка

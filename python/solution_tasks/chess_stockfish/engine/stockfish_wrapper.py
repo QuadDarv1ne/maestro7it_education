@@ -67,6 +67,10 @@ class StockfishWrapper:
         self._lock = threading.Lock()  # Блокировка для потокобезопасности
         self._weakref_cache = weakref.WeakValueDictionary()  # Кэш слабых ссылок для предотвращения утечек памяти
         
+        # Ограничение размера кэша для предотвращения утечек памяти
+        self._max_cache_size = 50
+        self._cache_access_count = {}
+        
         # Проверка наличия исполняемого файла Stockfish
         stockfish_path = path
         if stockfish_path is None:
@@ -96,6 +100,20 @@ class StockfishWrapper:
         except Exception as e:
             raise RuntimeError(f"❌ Не удалось запустить Stockfish: {e}. Убедитесь, что Stockfish установлен и доступен.")
     
+    def _cleanup_cache(self):
+        """Очистка кэша по LRU алгоритму при превышении максимального размера."""
+        if len(self.analysis_cache) > self._max_cache_size:
+            # Сортируем по количеству обращений и удаляем наименее используемые
+            sorted_items = sorted(self._cache_access_count.items(), key=lambda x: x[1])
+            items_to_remove = len(self.analysis_cache) - self._max_cache_size // 2
+            
+            for i in range(min(items_to_remove, len(sorted_items))):
+                key = sorted_items[i][0]
+                if key in self.analysis_cache:
+                    del self.analysis_cache[key]
+                if key in self._cache_access_count:
+                    del self._cache_access_count[key]
+    
     def get_board_state(self) -> List[List[Optional[str]]]:
         """
         Возвращает текущее состояние доски (8x8).
@@ -121,10 +139,10 @@ class StockfishWrapper:
             fen = self.engine.get_fen_position()
             # Check cache first with more aggressive caching
             if self.board_state_cache_fen == fen and self.board_state_cache is not None:
-                # Проверяем время кэша - используем кэш до 750 мс (увеличено с 500 мс для более агрессивного кэширования)
+                # Проверяем время кэша - используем кэш до 1500 мс (увеличено с 750 мс для более агрессивного кэширования)
                 if hasattr(self, '_last_board_cache_time'):
                     current_time = time.time()
-                    if (current_time - self._last_board_cache_time) < 0.75:
+                    if (current_time - self._last_board_cache_time) < 1.5:
                         return self.board_state_cache  # type: ignore
             
             board_str = fen.split()[0]
@@ -386,7 +404,7 @@ class StockfishWrapper:
         except Exception as e:
             print(f"⚠️  Ошибка при получении FEN: {e}")
             return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-    
+
     def get_evaluation(self) -> Optional[float]:
         """
         Получает оценку текущей позиции в пешках.
@@ -401,7 +419,7 @@ class StockfishWrapper:
         try:
             current_time = time.time()
             
-            # Более агрессивное кэширование - увеличиваем время до 15 секунд
+            # Более агрессивное кэширование - увеличиваем время до 30 секунд
             if (self.evaluation_cache is not None and 
                 self.evaluation_cache_fen is not None and
                 hasattr(self, '_last_eval_time')):
@@ -409,11 +427,11 @@ class StockfishWrapper:
                 time_since_last_eval = current_time - self._last_eval_time
                 # Используем кэш если:
                 # 1. FEN не изменился, или
-                # 2. Прошло меньше 10 секунд с последней оценки, или
-                # 3. Прошло меньше 0.75 секунд (очень свежий кэш)
+                # 2. Прошло меньше 20 секунд с последней оценки, или
+                # 3. Прошло меньше 1.5 секунд (очень свежий кэш)
                 if (current_fen == self.evaluation_cache_fen or 
-                    time_since_last_eval < 10.0 or
-                    time_since_last_eval < 0.75):
+                    time_since_last_eval < 20.0 or
+                    time_since_last_eval < 1.5):
                     return self.evaluation_cache
             
             # Засекаем время для диагностики только если кэш не используется
@@ -421,8 +439,8 @@ class StockfishWrapper:
             eval_score = self.engine.get_evaluation()
             eval_time = time.time() - start_time
             
-            # Выводим предупреждение только если оценка занимает больше 50 мс
-            if eval_time > 0.05:  # Уменьшено с 100 мс до 50 мс
+            # Выводим предупреждение только если оценка занимает больше 100 мс
+            if eval_time > 0.1:  # Увеличено с 50 мс до 100 мс
                 print(f"⚠️  Slow evaluation: {eval_time:.4f} seconds")
             
             if eval_score and 'value' in eval_score:

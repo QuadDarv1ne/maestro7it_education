@@ -34,6 +34,7 @@ from utils.educational import ChessEducator
 from utils.opening_book import OpeningBook
 from utils.sound_manager import SoundManager
 from game.in_game_menu import InGameMenu
+from utils.performance_monitor import get_performance_monitor, PerformanceTimer  # Добавляем импорт монитора производительности
 
 # Попытка импортировать CUDA для GPU ускорения (если доступно)
 CUDA_AVAILABLE = False
@@ -72,6 +73,10 @@ class ChessGameOptimized:
             skill_level (int): Уровень сложности Stockfish (0-20)
             theme (str): Цветовая тема доски
         """
+        # Инициализируем монитор производительности
+        self.performance_monitor = get_performance_monitor()
+        self.performance_monitor.start_monitoring(0.25)  # Мониторим каждые 0.25 секунды для оптимизированной версии
+        
         self.player_color = player_color
         self.ai_color = 'black' if player_color == 'white' else 'white'
         self.skill_level = skill_level
@@ -1025,6 +1030,10 @@ class ChessGameOptimized:
                 if self.in_game_menu.visible:
                     self.screen.set_clip(None)
                     self.in_game_menu.draw()
+
+                    menu_active = True
+                else:
+                    menu_active = False
 
                 self.frame_count += 1
                 if self.frame_count % 600 == 0:  # Каждые 10 секунд при 60 FPS

@@ -12,6 +12,7 @@ from typing import Tuple, Union
 from game.menu import main_menu
 from game.chess_game_optimized import ChessGameOptimized  # Используем оптимизированную версию
 from utils.game_stats import GameStatistics
+from utils.performance_monitor import get_performance_monitor  # Добавляем импорт
 
 
 def check_dependencies():
@@ -28,7 +29,7 @@ def check_dependencies():
     except ImportError as e:
         print(f"\n❌ Ошибка импорта: {e}")
         print("\n💡 РЕШЕНИЕ: Установите необходимые зависимости:")
-        print("   pip install pygame stockfish python-chess")
+        print("   pip install pygame stockfish python-chess psutil")
         return False
 
 
@@ -88,6 +89,11 @@ def main():
     Инициализирует Pygame, показывает меню и запускает игру.
     Обрабатывает исключения и выводит полезные сообщения об ошибках.
     """
+    # Инициализируем монитор производительности
+    performance_monitor = get_performance_monitor()
+    performance_monitor.start_monitoring(0.5)  # Более частый мониторинг для оптимизированной версии
+    print("✅ Монитор производительности запущен (оптимизированная версия)")
+    
     # Проверка зависимостей
     if not check_dependencies():
         sys.exit(1)
@@ -187,6 +193,19 @@ def main():
         if game:
             cleanup_game(game)
         pygame.quit()
+        
+        # Останавливаем монитор производительности
+        performance_monitor.stop_monitoring()
+        performance_summary = performance_monitor.get_performance_summary()
+        if performance_summary:
+            print(f"\n📊 Сводка производительности:")
+            print(f"   Время работы: {performance_summary.get('uptime_seconds', 0):.2f} сек")
+            cpu_usage = performance_summary.get('cpu_usage', {})
+            print(f"   CPU: среднее {cpu_usage.get('average', 0)}%")
+            memory_usage = performance_summary.get('memory_usage', {})
+            print(f"   Память: {memory_usage.get('process_memory_mb', {}).get('average', 0)} MB")
+        
+        performance_monitor.save_log()
         print("✅ Приложение закрыто\n")
 
 
