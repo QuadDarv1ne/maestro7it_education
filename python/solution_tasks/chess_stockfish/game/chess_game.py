@@ -2714,11 +2714,6 @@ class ChessGame:
             
     def start_multithreading(self):
         """Запустить многопоточную обработку."""
-        # Запускаем поток ИИ
-        self.ai_thread_running = True
-        self.ai_thread = threading.Thread(target=self._ai_worker, daemon=True)
-        self.ai_thread.start()
-        
         # Запускаем поток рендеринга
         self.render_thread_running = True
         self.render_thread = threading.Thread(target=self._render_worker, daemon=True)
@@ -2728,12 +2723,6 @@ class ChessGame:
         
     def stop_multithreading(self):
         """Остановить многопоточную обработку."""
-        # Останавливаем поток ИИ
-        self.ai_thread_running = False
-        if self.ai_thread:
-            self.ai_move_queue.put("stop")
-            self.ai_thread.join(timeout=1)
-            
         # Останавливаем поток рендеринга
         self.render_thread_running = False
         if self.render_thread:
@@ -2782,7 +2771,8 @@ class ChessGame:
             print(f"Ошибка в потоке ИИ: {e}")
             pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'action': 'ai_error', 'error': str(e)}))
         finally:
-            self.thinking = False
+            # Не сбрасываем self.thinking здесь, так как это будет сделано в обработчике события
+            pass
             
     def _execute_ai_move(self, ai_move):
         """Выполнить ход ИИ после его вычисления."""
@@ -2912,6 +2902,119 @@ class ChessGame:
         finally:
             self.thinking = False
 
+    def handle_ai_move_optimized(self):
+        """
+        Обработка хода ИИ с использованием оптимизированного алгоритма.
+        """
+        if self._is_player_turn() or self.game_over or self.thinking:
+            return
+            
+        # Проверка минимальной задержки
+        current_time = time.time()
+        if current_time - self.last_ai_move_time < self.ai_move_cooldown:
+            return
+            
+        # Уменьшенная задержка для более быстрой игры
+        if current_time - self.last_move_time < self.ai_move_delay:
+            return
+            
+        # Запускаем обработку в отдельном потоке
+        self.thinking = True
+        self.last_ai_move_time = current_time
+        # Используем пул потоков вместо создания новых потоков
+        self.executor.submit(self._process_ai_move)
+        
+    def _compute_ai_move(self):
+        """Вычислить ход ИИ."""
+        try:
+            if self.engine.supports_gpu and self.use_gpu:
+                # Используем GPU для вычислений
+                board_state = self.engine.get_board_state()
+                if self.engine.supports_tensorflow:
+                    tensor_board = self.engine.convert_board_to_tensor(board_state)
+                    model_input = tf.expand_dims(tensor_board, 0)
+                    model_output = self.model(model_input, training=False)
+                    move_scores = tf.squeeze(model_output, axis=0)
+                    move_scores = move_scores.numpy()
+                    legal_moves = self.engine.get_legal_moves(board_state)
+                    legal_indices = [self.engine.get_move_index(move) for move in legal_moves]
+                    filtered_scores = move_scores[legal_indices]
+                    best_index = np.argmax(filtered_scores)
+                    best_move = legal_moves[best_index]
+                    return best_move
+                else:
+                    # Это упрощенный пример - в реальном приложении здесь будут более сложные вычисления
+                    # Для демонстрации многопоточности просто возвращаем исходное состояние
+                    return board_state
+            else:
+                # Используем CPU для вычислений
+                return board_state
+        except Exception as e:
+            print(f"Ошибка при рендеринге с GPU: {e}")
+            return board_state
+            
+    def start_multithreading(self):
+        """Запустить многопоточную обработку."""
+        # Запускаем поток рендеринга
+        self.render_thread_running = True
+        self.render_thread = threading.Thread(target=self._render_worker, daemon=True)
+        self.render_thread.start()
+        
+        print("✅ Многопоточная обработка запущена")
+        
+    def stop_multithreading(self):
+        """Остановить многопоточную обработку."""
+        # Останавливаем поток рендеринга
+        self.render_thread_running = False
+        if self.render_thread:
+            self.render_queue.put("stop")
+            self.render_thread.join(timeout=1)
+            
+        # Завершаем пул потоков
+        self.executor.shutdown(wait=False)
+        
+        print("✅ Многопоточная обработка остановлена")
+        
+    def handle_ai_move_multithreaded(self):
+        """
+        Обработка хода ИИ с использованием многопоточности.
+        """
+        if self._is_player_turn() or self.game_over or self.thinking:
+            return
+            
+        # Проверка минимальной задержки
+        current_time = time.time()
+        if current_time - self.last_ai_move_time < self.ai_move_cooldown:
+            return
+            
+        # Уменьшенная задержка для более быстрой игры
+        if current_time - self.last_move_time < self.ai_move_delay:
+            return
+            
+        # Запускаем обработку в отдельном потоке
+        self.thinking = True
+        self.last_ai_move_time = current_time
+        # Используем пул потоков вместо создания новых потоков
+        self.executor.submit(self._process_ai_move)
+            
+    def _process_ai_move(self):
+        """Обработка хода ИИ в отдельном потоке."""
+        try:
+            # Выполняем вычисления ИИ
+            ai_move = self._compute_ai_move()
+            if ai_move:
+                # Выполняем ход в основном потоке через очередь событий
+                pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'action': 'ai_move', 'move': ai_move}))
+            else:
+                # Ошибка вычисления хода
+                pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'action': 'ai_error', 'error': 'Не удалось вычислить ход ИИ'}))
+        except BaseException as e:
+            print(f"Ошибка в потоке ИИ: {e}")
+            pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'action': 'ai_error', 'error': str(e)}))
+        finally:
+            # Не сбрасываем self.thinking здесь, так как это будет сделано в обработчике события
+            pass
+            
     def _execute_ai_move(self, ai_move):
         """Выполнить ход ИИ после его вычисления."""
         try:
@@ -3039,6 +3142,7 @@ class ChessGame:
                 self.sound_manager.play_sound("button")
         finally:
             self.thinking = False
+
             
     def _execute_ai_move(self, ai_move):
         """Выполнить ход ИИ после его вычисления."""
