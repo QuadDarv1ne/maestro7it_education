@@ -199,9 +199,17 @@
       "total_moves": 16,
       "result": "Неизвестно",
       "fen": "1nbqkb1r/5ppp/r3p3/1ppn4/5P2/1P1PP3/P5PP/RNBQK1NR w KQk - 0 9"
+    },
+    {
+      "timestamp": "2025-10-22T11:54:10.905775",
+      "player_color": "white",
+      "skill_level": 10,
+      "total_moves": 1,
+      "result": "Неизвестно",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/2P5/PP1PPPPP/RNBQKBNR b KQkq - 0 1"
     }
   ],
   "total_wins": 0,
-  "total_losses": 25,
+  "total_losses": 26,
   "total_draws": 0
 }

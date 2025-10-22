@@ -2686,6 +2686,10 @@ class ChessGame:
             if not ai_move:
                 ai_move = self._get_cached_best_move(depth=1)
                 
+            # Если все еще нет хода, пробуем получить без указания глубины
+            if not ai_move:
+                ai_move = self.engine.get_best_move()
+                
             return ai_move
         except Exception as e:
             print(f"Ошибка при вычислении хода ИИ: {e}")
@@ -2757,25 +2761,27 @@ class ChessGame:
         if current_time - self.last_move_time < self.ai_move_delay:
             return
             
-        # Помещаем задачу в очередь ИИ
-        self.ai_move_queue.put("compute_move")
+        # Запускаем обработку в отдельном потоке
         self.thinking = True
         self.last_ai_move_time = current_time
-        
-        # Проверяем результат
+        # Используем пул потоков вместо создания новых потоков
+        self.executor.submit(self._process_ai_move)
+            
+    def _process_ai_move(self):
+        """Обработка хода ИИ в отдельном потоке."""
         try:
-            result = self.ai_move_queue.get(timeout=0.1)
-            if result[0] == "result":
-                ai_move = result[1]
-                self._execute_ai_move(ai_move)
-            elif result[0] == "error":
-                print(f"Ошибка ИИ: {result[1]}")
-                self.thinking = False
-        except Empty:
-            # Результат еще не готов, продолжаем обработку в следующем кадре
-            pass
-        except Exception as e:
-            print(f"Ошибка при обработке хода ИИ: {e}")
+            # Выполняем вычисления ИИ
+            ai_move = self._compute_ai_move()
+            if ai_move:
+                # Выполняем ход в основном потоке через очередь событий
+                pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'action': 'ai_move', 'move': ai_move}))
+            else:
+                # Ошибка вычисления хода
+                pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'action': 'ai_error', 'error': 'Не удалось вычислить ход ИИ'}))
+        except BaseException as e:
+            print(f"Ошибка в потоке ИИ: {e}")
+            pygame.event.post(pygame.event.Event(pygame.USEREVENT, {'action': 'ai_error', 'error': str(e)}))
+        finally:
             self.thinking = False
             
     def _execute_ai_move(self, ai_move):
@@ -2830,8 +2836,14 @@ class ChessGame:
                         if is_capture:
                             self.game_stats['ai_capture_count'] += 1
                             self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
+                            # Проигрываем звук взятия
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("capture")
                         else:
                             self.move_feedback = f"Ход компьютера: {annotated_move}"
+                            # Проигрываем звук хода
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("move")
                         
                         # Добавляем информацию о дебюте, если она есть
                         if current_opening:
@@ -2866,22 +2878,293 @@ class ChessGame:
                             
                         # Очищаем кэш состояния доски после хода
                         self.board_state_cache = None
+                        
+                        # Обновляем отображение
+                        self.renderer._mark_all_dirty()
                     else:
                         print("⚠️  Не удалось выполнить ход компьютера")
                         self.move_feedback = "Не удалось выполнить ход компьютера"
                         self.move_feedback_time = time.time()
+                        # Проигрываем звук ошибки
+                        if self.sound_manager:
+                            self.sound_manager.play_sound("button")
                 else:
                     print("⚠️  Компьютер предложил некорректный ход")
                     self.move_feedback = "Компьютер предложил некорректный ход"
                     self.move_feedback_time = time.time()
+                    # Проигрываем звук ошибки
+                    if self.sound_manager:
+                        self.sound_manager.play_sound("button")
             else:
                 print("⚠️  Компьютер не смог найти ход")
                 self.move_feedback = "Компьютер не смог найти ход"
                 self.move_feedback_time = time.time()
+                # Проигрываем звук ошибки
+                if self.sound_manager:
+                    self.sound_manager.play_sound("button")
         except Exception as e:
             print(f"⚠️  Ошибка при получении хода компьютера: {e}")
             self.move_feedback = "Ошибка при получении хода компьютера"
             self.move_feedback_time = time.time()
+            # Проигрываем звук ошибки
+            if self.sound_manager:
+                self.sound_manager.play_sound("button")
+        finally:
+            self.thinking = False
+
+    def _execute_ai_move(self, ai_move):
+        """Выполнить ход ИИ после его вычисления."""
+        try:
+            if ai_move:
+                print(f"Ход компьютера: {ai_move}")
+                
+                # Получаем текущее состояние доски для проверки взятия
+                board_before = self.engine.get_board_state()
+                
+                # Валидация хода
+                if self.engine.is_move_correct(ai_move):
+                    if self.engine.make_move(ai_move):
+                        # Добавляем ход в дебютную книгу
+                        self.opening_book.add_move(ai_move)
+                        
+                        # Проверяем текущий дебют
+                        current_opening = self.opening_book.get_current_opening()
+                        
+                        self.move_history.append(ai_move)
+                        self.game_stats['ai_moves'] += 1
+                        
+                        # Проверяем, было ли взятие
+                        board_after = self.engine.get_board_state()
+                        # Преобразуем UCI ход в координаты
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        target_piece = board_before[to_row][to_col]
+                        is_capture = target_piece is not None
+                        # Проверяем, будет ли шах или мат после хода
+                        is_check = False
+                        is_mate = False
+                        is_castling = ai_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']
+                        
+                        # Проверяем состояние игры после хода
+                        is_over, reason = self.engine.is_game_over()
+                        if is_over and reason and "мат" in reason:
+                            is_mate = True
+                        
+                        # Проверяем шах
+                        try:
+                            eval_result = self.engine.get_evaluation()
+                            if eval_result and isinstance(eval_result, dict):
+                                is_check = eval_result.get('check', False)
+                        except:
+                            pass
+                        
+                        # Аннотируем ход
+                        annotated_move = self._annotate_move(ai_move, is_capture, is_check, is_mate, is_castling)
+                        
+                        if is_capture:
+                            self.game_stats['ai_capture_count'] += 1
+                            self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
+                            # Проигрываем звук взятия
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("capture")
+                        else:
+                            self.move_feedback = f"Ход компьютера: {annotated_move}"
+                            # Проигрываем звук хода
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("move")
+                        
+                        # Добавляем информацию о дебюте, если она есть
+                        if current_opening:
+                            opening_name, opening_info = current_opening
+                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
+                        
+                        # Преобразование UCI хода в координаты для выделения
+                        from_col = ord(ai_move[0]) - ord('a')
+                        from_row = 8 - int(ai_move[1])
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
+                        self.last_move_time = time.time()
+                        print(f"Ход компьютера выполнен: {annotated_move}")
+                        self.move_feedback_time = time.time()
+                        
+                        # Записываем время хода в статистику
+                        move_time = time.time() - self.last_move_time
+                        self.game_stats['move_times'].append(move_time)
+                        
+                        # Получаем оценку позиции для статистики
+                        evaluation = self.get_cached_evaluation()
+                        if evaluation is not None:
+                            self.game_stats['evaluations'].append(evaluation)
+                        
+                        # Добавляем образовательную обратную связь
+                        educational_tip = self.educator.get_educational_feedback(
+                            len(self.move_history), time.time())
+                        if educational_tip:
+                            self.move_feedback += f" | {educational_tip}"
+                            self.move_feedback_time = time.time()
+                            
+                        # Очищаем кэш состояния доски после хода
+                        self.board_state_cache = None
+                        
+                        # Обновляем отображение
+                        self.renderer._mark_all_dirty()
+                    else:
+                        print("⚠️  Не удалось выполнить ход компьютера")
+                        self.move_feedback = "Не удалось выполнить ход компьютера"
+                        self.move_feedback_time = time.time()
+                        # Проигрываем звук ошибки
+                        if self.sound_manager:
+                            self.sound_manager.play_sound("button")
+                else:
+                    print("⚠️  Компьютер предложил некорректный ход")
+                    self.move_feedback = "Компьютер предложил некорректный ход"
+                    self.move_feedback_time = time.time()
+                    # Проигрываем звук ошибки
+                    if self.sound_manager:
+                        self.sound_manager.play_sound("button")
+            else:
+                print("⚠️  Компьютер не смог найти ход")
+                self.move_feedback = "Компьютер не смог найти ход"
+                self.move_feedback_time = time.time()
+                # Проигрываем звук ошибки
+                if self.sound_manager:
+                    self.sound_manager.play_sound("button")
+        except Exception as e:
+            print(f"⚠️  Ошибка при получении хода компьютера: {e}")
+            self.move_feedback = "Ошибка при получении хода компьютера"
+            self.move_feedback_time = time.time()
+            # Проигрываем звук ошибки
+            if self.sound_manager:
+                self.sound_manager.play_sound("button")
+        finally:
+            self.thinking = False
+            
+    def _execute_ai_move(self, ai_move):
+        """Выполнить ход ИИ после его вычисления."""
+        try:
+            if ai_move:
+                print(f"Ход компьютера: {ai_move}")
+                
+                # Получаем текущее состояние доски для проверки взятия
+                board_before = self.engine.get_board_state()
+                
+                # Валидация хода
+                if self.engine.is_move_correct(ai_move):
+                    if self.engine.make_move(ai_move):
+                        # Добавляем ход в дебютную книгу
+                        self.opening_book.add_move(ai_move)
+                        
+                        # Проверяем текущий дебют
+                        current_opening = self.opening_book.get_current_opening()
+                        
+                        self.move_history.append(ai_move)
+                        self.game_stats['ai_moves'] += 1
+                        
+                        # Проверяем, было ли взятие
+                        board_after = self.engine.get_board_state()
+                        # Преобразуем UCI ход в координаты
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        target_piece = board_before[to_row][to_col]
+                        is_capture = target_piece is not None
+                        # Проверяем, будет ли шах или мат после хода
+                        is_check = False
+                        is_mate = False
+                        is_castling = ai_move in ['e1g1', 'e1c1', 'e8g8', 'e8c8']
+                        
+                        # Проверяем состояние игры после хода
+                        is_over, reason = self.engine.is_game_over()
+                        if is_over and reason and "мат" in reason:
+                            is_mate = True
+                        
+                        # Проверяем шах
+                        try:
+                            eval_result = self.engine.get_evaluation()
+                            if eval_result and isinstance(eval_result, dict):
+                                is_check = eval_result.get('check', False)
+                        except:
+                            pass
+                        
+                        # Аннотируем ход
+                        annotated_move = self._annotate_move(ai_move, is_capture, is_check, is_mate, is_castling)
+                        
+                        if is_capture:
+                            self.game_stats['ai_capture_count'] += 1
+                            self.move_feedback = f"Ход компьютера: {annotated_move} (взятие!)"
+                            # Проигрываем звук взятия
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("capture")
+                        else:
+                            self.move_feedback = f"Ход компьютера: {annotated_move}"
+                            # Проигрываем звук хода
+                            if self.sound_manager:
+                                self.sound_manager.play_sound("move")
+                        
+                        # Добавляем информацию о дебюте, если она есть
+                        if current_opening:
+                            opening_name, opening_info = current_opening
+                            self.move_feedback += f" | 🎯 Дебют: {opening_name}"
+                        
+                        # Преобразование UCI хода в координаты для выделения
+                        from_col = ord(ai_move[0]) - ord('a')
+                        from_row = 8 - int(ai_move[1])
+                        to_col = ord(ai_move[2]) - ord('a')
+                        to_row = 8 - int(ai_move[3])
+                        self.renderer.set_last_move((from_row, from_col), (to_row, to_col))
+                        self.last_move_time = time.time()
+                        print(f"Ход компьютера выполнен: {annotated_move}")
+                        self.move_feedback_time = time.time()
+                        
+                        # Записываем время хода в статистику
+                        move_time = time.time() - self.last_move_time
+                        self.game_stats['move_times'].append(move_time)
+                        
+                        # Получаем оценку позиции для статистики
+                        evaluation = self.get_cached_evaluation()
+                        if evaluation is not None:
+                            self.game_stats['evaluations'].append(evaluation)
+                        
+                        # Добавляем образовательную обратную связь
+                        educational_tip = self.educator.get_educational_feedback(
+                            len(self.move_history), time.time())
+                        if educational_tip:
+                            self.move_feedback += f" | {educational_tip}"
+                            self.move_feedback_time = time.time()
+                            
+                        # Очищаем кэш состояния доски после хода
+                        self.board_state_cache = None
+                        
+                        # Обновляем отображение
+                        self.renderer._mark_all_dirty()
+                    else:
+                        print("⚠️  Не удалось выполнить ход компьютера")
+                        self.move_feedback = "Не удалось выполнить ход компьютера"
+                        self.move_feedback_time = time.time()
+                        # Проигрываем звук ошибки
+                        if self.sound_manager:
+                            self.sound_manager.play_sound("button")
+                else:
+                    print("⚠️  Компьютер предложил некорректный ход")
+                    self.move_feedback = "Компьютер предложил некорректный ход"
+                    self.move_feedback_time = time.time()
+                    # Проигрываем звук ошибки
+                    if self.sound_manager:
+                        self.sound_manager.play_sound("button")
+            else:
+                print("⚠️  Компьютер не смог найти ход")
+                self.move_feedback = "Компьютер не смог найти ход"
+                self.move_feedback_time = time.time()
+                # Проигрываем звук ошибки
+                if self.sound_manager:
+                    self.sound_manager.play_sound("button")
+        except Exception as e:
+            print(f"⚠️  Ошибка при получении хода компьютера: {e}")
+            self.move_feedback = "Ошибка при получении хода компьютера"
+            self.move_feedback_time = time.time()
+            # Проигрываем звук ошибки
+            if self.sound_manager:
+                self.sound_manager.play_sound("button")
         finally:
             self.thinking = False
 
@@ -3613,6 +3896,21 @@ class ChessGame:
                                 running = False
                         continue  # Пропустить остальную обработку событий, если меню активно
 
+                    # Обработка пользовательских событий (включая события ИИ)
+                    elif event.type == pygame.USEREVENT:
+                        if event.action == 'ai_move':
+                            self._execute_ai_move(event.move)
+                            board_needs_update = True
+                            ui_needs_update = True
+                            last_board_state = None
+                        elif event.action == 'ai_error':
+                            print(f"Ошибка ИИ: {event.error}")
+                            self.thinking = False
+                            self.move_feedback = f"Ошибка ИИ: {event.error}"
+                            self.move_feedback_time = time.time()
+                            ui_needs_update = True
+
+                    # Обработка событий меню, если оно активно
                     elif event.type == pygame.KEYDOWN:
                         # Сброс игры
                         if event.key == pygame.K_r:
@@ -3823,6 +4121,7 @@ class ChessGame:
                     self.renderer.update_hover(mouse_pos)
                     
                     # Handle AI moves с оптимизацией и многопоточностью
+                    # Handle AI moves с оптимизацией и многопоточностью
                     if time_to_update_ai and not self.game_over:
                         # Проверяем, наша ли очередь хода
                         if not self._is_player_turn():
@@ -3832,6 +4131,21 @@ class ChessGame:
                             # После хода AI доска точно изменилась
                             board_needs_update = True
                             last_board_state = None  # Принудительно обновим кэш
+                            
+                            # Добавляем резервный механизм для выполнения хода ИИ, если поток не запустился
+                            if not hasattr(self, '_ai_processing_thread') or not self._ai_processing_thread or not self._ai_processing_thread.is_alive():
+                                # Если поток не запущен, пробуем выполнить ход напрямую
+                                if self.thinking:
+                                    # Пытаемся получить ход напрямую
+                                    ai_move = self._compute_ai_move()
+                                    if ai_move:
+                                        self._execute_ai_move(ai_move)
+                                    else:
+                                        # Если не удалось получить ход, сбрасываем флаг thinking
+                                        self.thinking = False
+                                        self.move_feedback = "Компьютер не смог найти ход"
+                                        self.move_feedback_time = time.time()
+                                        ui_needs_update = True
                     
                     # Проверяем состояние игры (шах, мат, пат)
                     if not self.game_over:

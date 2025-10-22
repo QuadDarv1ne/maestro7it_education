@@ -694,7 +694,10 @@ class BoardRenderer:
         # Информационная панель (рисуется напрямую)
         self._draw_info_panel(evaluation, thinking, move_count, 
                              capture_count, check_count)
-
+                             
+        # Принудительное обновление экрана для стабильности отображения
+        pygame.display.flip()
+    
     def _draw_info_panel(self, evaluation: Optional[float], thinking: bool,
                         move_count: int, capture_count: Tuple[int, int], 
                         check_count: int):
