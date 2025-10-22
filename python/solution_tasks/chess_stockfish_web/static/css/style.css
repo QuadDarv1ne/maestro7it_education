@@ -6,6 +6,7 @@ body {
     margin: 0;
     padding: 20px;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .container {
@@ -22,11 +23,13 @@ h1 {
     color: #FFD700;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     margin-bottom: 5px;
+    font-size: 2.2rem;
 }
 
 h2 {
     color: #4FC3F7;
     margin-top: 0;
+    font-size: 1.5rem;
 }
 
 .setup {
@@ -71,6 +74,9 @@ button {
     margin: 10px 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
+    min-width: 120px;
+    position: relative;
+    overflow: hidden;
 }
 
 button:hover {
@@ -89,12 +95,103 @@ button:disabled {
     opacity: 0.7;
 }
 
+button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+button:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(50, 50);
+        opacity: 0;
+    }
+}
+
 #reset {
     background: linear-gradient(to bottom, #f44336, #d32f2f);
 }
 
 #reset:hover {
     background: linear-gradient(to bottom, #ef5350, #f44336);
+}
+
+#analyze {
+    background: linear-gradient(to bottom, #2196F3, #1976D2);
+}
+
+#analyze:hover {
+    background: linear-gradient(to bottom, #42A5F5, #2196F3);
+}
+
+#save-game {
+    background: linear-gradient(to bottom, #FF9800, #F57C00);
+}
+
+#save-game:hover {
+    background: linear-gradient(to bottom, #FFA726, #FF9800);
+}
+
+#load-game {
+    background: linear-gradient(to bottom, #9C27B0, #7B1FA2);
+}
+
+#load-game:hover {
+    background: linear-gradient(to bottom, #AB47BC, #9C27B0);
+}
+
+#navigation-container button {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 40px;
+}
+
+#navigation-container button:disabled {
+    background: #616161;
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#button-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+#save-load-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+#navigation-container {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin: 10px 0;
+    flex-wrap: wrap;
 }
 
 #status {
@@ -106,18 +203,28 @@ button:disabled {
     padding: 10px;
     border-radius: 5px;
     background: rgba(255, 255, 255, 0.1);
+    word-wrap: break-word;
+    max-width: 100%;
 }
 
 .win {
     color: #4CAF50;
+    animation: glow 1s ease-in-out infinite alternate;
 }
 
 .loss {
     color: #f44336;
+    animation: glow 1s ease-in-out infinite alternate;
 }
 
 .draw {
     color: #FFD700;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 5px currentColor; }
+    to { text-shadow: 0 0 15px currentColor, 0 0 20px currentColor; }
 }
 
 a {
@@ -167,24 +274,359 @@ a:hover {
     to { transform: rotate(360deg); }
 }
 
+/* Pulse animation for game over */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Flip animation for board */
+@keyframes flip {
+    0% { transform: rotateY(0); }
+    100% { transform: rotateY(180deg); }
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    z-index: 1000;
+    max-width: 300px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateX(100%);
+    animation: slideIn 0.3s forwards;
+}
+
+@keyframes slideIn {
+    to { transform: translateX(0); }
+}
+
+/* Button hover effects */
+button {
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    background: linear-gradient(to bottom, #4CAF50, #2E7D32);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    margin: 10px 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    min-width: 120px;
+    position: relative;
+    overflow: hidden;
+}
+
+button:hover {
+    background: linear-gradient(to bottom, #66BB6A, #388E3C);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+button:disabled {
+    background: linear-gradient(to bottom, #616161, #424242);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+button:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(50, 50);
+        opacity: 0;
+    }
+}
+
+#reset {
+    background: linear-gradient(to bottom, #f44336, #d32f2f);
+}
+
+#reset:hover {
+    background: linear-gradient(to bottom, #ef5350, #f44336);
+}
+
+#analyze {
+    background: linear-gradient(to bottom, #2196F3, #1976D2);
+}
+
+#analyze:hover {
+    background: linear-gradient(to bottom, #42A5F5, #2196F3);
+}
+
+#navigation-container button {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 5px;
+    min-width: 40px;
+}
+
+#navigation-container button:disabled {
+    background: #616161;
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#button-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+#navigation-container {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+#status {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 15px 0;
+    min-height: 27px;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    word-wrap: break-word;
+    max-width: 100%;
+}
+
+.win {
+    color: #4CAF50;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+.loss {
+    color: #f44336;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+.draw {
+    color: #FFD700;
+    animation: glow 1s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 5px currentColor; }
+    to { text-shadow: 0 0 15px currentColor, 0 0 20px currentColor; }
+}
+
+a {
+    color: #4FC3F7;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+#instructions {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    text-align: left;
+}
+
+#instructions h3 {
+    margin-top: 0;
+    color: #4FC3F7;
+}
+
+#instructions ul {
+    padding-left: 20px;
+}
+
+#instructions li {
+    margin: 5px 0;
+}
+
+/* Loading spinner */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+/* Analysis panel */
+#analysis-panel {
+    margin: 15px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    text-align: left;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#analysis-panel h3 {
+    color: #4FC3F7;
+    margin-top: 0;
+}
+
 /* Responsive design */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .container {
         margin: 10px;
         padding: 15px;
     }
     
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    h2 {
+        font-size: 1.3rem;
+    }
+    
     #board {
-        width: 90vw !important;
-        height: 90vw !important;
+        width: 95vw !important;
+        height: 95vw !important;
+        max-width: 500px;
+        max-height: 500px;
     }
     
     .setup label {
         font-size: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .setup select, .setup input {
+        margin: 10px 0 0 0;
     }
     
     button {
-        padding: 10px 20px;
+        padding: 10px 15px;
         font-size: 14px;
+        min-width: 100px;
+        margin: 5px;
+    }
+    
+    #button-container, #navigation-container, #save-load-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    #status {
+        font-size: 16px;
+        padding: 8px;
+    }
+    
+    #instructions {
+        padding: 10px;
+    }
+    
+    #instructions ul {
+        padding-left: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+    
+    .container {
+        padding: 10px;
+        margin: 5px;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.2rem;
+    }
+    
+    .setup {
+        padding: 15px;
+    }
+    
+    .setup label {
+        font-size: 14px;
+    }
+    
+    .setup select, .setup input {
+        padding: 8px;
+        font-size: 14px;
+        width: 70px;
+    }
+    
+    .setup input {
+        width: 50px;
+    }
+    
+    button {
+        padding: 8px 12px;
+        font-size: 13px;
+        min-width: 80px;
+    }
+    
+    #navigation-container button {
+        padding: 6px 10px;
+        font-size: 12px;
+        min-width: 35px;
+    }
+    
+    #status {
+        font-size: 14px;
+    }
+}
+
+/* Chess board specific responsive adjustments */
+@media (max-width: 600px) {
+    #board {
+        width: 95vw !important;
+        height: 95vw !important;
     }
 }

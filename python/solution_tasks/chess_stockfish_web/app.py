@@ -10,18 +10,92 @@ import logging
 import json
 import threading
 import weakref
+import pickle
+import base64
+import functools
+from collections import defaultdict
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Store game instances per session
+games = {}
+
+# Store game history per session
+game_histories = {}
+
+# Store user preferences per session
+user_preferences = {}
+
+# Global Stockfish engine instance for reuse
+stockfish_engine = None
+
+# Maximum concurrent games to prevent server overload
+MAX_CONCURRENT_GAMES = 10
+
+# Track active game count
+active_game_count = 0
+
+# Session timestamps for cleanup
+session_timestamps = {}
+
+# Cleanup interval in seconds
+CLEANUP_INTERVAL = 300  # 5 minutes
+
+# Game inactivity timeout in seconds
+GAME_TIMEOUT = 3600  # 1 hour
+
+# Cache for expensive operations
+cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+def cached_result(ttl=CACHE_TTL):
+    """Decorator to cache function results"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Create cache key
+            cache_key = f"{func.__name__}:{hash(str(args) + str(kwargs))}"
+            current_time = time.time()
+            
+            # Check if result is in cache and not expired
+            if cache_key in cache:
+                result, timestamp = cache[cache_key]
+                if current_time - timestamp < ttl:
+                    logger.debug(f"Cache hit for {func.__name__}")
+                    return result
+            
+            # Call function and cache result
+            result = func(*args, **kwargs)
+            cache[cache_key] = (result, current_time)
+            logger.debug(f"Cache miss for {func.__name__}, cached result")
+            return result
+        return wrapper
+    return decorator
+
+def cleanup_cache():
+    """Periodically clean up expired cache entries"""
+    global cache
+    current_time = time.time()
+    expired_keys = [
+        key for key, (_, timestamp) in cache.items()
+        if current_time - timestamp >= CACHE_TTL
+    ]
+    for key in expired_keys:
+        del cache[key]
+    logger.debug(f"Cleaned up {len(expired_keys)} expired cache entries")
+
 def cleanup_stale_games():
     """Periodically clean up stale game sessions to prevent memory leaks."""
-    global games, session_timestamps, active_game_count
+    global games, session_timestamps, active_game_count, cache
     while True:
         try:
             time.sleep(CLEANUP_INTERVAL)
             current_time = time.time()
+            
+            # Clean up cache
+            cleanup_cache()
             
             # Find stale sessions
             stale_sessions = [
@@ -56,34 +130,15 @@ socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=30, ping_interva
 cleanup_thread = threading.Thread(target=cleanup_stale_games, daemon=True)
 cleanup_thread.start()
 
-# Store game instances per session
-games = {}
-
-# Global Stockfish engine instance for reuse
-stockfish_engine = None
-
-# Maximum concurrent games to prevent server overload
-MAX_CONCURRENT_GAMES = 10
-
-# Track active game count
-active_game_count = 0
-
-# Session timestamps for cleanup
-session_timestamps = {}
-
-# Cleanup interval in seconds
-CLEANUP_INTERVAL = 300  # 5 minutes
-
-# Game inactivity timeout in seconds
-GAME_TIMEOUT = 3600  # 1 hour
-
 class ChessGame:
     def __init__(self, player_color='white', skill_level=5):
         self.player_color = player_color
         self.skill_level = skill_level
         self.engine = None
         self.initialized = False
-        # Don't initialize engine here, do it lazily when needed
+        self._fen_cache = None
+        self._fen_cache_time = 0
+        self._cache_ttl = 1  # 1 second cache for FEN
         
     def _is_engine_compatible(self, engine, skill_level):
         """
@@ -154,6 +209,7 @@ class ChessGame:
             traceback.print_exc()
             return False
     
+    @cached_result(ttl=1)  # Cache FEN for 1 second
     def get_fen(self):
         if self.engine:
             return self.engine.get_fen_position()
@@ -162,6 +218,8 @@ class ChessGame:
     def make_move(self, move):
         if not self.initialized or not self.engine:
             return False
+        # Clear FEN cache when making a move
+        self._fen_cache = None
         # make_moves_from_current_position returns None on success, False on failure
         result = self.engine.make_moves_from_current_position([move])
         return result is not False
@@ -200,6 +258,24 @@ class ChessGame:
         if not self.initialized or not self.engine:
             return None
         return self.engine.get_best_move()
+    
+    def get_evaluation(self):
+        """Get position evaluation from Stockfish"""
+        if not self.initialized or not self.engine:
+            return None
+        try:
+            return self.engine.get_evaluation()
+        except:
+            return None
+    
+    def get_top_moves(self, limit=5):
+        """Get top moves from Stockfish"""
+        if not self.initialized or not self.engine:
+            return []
+        try:
+            return self.engine.get_top_moves(limit)
+        except:
+            return []
     
     def get_game_status(self, fen):
         """
@@ -462,6 +538,160 @@ def handle_move(data):
         traceback.print_exc()
         emit('error', {'message': 'Move processing error'})
         logger.info(f"Total move processing time: {time.time() - start_time:.2f} seconds")
+
+@socketio.on('analyze_position')
+def handle_analysis(data):
+    """Analyze the current position and return evaluation"""
+    try:
+        session_id = session.get('session_id')
+        if not session_id or session_id not in games:
+            emit('error', {'message': 'Game not initialized'})
+            return
+
+        game = games[session_id]
+        fen = data.get('fen', game.get_fen())
+        
+        if game.engine:
+            # Set position for analysis
+            game.engine.set_fen_position(fen)
+            
+            # Get evaluation
+            evaluation = game.get_evaluation()
+            
+            # Get best move for analysis
+            best_move = game.get_best_move()
+            
+            # Get top moves
+            top_moves = game.get_top_moves(3)  # Get top 3 moves
+            
+            emit('analysis_result', {
+                'fen': fen,
+                'evaluation': evaluation,
+                'best_move': best_move,
+                'top_moves': top_moves
+            })
+        else:
+            emit('error', {'message': 'Engine not available'})
+    except Exception as e:
+        logger.error(f"Error in analysis: {e}")
+        emit('error', {'message': 'Analysis error'})
+
+@socketio.on('save_preferences')
+def handle_save_preferences(data):
+    """Save user preferences"""
+    try:
+        session_id = session.get('session_id')
+        if not session_id:
+            emit('error', {'message': 'Session not found'})
+            return
+            
+        # Store preferences
+        user_preferences[session_id] = data.get('preferences', {})
+        
+        emit('preferences_saved', {
+            'success': True,
+            'message': 'Настройки сохранены успешно'
+        })
+    except Exception as e:
+        logger.error(f"Error saving preferences: {e}")
+        emit('error', {'message': 'Ошибка сохранения настроек'})
+
+@socketio.on('load_preferences')
+def handle_load_preferences():
+    """Load user preferences"""
+    try:
+        session_id = session.get('session_id')
+        if not session_id:
+            emit('error', {'message': 'Session not found'})
+            return
+            
+        # Get preferences
+        preferences = user_preferences.get(session_id, {})
+        
+        emit('preferences_loaded', {
+            'preferences': preferences
+        })
+    except Exception as e:
+        logger.error(f"Error loading preferences: {e}")
+        emit('error', {'message': 'Ошибка загрузки настроек'})
+
+@socketio.on('save_game')
+def handle_save_game(data):
+    """Save the current game state"""
+    try:
+        session_id = session.get('session_id')
+        if not session_id or session_id not in games:
+            emit('error', {'message': 'Game not initialized'})
+            return
+
+        game = games[session_id]
+        
+        # Create game state object
+        game_state = {
+            'fen': game.get_fen(),
+            'player_color': game.player_color,
+            'skill_level': game.skill_level,
+            'game_history': game_histories.get(session_id, []) if session_id in game_histories else [],
+            'timestamp': time.time()
+        }
+        
+        # Serialize game state
+        serialized_state = base64.b64encode(pickle.dumps(game_state)).decode('utf-8')
+        
+        emit('game_saved', {
+            'success': True,
+            'game_state': serialized_state,
+            'message': 'Игра сохранена успешно'
+        })
+    except Exception as e:
+        logger.error(f"Error saving game: {e}")
+        emit('error', {'message': 'Ошибка сохранения игры'})
+
+@socketio.on('load_game')
+def handle_load_game(data):
+    """Load a saved game state"""
+    try:
+        session_id = session.get('session_id')
+        serialized_state = data.get('game_state')
+        
+        if not serialized_state:
+            emit('error', {'message': 'Нет данных для загрузки'})
+            return
+        
+        # Deserialize game state
+        game_state = pickle.loads(base64.b64decode(serialized_state.encode('utf-8')))
+        
+        # Create new game instance with saved parameters
+        game = ChessGame(game_state['player_color'], game_state['skill_level'])
+        
+        # Initialize engine
+        if not game.init_engine():
+            emit('error', {'message': 'Не удалось инициализировать движок'})
+            return
+            
+        # Set position
+        if game.engine:
+            game.engine.set_fen_position(game_state['fen'])
+            game.initialized = True
+            
+            # Store game in session
+            games[session_id] = game
+            
+            # Update session timestamp
+            session_timestamps[session_id] = time.time()
+            
+            emit('game_loaded', {
+                'fen': game_state['fen'],
+                'player_color': game_state['player_color'],
+                'skill_level': game_state['skill_level'],
+                'game_history': game_state.get('game_history', []),
+                'message': 'Игра загружена успешно'
+            })
+        else:
+            emit('error', {'message': 'Не удалось инициализировать движок'})
+    except Exception as e:
+        logger.error(f"Error loading game: {e}")
+        emit('error', {'message': 'Ошибка загрузки игры'})
 
 if __name__ == '__main__':
     print("DEBUG: Starting Chess Stockfish Web application...")
