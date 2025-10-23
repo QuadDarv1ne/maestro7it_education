@@ -13,7 +13,157 @@ import weakref
 import pickle
 import base64
 import functools
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
+from contextlib import contextmanager
+
+# Import performance tracking
+try:
+    from utils.performance_tracker import performance_tracker, track_engine_init, track_move_validation, track_move_execution, track_ai_calculation, track_game_status_check, track_fen_retrieval
+    PERFORMANCE_TRACKING_ENABLED = True
+except ImportError:
+    # Fallback if utils module is not available
+    PERFORMANCE_TRACKING_ENABLED = False
+    performance_tracker = None
+    def track_engine_init(func): return func
+    def track_move_validation(func): return func
+    def track_move_execution(func): return func
+    def track_ai_calculation(func): return func
+    def track_game_status_check(func): return func
+    def track_fen_retrieval(func): return func
+
+# Import cache manager
+try:
+    from utils.cache_manager import cache_manager, cached
+    CACHE_MANAGER_ENABLED = True
+except ImportError:
+    # Fallback if cache manager is not available
+    CACHE_MANAGER_ENABLED = False
+    cache_manager = None
+    def cached(cache_type='generic'): 
+        def decorator(func):
+            return func
+        return decorator
+
+# Import error handler
+try:
+    from utils.error_handler import error_handler, handle_chess_errors, retry_on_failure
+    # Import exception classes
+    from utils.error_handler import EngineInitializationError as ErrorHandlerEngineInitializationError
+    from utils.error_handler import MoveValidationError as ErrorHandlerMoveValidationError
+    from utils.error_handler import GameLogicError as ErrorHandlerGameLogicError
+    ERROR_HANDLER_ENABLED = True
+except ImportError:
+    # Fallback if error handler is not available
+    ERROR_HANDLER_ENABLED = False
+    error_handler = None
+    def handle_chess_errors(context=""): 
+        def decorator(func):
+            return func
+        return decorator
+    def retry_on_failure(max_attempts=3, delay=1.0, backoff=2.0):
+        def decorator(func):
+            return func
+        return decorator
+    # Define local exception classes
+    class EngineInitializationError(Exception):
+        pass
+    class MoveValidationError(Exception):
+        pass
+    class GameLogicError(Exception):
+        pass
+
+# Import connection pool
+try:
+    from utils.connection_pool import stockfish_pool
+    CONNECTION_POOLING_ENABLED = True
+    # Import the context manager function
+    from utils.connection_pool import get_stockfish_engine as pool_get_stockfish_engine
+except ImportError:
+    # Fallback if connection pool is not available
+    CONNECTION_POOLING_ENABLED = False
+    stockfish_pool = None
+    def pool_get_stockfish_engine(skill_level=5):
+        # Simple context manager that creates a new engine each time
+        @contextmanager
+        def engine_context_manager():
+            # Create new engine
+            engine_path = _find_stockfish_executable()
+            if not engine_path:
+                raise EngineInitializationError("Stockfish executable not found")
+            
+            engine = Stockfish(path=engine_path)
+            engine.set_skill_level(skill_level)
+            engine.set_depth(10)
+            engine.update_engine_parameters({
+                'Threads': 2,
+                'Hash': 128,
+                'Contempt': 0,
+                'Ponder': False
+            })
+            try:
+                yield engine
+            finally:
+                # Clean up engine
+                try:
+                    # Stockfish doesn't have quit() or close() methods, just let it be garbage collected
+                    pass
+                except:
+                    pass
+        return engine_context_manager()
+    
+    def _find_stockfish_executable():
+        """Find Stockfish executable in various possible locations"""
+        import shutil
+        executable_names = [
+            'stockfish.exe',    # Windows
+            'stockfish',        # Linux/Mac
+            'stockfish_15_x64.exe',
+            'stockfish_14_x64.exe',
+            'stockfish-windows-x86-64.exe',
+            'stockfish-linux-x64',
+            'stockfish-mac-x64'
+        ]
+        
+        search_paths = [
+            os.path.dirname(__file__),
+            os.path.join(os.path.dirname(__file__), '..'),
+            os.path.join(os.path.dirname(__file__), 'engines'),
+            os.path.expanduser('~'),
+            os.path.expanduser('~/stockfish'),
+            '/usr/local/bin',
+            '/usr/bin',
+            'C:\\Program Files\\Stockfish',
+            'C:\\Program Files (x86)\\Stockfish'
+        ]
+        
+        # Check environment variable
+        env_path = os.getenv('STOCKFISH_PATH')
+        if env_path:
+            search_paths.insert(0, env_path)
+        
+        # Try to find executable
+        for search_path in search_paths:
+            if search_path and os.path.exists(search_path):
+                # Check direct path first
+                if os.path.isfile(search_path) and any(search_path.endswith(ext) for ext in ['.exe', '']):
+                    return search_path
+                
+                # Check in directory
+                for exe_name in executable_names:
+                    full_path = os.path.join(search_path, exe_name)
+                    if os.path.exists(full_path) and os.access(full_path, os.X_OK):
+                        return full_path
+        
+        # Check system PATH
+        for exe_name in executable_names:
+            try:
+                path = shutil.which(exe_name)
+                if path:
+                    return path
+            except:
+                pass
+        
+        return None
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -46,77 +196,49 @@ CLEANUP_INTERVAL = 300  # 5 minutes
 # Game inactivity timeout in seconds
 GAME_TIMEOUT = 3600  # 1 hour
 
-# Cache for expensive operations
-cache = {}
-CACHE_TTL = 300  # 5 minutes
-
-def cached_result(ttl=CACHE_TTL):
-    """Decorator to cache function results"""
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            # Create cache key
-            cache_key = f"{func.__name__}:{hash(str(args) + str(kwargs))}"
-            current_time = time.time()
-            
-            # Check if result is in cache and not expired
-            if cache_key in cache:
-                result, timestamp = cache[cache_key]
-                if current_time - timestamp < ttl:
-                    logger.debug(f"Cache hit for {func.__name__}")
-                    return result
-            
-            # Call function and cache result
-            result = func(*args, **kwargs)
-            cache[cache_key] = (result, current_time)
-            logger.debug(f"Cache miss for {func.__name__}, cached result")
-            return result
-        return wrapper
-    return decorator
-
-def cleanup_cache():
-    """Periodically clean up expired cache entries"""
-    global cache
-    current_time = time.time()
-    expired_keys = [
-        key for key, (_, timestamp) in cache.items()
-        if current_time - timestamp >= CACHE_TTL
-    ]
-    for key in expired_keys:
-        del cache[key]
-    logger.debug(f"Cleaned up {len(expired_keys)} expired cache entries")
-
 def cleanup_stale_games():
     """Periodically clean up stale game sessions to prevent memory leaks."""
-    global games, session_timestamps, active_game_count, cache
+    global games, session_timestamps, active_game_count
     while True:
         try:
             time.sleep(CLEANUP_INTERVAL)
             current_time = time.time()
             
-            # Clean up cache
-            cleanup_cache()
-            
             # Find stale sessions
-            stale_sessions = [
-                session_id for session_id, timestamp in session_timestamps.items()
-                if current_time - timestamp > GAME_TIMEOUT
-            ]
+            try:
+                stale_sessions = [
+                    session_id for session_id, timestamp in session_timestamps.items()
+                    if current_time - timestamp > GAME_TIMEOUT
+                ]
+            except Exception as e:
+                logger.error(f"Error finding stale sessions: {e}")
+                stale_sessions = []
             
             # Clean up stale sessions
             for session_id in stale_sessions:
-                if session_id in games:
-                    # Clean up game resources
-                    try:
-                        del games[session_id]
-                        active_game_count = max(0, active_game_count - 1)
-                        logger.info(f"Cleaned up stale game for session: {session_id}")
-                    except Exception as e:
-                        logger.error(f"Error cleaning up stale game for session {session_id}: {e}")
+                try:
+                    if session_id in games:
+                        # Clean up game resources
+                        try:
+                            del games[session_id]
+                            active_game_count = max(0, active_game_count - 1)
+                            logger.info(f"Cleaned up stale game for session: {session_id}")
+                        except Exception as e:
+                            logger.error(f"Error cleaning up stale game for session {session_id}: {e}")
+                except Exception as e:
+                    logger.error(f"Error processing session {session_id}: {e}")
                 
                 # Remove timestamp
-                if session_id in session_timestamps:
-                    del session_timestamps[session_id]
+                try:
+                    if session_id in session_timestamps:
+                        del session_timestamps[session_id]
+                except Exception as e:
+                    logger.error(f"Error removing timestamp for session {session_id}: {e}")
+            
+            # Clear expired cache entries
+            if CACHE_MANAGER_ENABLED:
+                # The cache manager automatically handles TTL expiration
+                pass
             
             logger.info(f"Cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}")
         except Exception as e:
@@ -126,7 +248,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'maestro7it-chess-secret'
 socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=30, ping_interval=25)
 
-# Start cleanup thread will be started after all variables are defined
+# Start cleanup thread after all variables are defined to prevent race conditions
 
 class ChessGame:
     def __init__(self, player_color='white', skill_level=5):
@@ -134,10 +256,8 @@ class ChessGame:
         self.skill_level = skill_level
         self.engine = None
         self.initialized = False
-        self._fen_cache = None
-        self._fen_cache_time = 0
-        self._cache_ttl = 1  # 1 second cache for FEN
         self.engine_path = None
+        self._engine_context = None
         
     def _is_engine_compatible(self, engine, skill_level):
         """
@@ -151,33 +271,84 @@ class ChessGame:
             return False
     
     def _find_stockfish_executable(self):
-        """Find Stockfish executable in various possible locations"""
-        possible_paths = [
-            os.path.join(os.path.dirname(__file__), 'stockfish.exe'),  # Local copy
-            os.path.join(os.path.dirname(__file__), 'stockfish'),      # Linux/Mac version
-            os.path.join(os.path.dirname(__file__), '..', 'stockfish.exe'),  # Parent directory
-            os.path.join(os.path.dirname(__file__), '..', 'stockfish'),     # Parent directory (Linux/Mac)
-            'stockfish.exe',  # System PATH
-            'stockfish',      # System PATH (Linux/Mac)
+        """Find Stockfish executable in various possible locations with enhanced detection"""
+        # Common executable names for different platforms
+        executable_names = [
+            'stockfish.exe',    # Windows
+            'stockfish',        # Linux/Mac
+            'stockfish_15_x64.exe',  # Specific versions
+            'stockfish_14_x64.exe',
+            'stockfish_13_x64.exe',
+            'stockfish-windows-x86-64.exe',
+            'stockfish-linux-x64',
+            'stockfish-mac-x64'
+        ]
+        
+        # Common search paths
+        search_paths = [
+            os.path.dirname(__file__),  # Current directory
+            os.path.join(os.path.dirname(__file__), '..'),  # Parent directory
+            os.path.join(os.path.dirname(__file__), 'engines'),  # Engines subdirectory
+            os.path.join(os.path.dirname(__file__), '..', 'engines'),  # Engines in parent
+            os.path.expanduser('~'),  # Home directory
+            os.path.expanduser('~/stockfish'),  # Stockfish in home directory
+            '/usr/local/bin',  # Common Unix paths
+            '/usr/bin',
+            'C:\\Program Files\\Stockfish',
+            'C:\\Program Files (x86)\\Stockfish'
         ]
         
         # Check environment variable
         env_path = os.getenv('STOCKFISH_PATH')
         if env_path:
-            possible_paths.insert(0, env_path)
+            search_paths.insert(0, env_path)
         
-        for path in possible_paths:
-            if path and os.path.exists(path):
-                logger.info(f"Found Stockfish executable at: {path}")
-                return path
+        # Try to find executable in search paths
+        import shutil
+        for search_path in search_paths:
+            if search_path and os.path.exists(search_path):
+                # Check direct path first
+                if os.path.isfile(search_path) and any(search_path.endswith(ext) for ext in ['.exe', '']):
+                    logger.info(f"Found Stockfish executable at direct path: {search_path}")
+                    return search_path
+                
+                # Check in directory
+                for exe_name in executable_names:
+                    full_path = os.path.join(search_path, exe_name)
+                    if os.path.exists(full_path) and os.access(full_path, os.X_OK):
+                        logger.info(f"Found Stockfish executable at: {full_path}")
+                        return full_path
+        
+        # Check system PATH
+        for exe_name in executable_names:
+            try:
+                path = shutil.which(exe_name)
+                if path:
+                    logger.info(f"Found Stockfish executable in PATH: {path}")
+                    return path
+            except:
+                pass
         
         logger.warning("Stockfish executable not found in any expected location")
         return None
     
+    @retry_on_failure(max_attempts=3, delay=1.0, backoff=2.0)
+    @track_engine_init
+    @handle_chess_errors(context="engine_initialization")
     def init_engine(self):
         global stockfish_engine
         start_time = time.time()
         try:
+            # Use connection pooling if available
+            if CONNECTION_POOLING_ENABLED and stockfish_pool:
+                # Get engine from pool using context manager
+                self._engine_context = pool_get_stockfish_engine(self.skill_level)
+                # Correctly use the context manager
+                self.engine = self._engine_context.__enter__()
+                self.initialized = True
+                logger.info(f"Got Stockfish engine from pool with skill level {self.skill_level} in {time.time() - start_time:.2f} seconds")
+                return True
+            
             # Reuse existing engine if available and properly configured
             if stockfish_engine and self._is_engine_compatible(stockfish_engine, self.skill_level):
                 logger.info(f"Reusing existing Stockfish engine with skill level {self.skill_level}")
@@ -198,7 +369,7 @@ class ChessGame:
             self.engine_path = self._find_stockfish_executable()
             if not self.engine_path:
                 logger.error("Stockfish executable not found")
-                return False
+                raise EngineInitializationError("Stockfish executable not found")
             
             # Initialize new engine
             logger.info(f"Initializing Stockfish engine from: {self.engine_path}")
@@ -227,32 +398,81 @@ class ChessGame:
             logger.error(f"Stockfish initialization error: {e}")
             import traceback
             traceback.print_exc()
-            return False
-    
-    @cached_result(ttl=1)  # Cache FEN for 1 second
-    def get_fen(self):
-        if self.engine:
+            # Try to clean up any partially initialized engine
             try:
-                return self.engine.get_fen_position()
+                if hasattr(self, 'engine') and self.engine:
+                    if CONNECTION_POOLING_ENABLED and self._engine_context:
+                        try:
+                            self._engine_context.__exit__(None, None, None)
+                        except:
+                            pass
+                    else:
+                        # Stockfish doesn't have explicit close method, just dereference
+                        self.engine = None
+            except:
+                pass
+            self.initialized = False
+            raise EngineInitializationError(f"Failed to initialize Stockfish engine: {str(e)}") from e
+    
+    def __del__(self):
+        """Clean up engine when ChessGame instance is destroyed"""
+        try:
+            if self.initialized and self.engine:
+                if CONNECTION_POOLING_ENABLED and self._engine_context:
+                    try:
+                        self._engine_context.__exit__(None, None, None)
+                    except:
+                        pass
+                # Stockfish doesn't have explicit cleanup methods
+                self.engine = None
+        except Exception as e:
+            logger.warning(f"Error cleaning up engine: {e}")
+    
+    @cached('board_state')
+    @track_fen_retrieval
+    @handle_chess_errors(context="fen_retrieval")
+    def get_fen(self):
+        if self.engine and self.initialized:
+            try:
+                fen = self.engine.get_fen_position()
+                if fen is None:
+                    logger.warning("Stockfish returned None for FEN position")
+                return fen
             except Exception as e:
                 logger.error(f"Error getting FEN position: {e}")
-                return None
+                raise GameLogicError(f"Failed to get FEN position: {str(e)}") from e
+        else:
+            logger.warning("Engine not initialized when trying to get FEN")
+            raise EngineInitializationError("Engine not initialized")
         return None
     
+    @track_move_execution
+    @handle_chess_errors(context="move_execution")
     def make_move(self, move):
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
-            return False
-        # Clear FEN cache when making a move
-        self._fen_cache = None
+            raise EngineInitializationError("Engine not initialized")
+        # Validate move format
+        if not isinstance(move, str) or len(move) != 4:
+            logger.error(f"Invalid move format: {move}")
+            raise MoveValidationError(f"Invalid move format: {move}")
         try:
             # make_moves_from_current_position returns None on success, False on failure
             result = self.engine.make_moves_from_current_position([move])
-            return result is not False
+            success = result is not False
+            if not success:
+                logger.warning(f"Move {move} was rejected by Stockfish engine")
+                raise MoveValidationError(f"Move {move} was rejected by Stockfish engine")
+            return success
+        except MoveValidationError:
+            raise
         except Exception as e:
             logger.error(f"Error making move {move}: {e}")
-            return False
+            raise GameLogicError(f"Failed to execute move {move}: {str(e)}") from e
     
+    @cached('valid_moves')
+    @track_move_validation
+    @handle_chess_errors(context="move_validation")
     def is_move_correct(self, move):
         """
         Check if a move is correct using Stockfish's built-in validation for better performance.
@@ -260,7 +480,12 @@ class ChessGame:
         """
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
-            return False
+            raise EngineInitializationError("Engine not initialized")
+            
+        # Validate move format first
+        if not isinstance(move, str) or len(move) != 4:
+            logger.warning(f"Invalid move format: {move}")
+            raise MoveValidationError(f"Invalid move format: {move}")
             
         # First try using Stockfish's built-in validation (faster)
         try:
@@ -287,40 +512,53 @@ class ChessGame:
                 return move_successful
             except Exception as e:
                 logger.error(f"Position comparison method failed: {e}")
-                return False
+                raise MoveValidationError(f"Failed to validate move {move}: {str(e)}") from e
     
+    @cached('ai_move')
+    @track_ai_calculation
+    @handle_chess_errors(context="ai_move_calculation")
     def get_best_move(self):
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
-            return None
+            raise EngineInitializationError("Engine not initialized")
         try:
-            return self.engine.get_best_move()
+            best_move = self.engine.get_best_move()
+            if best_move is None:
+                logger.warning("Stockfish returned None for best move")
+            return best_move
         except Exception as e:
             logger.error(f"Error getting best move: {e}")
-            return None
+            raise GameLogicError(f"Failed to get best move: {str(e)}") from e
     
+    @cached('evaluation')
+    @handle_chess_errors(context="position_evaluation")
     def get_evaluation(self):
         """Get position evaluation from Stockfish"""
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
-            return None
+            raise EngineInitializationError("Engine not initialized")
         try:
             return self.engine.get_evaluation()
         except Exception as e:
             logger.error(f"Error getting evaluation: {e}")
-            return None
+            raise GameLogicError(f"Failed to get position evaluation: {str(e)}") from e
     
+    @cached('valid_moves')
+    @handle_chess_errors(context="top_moves")
     def get_top_moves(self, limit=5):
         """Get top moves from Stockfish"""
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
-            return []
+            raise EngineInitializationError("Engine not initialized")
         try:
             return self.engine.get_top_moves(limit)
         except Exception as e:
             logger.error(f"Error getting top moves: {e}")
-            return []
+            raise GameLogicError(f"Failed to get top moves: {str(e)}") from e
     
+    @cached('game_status')
+    @track_game_status_check
+    @handle_chess_errors(context="game_status_check")
     def get_game_status(self, fen):
         """
         Determine the game status (check, checkmate, stalemate) from the FEN string.
@@ -330,7 +568,7 @@ class ChessGame:
             return {'game_over': False}
         
         # Check for checkmate using Stockfish evaluation
-        if self.engine:
+        if self.engine and self.initialized:
             try:
                 # Get evaluation to check for checkmate
                 evaluation = self.engine.get_evaluation()
@@ -345,7 +583,8 @@ class ChessGame:
                         }
                     elif evaluation['type'] == 'cp' and evaluation['value'] == 0:
                         # Check for stalemate by seeing if any legal moves exist
-                        if not self.engine.get_best_move():
+                        best_move = self.engine.get_best_move()
+                        if not best_move:
                             return {
                                 'game_over': True,
                                 'result': 'stalemate'
@@ -356,24 +595,28 @@ class ChessGame:
                 pass
         
         # Fallback to original FEN-based detection
-        if '#' in fen:
-            # Check for checkmate
-            if ' w ' in fen:
-                # White to move, but in checkmate
-                if not any(c.isupper() for c in fen.split()[0] if c.isalpha()):
-                    return {
-                        'game_over': True,
-                        'result': 'checkmate',
-                        'winner': 'black'
-                    }
-            else:
-                # Black to move, but in checkmate
-                if not any(c.islower() for c in fen.split()[0] if c.isalpha()):
-                    return {
-                        'game_over': True,
-                        'result': 'checkmate',
-                        'winner': 'white'
-                    }
+        try:
+            if '#' in fen:
+                # Check for checkmate
+                if ' w ' in fen:
+                    # White to move, but in checkmate
+                    if not any(c.isupper() for c in fen.split()[0] if c.isalpha()):
+                        return {
+                            'game_over': True,
+                            'result': 'checkmate',
+                            'winner': 'black'
+                        }
+                else:
+                    # Black to move, but in checkmate
+                    if not any(c.islower() for c in fen.split()[0] if c.isalpha()):
+                        return {
+                            'game_over': True,
+                            'result': 'checkmate',
+                            'winner': 'white'
+                        }
+        except Exception as e:
+            logger.warning(f"FEN-based game status detection failed: {e}")
+            pass
         
         return {'game_over': False}
 
@@ -386,6 +629,7 @@ def index():
     return render_template('index.html')
 
 @socketio.on('connect')
+@handle_chess_errors(context="websocket_connect")
 def handle_connect():
     try:
         # Create a session ID for Socket.IO connection if it doesn't exist
@@ -399,8 +643,13 @@ def handle_connect():
         else:
             logger.info(f"Using existing session_id for WebSocket: {session.get('session_id')}")
             
-        # Update session timestamp
-        session_timestamps[session.get('session_id')] = time.time()
+        # Update session timestamp with existence check
+        session_id = session.get('session_id')
+        if session_id:
+            if session_id not in session_timestamps:
+                session_timestamps[session_id] = time.time()
+            else:
+                session_timestamps[session_id] = time.time()
             
         # Send connection confirmation
         emit('connected', {'status': 'success', 'message': 'Connected successfully'})
@@ -409,24 +658,74 @@ def handle_connect():
         emit('error', {'message': 'Connection error'})
 
 @socketio.on('disconnect')
+@handle_chess_errors(context="websocket_disconnect")
 def handle_disconnect():
     try:
         session_id = session.get('session_id')
         logger.info(f"WebSocket disconnect event received for session: {session_id}")
-        if session_id and session_id in games:
-            # Clean up game instance when user disconnects
-            del games[session_id]
-            global active_game_count
-            active_game_count = max(0, active_game_count - 1)  # Ensure it doesn't go below 0
-            logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
-            logger.info(f"Active games count: {active_game_count}")
+        if session_id:
+            if session_id in games:
+                # Clean up game instance when user disconnects
+                del games[session_id]
+                global active_game_count
+                active_game_count = max(0, active_game_count - 1)  # Ensure it doesn't go below 0
+                logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
+                logger.info(f"Active games count: {active_game_count}")
+            
+            # Remove timestamp
+            if session_id in session_timestamps:
+                del session_timestamps[session_id]
+                logger.info(f"Removed timestamp for session: {session_id}")
         
         # Send disconnection confirmation
         logger.info("Client disconnected successfully")
     except Exception as e:
         logger.error(f"Error in disconnect handler: {e}")
 
+# Add health check endpoint
+@app.route('/health')
+@handle_chess_errors(context="health_check")
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Check if we can create a simple ChessGame instance
+        game = ChessGame()
+        
+        # Get cache statistics if cache manager is enabled
+        cache_stats = {}
+        if CACHE_MANAGER_ENABLED and cache_manager:
+            cache_stats = cache_manager.get_cache_stats()
+        
+        # Get performance metrics if performance tracking is enabled
+        perf_metrics = {}
+        if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
+            perf_metrics = performance_tracker.get_metrics_summary()
+        
+        # Get error statistics if error handler is enabled
+        error_stats = {}
+        if ERROR_HANDLER_ENABLED and error_handler:
+            error_stats = error_handler.get_error_stats()
+        
+        # Get connection pool statistics if connection pooling is enabled
+        pool_stats = {}
+        if CONNECTION_POOLING_ENABLED and stockfish_pool:
+            pool_stats = stockfish_pool.get_stats()
+        
+        return {
+            'status': 'healthy',
+            'active_games': active_game_count,
+            'tracked_sessions': len(session_timestamps),
+            'cache_stats': cache_stats,
+            'performance_metrics': perf_metrics,
+            'error_stats': error_stats,
+            'pool_stats': pool_stats
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {'status': 'unhealthy', 'error': str(e)}, 500
+
 @socketio.on('init_game')
+@handle_chess_errors(context="game_initialization")
 def handle_init(data):
     start_time = time.time()
     logger.info(f"Game initialization requested with data: {data}")
@@ -450,7 +749,8 @@ def handle_init(data):
         if active_game_count >= MAX_CONCURRENT_GAMES:
             logger.warning(f"Maximum concurrent games reached ({MAX_CONCURRENT_GAMES}). Rejecting new game request.")
             emit('error', {'message': 'Server overload. Please try again later.'})
-            logger.info(f"Total initialization time: {time.time() - start_time:.2f} seconds")
+            total_init_time = time.time() - start_time
+            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
             return
         
         # Create a new game instance for this session
@@ -469,23 +769,50 @@ def handle_init(data):
             else:
                 session_timestamps[session_id] = time.time()
             fen = game.get_fen()
+            if fen is None:
+                logger.error("Failed to get initial FEN position")
+                emit('error', {'message': 'Ошибка получения начальной позиции. Попробуйте перезапустить игру.'})
+                # Clean up
+                if session_id in games:
+                    del games[session_id]
+                    active_game_count -= 1
+                return
             logger.info(f"Game initialized successfully. Initial FEN: {fen}")
             logger.info(f"Active games count: {active_game_count}")
             emit('game_initialized', {'fen': fen, 'player_color': player_color})
             logger.info("Sent game_initialized event to client")
-            logger.info(f"Total initialization time: {time.time() - start_time:.2f} seconds")
+            total_init_time = time.time() - start_time
+            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
         else:
             logger.error("Failed to initialize Stockfish engine")
             emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
-            logger.info(f"Total initialization time: {time.time() - start_time:.2f} seconds")
+            total_init_time = time.time() - start_time
+            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
+    except EngineInitializationError as e:
+        logger.error(f"Engine initialization error: {e}")
+        emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
+        # Re-enable start button on error
+        try:
+            emit('enable_start_button')
+        except:
+            pass  # Ignore if client is not connected
+        total_init_time = time.time() - start_time
+        logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
     except Exception as e:
         logger.error(f"Error initializing game: {e}")
         import traceback
         traceback.print_exc()
         emit('error', {'message': 'Ошибка инициализации игры. Пожалуйста, проверьте консоль для получения дополнительной информации.'})
-        logger.info(f"Total initialization time: {time.time() - start_time:.2f} seconds")
+        # Re-enable start button on error
+        try:
+            emit('enable_start_button')
+        except:
+            pass  # Ignore if client is not connected
+        total_init_time = time.time() - start_time
+        logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
 
 @socketio.on('make_move')
+@handle_chess_errors(context="move_processing")
 def handle_move(data):
     start_time = time.time()
     try:
@@ -500,10 +827,17 @@ def handle_move(data):
             return
 
         game = games[session_id]
-        uci_move = data['move']
+        uci_move = data.get('move')
+        
+        # Validate move exists
+        if not uci_move:
+            logger.error("No move provided in request")
+            emit('invalid_move', {'move': '', 'message': 'No move provided'})
+            return
 
         # Validate move format
         if not isinstance(uci_move, str) or len(uci_move) != 4:
+            logger.warning(f"Invalid move format: {uci_move}")
             emit('invalid_move', {'move': uci_move, 'message': 'Invalid move format'})
             return
 
@@ -516,12 +850,17 @@ def handle_move(data):
         if is_valid_move:
             move_execution_start = time.time()
             if not game.make_move(uci_move):
+                logger.warning(f"Move execution failed for move: {uci_move}")
                 emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
                 return
             move_execution_time = time.time() - move_execution_start
             logger.info(f"Move execution took {move_execution_time:.2f} seconds")
                 
             fen = game.get_fen()
+            if fen is None:
+                logger.error("Failed to get FEN after move execution")
+                emit('error', {'message': 'Ошибка получения позиции после хода'})
+                return
             
             # Update session timestamp
             if session_id not in session_timestamps:
@@ -541,7 +880,8 @@ def handle_move(data):
                     'fen': fen,
                     'winner': game_status.get('winner')
                 })
-                logger.info(f"Total move processing time: {time.time() - start_time:.2f} seconds")
+                total_move_time = time.time() - start_time
+                logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
                 return
 
             # AI move
@@ -553,12 +893,17 @@ def handle_move(data):
             if ai_move:
                 ai_move_execution_start = time.time()
                 if not game.make_move(ai_move):
+                    logger.warning(f"AI move execution failed for move: {ai_move}")
                     emit('position_update', {'fen': fen})
                     return
                 ai_move_execution_time = time.time() - ai_move_execution_start
                 logger.info(f"AI move execution took {ai_move_execution_time:.2f} seconds")
                     
                 fen = game.get_fen()
+                if fen is None:
+                    logger.error("Failed to get FEN after AI move execution")
+                    emit('error', {'message': 'Ошибка получения позиции после хода компьютера'})
+                    return
                 
                 # Check game status after AI move
                 game_status_start = time.time()
@@ -572,25 +917,47 @@ def handle_move(data):
                         'fen': fen,
                         'winner': game_status.get('winner')
                     })
-                    logger.info(f"Total move processing time: {time.time() - start_time:.2f} seconds")
+                    total_move_time = time.time() - start_time
+                    logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
                     return
                     
                 emit('position_update', {'fen': fen, 'ai_move': ai_move})
             else:
+                logger.warning("No AI move available")
                 emit('position_update', {'fen': fen})
                 
-            logger.info(f"Total move processing time: {time.time() - start_time:.2f} seconds")
+            total_move_time = time.time() - start_time
+            logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
         else:
+            logger.warning(f"Invalid move: {uci_move}")
             emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
-            logger.info(f"Total move processing time: {time.time() - start_time:.2f} seconds")
+            total_move_time = time.time() - start_time
+            logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
+    except MoveValidationError as e:
+        logger.warning(f"Move validation error: {e}")
+        emit('invalid_move', {'move': data.get('move', ''), 'message': str(e)})
+        total_move_time = time.time() - start_time
+        logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
+    except EngineInitializationError as e:
+        logger.error(f"Engine error during move processing: {e}")
+        emit('error', {'message': 'Ошибка движка. Попробуйте перезапустить игру.'})
+        total_move_time = time.time() - start_time
+        logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
+    except GameLogicError as e:
+        logger.error(f"Game logic error: {e}")
+        emit('error', {'message': 'Ошибка обработки хода'})
+        total_move_time = time.time() - start_time
+        logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
     except Exception as e:
         logger.error(f"Error processing move: {e}")
         import traceback
         traceback.print_exc()
         emit('error', {'message': 'Ошибка обработки хода'})
-        logger.info(f"Total move processing time: {time.time() - start_time:.2f} seconds")
+        total_move_time = time.time() - start_time
+        logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
 
 @socketio.on('analyze_position')
+@handle_chess_errors(context="position_analysis")
 def handle_analysis(data):
     """Analyze the current position and return evaluation"""
     try:
@@ -628,6 +995,7 @@ def handle_analysis(data):
         emit('error', {'message': 'Ошибка анализа позиции'})
 
 @socketio.on('save_preferences')
+@handle_chess_errors(context="preferences_save")
 def handle_save_preferences(data):
     """Save user preferences"""
     try:
@@ -648,6 +1016,7 @@ def handle_save_preferences(data):
         emit('error', {'message': 'Ошибка сохранения настроек'})
 
 @socketio.on('load_preferences')
+@handle_chess_errors(context="preferences_load")
 def handle_load_preferences():
     """Load user preferences"""
     try:
@@ -667,6 +1036,7 @@ def handle_load_preferences():
         emit('error', {'message': 'Ошибка загрузки настроек'})
 
 @socketio.on('save_game')
+@handle_chess_errors(context="game_save")
 def handle_save_game(data):
     """Save the current game state"""
     try:
@@ -677,9 +1047,16 @@ def handle_save_game(data):
 
         game = games[session_id]
         
+        # Get current FEN
+        fen = game.get_fen()
+        if fen is None:
+            logger.error("Failed to get FEN for game save")
+            emit('error', {'message': 'Ошибка получения позиции для сохранения'})
+            return
+        
         # Create game state object
         game_state = {
-            'fen': game.get_fen(),
+            'fen': fen,
             'player_color': game.player_color,
             'skill_level': game.skill_level,
             'game_history': game_histories.get(session_id, []) if session_id in game_histories else [],
@@ -687,7 +1064,12 @@ def handle_save_game(data):
         }
         
         # Serialize game state
-        serialized_state = base64.b64encode(pickle.dumps(game_state)).decode('utf-8')
+        try:
+            serialized_state = base64.b64encode(pickle.dumps(game_state)).decode('utf-8')
+        except Exception as e:
+            logger.error(f"Error serializing game state: {e}")
+            emit('error', {'message': 'Ошибка сериализации игры'})
+            return
         
         emit('game_saved', {
             'success': True,
@@ -699,6 +1081,7 @@ def handle_save_game(data):
         emit('error', {'message': 'Ошибка сохранения игры'})
 
 @socketio.on('load_game')
+@handle_chess_errors(context="game_load")
 def handle_load_game(data):
     """Load a saved game state"""
     try:
@@ -710,7 +1093,25 @@ def handle_load_game(data):
             return
         
         # Deserialize game state
-        game_state = pickle.loads(base64.b64decode(serialized_state.encode('utf-8')))
+        try:
+            game_state = pickle.loads(base64.b64decode(serialized_state.encode('utf-8')))
+        except Exception as e:
+            logger.error(f"Error deserializing game state: {e}")
+            emit('error', {'message': 'Ошибка десериализации сохраненной игры'})
+            return
+        
+        # Validate game state
+        if not isinstance(game_state, dict):
+            logger.error("Invalid game state format")
+            emit('error', {'message': 'Неверный формат сохраненной игры'})
+            return
+            
+        required_fields = ['player_color', 'skill_level', 'fen']
+        for field in required_fields:
+            if field not in game_state:
+                logger.error(f"Missing required field in game state: {field}")
+                emit('error', {'message': f'Отсутствует обязательное поле: {field}'})
+                return
         
         # Create new game instance with saved parameters
         game = ChessGame(game_state['player_color'], game_state['skill_level'])
@@ -722,27 +1123,54 @@ def handle_load_game(data):
             
         # Set position
         if game.engine:
-            game.engine.set_fen_position(game_state['fen'])
-            game.initialized = True
-            
-            # Store game in session
-            games[session_id] = game
-            
-            # Update session timestamp
-            session_timestamps[session_id] = time.time()
-            
-            emit('game_loaded', {
-                'fen': game_state['fen'],
-                'player_color': game_state['player_color'],
-                'skill_level': game_state['skill_level'],
-                'game_history': game_state.get('game_history', []),
-                'message': 'Игра загружена успешно'
-            })
+            try:
+                game.engine.set_fen_position(game_state['fen'])
+                game.initialized = True
+                
+                # Store game in session
+                games[session_id] = game
+                
+                # Update session timestamp
+                session_timestamps[session_id] = time.time()
+                
+                emit('game_loaded', {
+                    'fen': game_state['fen'],
+                    'player_color': game_state['player_color'],
+                    'skill_level': game_state['skill_level'],
+                    'game_history': game_state.get('game_history', []),
+                    'message': 'Игра загружена успешно'
+                })
+            except Exception as e:
+                logger.error(f"Error setting FEN position: {e}")
+                emit('error', {'message': 'Ошибка установки позиции доски'})
+                return
         else:
             emit('error', {'message': 'Не удалось инициализировать движок'})
     except Exception as e:
         logger.error(f"Error loading game: {e}")
         emit('error', {'message': 'Ошибка загрузки игры'})
+
+@app.route('/pool-stats')
+def pool_stats():
+    """Endpoint to get connection pool statistics"""
+    try:
+        # Test connection pooling if enabled
+        pool_stats = {}
+        if CONNECTION_POOLING_ENABLED and stockfish_pool:
+            pool_stats = stockfish_pool.get_stats()
+        
+        return {
+            'status': 'success',
+            'connection_pooling_enabled': CONNECTION_POOLING_ENABLED,
+            'pool_stats': pool_stats,
+            'timestamp': time.time()
+        }
+    except Exception as e:
+        logger.error(f"Pool stats endpoint failed: {e}")
+        return {
+            'status': 'error',
+            'error': str(e)
+        }, 500
 
 # Start cleanup thread
 cleanup_thread = threading.Thread(target=cleanup_stale_games, daemon=True)

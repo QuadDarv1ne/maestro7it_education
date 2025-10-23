@@ -210,6 +210,16 @@ socket.on('reconnect_failed', () => {
     showNotification('Не удалось переподключиться. Попробуйте обновить страницу.', 'error');
 });
 
+socket.on('enable_start_button', () => {
+    console.log('Enabling start button');
+    // Re-enable start button
+    const startBtn = document.getElementById('start');
+    if (startBtn) {
+        startBtn.disabled = false;
+        startBtn.textContent = 'Начать игру';
+    }
+});
+
 document.getElementById('start').addEventListener('click', () => {
     playerColor = document.getElementById('color').value;
     const level = document.getElementById('level').value;
@@ -1003,6 +1013,10 @@ socket.on('error', (data) => {
         errorMessage = 'Ошибка сессии. Попробуйте обновить страницу.';
     } else if (errorMessage.includes('overload') || errorMessage.includes('limit')) {
         errorMessage = 'Сервер перегружен. Попробуйте позже.';
+    } else if (errorMessage.includes('initialization')) {
+        errorMessage = 'Ошибка инициализации. Попробуйте перезапустить игру.';
+    } else if (errorMessage.includes('move')) {
+        errorMessage = 'Ошибка обработки хода. Попробуйте повторить ход.';
     }
     
     document.getElementById('status').innerText = '⚠️ Ошибка: ' + errorMessage;
