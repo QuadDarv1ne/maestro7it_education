@@ -3191,7 +3191,7 @@ class ChessGame:
                             pass
                         
                         # Аннотируем ход
-                        annotated_move = self._annotate_move(ai_move, is_capture, is_check, is_mate, is_castling)
+                        annotated_move = self._annotate_move_internal(ai_move, is_capture, is_check, is_mate, is_castling)
                         
                         if is_capture:
                             self.game_stats['ai_capture_count'] += 1

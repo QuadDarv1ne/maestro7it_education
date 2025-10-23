@@ -1,0 +1,10 @@
+# Patch file to remove duplicate methods in chess_game.py
+
+# Remove duplicate _execute_ai_move method (lines ~3017-3145)
+# Remove duplicate _execute_ai_move method (lines ~3146-3272)
+
+# This patch would remove the duplicate methods that are causing code bloat
+# and potential maintenance issues.
+
+# The duplicate methods were exact copies of the original method and should be removed
+# to maintain a clean, efficient codebase.
