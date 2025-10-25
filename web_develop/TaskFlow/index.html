@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Flow - Умный менеджер задач</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-decoration">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+        <div class="circle circle-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">✓</span>
+                <h1>Task Flow</h1>
+            </div>
+            <p class="subtitle">Управляйте своим временем эффективно</p>
+            <div class="current-date" id="currentDate"></div>
+        </header>
+
+        <div class="stats-container">
+            <div class="stats">
+                <div class="stat-card" data-stat="total">
+                    <div class="stat-icon">📊</div>
+                    <span class="stat-number" id="totalTasks">0</span>
+                    <span class="stat-label">Всего задач</span>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" id="totalProgress"></div>
+                    </div>
+                </div>
+                <div class="stat-card" data-stat="active">
+                    <div class="stat-icon">⚡</div>
+                    <span class="stat-number" id="activeTasks">0</span>
+                    <span class="stat-label">Активных</span>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" id="activeProgress"></div>
+                    </div>
+                </div>
+                <div class="stat-card" data-stat="completed">
+                    <div class="stat-icon">🎯</div>
+                    <span class="stat-number" id="completedTasks">0</span>
+                    <span class="stat-label">Выполнено</span>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" id="completedProgress"></div>
+                    </div>
+                </div>
+                <div class="stat-card" data-stat="productivity">
+                    <div class="stat-icon">📈</div>
+                    <span class="stat-number" id="productivityScore">0%</span>
+                    <span class="stat-label">Продуктивность</span>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" id="productivityProgress"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="add-task-section">
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="taskInput" 
+                    placeholder="✍️ Что нужно сделать?" 
+                    maxlength="150"
+                >
+                <span class="char-counter" id="charCounter">0/150</span>
+            </div>
+            
+            <div class="task-options">
+                <div class="option-group">
+                    <label>Приоритет</label>
+                    <select id="prioritySelect">
+                        <option value="low">🟢 Низкий</option>
+                        <option value="medium" selected>🟡 Средний</option>
+                        <option value="high">🔴 Высокий</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label>Категория</label>
+                    <select id="categorySelect">
+                        <option value="work">💼 Работа</option>
+                        <option value="personal">🏠 Личное</option>
+                        <option value="shopping">🛒 Покупки</option>
+                        <option value="health">💪 Здоровье</option>
+                        <option value="study">📚 Обучение</option>
+                        <option value="other">📌 Другое</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label>Срок выполнения</label>
+                    <input type="date" id="dueDateInput">
+                </div>
+            </div>
+            
+            <button id="addTaskBtn" class="btn-primary">
+                <span class="btn-icon">+</span>
+                <span class="btn-text">Добавить задачу</span>
+            </button>
+        </div>
+
+        <div class="controls-section">
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">
+                    <span>📋</span> Все
+                </button>
+                <button class="filter-btn" data-filter="active">
+                    <span>⚡</span> Активные
+                </button>
+                <button class="filter-btn" data-filter="completed">
+                    <span>✅</span> Выполненные
+                </button>
+                <button class="filter-btn" data-filter="high">
+                    <span>🔥</span> Важные
+                </button>
+                <button class="filter-btn" data-filter="today">
+                    <span>📅</span> Сегодня
+                </button>
+            </div>
+
+            <div class="view-controls">
+                <button class="view-btn active" data-view="list">
+                    <span>☰</span>
+                </button>
+                <button class="view-btn" data-view="grid">
+                    <span>▦</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="search-sort-section">
+            <div class="search-wrapper">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="🔍 Поиск задач..."
+                >
+            </div>
+            
+            <div class="sort-wrapper">
+                <select id="sortSelect">
+                    <option value="dateNew">Сначала новые</option>
+                    <option value="dateOld">Сначала старые</option>
+                    <option value="priority">По приоритету</option>
+                    <option value="alphabetical">По алфавиту</option>
+                    <option value="dueDate">По сроку</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="task-list-header">
+            <h3>Список задач</h3>
+            <div class="task-count">
+                <span id="visibleTaskCount">0</span> задач
+            </div>
+        </div>
+
+        <div id="taskList" class="task-list list-view">
+            <!-- Задачи будут добавляться динамически -->
+        </div>
+
+        <div class="actions">
+            <button id="exportBtn" class="action-btn">
+                <span>📥</span> Экспорт задач
+            </button>
+            <button id="clearCompletedBtn" class="action-btn">
+                <span>🗑️</span> Очистить выполненные
+            </button>
+            <button id="clearAllBtn" class="action-btn danger">
+                <span>⚠️</span> Удалить все
+            </button>
+        </div>
+
+        <footer>
+            <div class="footer-content">
+                <p>© 2025 Task Flow - Ваш персональный помощник в управлении задачами</p>
+                <p>Разработано с ❤️ | <a href="mailto:maksimqwe42@mail.ru">maksimqwe42@mail.ru</a></p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Модальное окно подтверждения -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Подтверждение</h3>
+            <p id="modalMessage">Вы уверены?</p>
+            <div class="modal-actions">
+                <button id="modalConfirm" class="btn-primary">Да</button>
+                <button id="modalCancel" class="btn-secondary">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
