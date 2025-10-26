@@ -12,7 +12,7 @@ import json
 from typing import Dict, List
 
 # Добавляем путь к проекту
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from engine.stockfish_wrapper import StockfishWrapper
 from utils.performance_monitor import PerformanceMonitor, PerformanceTimer

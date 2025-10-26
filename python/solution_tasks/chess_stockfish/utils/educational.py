@@ -15,6 +15,8 @@
     - Стратегические советы
     - Исторические факты о шахматах
     - Информация о дебютах и их характеристиках
+    - Интерактивные шахматные головоломки и задачи
+    - Прогресс обучения и достижения
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -115,6 +117,40 @@ TACTICAL_MOTIVS = [
     "Жертва - добровольное пожертвование материала ради позиционных преимуществ."
 ]
 
+# Интерактивные шахматные головоломки
+CHESS_PUZZLES = [
+    {
+        "name": "Мат в 1 ход",
+        "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1",
+        "solution": "f3g5",
+        "description": "Белые ставят мат в один ход"
+    },
+    {
+        "name": "Вилка конем",
+        "fen": "r1bq1rk1/pp2bppp/2n2n2/2pp4/4P3/2PB1N2/PP3PPP/RNBQ1RK1 w - - 0 1",
+        "solution": "d3h7",
+        "description": "Белые создают вилку конем, атакуя короля и ладью"
+    },
+    {
+        "name": "Связка",
+        "fen": "r1bq1rk1/pp2bppp/2n2n2/2pp4/4P3/2PB1N2/PP3PPP/RNBQ1RK1 b - - 0 1",
+        "solution": "c8g4",
+        "description": "Черные связывают коня, атакуя ферзя и коня"
+    }
+]
+
+# Достижения в обучении
+ACHIEVEMENTS = {
+    "first_game": {"name": "Первая игра", "description": "Сыграйте свою первую партию"},
+    "first_win": {"name": "Первая победа", "description": "Выиграйте свою первую партию"},
+    "tactical_master": {"name": "Тактический мастер", "description": "Решите 10 тактических задач"},
+    "opening_expert": {"name": "Эксперт по дебютам", "description": "Изучите 5 разных дебютов"},
+    "endgame_king": {"name": "Король эндшпиля", "description": "Выиграйте 3 партии в эндшпилях"},
+    "patience": {"name": "Терпение", "description": "Сыграйте партию дольше 30 ходов"},
+    "aggressive": {"name": "Агрессивный игрок", "description": "Сделайте 20 взятий"},
+    "defender": {"name": "Защитник", "description": "Спасите партию из проигранной позиции"}
+}
+
 class ChessEducator:
     """
     Класс для предоставления образовательных материалов по шахматам.
@@ -124,6 +160,15 @@ class ChessEducator:
         self.move_counter = 0
         self.last_tip_time = 0
         self.tips_shown = set()
+        self.puzzles_solved = 0
+        self.openings_learned = set()
+        self.achievements_unlocked = set()
+        self.learning_progress = {
+            "tactics": 0,
+            "openings": 0,
+            "endgames": 0,
+            "strategy": 0
+        }
         # Импортируем OpeningBook внутри класса чтобы избежать циклических импортов
         from utils.opening_book import OpeningBook
         self.opening_book = OpeningBook()
@@ -239,3 +284,83 @@ class ChessEducator:
                 return f"⚔️ Тактика: {self.get_tactical_motiv()}"
         
         return None
+    
+    def get_random_puzzle(self) -> Dict:
+        """
+        Получить случайную шахматную головоломку.
+        
+        Возвращает:
+            Dict: Словарь с головоломкой
+        """
+        return random.choice(CHESS_PUZZLES)
+    
+    def check_puzzle_solution(self, puzzle: Dict, user_move: str) -> bool:
+        """
+        Проверить решение головоломки.
+        
+        Параметры:
+            puzzle (Dict): Головоломка
+            user_move (str): Ход пользователя
+            
+        Возвращает:
+            bool: True если решение верное
+        """
+        is_correct = puzzle["solution"] == user_move
+        if is_correct:
+            self.puzzles_solved += 1
+            self.learning_progress["tactics"] += 1
+            self._check_achievements()
+        return is_correct
+    
+    def get_learning_progress(self) -> Dict:
+        """
+        Получить прогресс обучения.
+        
+        Возвращает:
+            Dict: Словарь с прогрессом обучения
+        """
+        return self.learning_progress.copy()
+    
+    def get_unlocked_achievements(self) -> List[str]:
+        """
+        Получить список разблокированных достижений.
+        
+        Возвращает:
+            List[str]: Список разблокированных достижений
+        """
+        return list(self.achievements_unlocked)
+    
+    def _check_achievements(self):
+        """Проверить и разблокировать достижения."""
+        # Проверяем достижения
+        if "first_game" not in self.achievements_unlocked:
+            self.achievements_unlocked.add("first_game")
+            
+        if self.puzzles_solved >= 10 and "tactical_master" not in self.achievements_unlocked:
+            self.achievements_unlocked.add("tactical_master")
+            
+        if len(self.openings_learned) >= 5 and "opening_expert" not in self.achievements_unlocked:
+            self.achievements_unlocked.add("opening_expert")
+    
+    def add_learned_opening(self, opening_name: str):
+        """
+        Добавить изученный дебют.
+        
+        Параметры:
+            opening_name (str): Название дебюта
+        """
+        self.openings_learned.add(opening_name)
+        self.learning_progress["openings"] += 1
+        self._check_achievements()
+    
+    def get_achievement_info(self, achievement_key: str) -> Optional[Dict]:
+        """
+        Получить информацию о достижении.
+        
+        Параметры:
+            achievement_key (str): Ключ достижения
+            
+        Возвращает:
+            Dict: Информация о достижении или None
+        """
+        return ACHIEVEMENTS.get(achievement_key)

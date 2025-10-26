@@ -364,4 +364,38 @@ class SoundManager:
             bool: True если фоновая музыка включена
         """
         return self.music_enabled and self._initialized
+    
+    def cleanup(self):
+        """
+        Очистка всех звуковых ресурсов.
+        """
+        try:
+            # Останавливаем фоновую музыку
+            self.stop_background_music()
+            
+            # Останавливаем все воспроизводимые звуки
+            pygame.mixer.stop()
+            
+            # Освобождаем звуковые файлы
+            for sound in self.sounds.values():
+                try:
+                    sound.stop()
+                except:
+                    pass
+            self.sounds.clear()
+            
+            # Выгружаем звуковую систему
+            pygame.mixer.quit()
+            
+        except Exception as e:
+            logging.warning(f"Error during sound cleanup: {e}")
+    
+    def __del__(self):
+        """
+        Деструктор для автоматической очистки ресурсов.
+        """
+        try:
+            self.cleanup()
+        except:
+            pass
 

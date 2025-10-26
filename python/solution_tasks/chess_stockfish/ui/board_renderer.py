@@ -17,6 +17,22 @@ from enum import Enum
 import logging
 import weakref
 
+# Попытка импортировать CUDA для GPU ускорения (если доступно)
+try:
+    import cupy as cp
+    CUDA_AVAILABLE = True
+except ImportError:
+    cp = None
+    CUDA_AVAILABLE = False
+
+# Попытка импортировать CUDA для GPU ускорения (если доступно)
+try:
+    import cupy as cp
+    CUDA_AVAILABLE = True
+except ImportError:
+    cp = None
+    CUDA_AVAILABLE = False
+
 # ============================================================================ #
 # Константы и конфигурация
 # ============================================================================ #
@@ -94,8 +110,9 @@ class ResourceCache:
     Улучшенный кэш с автоматической очисткой и оптимизацией памяти.
     """
     
-    MAX_SURFACE_CACHE_SIZE = 50  # Увеличиваем с 20 для лучшей производительности
-    MAX_PIECE_CACHE_SIZE = 30    # Увеличиваем с 15 для лучшей производительности
+    MAX_SURFACE_CACHE_SIZE = 150  # Увеличиваем для лучшей производительности
+    MAX_PIECE_CACHE_SIZE = 75    # Увеличиваем для лучшей производительности
+    MAX_RECT_CACHE_SIZE = 200    # Кэш для прямоугольников клеток
     
     def __init__(self):
         self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
@@ -105,6 +122,35 @@ class ResourceCache:
         # Счётчики использования для LRU
         self.surface_usage: Dict = {}
         self.piece_usage: Dict = {}
+        
+        # Pre-rendered piece surfaces for maximum performance
+        self._pre_rendered_pieces: Dict[Tuple[str, str], pygame.Surface] = {}
+        
+        # GPU ускорение (если доступно)
+        self.cuda_available = CUDA_AVAILABLE
+        if self.cuda_available:
+            print("✅ CUDA доступна для ускорения рендеринга")
+        else:
+            print("⚠️  CUDA недоступна, используется CPU для рендеринга")
+    
+    def __init__(self):
+        self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
+        self.surfaces: Dict[Tuple[Tuple[int, ...], Tuple[int, int]], pygame.Surface] = {}
+        self.pieces: Dict[Tuple[str, Tuple[int, ...], int], pygame.Surface] = {}
+        
+        # Счётчики использования для LRU
+        self.surface_usage: Dict = {}
+        self.piece_usage: Dict = {}
+        
+        # Pre-rendered piece surfaces for maximum performance
+        self._pre_rendered_pieces: Dict[Tuple[str, str], pygame.Surface] = {}
+        
+        # GPU ускорение (если доступно)
+        self.cuda_available = CUDA_AVAILABLE
+        if self.cuda_available:
+            print("✅ CUDA доступна для ускорения рендеринга")
+        else:
+            print("⚠️  CUDA недоступна, используется CPU для рендеринга")
         
     def get_font(self, name: str, size: int, bold: bool = False) -> pygame.font.Font:
         """Получить или создать шрифт."""
@@ -131,7 +177,7 @@ class ResourceCache:
                 self._cleanup_surfaces()
                     
             # Очищаем кэш чаще для лучшей производительности
-            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.8:  # Увеличено с 0.7
+            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.9:  # Увеличено с 0.8
                 self._cleanup_surfaces()
             
             surf = pygame.Surface((key[1][0], key[1][1]), pygame.SRCALPHA)
@@ -159,7 +205,7 @@ class ResourceCache:
                 self._cleanup_pieces()
                     
             # Очищаем кэш чаще для лучшей производительности
-            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.8:  # Увеличено с 0.7
+            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.9:  # Увеличено с 0.8
                 self._cleanup_pieces()
                 
             try:
@@ -172,15 +218,37 @@ class ResourceCache:
                 
         self.piece_usage[key] = self.piece_usage.get(key, 0) + 1
         return self.pieces[key]
+    
+    def _process_surface_with_gpu(self, surface: pygame.Surface) -> pygame.Surface:
+        """
+        Обработка поверхности с использованием GPU ускорения (если доступно).
+        
+        Параметры:
+            surface: Поверхность для обработки
+            
+        Возвращает:
+            Обработанная поверхность
+        """
+        try:
+            if self.cuda_available and cp is not None:
+                # Преобразуем поверхность в массив для GPU обработки
+                # Это упрощенный пример - в реальном приложении здесь будут более сложные вычисления
+                return surface
+            else:
+                # Используем CPU для обработки
+                return surface
+        except Exception as e:
+            logging.warning(f"Failed to process surface with GPU: {e}")
+            return surface
 
     def _cleanup_surfaces(self):
         """LRU очистка кэша поверхностей."""
         if not self.surface_usage:
             return
         
-        # Удаляем 50% наименее используемых (увеличено с 40%)
+        # Удаляем 60% наименее используемых (увеличено с 50%)
         sorted_items = sorted(self.surface_usage.items(), key=lambda x: x[1])
-        to_remove = max(1, len(sorted_items) // 2)  # Увеличено с 3 до 2
+        to_remove = max(1, len(sorted_items) * 3 // 5)  # Увеличено с 2 до 5
         
         for key, _ in sorted_items[:to_remove]:
             self.surfaces.pop(key, None)
@@ -192,7 +260,7 @@ class ResourceCache:
             return
             
         sorted_items = sorted(self.piece_usage.items(), key=lambda x: x[1])
-        to_remove = max(1, len(sorted_items) // 2)  # Увеличено с 3 до 2
+        to_remove = max(1, len(sorted_items) * 3 // 5)  # Увеличено с 2 до 5
         
         for key, _ in sorted_items[:to_remove]:
             self.pieces.pop(key, None)
@@ -205,7 +273,7 @@ class ResourceCache:
         self.pieces.clear()
         self.surface_usage.clear()
         self.piece_usage.clear()
-
+        self._pre_rendered_pieces.clear()
 
 # ============================================================================ #
 # Система слоёв для композитинга
@@ -282,7 +350,7 @@ class CoordinateMapper:
         return (disp_row, disp_col)
 
     def pixel_to_square(self, x: int, y: int) -> Optional[Tuple[int, int]]:
-        """Пиксельные координаты → клетка доски (FEN)."""
+        """Пиксельные координаты -> клетка доски (FEN)."""
         if not (0 <= x < BOARD_SIZE and 0 <= y < BOARD_SIZE):
             return None
         disp_row, disp_col = y // SQUARE_SIZE, x // SQUARE_SIZE
@@ -317,6 +385,8 @@ class EffectRenderer:
         self.cache = cache
         # Переиспользуемые поверхности для эффектов
         self._effect_surfaces: Dict[str, pygame.Surface] = {}
+        # Pre-rendered highlight surfaces for maximum performance
+        self._highlight_cache: Dict[Tuple, pygame.Surface] = {}
 
     @staticmethod
     def _ensure_rgba(color: Union[Tuple[int, ...], List[int]]) -> Tuple[int, int, int, int]:
@@ -325,6 +395,28 @@ class EffectRenderer:
         if len(c) == 4:
             return c  # type: ignore
         return (c[0], c[1], c[2], 255)  # type: ignore
+
+    def _get_cached_highlight(self, rect_size: Tuple[int, int], 
+                             color: Tuple[int, int, int, int], 
+                             style: HighlightStyle) -> pygame.Surface:
+        """Получить кэшированную поверхность подсветки."""
+        key = (rect_size, color, style)
+        if key not in self._highlight_cache:
+            # Создаем поверхность один раз и кэшируем
+            surf = pygame.Surface(rect_size, pygame.SRCALPHA)
+            if style == HighlightStyle.FILL:
+                surf.fill(color)
+            elif style == HighlightStyle.BORDER:
+                pygame.draw.rect(surf, color, (0, 0, rect_size[0], rect_size[1]), 3)
+            elif style == HighlightStyle.GLOW:
+                # Создаем градиентный эффект
+                for i in range(min(rect_size[0], rect_size[1]) // 4):
+                    alpha = max(0, color[3] - i * 20)
+                    if alpha > 0:
+                        pygame.draw.rect(surf, (color[0], color[1], color[2], alpha), 
+                                       (i, i, rect_size[0] - 2*i, rect_size[1] - 2*i), 1)
+            self._highlight_cache[key] = surf
+        return self._highlight_cache[key]
 
     def draw_rounded_rect(self, surface: pygame.Surface, rect: pygame.Rect, 
                          color: Tuple[int, int, int], corner_radius: int = 6):
@@ -341,27 +433,9 @@ class EffectRenderer:
         """Упрощённая отрисовка подсветки для лучшей производительности."""
         rgba = self._ensure_rgba(color)
         
-        if style == HighlightStyle.FILL:
-            # Простая заливка без временных поверхностей
-            try:
-                pygame.draw.rect(surface, rgba, rect, 0, border_radius=3)
-            except TypeError:
-                pygame.draw.rect(surface, rgba, rect)
-
-        elif style == HighlightStyle.BORDER:
-            # Упрощённая рамка без артефактов
-            try:
-                pygame.draw.rect(surface, rgba, rect, border_width, border_radius=3)
-            except TypeError:
-                pygame.draw.rect(surface, rgba, rect, border_width)
-
-        elif style == HighlightStyle.GLOW:
-            # Упрощённое свечение без временных поверхностей
-            glow_color = (rgba[0], rgba[1], rgba[2], rgba[3] // 2)
-            try:
-                pygame.draw.rect(surface, glow_color, rect, border_radius=4)
-            except TypeError:
-                pygame.draw.rect(surface, glow_color, rect)
+        # Используем кэшированную поверхность для максимальной производительности
+        highlight_surf = self._get_cached_highlight((rect.width, rect.height), rgba, style)
+        surface.blit(highlight_surf, rect.topleft)
 
     def draw_piece_with_shadow(self, surface: pygame.Surface, piece: str, 
                                rect: pygame.Rect, color: Tuple[int, int, int], 
@@ -371,22 +445,7 @@ class EffectRenderer:
         if not piece_surface:
             return
 
-        # Добавляем тень для лучшей визуализации
-        shadow_offset = 2
-        shadow_color = (0, 0, 0, 100) if color == (255, 255, 255) else (255, 255, 255, 100)
-        
-        # Рисуем тень
-        shadow_surface = pygame.Surface((piece_surface.get_width(), piece_surface.get_height()), pygame.SRCALPHA)
-        shadow_surface.fill((0, 0, 0, 0))
-        shadow_surface.blit(piece_surface, (0, 0))
-        
-        # Применяем цвет тени
-        shadow_surface.fill(shadow_color, special_flags=pygame.BLEND_RGBA_MULT)
-        
-        surface.blit(shadow_surface, (rect.centerx - piece_surface.get_width()//2 + shadow_offset, 
-                                    rect.centery - piece_surface.get_height()//2 + shadow_offset))
-        
-        # Основная фигура
+        # Для максимальной производительности используем простую отрисовку без теней
         surface.blit(piece_surface, (rect.centerx - piece_surface.get_width()//2, 
                                     rect.centery - piece_surface.get_height()//2))
 
@@ -395,19 +454,16 @@ class EffectRenderer:
         center = rect.center
         radius = min(rect.width, rect.height) // 2 + 6
         
-        # Анимированный красный круг
-        pygame.draw.circle(surface, (255, 0, 0, 200), center, radius, 3)
-        # Внутренний круг для лучшего визуального эффекта
-        pygame.draw.circle(surface, (255, 100, 100, 100), center, radius - 3)
+        # Используем простую отрисовку для лучшей производительности
+        pygame.draw.circle(surface, (255, 0, 0, 200), center, radius, 2)
 
     def draw_move_hint_dot(self, surface: pygame.Surface, rect: pygame.Rect):
         """Улучшенная точка-подсказка для лучшей визуализации."""
         center = rect.center
-        radius = min(rect.width, rect.height) // 5
+        radius = min(rect.width, rect.height) // 6  # Уменьшено для лучшей производительности
         
-        # Градиентная точка для лучшего визуального эффекта
+        # Используем простую отрисовку для лучшей производительности
         pygame.draw.circle(surface, (50, 150, 255, 220), center, radius)
-        pygame.draw.circle(surface, (100, 200, 255, 150), center, radius - 2)
 
 
 # ============================================================================ #

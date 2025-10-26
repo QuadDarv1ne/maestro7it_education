@@ -30,6 +30,9 @@ import time
 import threading
 import weakref
 
+# Импортируем пул движков
+from engine.stockfish_pool import get_stockfish_pool, cleanup_stockfish_pool
+
 
 class StockfishWrapper:
     """
@@ -44,7 +47,7 @@ class StockfishWrapper:
     
     def __init__(self, skill_level=5, depth=15, path=None):
         """
-        Инициализация Stockfish движка.
+        Инициализация Stockfish движка с использованием пула подключений.
         
         Параметры:
             skill_level (int): Уровень сложности (0-20), по умолчанию 5
@@ -71,34 +74,22 @@ class StockfishWrapper:
         self._max_cache_size = 50
         self._cache_access_count = {}
         
-        # Проверка наличия исполняемого файла Stockfish
-        stockfish_path = path
-        if stockfish_path is None:
-            # Попробуем найти Stockfish в PATH
-            stockfish_path = shutil.which("stockfish")
-            if stockfish_path is None:
-                print("⚠️  Stockfish не найден в PATH. Убедитесь, что он установлен.")
-                print("💡 Решение:")
-                print("   1. Скачайте Stockfish с https://stockfishchess.org/download/")
-                print("   2. Распакуйте в папку и добавьте её в PATH")
-                print("   3. Или запустите install_stockfish.bat")
-                raise RuntimeError("Stockfish executable not found in PATH")
-        
-        # Проверим, что файл существует, если указан конкретный путь
-        if path is not None and not os.path.exists(path):
-            raise RuntimeError(f"❌ Файл Stockfish не найден по пути: {path}")
-        
+        # Получаем движок из пула вместо создания нового
         try:
-            # Handle the case where path might be None
-            if path is not None:
-                self.engine = Stockfish(path=path)
-            else:
-                # Используем найденный путь или путь по умолчанию
-                self.engine = Stockfish(path=stockfish_path) if stockfish_path else Stockfish()
+            # Получаем пул движков
+            self._pool = get_stockfish_pool(path=path, skill_level=skill_level, depth=depth)
+            # Получаем движок из пула
+            self.engine = self._pool.get_engine()
+            
+            if self.engine is None:
+                raise RuntimeError("Не удалось получить движок из пула")
+            
+            # Настраиваем движок
             self.engine.set_skill_level(self.skill_level)
             self.engine.set_depth(self.depth)
+            
         except Exception as e:
-            raise RuntimeError(f"❌ Не удалось запустить Stockfish: {e}. Убедитесь, что Stockfish установлен и доступен.")
+            raise RuntimeError(f"❌ Не удалось получить Stockfish движок из пула: {e}")
     
     def _cleanup_cache(self):
         """Очистка кэша по LRU алгоритму при превышении максимального размера."""
@@ -139,10 +130,10 @@ class StockfishWrapper:
             fen = self.engine.get_fen_position()
             # Check cache first with more aggressive caching
             if self.board_state_cache_fen == fen and self.board_state_cache is not None:
-                # Проверяем время кэша - используем кэш до 1500 мс (увеличено с 750 мс для более агрессивного кэширования)
+                # Проверяем время кэша - используем кэш до 2 секунд (увеличено с 1.5 секунд)
                 if hasattr(self, '_last_board_cache_time'):
                     current_time = time.time()
-                    if (current_time - self._last_board_cache_time) < 1.5:
+                    if (current_time - self._last_board_cache_time) < 2.0:
                         return self.board_state_cache  # type: ignore
             
             board_str = fen.split()[0]
@@ -419,7 +410,7 @@ class StockfishWrapper:
         try:
             current_time = time.time()
             
-            # Более агрессивное кэширование - увеличиваем время до 30 секунд
+            # Более агрессивное кэширование - увеличиваем время до 180 секунд (увеличено с 120 секунд)
             if (self.evaluation_cache is not None and 
                 self.evaluation_cache_fen is not None and
                 hasattr(self, '_last_eval_time')):
@@ -427,11 +418,11 @@ class StockfishWrapper:
                 time_since_last_eval = current_time - self._last_eval_time
                 # Используем кэш если:
                 # 1. FEN не изменился, или
-                # 2. Прошло меньше 20 секунд с последней оценки, или
-                # 3. Прошло меньше 1.5 секунд (очень свежий кэш)
+                # 2. Прошло меньше 45 секунд с последней оценки, или
+                # 3. Прошло меньше 3 секунды (очень свежий кэш)
                 if (current_fen == self.evaluation_cache_fen or 
-                    time_since_last_eval < 20.0 or
-                    time_since_last_eval < 1.5):
+                    time_since_last_eval < 45.0 or
+                    time_since_last_eval < 3.0):
                     return self.evaluation_cache
             
             # Засекаем время для диагностики только если кэш не используется
@@ -439,8 +430,8 @@ class StockfishWrapper:
             eval_score = self.engine.get_evaluation()
             eval_time = time.time() - start_time
             
-            # Выводим предупреждение только если оценка занимает больше 100 мс
-            if eval_time > 0.1:  # Увеличено с 50 мс до 100 мс
+            # Выводим предупреждение только если оценка занимает больше 80 мс (увеличено с 100 мс)
+            if eval_time > 0.08:  # Уменьшено с 0.1 для более чувствительного мониторинга
                 print(f"⚠️  Slow evaluation: {eval_time:.4f} seconds")
             
             if eval_score and 'value' in eval_score:
@@ -609,7 +600,7 @@ class StockfishWrapper:
             return {}
     
     def quit(self):
-        """Закрывает соединение с Stockfish и освобождает ресурсы."""
+        """Возвращает движок в пул и освобождает ресурсы."""
         with self._lock:  # Потокобезопасное завершение
             if self.engine is None or self._process_cleaned_up:
                 return
@@ -617,37 +608,13 @@ class StockfishWrapper:
             try:
                 # Помечаем, что процесс уже очищен
                 self._process_cleaned_up = True
-                # Безопасно закрываем движок
-                if hasattr(self.engine, '_stockfish'):
-                    # Закрываем stdin/stdout/stderr потоки
-                    try:
-                        if hasattr(self.engine._stockfish, 'stdin') and self.engine._stockfish.stdin:
-                            self.engine._stockfish.stdin.close()
-                    except:
-                        pass
-                    try:
-                        if hasattr(self.engine._stockfish, 'stdout') and self.engine._stockfish.stdout:
-                            self.engine._stockfish.stdout.close()
-                    except:
-                        pass
-                    try:
-                        if hasattr(self.engine._stockfish, 'stderr') and self.engine._stockfish.stderr:
-                            self.engine._stockfish.stderr.close()
-                    except:
-                        pass
-                    # Завершаем процесс
-                    try:
-                        if hasattr(self.engine._stockfish, 'terminate'):
-                            self.engine._stockfish.terminate()
-                    except:
-                        pass
-                    try:
-                        if hasattr(self.engine._stockfish, 'wait'):
-                            self.engine._stockfish.wait(timeout=1)
-                    except:
-                        pass
+                
+                # Возвращаем движок в пул вместо закрытия
+                if hasattr(self, '_pool') and self._pool and self.engine:
+                    self._pool.return_engine(self.engine)
+                
             except Exception as e:
-                # Игнорируем ошибки при закрытии, чтобы не прерывать выполнение программы
-                pass
+                # Игнорируем ошибки при возврате в пул
+                print(f"⚠️  Ошибка при возврате движка в пул: {e}")
             finally:
                 self.engine = None

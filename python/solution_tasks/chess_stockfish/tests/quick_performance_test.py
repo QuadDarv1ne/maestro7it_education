@@ -75,8 +75,8 @@ def test_move_validation_performance():
     # Создаем движок
     engine = StockfishWrapper(skill_level=3)
     
-    # Тестовые ходы
-    test_moves = ['e2e4', 'e7e5', 'g1f3', 'b8c6']
+    # Тестовые ходы (используем ходы, которые точно корректны в начальной позиции)
+    test_moves = ['e2e4', 'd2d4', 'g1f3', 'b1c3']
     
     # Измеряем время валидации
     start_time = time.perf_counter()
