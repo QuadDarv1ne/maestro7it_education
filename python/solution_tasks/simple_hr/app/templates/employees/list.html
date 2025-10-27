@@ -8,6 +8,51 @@
     <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary">Добавить сотрудника</a>
 </div>
 
+<!-- Форма фильтрации -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">Поиск</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ current_search or '' }}" placeholder="ФИО, email, табельный номер">
+            </div>
+            <div class="col-md-3">
+                <label for="department_id" class="form-label">Подразделение</label>
+                <select class="form-select" id="department_id" name="department_id">
+                    <option value="">Все подразделения</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if current_department == dept.id %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="position_id" class="form-label">Должность</label>
+                <select class="form-select" id="position_id" name="position_id">
+                    <option value="">Все должности</option>
+                    {% for pos in positions %}
+                        <option value="{{ pos.id }}" {% if current_position == pos.id %}selected{% endif %}>
+                            {{ pos.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">Статус</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Все статусы</option>
+                    <option value="active" {% if current_status == 'active' %}selected{% endif %}>Активен</option>
+                    <option value="dismissed" {% if current_status == 'dismissed' %}selected{% endif %}>Уволен</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Фильтр</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <table class="table table-striped">
     <thead>
         <tr>
@@ -22,7 +67,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for employee in employees %}
+        {% for employee in employees.items %}
         <tr>
             <td>{{ employee.employee_id }}</td>
             <td>{{ employee.full_name }}</td>
@@ -30,7 +75,13 @@
             <td>{{ employee.department.name }}</td>
             <td>{{ employee.position.title }}</td>
             <td>{{ employee.hire_date.strftime('%d.%m.%Y') }}</td>
-            <td>{{ employee.status }}</td>
+            <td>
+                {% if employee.status == 'active' %}
+                    <span class="badge bg-success">Активен</span>
+                {% else %}
+                    <span class="badge bg-secondary">Уволен</span>
+                {% endif %}
+            </td>
             <td>
                 <a href="{{ url_for('employees.edit_employee', id=employee.id) }}" class="btn btn-sm btn-outline-primary">Редактировать</a>
                 <form method="POST" action="{{ url_for('employees.delete_employee', id=employee.id) }}" class="d-inline">
@@ -41,4 +92,43 @@
         {% endfor %}
     </tbody>
 </table>
+
+<!-- Пагинация -->
+{% if employees.pages > 1 %}
+<nav aria-label="Пагинация">
+    <ul class="pagination justify-content-center">
+        {% if employees.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.prev_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">Предыдущая</a>
+            </li>
+        {% endif %}
+        
+        {% for page_num in employees.iter_pages() %}
+            {% if page_num %}
+                {% if page_num != employees.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('employees.list_employees', page=page_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">…</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if employees.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.next_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">Следующая</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<p class="text-center">Показано {{ employees.items|length }} из {{ employees.total }} сотрудников</p>
 {% endblock %}
