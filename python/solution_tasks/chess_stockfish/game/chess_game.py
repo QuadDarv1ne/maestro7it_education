@@ -214,6 +214,7 @@ class ChessGame:
         self.board_state_cache_duration = 0.2  # Длительность кэша состояния доски (200ms)
 
         # Инициализация статистики игры
+        # Инициализация статистики игры
         self.game_stats = {
             'start_time': time.time(),
             'player_moves': 0,
