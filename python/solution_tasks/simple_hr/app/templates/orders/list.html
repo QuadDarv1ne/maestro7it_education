@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Список приказов{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Список приказов</h2>
+    <a href="{{ url_for('orders.create_order') }}" class="btn btn-primary">Создать приказ</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Сотрудник</th>
+            <th>Тип</th>
+            <th>Дата</th>
+            <th>Новое подразделение</th>
+            <th>Новая должность</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in orders %}
+        <tr>
+            <td>{{ order.id }}</td>
+            <td>{{ order.employee.full_name }}</td>
+            <td>
+                {% if order.type == 'hire' %}Прием
+                {% elif order.type == 'transfer' %}Перевод
+                {% elif order.type == 'dismissal' %}Увольнение
+                {% endif %}
+            </td>
+            <td>{{ order.date_issued.strftime('%d.%m.%Y') }}</td>
+            <td>{{ order.new_department.name if order.new_department else '-' }}</td>
+            <td>{{ order.new_position.title if order.new_position else '-' }}</td>
+            <td>
+                <a href="{{ url_for('orders.edit_order', id=order.id) }}" class="btn btn-sm btn-outline-primary">Редактировать</a>
+                <form method="POST" action="{{ url_for('orders.delete_order', id=order.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Вы уверены?')">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{% if employee %}Редактирование сотрудника{% else %}Добавление сотрудника{% endif %}{% endblock %}
+
+{% block content %}
+<h2>{% if employee %}Редактирование сотрудника{% else %}Добавление сотрудника{% endif %}</h2>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="full_name" class="form-label">ФИО</label>
+        <input type="text" class="form-control" id="full_name" name="full_name" value="{{ employee.full_name if employee else '' }}" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" name="email" value="{{ employee.email if employee else '' }}" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="employee_id" class="form-label">Табельный номер</label>
+        <input type="text" class="form-control" id="employee_id" name="employee_id" value="{{ employee.employee_id if employee else '' }}" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="hire_date" class="form-label">Дата приема</label>
+        <input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ employee.hire_date.strftime('%Y-%m-%d') if employee else '' }}" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="department_id" class="form-label">Подразделение</label>
+        <select class="form-select" id="department_id" name="department_id" required>
+            <option value="">Выберите подразделение</option>
+            {% for department in departments %}
+                <option value="{{ department.id }}" {% if employee and employee.department_id == department.id %}selected{% endif %}>
+                    {{ department.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="position_id" class="form-label">Должность</label>
+        <select class="form-select" id="position_id" name="position_id" required>
+            <option value="">Выберите должность</option>
+            {% for position in positions %}
+                <option value="{{ position.id }}" {% if employee and employee.position_id == position.id %}selected{% endif %}>
+                    {{ position.title }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="status" class="form-label">Статус</label>
+        <select class="form-select" id="status" name="status">
+            <option value="active" {% if employee and employee.status == 'active' %}selected{% endif %}>Активен</option>
+            <option value="dismissed" {% if employee and employee.status == 'dismissed' %}selected{% endif %}>Уволен</option>
+        </select>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {% if employee %}Обновить{% else %}Добавить{% endif %}
+        </button>
+        <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

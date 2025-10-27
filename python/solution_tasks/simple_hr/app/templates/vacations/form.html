@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}{% if vacation %}Редактирование отпуска{% else %}Добавление отпуска{% endif %}{% endblock %}
+
+{% block content %}
+<h2>{% if vacation %}Редактирование отпуска{% else %}Добавление отпуска{% endif %}</h2>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="employee_id" class="form-label">Сотрудник</label>
+        <select class="form-select" id="employee_id" name="employee_id" required>
+            <option value="">Выберите сотрудника</option>
+            {% for employee in employees %}
+                <option value="{{ employee.id }}" {% if vacation and vacation.employee_id == employee.id %}selected{% endif %}>
+                    {{ employee.full_name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="type" class="form-label">Тип отпуска</label>
+        <select class="form-select" id="type" name="type" required>
+            <option value="">Выберите тип</option>
+            <option value="paid" {% if vacation and vacation.type == 'paid' %}selected{% endif %}>Оплачиваемый</option>
+            <option value="unpaid" {% if vacation and vacation.type == 'unpaid' %}selected{% endif %}>Неоплачиваемый</option>
+            <option value="sick" {% if vacation and vacation.type == 'sick' %}selected{% endif %}>Больничный</option>
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="start_date" class="form-label">Дата начала</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ vacation.start_date.strftime('%Y-%m-%d') if vacation else '' }}" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="end_date" class="form-label">Дата окончания</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ vacation.end_date.strftime('%Y-%m-%d') if vacation else '' }}" required>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {% if vacation %}Обновить{% else %}Добавить{% endif %}
+        </button>
+        <a href="{{ url_for('vacations.list_vacations') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

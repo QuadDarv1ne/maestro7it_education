@@ -18,7 +18,7 @@ WTForms
 pandas
 
 # Управление переменными окружения (для SECRET_KEY, данных БД)
-python-dotenv=
+python-dotenv
 
 # Вспомогательные утилиты для работы с датами (отпуска, отчёты)
 python-dateutil

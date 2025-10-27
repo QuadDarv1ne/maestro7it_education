@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Список отпусков{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Список отпусков</h2>
+    <a href="{{ url_for('vacations.create_vacation') }}" class="btn btn-primary">Добавить отпуск</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Сотрудник</th>
+            <th>Тип</th>
+            <th>Дата начала</th>
+            <th>Дата окончания</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for vacation in vacations %}
+        <tr>
+            <td>{{ vacation.id }}</td>
+            <td>{{ vacation.employee.full_name }}</td>
+            <td>
+                {% if vacation.type == 'paid' %}Оплачиваемый
+                {% elif vacation.type == 'unpaid' %}Неоплачиваемый
+                {% elif vacation.type == 'sick' %}Больничный
+                {% endif %}
+            </td>
+            <td>{{ vacation.start_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ vacation.end_date.strftime('%d.%m.%Y') }}</td>
+            <td>
+                <a href="{{ url_for('vacations.edit_vacation', id=vacation.id) }}" class="btn btn-sm btn-outline-primary">Редактировать</a>
+                <form method="POST" action="{{ url_for('vacations.delete_vacation', id=vacation.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Вы уверены?')">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

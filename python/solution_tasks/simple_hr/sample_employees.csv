@@ -1,0 +1,4 @@
+full_name,email,employee_id,hire_date,department,position
+Иванов Иван Иванович,ivanov@example.com,ID0001,2023-01-15,IT,Developer
+Петров Петр Петрович,petrov@example.com,ID0002,2023-02-20,HR,HR Manager
+Сидоров Сидор Сидорович,sidorov@example.com,ID0003,2023-03-10,Finance,Accountant

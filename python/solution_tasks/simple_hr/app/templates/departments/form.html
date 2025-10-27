@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{% if department %}Редактирование подразделения{% else %}Добавление подразделения{% endif %}{% endblock %}
+
+{% block content %}
+<h2>{% if department %}Редактирование подразделения{% else %}Добавление подразделения{% endif %}</h2>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="name" class="form-label">Название</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ department.name if department else '' }}" required>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {% if department %}Обновить{% else %}Добавить{% endif %}
+        </button>
+        <a href="{{ url_for('departments.list_departments') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

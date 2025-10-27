@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{% if position %}Редактирование должности{% else %}Добавление должности{% endif %}{% endblock %}
+
+{% block content %}
+<h2>{% if position %}Редактирование должности{% else %}Добавление должности{% endif %}</h2>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="title" class="form-label">Название</label>
+        <input type="text" class="form-control" id="title" name="title" value="{{ position.title if position else '' }}" required>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {% if position %}Обновить{% else %}Добавить{% endif %}
+        </button>
+        <a href="{{ url_for('positions.list_positions') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

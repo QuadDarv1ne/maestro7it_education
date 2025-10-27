@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Панель управления{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Сотрудники</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ employee_count }}</h5>
+                <p class="card-text">Общее количество сотрудников</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Подразделения</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ department_count }}</h5>
+                <p class="card-text">Общее количество подразделений</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-header">Должности</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ position_count }}</h5>
+                <p class="card-text">Общее количество должностей</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Последние добавленные сотрудники</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Табельный номер</th>
+                            <th>ФИО</th>
+                            <th>Email</th>
+                            <th>Подразделение</th>
+                            <th>Должность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in recent_employees %}
+                        <tr>
+                            <td>{{ employee.employee_id }}</td>
+                            <td>{{ employee.full_name }}</td>
+                            <td>{{ employee.email }}</td>
+                            <td>{{ employee.department.name }}</td>
+                            <td>{{ employee.position.title }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

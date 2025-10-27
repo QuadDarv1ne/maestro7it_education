@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{% if order %}Редактирование приказа{% else %}Создание приказа{% endif %}{% endblock %}
+
+{% block content %}
+<h2>{% if order %}Редактирование приказа{% else %}Создание приказа{% endif %}</h2>
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="employee_id" class="form-label">Сотрудник</label>
+        <select class="form-select" id="employee_id" name="employee_id" required>
+            <option value="">Выберите сотрудника</option>
+            {% for employee in employees %}
+                <option value="{{ employee.id }}" {% if order and order.employee_id == employee.id %}selected{% endif %}>
+                    {{ employee.full_name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="type" class="form-label">Тип приказа</label>
+        <select class="form-select" id="type" name="type" required>
+            <option value="">Выберите тип</option>
+            <option value="hire" {% if order and order.type == 'hire' %}selected{% endif %}>Прием</option>
+            <option value="transfer" {% if order and order.type == 'transfer' %}selected{% endif %}>Перевод</option>
+            <option value="dismissal" {% if order and order.type == 'dismissal' %}selected{% endif %}>Увольнение</option>
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="date_issued" class="form-label">Дата приказа</label>
+        <input type="date" class="form-control" id="date_issued" name="date_issued" value="{{ order.date_issued.strftime('%Y-%m-%d') if order else '' }}" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="new_department_id" class="form-label">Новое подразделение (для перевода)</label>
+        <select class="form-select" id="new_department_id" name="new_department_id">
+            <option value="">Выберите подразделение</option>
+            {% for department in departments %}
+                <option value="{{ department.id }}" {% if order and order.new_department_id == department.id %}selected{% endif %}>
+                    {{ department.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="mb-3">
+        <label for="new_position_id" class="form-label">Новая должность (для перевода)</label>
+        <select class="form-select" id="new_position_id" name="new_position_id">
+            <option value="">Выберите должность</option>
+            {% for position in positions %}
+                <option value="{{ position.id }}" {% if order and order.new_position_id == position.id %}selected{% endif %}>
+                    {{ position.title }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {% if order %}Обновить{% else %}Создать{% endif %}
+        </button>
+        <a href="{{ url_for('orders.list_orders') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

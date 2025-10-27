@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Список сотрудников{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Список сотрудников</h2>
+    <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary">Добавить сотрудника</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Табельный номер</th>
+            <th>ФИО</th>
+            <th>Email</th>
+            <th>Подразделение</th>
+            <th>Должность</th>
+            <th>Дата приема</th>
+            <th>Статус</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for employee in employees %}
+        <tr>
+            <td>{{ employee.employee_id }}</td>
+            <td>{{ employee.full_name }}</td>
+            <td>{{ employee.email }}</td>
+            <td>{{ employee.department.name }}</td>
+            <td>{{ employee.position.title }}</td>
+            <td>{{ employee.hire_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ employee.status }}</td>
+            <td>
+                <a href="{{ url_for('employees.edit_employee', id=employee.id) }}" class="btn btn-sm btn-outline-primary">Редактировать</a>
+                <form method="POST" action="{{ url_for('employees.delete_employee', id=employee.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Вы уверены?')">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

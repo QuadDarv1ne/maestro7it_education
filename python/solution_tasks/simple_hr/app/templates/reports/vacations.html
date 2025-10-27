@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Отчет по отпускам{% endblock %}
+
+{% block content %}
+<h2>Отчет по отпускам (текущий месяц)</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Сотрудник</th>
+            <th>Тип отпуска</th>
+            <th>Дата начала</th>
+            <th>Дата окончания</th>
+            <th>Количество дней</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for vacation in vacations %}
+        <tr>
+            <td>{{ vacation.employee.full_name }}</td>
+            <td>
+                {% if vacation.type == 'paid' %}Оплачиваемый
+                {% elif vacation.type == 'unpaid' %}Неоплачиваемый
+                {% elif vacation.type == 'sick' %}Больничный
+                {% endif %}
+            </td>
+            <td>{{ vacation.start_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ vacation.end_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ (vacation.end_date - vacation.start_date).days + 1 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

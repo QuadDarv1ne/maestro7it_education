@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Отчет по сотрудникам{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Отчет по сотрудникам</h2>
+    <a href="{{ url_for('reports.export_report', type='employees', department_id=selected_department) }}" class="btn btn-success">Экспорт в CSV</a>
+</div>
+
+<form method="GET" class="mb-3">
+    <input type="hidden" name="type" value="employees">
+    <div class="row">
+        <div class="col-md-4">
+            <label for="department_id" class="form-label">Фильтр по подразделению</label>
+            <select class="form-select" id="department_id" name="department_id">
+                <option value="">Все подразделения</option>
+                {% for department in departments %}
+                    <option value="{{ department.id }}" {% if selected_department == department.id %}selected{% endif %}>
+                        {{ department.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">Фильтровать</button>
+        </div>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Табельный номер</th>
+            <th>ФИО</th>
+            <th>Email</th>
+            <th>Подразделение</th>
+            <th>Должность</th>
+            <th>Дата приема</th>
+            <th>Статус</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for employee in employees %}
+        <tr>
+            <td>{{ employee.employee_id }}</td>
+            <td>{{ employee.full_name }}</td>
+            <td>{{ employee.email }}</td>
+            <td>{{ employee.department.name }}</td>
+            <td>{{ employee.position.title }}</td>
+            <td>{{ employee.hire_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ employee.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

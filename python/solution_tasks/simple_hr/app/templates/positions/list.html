@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Список должностей{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Список должностей</h2>
+    <a href="{{ url_for('positions.create_position') }}" class="btn btn-primary">Добавить должность</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Количество сотрудников</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for position in positions %}
+        <tr>
+            <td>{{ position.id }}</td>
+            <td>{{ position.title }}</td>
+            <td>{{ position.employees|length }}</td>
+            <td>
+                <a href="{{ url_for('positions.edit_position', id=position.id) }}" class="btn btn-sm btn-outline-primary">Редактировать</a>
+                <form method="POST" action="{{ url_for('positions.delete_position', id=position.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Вы уверены?')">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Список подразделений{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Список подразделений</h2>
+    <a href="{{ url_for('departments.create_department') }}" class="btn btn-primary">Добавить подразделение</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Количество сотрудников</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for department in departments %}
+        <tr>
+            <td>{{ department.id }}</td>
+            <td>{{ department.name }}</td>
+            <td>{{ department.employees|length }}</td>
+            <td>
+                <a href="{{ url_for('departments.edit_department', id=department.id) }}" class="btn btn-sm btn-outline-primary">Редактировать</a>
+                <form method="POST" action="{{ url_for('departments.delete_department', id=department.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Вы уверены?')">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
