@@ -3,12 +3,44 @@
 {% block title %}Отчет по отпускам{% endblock %}
 
 {% block content %}
-<h2>Отчет по отпускам (текущий месяц)</h2>
+<h2>Отчет по отпускам</h2>
+
+<!-- Форма фильтрации -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <input type="hidden" name="type" value="vacations">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Дата начала</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">Дата окончания</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="department_id" class="form-label">Подразделение</label>
+                <select class="form-select" id="department_id" name="department_id">
+                    <option value="">Все подразделения</option>
+                    {% for department in departments %}
+                        <option value="{{ department.id }}" {% if selected_department == department.id %}selected{% endif %}>
+                            {{ department.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Фильтровать</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <table class="table table-striped">
     <thead>
         <tr>
             <th>Сотрудник</th>
+            <th>Подразделение</th>
             <th>Тип отпуска</th>
             <th>Дата начала</th>
             <th>Дата окончания</th>
@@ -19,6 +51,7 @@
         {% for vacation in vacations %}
         <tr>
             <td>{{ vacation.employee.full_name }}</td>
+            <td>{{ vacation.employee.department.name }}</td>
             <td>
                 {% if vacation.type == 'paid' %}Оплачиваемый
                 {% elif vacation.type == 'unpaid' %}Неоплачиваемый
@@ -32,4 +65,6 @@
         {% endfor %}
     </tbody>
 </table>
+
+<p class="text-center">Всего записей: {{ vacations|length }}</p>
 {% endblock %}

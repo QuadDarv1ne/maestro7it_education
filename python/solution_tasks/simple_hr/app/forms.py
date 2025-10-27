@@ -117,11 +117,14 @@ class RegistrationForm(FlaskForm):
     password2 = PasswordField('Подтверждение пароля', 
                              validators=[DataRequired(), EqualTo('password', message='Пароли должны совпадать')])
     role = SelectField('Роль', choices=[('hr', 'HR'), ('admin', 'Администратор')], validators=[DataRequired()])
+    submit = SubmitField('Зарегистрироваться')
 
 class ResetPasswordRequestForm(FlaskForm):
     email = EmailField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Отправить')
 
 class ResetPasswordForm(FlaskForm):
     password = PasswordField('Новый пароль', validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField('Подтверждение пароля', 
                              validators=[DataRequired(), EqualTo('password', message='Пароли должны совпадать')])
+    submit = SubmitField('Установить пароль')

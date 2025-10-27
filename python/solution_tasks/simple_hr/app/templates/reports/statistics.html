@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика по сотрудникам{% endblock %}
+
+{% block content %}
+<h2>Статистика по сотрудникам</h2>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Всего сотрудников</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ total_employees }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Активных сотрудников</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ active_employees }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-secondary mb-3">
+            <div class="card-header">Уволенных сотрудников</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ dismissed_employees }}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Сотрудники по подразделениям</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Подразделение</th>
+                            <th>Количество сотрудников</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in department_stats %}
+                        <tr>
+                            <td>{{ stat.name }}</td>
+                            <td>{{ stat.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Сотрудники по должностям</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Должность</th>
+                            <th>Количество сотрудников</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in position_stats %}
+                        <tr>
+                            <td>{{ stat.title }}</td>
+                            <td>{{ stat.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -14,6 +14,8 @@ def generate_report():
     # Get report parameters
     report_type = request.args.get('type', 'employees')
     department_id = request.args.get('department_id', type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
     
     # Base query
     query = db.session.query(Employee)
@@ -29,24 +31,56 @@ def generate_report():
         return render_template('reports/employees.html', employees=employees, departments=departments, selected_department=department_id)
     
     elif report_type == 'vacations':
-        # Get vacations for current month
-        today = date.today()
-        start_date = date(today.year, today.month, 1)
-        if today.month == 12:
-            end_date = date(today.year + 1, 1, 1)
-        else:
-            end_date = date(today.year, today.month + 1, 1)
+        # Build vacation query
+        vacation_query = Vacation.query
         
-        vacations = Vacation.query.filter(
-            Vacation.start_date >= start_date,
-            Vacation.start_date < end_date
-        ).all()
+        # Filter by date range if specified
+        if start_date:
+            vacation_query = vacation_query.filter(Vacation.start_date >= datetime.strptime(start_date, '%Y-%m-%d').date())
+        if end_date:
+            vacation_query = vacation_query.filter(Vacation.end_date <= datetime.strptime(end_date, '%Y-%m-%d').date())
         
-        return render_template('reports/vacations.html', vacations=vacations)
+        vacations = vacation_query.all()
+        departments = Department.query.all()
+        return render_template('reports/vacations.html', vacations=vacations, departments=departments, 
+                             selected_department=department_id, start_date=start_date, end_date=end_date)
     
     elif report_type == 'departments':
         departments = Department.query.all()
         return render_template('reports/departments.html', departments=departments)
+    
+    elif report_type == 'employee_statistics':
+        # Get statistics
+        total_employees = Employee.query.count()
+        active_employees = Employee.query.filter_by(status='active').count()
+        dismissed_employees = Employee.query.filter_by(status='dismissed').count()
+        
+        # Get department statistics
+        department_stats = []
+        departments = Department.query.all()
+        for dept in departments:
+            dept_count = len(dept.employees)
+            department_stats.append({
+                'name': dept.name,
+                'count': dept_count
+            })
+        
+        # Get position statistics
+        position_stats = []
+        positions = Position.query.all()
+        for pos in positions:
+            pos_count = len(pos.employees)
+            position_stats.append({
+                'title': pos.title,
+                'count': pos_count
+            })
+        
+        return render_template('reports/statistics.html', 
+                             total_employees=total_employees,
+                             active_employees=active_employees,
+                             dismissed_employees=dismissed_employees,
+                             department_stats=department_stats,
+                             position_stats=position_stats)
     
     else:
         flash('Неверный тип отчета')

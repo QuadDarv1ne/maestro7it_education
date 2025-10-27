@@ -93,7 +93,7 @@
     </div>
     
     <div class="d-flex gap-2">
-        {{ form.submit(class="btn btn-primary", value="Добавить" if not employee else "Обновить") }}
+        {{ form.submit(class="btn btn-primary") }}
         <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">Отмена</a>
     </div>
 </form>
