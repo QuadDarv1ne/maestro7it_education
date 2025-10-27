@@ -1,5 +1,7 @@
 import base64
 from io import BytesIO
+import matplotlib
+matplotlib.use('Agg')  # Установка backend для работы в многопоточной среде
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -8,6 +10,10 @@ from app.models import Employee, Department, Position, Vacation
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+
+# Настройка стиля для matplotlib
+plt.style.use('seaborn-v0_8')
+sns.set_palette("husl")
 
 def create_employee_distribution_chart(department_stats):
     """Создание графика распределения сотрудников по подразделениям"""

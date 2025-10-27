@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.models import Employee, Department, Position
 from app.forms import EmployeeForm
 from app.utils.notifications import notify_employee_created, notify_employee_updated
+from app.utils.audit import log_employee_create, log_employee_update, log_employee_delete
 from app import db
 
 bp = Blueprint('employees', __name__)

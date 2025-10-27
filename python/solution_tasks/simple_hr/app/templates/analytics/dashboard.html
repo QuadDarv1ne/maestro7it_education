@@ -9,35 +9,71 @@
 
 <!-- Ключевые метрики -->
 <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body text-center">
                 <h5 class="card-title">Всего сотрудников</h5>
                 <h2>{{ interactive_data.total_employees }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body text-center">
                 <h5 class="card-title">Активные</h5>
                 <h2>{{ interactive_data.active_employees }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-secondary">
-            <div class="card-body">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-secondary h-100">
+            <div class="card-body text-center">
                 <h5 class="card-title">Уволенные</h5>
                 <h2>{{ interactive_data.dismissed_employees }}</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info">
-            <div class="card-body">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body text-center">
                 <h5 class="card-title">Подразделения</h5>
                 <h2>{{ interactive_data.department_stats|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Дополнительные метрики -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-primary h-100">
+            <div class="card-body">
+                <h5 class="card-title">Активные отпуска</h5>
+                <h3 class="text-primary">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-success h-100">
+            <div class="card-body">
+                <h5 class="card-title">Начинаются сегодня</h5>
+                <h3 class="text-success">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-warning h-100">
+            <div class="card-body">
+                <h5 class="card-title">Заканчиваются сегодня</h5>
+                <h3 class="text-warning">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card border-left-info h-100">
+            <div class="card-body">
+                <h5 class="card-title">Должности</h5>
+                <h3 class="text-info">{{ interactive_data.position_stats|length }}</h3>
             </div>
         </div>
     </div>

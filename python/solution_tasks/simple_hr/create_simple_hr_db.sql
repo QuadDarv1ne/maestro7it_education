@@ -92,7 +92,23 @@ CREATE TABLE IF NOT EXISTS `notification` (
         ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
--- 10. Индексы для ускорения поиска и фильтрации
+-- 10. Аудит действий пользователей
+CREATE TABLE IF NOT EXISTS `audit_log` (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id INT NULL,
+    description TEXT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    FOREIGN KEY (user_id) REFERENCES user(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- 11. Индексы для ускорения поиска и фильтрации
 CREATE INDEX idx_employee_status ON employee(status);
 CREATE INDEX idx_employee_department ON employee(department_id);
 CREATE INDEX idx_employee_name ON employee(full_name);
@@ -100,3 +116,7 @@ CREATE INDEX idx_vacation_dates ON vacation(start_date, end_date);
 CREATE INDEX idx_order_date ON `order`(date_issued);
 CREATE INDEX idx_notification_user ON notification(user_id);
 CREATE INDEX idx_notification_created ON notification(created_at);
+CREATE INDEX idx_audit_user ON audit_log(user_id);
+CREATE INDEX idx_audit_action ON audit_log(action);
+CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX idx_audit_created ON audit_log(created_at);

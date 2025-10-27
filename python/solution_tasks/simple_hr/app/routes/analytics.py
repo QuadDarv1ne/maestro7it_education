@@ -9,6 +9,7 @@ from app.utils.analytics import (
     create_interactive_dashboard_data,
     create_interactive_charts
 )
+from app.utils.vacation_reminders import get_vacation_statistics
 from app import db
 from datetime import datetime, date
 

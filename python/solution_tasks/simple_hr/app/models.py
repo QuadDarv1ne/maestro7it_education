@@ -86,3 +86,16 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(db.String(100), nullable=False)  # create, update, delete, login, etc.
+    entity_type = db.Column(db.String(50), nullable=False)  # employee, department, etc.
+    entity_id = db.Column(db.Integer, nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv4 or IPv6
+    user_agent = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    user = db.relationship('User', backref=db.backref('audit_logs', lazy=True))
