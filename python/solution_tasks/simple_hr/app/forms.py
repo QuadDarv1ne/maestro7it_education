@@ -53,6 +53,7 @@ class DepartmentForm(FlaskForm):
 
 class PositionForm(FlaskForm):
     title = StringField('Название', validators=[DataRequired(), Length(max=100)])
+    submit = SubmitField('Сохранить')
     
     def __init__(self, original_title=None, *args, **kwargs):
         super(PositionForm, self).__init__(*args, **kwargs)
