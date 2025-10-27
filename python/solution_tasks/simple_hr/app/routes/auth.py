@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required
+from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User
 from app.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
+from app.utils.audit import log_user_login, log_user_logout
 from app import db
 
 bp = Blueprint('auth', __name__)
@@ -13,6 +14,8 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
+            # Логируем вход
+            log_user_login(user.id, user.username)
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('main.index'))
         else:

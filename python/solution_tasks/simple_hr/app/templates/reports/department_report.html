@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Отчет по подразделениям{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Отчет по подразделениям</h2>
+    <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Статистика по подразделениям</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Подразделение</th>
+                                <th>Всего сотрудников</th>
+                                <th>Активные</th>
+                                <th>Уволенные</th>
+                                <th>Средние дни отпуска</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report_data %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.total_employees }}</td>
+                                <td>{{ item.active_employees }}</td>
+                                <td>{{ item.dismissed_employees }}</td>
+                                <td>{{ item.avg_vacation_days }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

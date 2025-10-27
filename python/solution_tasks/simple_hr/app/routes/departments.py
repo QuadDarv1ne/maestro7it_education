@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.models import Department
+from app.utils.audit import log_department_create, log_department_update, log_department_delete
 from app import db
 
 bp = Blueprint('departments', __name__)
@@ -24,11 +25,14 @@ def create_department():
             return redirect(url_for('departments.create_department'))
         
         # Create new department
-        department = Department(name=name)
+        department = Department()
+        department.name = name
         
         try:
             db.session.add(department)
             db.session.commit()
+            # Логируем действие
+            log_department_create(department.id, department.name, current_user.id)
             flash('Подразделение успешно добавлено')
             return redirect(url_for('departments.list_departments'))
         except Exception as e:
@@ -56,6 +60,8 @@ def edit_department(id):
         
         try:
             db.session.commit()
+            # Логируем действие
+            log_department_update(department.id, department.name, current_user.id)
             flash('Подразделение успешно обновлено')
             return redirect(url_for('departments.list_departments'))
         except Exception as e:
@@ -76,8 +82,13 @@ def delete_department(id):
         return redirect(url_for('departments.list_departments'))
     
     try:
+        # Сохраняем данные для логирования
+        dept_id = department.id
+        dept_name = department.name
         db.session.delete(department)
         db.session.commit()
+        # Логируем действие
+        log_department_delete(dept_id, dept_name, current_user.id)
         flash('Подразделение успешно удалено')
     except Exception as e:
         db.session.rollback()

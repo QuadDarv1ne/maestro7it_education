@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика по отпускам{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Статистика по отпускам</h2>
+    <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <h5 class="card-title">Всего отпусков</h5>
+                <h2>{{ total_vacations }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body text-center">
+                <h5 class="card-title">Оплачиваемые</h5>
+                <h2>{{ paid_vacations }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body text-center">
+                <h5 class="card-title">Неоплачиваемые</h5>
+                <h2>{{ unpaid_vacations }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body text-center">
+                <h5 class="card-title">Больничные</h5>
+                <h2>{{ sick_vacations }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Средняя продолжительность отпуска</h5>
+            </div>
+            <div class="card-body text-center">
+                <h3 class="display-4">{{ average_duration }}</h3>
+                <p class="text-muted">дней</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение по типам</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ (paid_vacations / total_vacations * 100)|round(1) }}%" aria-valuenow="{{ paid_vacations }}" aria-valuemin="0" aria-valuemax="{{ total_vacations }}">
+                        Оплачиваемые ({{ (paid_vacations / total_vacations * 100)|round(1) }}%)
+                    </div>
+                </div>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: {{ (unpaid_vacations / total_vacations * 100)|round(1) }}%" aria-valuenow="{{ unpaid_vacations }}" aria-valuemin="0" aria-valuemax="{{ total_vacations }}">
+                        Неоплачиваемые ({{ (unpaid_vacations / total_vacations * 100)|round(1) }}%)
+                    </div>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar bg-info" role="progressbar" style="width: {{ (sick_vacations / total_vacations * 100)|round(1) }}%" aria-valuenow="{{ sick_vacations }}" aria-valuemin="0" aria-valuemax="{{ total_vacations }}">
+                        Больничные ({{ (sick_vacations / total_vacations * 100)|round(1) }}%)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

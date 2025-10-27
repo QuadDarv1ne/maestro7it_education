@@ -83,6 +83,8 @@ def create_employee():
             db.session.commit()
             # Отправляем уведомление
             notify_employee_created(current_user.id, employee.full_name)
+            # Логируем действие
+            log_employee_create(employee.id, employee.full_name, current_user.id)
             flash('Сотрудник успешно добавлен')
             return redirect(url_for('employees.list_employees'))
         except Exception as e:
@@ -112,6 +114,8 @@ def edit_employee(id):
             db.session.commit()
             # Отправляем уведомление
             notify_employee_updated(current_user.id, employee.full_name)
+            # Логируем действие
+            log_employee_update(employee.id, employee.full_name, current_user.id)
             flash('Сотрудник успешно обновлен')
             return redirect(url_for('employees.list_employees'))
         except Exception as e:
@@ -127,8 +131,13 @@ def delete_employee(id):
     employee = Employee.query.get_or_404(id)
     
     try:
+        # Сохраняем имя сотрудника для логирования
+        employee_name = employee.full_name
+        employee_id = employee.id
         db.session.delete(employee)
         db.session.commit()
+        # Логируем действие
+        log_employee_delete(employee_id, employee_name, current_user.id)
         flash('Сотрудник успешно удален')
     except Exception as e:
         db.session.rollback()

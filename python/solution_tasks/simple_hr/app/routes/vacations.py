@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Vacation, Employee
 from app.utils.notifications import notify_vacation_created
+from app.utils.audit import log_vacation_create
 from app import db
 from datetime import datetime
 
@@ -49,6 +50,8 @@ def create_vacation():
                     'sick': 'больничный'
                 }.get(vacation_type, 'отпуск')
                 notify_vacation_created(current_user.id, employee.full_name, vacation_type_name, start)
+                # Логируем действие
+                log_vacation_create(vacation.id, employee.full_name, vacation_type, start.strftime('%d.%m.%Y'), current_user.id)
             flash('Отпуск успешно добавлен')
             return redirect(url_for('vacations.list_vacations'))
         except Exception as e:

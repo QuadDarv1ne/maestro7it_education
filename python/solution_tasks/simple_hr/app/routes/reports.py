@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required
 from app.models import Employee, Department, Position, Vacation, Order
+from app.utils.reports import generate_employee_report, generate_department_report, generate_vacation_report, generate_hiring_report, export_report_to_csv, export_report_to_excel, get_employee_statistics, get_vacation_statistics
 from app import db
 from datetime import datetime, date
 import pandas as pd
@@ -50,37 +51,30 @@ def generate_report():
         return render_template('reports/departments.html', departments=departments)
     
     elif report_type == 'employee_statistics':
-        # Get statistics
-        total_employees = Employee.query.count()
-        active_employees = Employee.query.filter_by(status='active').count()
-        dismissed_employees = Employee.query.filter_by(status='dismissed').count()
-        
-        # Get department statistics
-        department_stats = []
-        departments = Department.query.all()
-        for dept in departments:
-            dept_count = len(dept.employees)
-            department_stats.append({
-                'name': dept.name,
-                'count': dept_count
-            })
-        
-        # Get position statistics
-        position_stats = []
-        positions = Position.query.all()
-        for pos in positions:
-            pos_count = len(pos.employees)
-            position_stats.append({
-                'title': pos.title,
-                'count': pos_count
-            })
-        
-        return render_template('reports/statistics.html', 
-                             total_employees=total_employees,
-                             active_employees=active_employees,
-                             dismissed_employees=dismissed_employees,
-                             department_stats=department_stats,
-                             position_stats=position_stats)
+        # Get statistics using utility functions
+        stats = get_employee_statistics()
+        return render_template('reports/statistics.html', **stats)
+    
+    elif report_type == 'vacation_statistics':
+        # Get vacation statistics
+        stats = get_vacation_statistics()
+        return render_template('reports/vacation_statistics.html', **stats)
+    
+    elif report_type == 'hiring_report':
+        # Generate hiring report
+        period_months = request.args.get('period_months', 12, type=int)
+        hiring_data = generate_hiring_report(period_months)
+        return render_template('reports/hiring.html', hiring_data=hiring_data, period_months=period_months)
+    
+    elif report_type == 'detailed_employee_report':
+        # Generate detailed employee report
+        report_data = generate_employee_report()
+        return render_template('reports/detailed_employees.html', report_data=report_data)
+    
+    elif report_type == 'department_report':
+        # Generate department report
+        report_data = generate_department_report()
+        return render_template('reports/department_report.html', report_data=report_data)
     
     else:
         flash('Неверный тип отчета')
@@ -102,17 +96,21 @@ def export_report():
     
     # Generate report based on type
     if report_type == 'employees':
-        employees = query.all()
+        # Join with Department and Position to access related data
+        employees = db.session.query(Employee, Department, Position)\
+            .join(Department, Employee.department_id == Department.id)\
+            .join(Position, Employee.position_id == Position.id)\
+            .all()
         
         # Create DataFrame
         data = []
-        for emp in employees:
+        for emp, dept, pos in employees:
             data.append({
                 'Табельный номер': emp.employee_id,
                 'ФИО': emp.full_name,
                 'Email': emp.email,
-                'Подразделение': emp.department.name,
-                'Должность': emp.position.title,
+                'Подразделение': dept.name,
+                'Должность': pos.title,
                 'Дата приема': emp.hire_date.strftime('%d.%m.%Y'),
                 'Статус': emp.status
             })

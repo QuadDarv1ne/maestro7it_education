@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Отчет по найму{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Отчет по найму</h2>
+    <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Параметры отчета</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <input type="hidden" name="type" value="hiring_report">
+                    <div class="col-md-6">
+                        <label for="period_months" class="form-label">Период (месяцев)</label>
+                        <select class="form-select" id="period_months" name="period_months">
+                            <option value="3" {% if period_months == 3 %}selected{% endif %}>3 месяца</option>
+                            <option value="6" {% if period_months == 6 %}selected{% endif %}>6 месяцев</option>
+                            <option value="12" {% if period_months == 12 %}selected{% endif %}>12 месяцев</option>
+                            <option value="24" {% if period_months == 24 %}selected{% endif %}>24 месяца</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Сформировать отчет</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if hiring_data %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Динамика найма по месяцам</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Месяц</th>
+                                <th>Количество принятых</th>
+                                <th>Сотрудники</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for month_data in hiring_data %}
+                            <tr>
+                                <td>{{ month_data.month }}</td>
+                                <td>{{ month_data.count }}</td>
+                                <td>
+                                    {% if month_data.employees %}
+                                    <ul class="mb-0">
+                                        {% for emp in month_data.employees %}
+                                        <li>{{ emp.name }} - {{ emp.department }} ({{ emp.position }}), {{ emp.hire_date.strftime('%d.%m.%Y') }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    Нет данных
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-12 text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+                <h4>Нет данных для отчета</h4>
+                <p class="text-muted">Выберите период и сформируйте отчет.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

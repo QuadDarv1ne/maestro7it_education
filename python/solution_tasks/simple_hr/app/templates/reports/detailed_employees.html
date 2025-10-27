@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Детальный отчет по сотрудникам{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Детальный отчет по сотрудникам</h2>
+    <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Список сотрудников с детальной информацией</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Email</th>
+                                <th>Табельный номер</th>
+                                <th>Подразделение</th>
+                                <th>Должность</th>
+                                <th>Дата приема</th>
+                                <th>Статус</th>
+                                <th>Дней отпуска</th>
+                                <th>Последний приказ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report_data %}
+                            <tr>
+                                <td>{{ item.full_name }}</td>
+                                <td>{{ item.email }}</td>
+                                <td>{{ item.employee_id }}</td>
+                                <td>{{ item.department }}</td>
+                                <td>{{ item.position }}</td>
+                                <td>{{ item.hire_date.strftime('%d.%m.%Y') }}</td>
+                                <td>
+                                    <span class="badge bg-{% if item.status == 'active' %}success{% else %}secondary{% endif %}">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                                <td>{{ item.total_vacation_days }}</td>
+                                <td>
+                                    {% if item.last_order_type %}
+                                    {{ item.last_order_type }} ({{ item.last_order_date.strftime('%d.%m.%Y') }})
+                                    {% else %}
+                                    Нет данных
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
