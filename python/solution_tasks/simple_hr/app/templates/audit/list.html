@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}{% if my_logs %}Мой аудит{% elif target_user %}Аудит пользователя {{ target_user.username }}{% else %}Аудит системы{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if my_logs %}
+            Мой аудит
+        {% elif target_user %}
+            Аудит пользователя {{ target_user.username }}
+        {% else %}
+            Аудит системы
+        {% endif %}
+    </h2>
+    {% if not my_logs and current_user.is_admin() %}
+    <form method="POST" action="{{ url_for('audit.cleanup_logs') }}" class="d-inline">
+        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Вы уверены, что хотите удалить старые записи аудита?')">
+            <i class="fas fa-trash"></i> Очистить старые записи
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+{% if logs.items %}
+<div class="row">
+    <div class="col-12">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        {% if not my_logs %}
+                        <th>Пользователь</th>
+                        {% endif %}
+                        <th>Действие</th>
+                        <th>Сущность</th>
+                        <th>Описание</th>
+                        <th>IP адрес</th>
+                        <th>Дата</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        {% if not my_logs %}
+                        <td>
+                            {% if current_user.is_admin() %}
+                            <a href="{{ url_for('audit.user_logs', user_id=log.user_id) }}">{{ log.user.username }}</a>
+                            {% else %}
+                            {{ log.user.username }}
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>
+                            <span class="badge bg-{% if log.action == 'create' %}success{% elif log.action == 'update' %}warning{% elif log.action == 'delete' %}danger{% elif log.action == 'login' %}info{% elif log.action == 'logout' %}secondary{% else %}primary{% endif %}">
+                                {{ log.action }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                {{ log.entity_type }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ log.description or '-' }}</td>
+                        <td>{{ log.ip_address or '-' }}</td>
+                        <td>{{ log.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Пагинация -->
+{% if logs.pages > 1 %}
+<nav aria-label="Пагинация аудита">
+    <ul class="pagination justify-content-center">
+        {% if logs.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for(request.endpoint, page=logs.prev_num, user_id=target_user.id if target_user else None) }}">Предыдущая</a>
+            </li>
+        {% endif %}
+        
+        {% for page_num in logs.iter_pages() %}
+            {% if page_num %}
+                {% if page_num != logs.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, user_id=target_user.id if target_user else None) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">…</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if logs.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for(request.endpoint, page=logs.next_num, user_id=target_user.id if target_user else None) }}">Следующая</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<p class="text-center text-muted">Показано {{ logs.items|length }} из {{ logs.total }} записей</p>
+
+{% else %}
+<div class="row">
+    <div class="col-12 text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                <h4>Записей аудита нет</h4>
+                <p class="text-muted">
+                    {% if my_logs %}
+                        У вас пока нет записей аудита.
+                    {% elif target_user %}
+                        У пользователя {{ target_user.username }} пока нет записей аудита.
+                    {% else %}
+                        В системе пока нет записей аудита.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

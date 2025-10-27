@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Резервное копирование{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Резервное копирование</h2>
+    <div>
+        <a href="{{ url_for('admin.create_backup') }}" class="btn btn-success">Создать резервную копию</a>
+        <a href="{{ url_for('admin.cleanup_backups') }}" class="btn btn-warning">Очистить старые копии</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Доступные резервные копии</h5>
+            </div>
+            <div class="card-body">
+                {% if backups %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Имя файла</th>
+                                <th>Размер</th>
+                                <th>Дата создания</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                            <tr>
+                                <td>{{ backup.name }}</td>
+                                <td>{{ backup.size|filesizeformat }}</td>
+                                <td>{{ backup.modified.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-download"></i> Скачать
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center">
+                    <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                    <h4>Резервные копии отсутствуют</h4>
+                    <p class="text-muted">Создайте первую резервную копию, нажав кнопку "Создать резервную копию".</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Настройки резервного копирования</h5>
+            </div>
+            <div class="card-body">
+                <p>Здесь будут настройки автоматического резервного копирования.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

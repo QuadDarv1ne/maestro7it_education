@@ -24,6 +24,7 @@
                 </a>
                 {% if current_user.role == 'admin' %}
                 <a class="nav-link" href="{{ url_for('audit.list_logs') }}">Аудит</a>
+                <a class="nav-link" href="{{ url_for('admin.index') }}">Администрирование</a>
                 {% endif %}
                 <a class="nav-link" href="{{ url_for('auth.logout') }}">Выход</a>
             </div>
