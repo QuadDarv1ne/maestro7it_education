@@ -61,6 +61,12 @@ def create_app():
 
     from app.routes.reports import bp as reports_bp
     app.register_blueprint(reports_bp, url_prefix='/reports')
+    
+    from app.routes.analytics import bp as analytics_bp
+    app.register_blueprint(analytics_bp, url_prefix='/analytics')
+    
+    from app.routes.notifications import bp as notifications_bp
+    app.register_blueprint(notifications_bp, url_prefix='/notifications')
 
     # Обработка ошибок
     @app.errorhandler(404)

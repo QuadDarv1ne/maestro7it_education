@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Анализ отпусков{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Анализ отпусков</h2>
+    <a href="{{ url_for('analytics.dashboard') }}" class="btn btn-secondary">Назад к аналитике</a>
+</div>
+
+<!-- График анализа отпусков -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение отпусков по типам</h5>
+            </div>
+            <div class="card-body">
+                <img src="data:image/png;base64,{{ vacation_chart }}" class="img-fluid" alt="Анализ отпусков">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица с данными об отпусках -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Последние отпуска</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Сотрудник</th>
+                                <th>Подразделение</th>
+                                <th>Тип отпуска</th>
+                                <th>Дата начала</th>
+                                <th>Дата окончания</th>
+                                <th>Длительность (дней)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vacation in vacation_data[:20] %} <!-- Показываем только последние 20 -->
+                            <tr>
+                                <td>{{ vacation.employee_name }}</td>
+                                <td>{{ vacation.department }}</td>
+                                <td>{{ vacation.type }}</td>
+                                <td>{{ vacation.start_date.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ vacation.end_date.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ vacation.duration }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if vacation_data|length > 20 %}
+                <p class="text-muted">Показаны последние 20 из {{ vacation_data|length }} записей</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

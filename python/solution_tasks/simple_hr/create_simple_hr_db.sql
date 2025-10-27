@@ -79,9 +79,24 @@ CREATE TABLE IF NOT EXISTS `vacation` (
         ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
--- 9. Индексы для ускорения поиска и фильтрации
+-- 9. Уведомления
+CREATE TABLE IF NOT EXISTS `notification` (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    FOREIGN KEY (user_id) REFERENCES user(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- 10. Индексы для ускорения поиска и фильтрации
 CREATE INDEX idx_employee_status ON employee(status);
 CREATE INDEX idx_employee_department ON employee(department_id);
 CREATE INDEX idx_employee_name ON employee(full_name);
 CREATE INDEX idx_vacation_dates ON vacation(start_date, end_date);
 CREATE INDEX idx_order_date ON `order`(date_issued);
+CREATE INDEX idx_notification_user ON notification(user_id);
+CREATE INDEX idx_notification_created ON notification(created_at);

@@ -15,6 +15,9 @@ WTForms
 
 # Импорт/экспорт CSV и отчёты
 pandas
+matplotlib
+seaborn
+plotly
 
 # Управление переменными окружения (для SECRET_KEY, данных БД)
 python-dotenv

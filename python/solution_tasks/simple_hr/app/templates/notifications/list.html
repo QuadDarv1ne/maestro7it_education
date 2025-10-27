@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Уведомления</h2>
+    {% if notifications.items %}
+    <div>
+        <form method="POST" action="{{ url_for('notifications.mark_all_as_read') }}" class="d-inline">
+            <button type="submit" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-check-double"></i> Пометить все как прочитанные
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('notifications.delete_all_notifications') }}" class="d-inline">
+            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Вы уверены, что хотите удалить все уведомления?')">
+                <i class="fas fa-trash"></i> Удалить все
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+{% if notifications.items %}
+<div class="row">
+    <div class="col-12">
+        {% for notification in notifications.items %}
+        <div class="card mb-3 {% if not notification.is_read %}border-primary{% endif %}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h5 class="card-title">
+                        {% if not notification.is_read %}
+                        <span class="badge bg-primary">Новое</span>
+                        {% endif %}
+                        {{ notification.title }}
+                    </h5>
+                    <small class="text-muted">{{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                </div>
+                <p class="card-text">{{ notification.message }}</p>
+                <div class="d-flex justify-content-end">
+                    {% if not notification.is_read %}
+                    <form method="POST" action="{{ url_for('notifications.mark_as_read', notification_id=notification.id) }}" class="d-inline me-2">
+                        <button type="submit" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-check"></i> Прочитано
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('notifications.delete_notification', notification_id=notification.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Вы уверены, что хотите удалить это уведомление?')">
+                            <i class="fas fa-trash"></i> Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Пагинация -->
+{% if notifications.pages > 1 %}
+<nav aria-label="Пагинация уведомлений">
+    <ul class="pagination justify-content-center">
+        {% if notifications.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('notifications.list_notifications', page=notifications.prev_num) }}">Предыдущая</a>
+            </li>
+        {% endif %}
+        
+        {% for page_num in notifications.iter_pages() %}
+            {% if page_num %}
+                {% if page_num != notifications.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('notifications.list_notifications', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">…</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if notifications.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('notifications.list_notifications', page=notifications.next_num) }}">Следующая</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<p class="text-center text-muted">Показано {{ notifications.items|length }} из {{ notifications.total }} уведомлений</p>
+
+{% else %}
+<div class="row">
+    <div class="col-12 text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h4>Уведомлений нет</h4>
+                <p class="text-muted">У вас пока нет уведомлений. Здесь будут отображаться важные события и сообщения.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

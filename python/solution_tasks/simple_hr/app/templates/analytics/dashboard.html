@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика и отчеты{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Аналитика и отчеты</h2>
+</div>
+
+<!-- Ключевые метрики -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Всего сотрудников</h5>
+                <h2>{{ interactive_data.total_employees }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Активные</h5>
+                <h2>{{ interactive_data.active_employees }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Уволенные</h5>
+                <h2>{{ interactive_data.dismissed_employees }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Подразделения</h5>
+                <h2>{{ interactive_data.department_stats|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Интерактивные графики -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение сотрудников по статусам</h5>
+            </div>
+            <div class="card-body">
+                <div id="status_chart">{{ interactive_charts.status_chart|safe }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение сотрудников по подразделениям</h5>
+            </div>
+            <div class="card-body">
+                <div id="department_chart">{{ interactive_charts.department_chart|safe }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение отпусков по типам</h5>
+            </div>
+            <div class="card-body">
+                <div id="vacation_chart">{{ interactive_charts.vacation_chart|safe }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Динамика найма сотрудников</h5>
+            </div>
+            <div class="card-body">
+                <div id="hiring_trend_chart">{{ interactive_charts.hiring_trend_chart|safe }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Навигация по разделам аналитики -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Детальная аналитика</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('analytics.employee_statistics') }}" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="fas fa-users"></i><br>Статистика по сотрудникам
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('analytics.hiring_trends') }}" class="btn btn-outline-success btn-lg w-100">
+                            <i class="fas fa-chart-line"></i><br>Тенденции найма
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('analytics.vacation_analysis') }}" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fas fa-umbrella-beach"></i><br>Анализ отпусков
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="#" class="btn btn-outline-secondary btn-lg w-100 disabled">
+                            <i class="fas fa-file-export"></i><br>Экспорт отчетов
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}

@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.models import Employee, Department, Position
 from app.forms import EmployeeForm
+from app.utils.notifications import notify_employee_created, notify_employee_updated
 from app import db
 
 bp = Blueprint('employees', __name__)
@@ -79,6 +80,8 @@ def create_employee():
         try:
             db.session.add(employee)
             db.session.commit()
+            # Отправляем уведомление
+            notify_employee_created(current_user.id, employee.full_name)
             flash('Сотрудник успешно добавлен')
             return redirect(url_for('employees.list_employees'))
         except Exception as e:
@@ -106,6 +109,8 @@ def edit_employee(id):
         
         try:
             db.session.commit()
+            # Отправляем уведомление
+            notify_employee_updated(current_user.id, employee.full_name)
             flash('Сотрудник успешно обновлен')
             return redirect(url_for('employees.list_employees'))
         except Exception as e:

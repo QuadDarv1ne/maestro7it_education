@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Тенденции найма{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Тенденции найма</h2>
+    <a href="{{ url_for('analytics.dashboard') }}" class="btn btn-secondary">Назад к аналитике</a>
+</div>
+
+<!-- График тенденций найма -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Динамика найма сотрудников по месяцам</h5>
+            </div>
+            <div class="card-body">
+                <img src="data:image/png;base64,{{ hiring_trend_chart }}" class="img-fluid" alt="Тенденции найма">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица с данными о найме -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Последние принятые сотрудники</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Подразделение</th>
+                                <th>Должность</th>
+                                <th>Дата приема</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hire in hiring_data[:20] %} <!-- Показываем только последние 20 -->
+                            <tr>
+                                <td>{{ hire.full_name }}</td>
+                                <td>{{ hire.department }}</td>
+                                <td>{{ hire.position }}</td>
+                                <td>{{ hire.hire_date.strftime('%d.%m.%Y') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if hiring_data|length > 20 %}
+                <p class="text-muted">Показаны последние 20 из {{ hiring_data|length }} записей</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
