@@ -4,7 +4,6 @@ Flask
 # Работа с базой данных
 Flask-SQLAlchemy
 SQLAlchemy
-PyMySQL
 
 # Авторизация и безопасность
 Flask-Login
