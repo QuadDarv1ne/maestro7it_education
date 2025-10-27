@@ -73,6 +73,7 @@ class VacationForm(FlaskForm):
     type = SelectField('Тип отпуска', 
                       choices=[('paid', 'Оплачиваемый'), ('unpaid', 'Неоплачиваемый'), ('sick', 'Больничный')],
                       validators=[DataRequired()])
+    submit = SubmitField('Сохранить')
     
     def __init__(self, *args, **kwargs):
         super(VacationForm, self).__init__(*args, **kwargs)
