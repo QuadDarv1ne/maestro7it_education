@@ -128,3 +128,47 @@ class ResetPasswordForm(FlaskForm):
     password2 = PasswordField('Подтверждение пароля', 
                              validators=[DataRequired(), EqualTo('password', message='Пароли должны совпадать')])
     submit = SubmitField('Установить пароль')
+
+class UserForm(FlaskForm):
+    username = StringField('Имя пользователя', validators=[DataRequired(), Length(min=3, max=80)])
+    email = EmailField('Email', validators=[DataRequired(), Email(), Length(max=120)])
+    password = PasswordField('Пароль', validators=[Optional(), Length(min=6)])
+    password2 = PasswordField('Подтверждение пароля', 
+                             validators=[Optional(), EqualTo('password', message='Пароли должны совпадать')])
+    role = SelectField('Роль', choices=[('hr', 'HR'), ('admin', 'Администратор')], validators=[DataRequired()])
+    submit = SubmitField('Сохранить')
+    
+    def __init__(self, original_username=None, original_email=None, *args, **kwargs):
+        super(UserForm, self).__init__(*args, **kwargs)
+        self.original_username = original_username
+        self.original_email = original_email
+    
+    def validate_username(self, username):
+        if self.original_username and username.data == self.original_username:
+            return
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError('Пользователь с таким именем уже существует.')
+    
+    def validate_email(self, email):
+        if self.original_email and email.data == self.original_email:
+            return
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('Пользователь с таким email уже существует.')
+    
+    def validate(self, extra_validators=None):
+        if not super(UserForm, self).validate(extra_validators=extra_validators):
+            return False
+        
+        # Если это создание нового пользователя, пароль обязателен
+        if not self.original_username and not self.password.data:
+            self.password.errors = list(self.password.errors) + ['Пароль обязателен при создании пользователя']
+            return False
+        
+        # Если указан пароль, проверяем его подтверждение
+        if self.password.data and not self.password2.data:
+            self.password2.errors = list(self.password2.errors) + ['Подтверждение пароля обязательно']
+            return False
+        
+        return True

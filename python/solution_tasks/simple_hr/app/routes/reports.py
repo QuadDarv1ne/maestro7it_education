@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from app.models import Employee, Department, Position, Vacation, Order
 from app.utils.reports import generate_employee_report, generate_department_report, generate_vacation_report, generate_hiring_report, export_report_to_csv, export_report_to_excel, get_employee_statistics, get_vacation_statistics
+from app.utils.decorators import reports_access_required
 from app import db
 from datetime import datetime, date
 import pandas as pd
@@ -11,9 +12,14 @@ bp = Blueprint('reports', __name__)
 
 @bp.route('/')
 @login_required
+@reports_access_required
 def generate_report():
     # Get report parameters
-    report_type = request.args.get('type', 'employees')
+    report_type = request.args.get('type', 'index')
+    
+    # If no specific report type requested, show report index
+    if report_type == 'index':
+        return render_template('reports/index.html')
     department_id = request.args.get('department_id', type=int)
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
@@ -82,6 +88,7 @@ def generate_report():
 
 @bp.route('/export')
 @login_required
+@reports_access_required
 def export_report():
     # Get report parameters
     report_type = request.args.get('type', 'employees')

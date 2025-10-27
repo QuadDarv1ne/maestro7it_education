@@ -41,6 +41,30 @@ class User(UserMixin, db.Model):
         self.set_password(new_password)
         self.reset_token = None
         self.reset_token_expires = None
+    
+    def is_admin(self):
+        return self.role == 'admin'
+    
+    def is_hr(self):
+        return self.role == 'hr'
+    
+    def can_access_reports(self):
+        return self.role in ['admin', 'hr']
+    
+    def can_manage_employees(self):
+        return self.role in ['admin', 'hr']
+    
+    def can_manage_departments(self):
+        return self.role in ['admin', 'hr']
+    
+    def can_manage_positions(self):
+        return self.role in ['admin', 'hr']
+    
+    def can_manage_vacations(self):
+        return self.role in ['admin', 'hr']
+    
+    def can_backup_data(self):
+        return self.role == 'admin'
 
 class Department(db.Model):
     id = db.Column(db.Integer, primary_key=True)
