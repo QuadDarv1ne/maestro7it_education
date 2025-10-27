@@ -43,6 +43,8 @@ class StockfishWrapper:
         skill_level (int): Уровень сложности (0-20)
         depth (int): Глубина анализа
         analysis_cache (dict): Кэш для результатов анализа
+        move_validation_cache (dict): Кэш для валидации ходов
+        position_analysis_cache (dict): Кэш для анализа позиций
     """
     
     def __init__(self, skill_level=5, depth=15, path=None):
@@ -64,6 +66,8 @@ class StockfishWrapper:
         self.board_state_cache_fen = None
         self.evaluation_cache = None
         self.evaluation_cache_fen = None
+        self.move_validation_cache = {}  # Кэш для валидации ходов
+        self.position_analysis_cache = {}  # Кэш для анализа позиций
         self.move_count = 0
         self.engine = None
         self._process_cleaned_up = False  # Флаг для отслеживания очистки
@@ -93,6 +97,9 @@ class StockfishWrapper:
     
     def _cleanup_cache(self):
         """Очистка кэша по LRU алгоритму при превышении максимального размера."""
+        current_time = time.time()
+        
+        # Очистка analysis_cache
         if len(self.analysis_cache) > self._max_cache_size:
             # Сортируем по количеству обращений и удаляем наименее используемые
             sorted_items = sorted(self._cache_access_count.items(), key=lambda x: x[1])
@@ -104,6 +111,18 @@ class StockfishWrapper:
                     del self.analysis_cache[key]
                 if key in self._cache_access_count:
                     del self._cache_access_count[key]
+        
+        # Очистка move_validation_cache по времени (устаревшие записи старше 30 секунд)
+        expired_keys = [key for key, timestamp in self.move_validation_cache.items() 
+                       if isinstance(timestamp, tuple) and current_time - timestamp[1] > 30]
+        for key in expired_keys:
+            del self.move_validation_cache[key]
+        
+        # Очистка position_analysis_cache по времени (устаревшие записи старше 60 секунд)
+        expired_keys = [key for key, data in self.position_analysis_cache.items() 
+                       if isinstance(data, dict) and 'timestamp' in data and current_time - data['timestamp'] > 60]
+        for key in expired_keys:
+            del self.position_analysis_cache[key]
     
     def get_board_state(self) -> List[List[Optional[str]]]:
         """
@@ -173,6 +192,17 @@ class StockfishWrapper:
             
         if not uci_move or len(uci_move) != 4:
             return False
+            
+        # Проверяем кэш валидации ходов
+        cache_key = f"{self.engine.get_fen_position()}_{uci_move}"
+        current_time = time.time()
+        
+        if cache_key in self.move_validation_cache:
+            cached_result, timestamp = self.move_validation_cache[cache_key]
+            # Используем кэш если он свежий (меньше 10 секунд)
+            if current_time - timestamp < 10:
+                return cached_result
+        
         try:
             # Get the FEN before attempting the move
             original_fen = self.engine.get_fen_position()
@@ -183,8 +213,15 @@ class StockfishWrapper:
             # Undo the move to restore the original position
             self.engine.set_fen_position(original_fen)
             # If the FEN changed, the move was valid
-            return original_fen != new_fen
+            result = original_fen != new_fen
+            
+            # Сохраняем результат в кэш
+            self.move_validation_cache[cache_key] = (result, current_time)
+            
+            return result
         except Exception:
+            # Сохраняем результат в кэш даже при ошибке
+            self.move_validation_cache[cache_key] = (False, current_time)
             return False
     
     def make_move(self, uci_move: str) -> bool:
@@ -572,6 +609,16 @@ class StockfishWrapper:
         if self.engine is None:
             return {}
             
+        # Проверяем кэш анализа позиций
+        cache_key = f"{self.engine.get_fen_position()}_{move}_{depth}"
+        current_time = time.time()
+        
+        if cache_key in self.position_analysis_cache:
+            cached_data = self.position_analysis_cache[cache_key]
+            # Используем кэш если он свежий (меньше 30 секунд)
+            if 'timestamp' in cached_data and current_time - cached_data['timestamp'] < 30:
+                return cached_data
+            
         try:
             # Сохраняем текущую позицию
             original_fen = self.engine.get_fen_position()
@@ -589,12 +636,17 @@ class StockfishWrapper:
             # Восстанавливаем оригинальную позицию
             self.engine.set_fen_position(original_fen)
             
-            return {
+            result = {
                 'move': move,
                 'evaluation': evaluation,
                 'best_response': best_move,
-                'timestamp': time.time()
+                'timestamp': current_time
             }
+            
+            # Сохраняем результат в кэш
+            self.position_analysis_cache[cache_key] = result
+            
+            return result
         except Exception as e:
             print(f"⚠️  Ошибка при анализе хода {move}: {e}")
             return {}

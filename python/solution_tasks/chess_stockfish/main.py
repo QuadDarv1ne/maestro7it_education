@@ -11,6 +11,11 @@ from typing import Tuple, Union
 # Import our game modules
 from game.menu import main_menu
 from game.chess_game import ChessGame
+# Import new game modes
+from game.puzzle_mode import PuzzleMode
+from game.timed_mode import TimedMode
+from game.adaptive_mode import AdaptiveMode
+
 from utils.game_stats import GameStatistics
 from utils.performance_monitor import get_performance_monitor  # Добавляем импорт
 
@@ -73,12 +78,57 @@ def suggest_stockfish_installation():
 def cleanup_game(game):
     """Безопасная очистка ресурсов игры."""
     try:
-        if game and hasattr(game, 'engine') and game.engine:
+        if game and hasattr(game, 'cleanup'):
+            game.cleanup()
+        elif game and hasattr(game, 'engine') and game.engine:
             if hasattr(game.engine, 'quit'):
                 game.engine.quit()
     except Exception as e:
         # Игнорируем ошибки при очистке
         pass
+
+
+def run_classic_game(player_color, skill_level, theme):
+    """Запустить классическую игру."""
+    game = ChessGame(player_color=player_color, skill_level=skill_level, theme=theme)
+    result = game.run()
+    return result
+
+
+def run_puzzle_mode(theme):
+    """Запустить режим головоломок."""
+    pygame.init()
+    screen = pygame.display.set_mode((512, 612))  # Дополнительное пространство для UI
+    pygame.display.set_caption("♟️  Шахматные головоломки — Maestro7IT")
+    
+    puzzle_mode = PuzzleMode(screen, theme)
+    result = puzzle_mode.run()
+    puzzle_mode.cleanup()
+    return result
+
+
+def run_timed_mode(player_color, theme):
+    """Запустить режим игры на время."""
+    pygame.init()
+    screen = pygame.display.set_mode((512, 612))  # Дополнительное пространство для UI
+    pygame.display.set_caption("⏱️  Игра на время — Maestro7IT")
+    
+    timed_mode = TimedMode(screen, player_color, 'blitz_3_0')  # По умолчанию блиц 3+0
+    result = timed_mode.run()
+    timed_mode.cleanup()
+    return result
+
+
+def run_adaptive_mode(player_color, theme):
+    """Запустить адаптивный режим."""
+    pygame.init()
+    screen = pygame.display.set_mode((512, 612))  # Дополнительное пространство для UI
+    pygame.display.set_caption("🧠  Адаптивная сложность — Maestro7IT")
+    
+    adaptive_mode = AdaptiveMode(screen, player_color, theme)
+    result = adaptive_mode.run()
+    adaptive_mode.cleanup()
+    return result
 
 
 def main():
@@ -114,16 +164,28 @@ def main():
     game = None
     try:
         while True:  # Цикл для возвращения в главное меню
-            menu_result: Union[Tuple[str, int], Tuple[str, int, str]] = main_menu()
-            # Handle both old and new menu return types
-            if len(menu_result) == 3:
-                player_color, skill_level, theme = menu_result
+            menu_result = main_menu()
+            # Handle menu return type (color, skill_level, theme, game_mode)
+            if len(menu_result) == 4:
+                player_color, skill_level, theme, game_mode = menu_result
             else:
+                # Fallback to classic mode for older menu versions
                 player_color, skill_level = menu_result
                 theme = 'classic'
+                game_mode = 'classic'
             
-            game = ChessGame(player_color=player_color, skill_level=skill_level, theme=theme)
-            result = game.run()
+            # Запуск соответствующего режима игры
+            if game_mode == 'classic':
+                result = run_classic_game(player_color, skill_level, theme)
+            elif game_mode == 'puzzle':
+                result = run_puzzle_mode(theme)
+            elif game_mode == 'timed':
+                result = run_timed_mode(player_color, theme)
+            elif game_mode == 'adaptive':
+                result = run_adaptive_mode(player_color, theme)
+            else:
+                # По умолчанию классический режим
+                result = run_classic_game(player_color, skill_level, theme)
             
             # Проверяем, нужно ли вернуться в главное меню
             if result == "main_menu":
@@ -133,30 +195,31 @@ def main():
                 game = None
                 continue  # Возвращаемся к началу цикла (в главное меню)
             
-            # Сохранить статистику игры
-            try:
-                stats = GameStatistics()
-                # Если результат - статистика игры, сохраняем её
-                if isinstance(result, dict):
-                    game_stats = result
-                else:
-                    # Иначе получаем статистику из игры
-                    game_stats = game.get_game_stats()
-                stats.save_game(game_stats)
-                print("📊 Статистика игры сохранена")
-                
-                # Показать обновленную статистику
-                summary = stats.get_summary()
-                print(f"\n📈 Обновленная статистика:")
-                print(f"   Всего игр: {summary['total_games']}")
-                print(f"   Побед: {summary['total_wins']}")
-                print(f"   Поражений: {summary['total_losses']}")
-                print(f"   Ничьих: {summary['total_draws']}")
-                if summary['total_games'] > 0:
-                    print(f"   Процент побед: {summary['win_rate']:.1f}%")
-                print()
-            except Exception as e:
-                print(f"⚠️  Не удалось сохранить статистику: {e}")
+            # Сохранить статистику игры (если это не режим головоломок)
+            if game_mode != 'puzzle':
+                try:
+                    stats = GameStatistics()
+                    # Если результат - статистика игры, сохраняем её
+                    if isinstance(result, dict):
+                        game_stats = result
+                    else:
+                        # Иначе получаем статистику из игры
+                        game_stats = game.get_game_stats() if game else {}
+                    stats.save_game(game_stats)
+                    print("📊 Статистика игры сохранена")
+                    
+                    # Показать обновленную статистику
+                    summary = stats.get_summary()
+                    print(f"\n📈 Обновленная статистика:")
+                    print(f"   Всего игр: {summary['total_games']}")
+                    print(f"   Побед: {summary['total_wins']}")
+                    print(f"   Поражений: {summary['total_losses']}")
+                    print(f"   Ничьих: {summary['total_draws']}")
+                    if summary['total_games'] > 0:
+                        print(f"   Процент побед: {summary['win_rate']:.1f}%")
+                    print()
+                except Exception as e:
+                    print(f"⚠️  Не удалось сохранить статистику: {e}")
             
             # Очищаем ресурсы игры
             cleanup_game(game)

@@ -10,6 +10,7 @@
     Позволяет игроку выбрать:
     - Сторону (белые/чёрные)
     - Уровень сложности Stockfish (0-20)
+    - Режим игры (классический, головоломки, на время, адаптивный)
     
 Возможности:
     - Валидация ввода
@@ -33,6 +34,20 @@ def show_difficulty_guide():
     print("   8-11  : Средний (умеренный)")
     print("   12-15 : Сильный (сложный)")
     print("   16-20 : Эксперт (очень сложный)")
+    print()
+
+
+def show_game_modes():
+    """
+    Показать справку по режимам игры.
+    
+    Объясняет, что представляют собой различные режимы игры.
+    """
+    print("\n🎮 Режимы игры:")
+    print("   classic     : Классическая игра против Stockfish")
+    print("   puzzle      : Решение шахматных головоломок")
+    print("   timed       : Игра на время (блиц, рапид, пуля)")
+    print("   adaptive    : Адаптивная сложность под ваш уровень")
     print()
 
 
@@ -62,17 +77,18 @@ def show_stats():
         print(f"⚠️  Не удалось загрузить статистику: {e}")
 
 
-def main_menu() -> Tuple[str, int, str]:
+def main_menu() -> Tuple[str, int, str, str]:
     """
     Главное меню выбора параметров игры.
     
     Выводит приветствие, справку и запрашивает параметры игры.
     
     Возвращает:
-        Tuple[str, int, str]: Кортеж (color, skill_level, theme)
+        Tuple[str, int, str, str]: Кортеж (color, skill_level, theme, game_mode)
             - color: 'white' или 'black'
             - skill_level: уровень сложности (0-20)
             - theme: цветовая тема
+            - game_mode: режим игры ('classic', 'puzzle', 'timed', 'adaptive')
     """
     print("\n" + "="*70)
     print("♟️  chess_stockfish — УЛУЧШЕННАЯ ВЕРСИЯ — Maestro7IT Education")
@@ -85,54 +101,106 @@ def main_menu() -> Tuple[str, int, str]:
     print("   ✓ Поддержка обеих сторон (белые/чёрные)")
     print("   ✓ Разные уровни сложности (0-20)")
     print("   ✓ История ходов и позиций")
-    print("   ✓ Оптимизированная производительность\n")
+    print("   ✓ Оптимизированная производительность")
+    print("   ✓ Новые режимы игры: головоломки, на время, адаптивный")
+    print()
     
     # Показать статистику
     show_stats()
     
     show_difficulty_guide()
+    show_game_modes()
     
-    # Выбор стороны
+    # Инициализация значений по умолчанию
+    player_color = 'white'
+    level = 5
+    theme = 'classic'
+    game_mode = 'classic'
+    
+    # Выбор режима игры
     while True:
-        side_input = input("Выберите сторону (white/w, black/b): ").strip().lower()
-        if side_input in ('white', 'w'):
-            player_color = 'white'
-            break
-        elif side_input in ('black', 'b'):
-            player_color = 'black'
+        mode_input = input("Выберите режим игры (classic/puzzle/timed/adaptive): ").strip().lower()
+        if mode_input in ('classic', 'puzzle', 'timed', 'adaptive'):
+            game_mode = mode_input
             break
         else:
-            print("❌ Неверный ввод! Введите 'white' (или 'w') или 'black' (или 'b')")
+            print("❌ Неверный ввод! Введите 'classic', 'puzzle', 'timed' или 'adaptive'")
     
-    # Выбор уровня сложности
-    while True:
-        try:
-            level_input = input("\nУровень Stockfish (0-20, рекомендуется 5-10): ").strip()
-            if level_input == '':
-                level = 5  # По умолчанию средний уровень
+    # Для режима головоломок и уровня
+    if game_mode == 'puzzle':
+        # Выбор темы
+        print("\n🎨 Доступные темы: classic, dark, blue, green, contrast, purple, wood, sunset")
+        theme_input = input("Выберите тему (по умолчанию classic): ").strip().lower()
+        if theme_input in ('classic', 'dark', 'blue', 'green', 'contrast', 'purple', 'wood', 'sunset'):
+            theme = theme_input
+        else:
+            theme = 'classic'
+            
+        print(f"\n✅ Режим головоломок запускается с темой: {theme}")
+        print(f"\n{'='*70}\n")
+        return 'white', 10, theme, 'puzzle'  # Для головоломок используем стандартные значения
+    
+    # Для классического режима и адаптивного режима требуются все параметры
+    if game_mode in ('classic', 'adaptive'):
+        # Выбор стороны
+        while True:
+            side_input = input("Выберите сторону (white/w, black/b): ").strip().lower()
+            if side_input in ('white', 'w'):
+                player_color = 'white'
                 break
-            level = int(level_input)
-            if 0 <= level <= 20:
+            elif side_input in ('black', 'b'):
+                player_color = 'black'
                 break
             else:
-                print("❌ Уровень должен быть от 0 до 20")
-        except ValueError:
-            print("❌ Пожалуйста, введите число от 0 до 20")
+                print("❌ Неверный ввод! Введите 'white' (или 'w') или 'black' (или 'b')")
+        
+        # Выбор уровня сложности
+        while True:
+            try:
+                level_input = input("\nУровень Stockfish (0-20, рекомендуется 5-10): ").strip()
+                if level_input == '':
+                    level = 5  # По умолчанию средний уровень
+                    break
+                level = int(level_input)
+                if 0 <= level <= 20:
+                    break
+                else:
+                    print("❌ Уровень должен быть от 0 до 20")
+            except ValueError:
+                print("❌ Пожалуйста, введите число от 0 до 20")
+    
+    # Для режима на время используются предопределенные настройки
+    elif game_mode == 'timed':
+        # Выбор стороны
+        while True:
+            side_input = input("Выберите сторону (white/w, black/b): ").strip().lower()
+            if side_input in ('white', 'w'):
+                player_color = 'white'
+                break
+            elif side_input in ('black', 'b'):
+                player_color = 'black'
+                break
+            else:
+                print("❌ Неверный ввод! Введите 'white' (или 'w') или 'black' (или 'b')")
+        
+        # Для режима на время уровень сложности фиксирован
+        level = 10  # Средний уровень для режима на время
     
     # Выбор темы
-    print("\n🎨 Доступные темы: classic, dark, blue, green, contrast")
+    print("\n🎨 Доступные темы: classic, dark, blue, green, contrast, purple, wood, sunset")
     theme_input = input("Выберите тему (по умолчанию classic): ").strip().lower()
-    if theme_input in ('classic', 'dark', 'blue', 'green', 'contrast'):
+    if theme_input in ('classic', 'dark', 'blue', 'green', 'contrast', 'purple', 'wood', 'sunset'):
         theme = theme_input
     else:
         theme = 'classic'
     
     # Подтверждение
     print(f"\n✅ Игра начинается:")
+    print(f"   Режим: {game_mode}")
     print(f"   Вы: {player_color.upper()}")
     print(f"   ПК: {('BLACK' if player_color == 'white' else 'WHITE')}")
     print(f"   Уровень: {level}/20")
     print(f"   Тема: {theme}")
     print(f"\n{'='*70}\n")
     
-    return player_color, level, theme
+    return player_color, level, theme, game_mode

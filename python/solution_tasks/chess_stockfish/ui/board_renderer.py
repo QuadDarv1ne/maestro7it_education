@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from enum import Enum
 import logging
 import weakref
+import time
 
 # Попытка импортировать CUDA для GPU ускорения (если доступно)
 try:
@@ -89,6 +90,33 @@ THEMES = {
         highlight=(0, 255, 0, 200),
         last_move=(255, 255, 0, 180),
         check=(255, 0, 0, 200)
+    ),
+    'purple': BoardTheme(  # Добавляем фиолетовую тему
+        light_square=(230, 230, 250),
+        dark_square=(128, 0, 128),
+        white_piece=(255, 255, 255),
+        black_piece=(218, 112, 214),
+        highlight=(147, 112, 219, 200),
+        last_move=(255, 105, 180, 180),
+        check=(255, 20, 147, 200)
+    ),
+    'wood': BoardTheme(  # Добавляем деревянную тему
+        light_square=(240, 217, 181),  # Светло-коричневый
+        dark_square=(181, 136, 99),    # Темно-коричневый
+        white_piece=(255, 255, 255),
+        black_piece=(0, 0, 0),
+        highlight=(139, 69, 19, 180),  # Кожано-коричневый
+        last_move=(210, 180, 140, 180), # Тан
+        check=(160, 82, 45, 200)       # Сиена
+    ),
+    'sunset': BoardTheme(  # Добавляем тему "Закат"
+        light_square=(255, 204, 153),  # Светло-оранжевый
+        dark_square=(204, 102, 0),     # Темно-оранжевый
+        white_piece=(255, 255, 255),   # Белые фигуры
+        black_piece=(102, 0, 0),       # Темно-красные фигуры
+        highlight=(255, 255, 102, 200), # Желтое выделение
+        last_move=(255, 153, 51, 180),  # Оранжевое выделение последнего хода
+        check=(255, 0, 0, 200)          # Красное выделение шаха
     )
 }
 
@@ -113,25 +141,6 @@ class ResourceCache:
     MAX_SURFACE_CACHE_SIZE = 150  # Увеличиваем для лучшей производительности
     MAX_PIECE_CACHE_SIZE = 75    # Увеличиваем для лучшей производительности
     MAX_RECT_CACHE_SIZE = 200    # Кэш для прямоугольников клеток
-    
-    def __init__(self):
-        self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
-        self.surfaces: Dict[Tuple[Tuple[int, ...], Tuple[int, int]], pygame.Surface] = {}
-        self.pieces: Dict[Tuple[str, Tuple[int, ...], int], pygame.Surface] = {}
-        
-        # Счётчики использования для LRU
-        self.surface_usage: Dict = {}
-        self.piece_usage: Dict = {}
-        
-        # Pre-rendered piece surfaces for maximum performance
-        self._pre_rendered_pieces: Dict[Tuple[str, str], pygame.Surface] = {}
-        
-        # GPU ускорение (если доступно)
-        self.cuda_available = CUDA_AVAILABLE
-        if self.cuda_available:
-            print("✅ CUDA доступна для ускорения рендеринга")
-        else:
-            print("⚠️  CUDA недоступна, используется CPU для рендеринга")
     
     def __init__(self):
         self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
@@ -503,6 +512,11 @@ class BoardRenderer:
         # Оптимизация
         self._dirty_squares: Set[Tuple[int, int]] = set()
         self._last_board_state: Optional[List[List[Optional[str]]]] = None
+        
+        # Анимации
+        self._animations: Dict[str, Dict] = {}
+        self._piece_animations: Dict[Tuple[int, int], Dict] = {}
+        self._last_update_time = 0
 
     def _init_fonts(self):
         """Инициализация шрифтов."""
@@ -575,6 +589,29 @@ class BoardRenderer:
             if new_hover:
                 self._dirty_squares.add(new_hover)
             self.layered_renderer.mark_dirty('effects')
+    
+    def add_piece_animation(self, from_square: Tuple[int, int], to_square: Tuple[int, int], duration: float = 0.3):
+        """Добавить анимацию перемещения фигуры."""
+        animation_id = f"piece_{from_square[0]}{from_square[1]}_{to_square[0]}{to_square[1]}"
+        self._animations[animation_id] = {
+            'type': 'piece_move',
+            'from_square': from_square,
+            'to_square': to_square,
+            'start_time': time.time(),
+            'duration': duration,
+            'progress': 0.0
+        }
+    
+    def add_capture_animation(self, square: Tuple[int, int], duration: float = 0.5):
+        """Добавить анимацию захвата фигуры."""
+        animation_id = f"capture_{square[0]}{square[1]}"
+        self._animations[animation_id] = {
+            'type': 'capture',
+            'square': square,
+            'start_time': time.time(),
+            'duration': duration,
+            'progress': 0.0
+        }
 
     def _draw_base_layer(self, board_state: List[List[Optional[str]]]):
         """Отрисовка базового слоя (доска)."""
