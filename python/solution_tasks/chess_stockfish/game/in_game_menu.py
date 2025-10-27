@@ -145,6 +145,13 @@ class InGameMenu:
         """Скрыть меню с анимацией."""
         self.animation_direction = -1
         self.animation_progress = 1.0
+
+    def toggle(self):
+        """Переключить видимость меню."""
+        if self.visible:
+            self.hide()
+        else:
+            self.show()
         
     def _complete_hide(self):
         """Завершить скрытие меню."""
