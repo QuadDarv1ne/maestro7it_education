@@ -97,6 +97,7 @@ class OrderForm(FlaskForm):
     date_issued = DateField('Дата приказа', validators=[DataRequired()])
     new_department_id = SelectField('Новое подразделение', coerce=int, validators=[Optional()])
     new_position_id = SelectField('Новая должность', coerce=int, validators=[Optional()])
+    submit = SubmitField('Сохранить')
     
     def __init__(self, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
