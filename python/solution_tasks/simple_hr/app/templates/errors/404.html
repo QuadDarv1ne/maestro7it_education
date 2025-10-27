@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Страница не найдена{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="display-1">404</h1>
+                <h2>Страница не найдена</h2>
+                <p class="lead">Извините, запрашиваемая страница не найдена.</p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary">Вернуться на главную</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,68 +1,44 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required
 from app.models import User
+from app.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
 from app import db
 
 bp = Blueprint('auth', __name__)
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        
-        # Validate input
-        if not username or not password:
-            flash('Пожалуйста, заполните все поля')
-            return render_template('login.html')
-        
-        user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data):
             login_user(user)
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('main.index'))
         else:
             flash('Неверный логин или пароль')
     
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip()
-        password = request.form.get('password', '')
-        password2 = request.form.get('password2', '')
-        role = request.form.get('role', '')
-        
-        # Validate input
-        if not username or not email or not password or not password2 or not role:
-            flash('Пожалуйста, заполните все поля')
-            return render_template('register.html')
-        
-        if password != password2:
-            flash('Пароли не совпадают')
-            return render_template('register.html')
-        
-        if len(password) < 6:
-            flash('Пароль должен содержать не менее 6 символов')
-            return render_template('register.html')
-        
+    form = RegistrationForm()
+    if form.validate_on_submit():
         # Check if user already exists
-        if User.query.filter_by(username=username).first():
+        if User.query.filter_by(username=form.username.data).first():
             flash('Пользователь с таким именем уже существует')
-            return render_template('register.html')
+            return render_template('register.html', form=form)
         
-        if User.query.filter_by(email=email).first():
+        if User.query.filter_by(email=form.email.data).first():
             flash('Пользователь с таким email уже существует')
-            return render_template('register.html')
+            return render_template('register.html', form=form)
         
         # Create new user
         user = User()
-        user.username = username
-        user.email = email
-        user.role = role
-        user.set_password(password)
+        user.username = form.username.data
+        user.email = form.email.data
+        user.role = form.role.data
+        user.set_password(form.password.data)
         
         try:
             db.session.add(user)
@@ -72,9 +48,9 @@ def register():
         except Exception as e:
             db.session.rollback()
             flash('Ошибка при регистрации')
-            return render_template('register.html')
+            return render_template('register.html', form=form)
     
-    return render_template('register.html')
+    return render_template('register.html', form=form)
 
 @bp.route('/logout')
 @login_required
@@ -85,14 +61,9 @@ def logout():
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])
 def reset_password_request():
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        
-        if not email:
-            flash('Пожалуйста, введите email')
-            return render_template('reset_password_request.html')
-        
-        user = User.query.filter_by(email=email).first()
+    form = ResetPasswordRequestForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
         if user:
             # Generate reset token
             token = user.generate_reset_token()
@@ -108,7 +79,7 @@ def reset_password_request():
         flash('Если email существует в нашей системе, вы получите инструкции по восстановлению пароля')
         return redirect(url_for('auth.login'))
     
-    return render_template('reset_password_request.html')
+    return render_template('reset_password_request.html', form=form)
 
 @bp.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
@@ -118,28 +89,13 @@ def reset_password(token):
         flash('Неверная или просроченная ссылка для восстановления пароля')
         return redirect(url_for('auth.login'))
     
-    if request.method == 'POST':
-        password = request.form.get('password', '')
-        password2 = request.form.get('password2', '')
-        
-        # Validate input
-        if not password or not password2:
-            flash('Пожалуйста, заполните все поля')
-            return render_template('reset_password.html')
-        
-        if password != password2:
-            flash('Пароли не совпадают')
-            return render_template('reset_password.html')
-        
-        if len(password) < 6:
-            flash('Пароль должен содержать не менее 6 символов')
-            return render_template('reset_password.html')
-        
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
         # Reset password
-        user.reset_password(password)
+        user.reset_password(form.password.data)
         db.session.commit()
         
         flash('Ваш пароль был успешно изменен')
         return redirect(url_for('auth.login'))
     
-    return render_template('reset_password.html')
+    return render_template('reset_password.html', form=form)

@@ -13,6 +13,13 @@ def detect_encoding(filepath):
 
 def import_employees_from_csv(filepath):
     """Import employees from CSV file with error handling"""
+    report = {
+        'imported': 0,
+        'skipped': 0,
+        'errors': [],
+        'details': []
+    }
+    
     try:
         # Detect encoding
         encoding = detect_encoding(filepath)
@@ -27,14 +34,18 @@ def import_employees_from_csv(filepath):
         if missing_columns:
             raise ValueError(f"Отсутствуют обязательные столбцы: {', '.join(missing_columns)}")
         
-        imported_count = 0
-        
-        for _, row in df.iterrows():
+        for index, row in df.iterrows():
             try:
                 # Check if employee already exists
                 existing_emp = Employee.query.filter_by(email=row['email']).first()
                 if existing_emp:
-                    print(f"Сотрудник с email {row['email']} уже существует, пропущен")
+                    report['skipped'] += 1
+                    report['details'].append(f"Строка {index+1}: Сотрудник с email {row['email']} уже существует, пропущен")
+                    continue
+                
+                # Validate required fields
+                if pd.isna(row['full_name']) or pd.isna(row['email']) or pd.isna(row['employee_id']):
+                    report['errors'].append(f"Строка {index+1}: Отсутствуют обязательные данные")
                     continue
                 
                 # Get or create department
@@ -55,29 +66,31 @@ def import_employees_from_csv(filepath):
                 try:
                     hire_date = datetime.strptime(str(row['hire_date']), '%Y-%m-%d').date()
                 except ValueError:
-                    print(f"Неверный формат даты для сотрудника {row['full_name']}, пропущен")
+                    report['errors'].append(f"Строка {index+1}: Неверный формат даты для сотрудника {row['full_name']}, пропущен")
                     continue
 
                 # Create employee
-                emp = Employee(
-                    full_name=row['full_name'],
-                    email=row['email'],
-                    employee_id=row['employee_id'],
-                    hire_date=hire_date,
-                    department_id=dept.id,
-                    position_id=pos.id,
-                    status='active'
-                )
+                emp = Employee()
+                emp.full_name = row['full_name']
+                emp.email = row['email']
+                emp.employee_id = row['employee_id']
+                emp.hire_date = hire_date
+                emp.department_id = dept.id
+                emp.position_id = pos.id
+                emp.status = 'active'
+                
                 db.session.add(emp)
-                imported_count += 1
+                report['imported'] += 1
+                report['details'].append(f"Строка {index+1}: Импортирован сотрудник {row['full_name']}")
                 
             except Exception as e:
-                print(f"Ошибка при импорте сотрудника {row.get('full_name', 'Unknown')}: {str(e)}")
-                db.session.rollback()
+                error_msg = f"Строка {index+1}: Ошибка при импорте сотрудника {row.get('full_name', 'Unknown')}: {str(e)}"
+                report['errors'].append(error_msg)
+                report['details'].append(error_msg)
                 continue
         
         db.session.commit()
-        return imported_count
+        return report
         
     except Exception as e:
         db.session.rollback()
