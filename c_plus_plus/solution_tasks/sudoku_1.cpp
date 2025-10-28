@@ -1,10 +1,10 @@
 /**
  * @file sudoku_1.cpp
- * @brief Реализация консольной игры "Судоку" для курсов Maestro7IT.
+ * @brief Реализация консольной игры "Судоку" для курса «C++ и C# разработка» — Maestro7IT.
  *
  * Программа генерирует валидную головоломку судоку заданной сложности,
- * позволяет пользователю вводить числа и проверяет корректность ходов.
- * Используется детерминированное заполнение + перемешивание строк/столбцов.
+ * позволяет пользователю вводить числа, проверяет корректность ходов
+ * и отображает итоговую статистику (ходы, ошибки).
  *
  * @note Требуется компилятор с поддержкой C++17.
  * @see https://school-maestro7it.ru/
@@ -49,6 +49,7 @@ public:
     void printBoard() const;
     bool makeMove(int row, int col, int num);
     [[nodiscard]] bool isSolved() const;
+    [[nodiscard]] int countEmptyCells() const;
 };
 
 void Sudoku::fillBaseSolution() {
@@ -61,7 +62,6 @@ void Sudoku::shuffle() {
     std::random_device rd;
     std::mt19937 g(rd());
 
-    // Перемешиваем строки внутри горизонтальных полос
     for (int band = 0; band < 3; ++band) {
         std::array<int, 3> rows = {band * 3, band * 3 + 1, band * 3 + 2};
         std::shuffle(rows.begin(), rows.end(), g);
@@ -70,7 +70,6 @@ void Sudoku::shuffle() {
             solution[band * 3 + i] = std::move(temp[rows[i]]);
     }
 
-    // Перемешиваем столбцы внутри вертикальных стеков
     for (int stack = 0; stack < 3; ++stack) {
         std::array<int, 3> cols = {stack * 3, stack * 3 + 1, stack * 3 + 2};
         std::shuffle(cols.begin(), cols.end(), g);
@@ -118,7 +117,7 @@ void Sudoku::printBoard() const {
     for (int i = 0; i < N; ++i) {
         std::cout << "| ";
         for (int j = 0; j < N; ++j) {
-            char ch = (board[i][j] == EMPTY) ? '.' : static_cast<char>('0' + board[i][j]);
+            char ch = (board[i][j] == EMPTY) ? '.' : '0' + board[i][j];
             std::cout << ch << ' ';
             if (j % 3 == 2) std::cout << "| ";
         }
@@ -149,6 +148,14 @@ bool Sudoku::isSolved() const {
     return board == solution;
 }
 
+int Sudoku::countEmptyCells() const {
+    int count = 0;
+    for (const auto& row : board)
+        for (int cell : row)
+            if (cell == EMPTY) ++count;
+    return count;
+}
+
 /**
  * @brief Безопасное чтение целого числа из стандартного ввода.
  */
@@ -166,13 +173,12 @@ int readInt() {
  * @brief Точка входа в программу.
  */
 int main() {
-
-    #ifdef _WIN32
+#ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
-    #endif
+#endif
 
-    std::cout << "Добро пожаловать в Судоку :D\n";
+    std::cout << "Добро пожаловать в Судоку 😊\n";
     std::cout << "Уровень сложности (20–60 пустых клеток, рекомендуется 40): ";
     int diff = readInt();
     diff = std::clamp(diff, 20, 60);
@@ -181,18 +187,32 @@ int main() {
     clearScreen();
     game.printBoard();
 
+    const int initialEmpty = game.countEmptyCells();
+    int totalMoves = 0;
+    int invalidMoves = 0;
+
     while (!game.isSolved()) {
         std::cout << "\nВведите: строка столбец число (1–9): ";
         int r = readInt();
         int c = readInt();
         int n = readInt();
 
-        if (game.makeMove(r - 1, c - 1, n)) {
+        ++totalMoves;
+        if (!game.makeMove(r - 1, c - 1, n)) {
+            ++invalidMoves;
+        } else {
             clearScreen();
             game.printBoard();
         }
     }
 
-    std::cout << "\nПоздравляем! Вы решили судоку!\n";
+    // === Финальное сообщение с эмодзи и статистикой ===
+    std::cout << "\n🎉 Поздравляем ... Вы решили судоку 🏆\n";
+    std::cout << "📊 Статистика:\n";
+    std::cout << "   Всего ходов: " << totalMoves << "\n";
+    std::cout << "   Ошибок: " << invalidMoves << "\n";
+    std::cout << "   Успешных ходов: " << (totalMoves - invalidMoves) << "\n";
+    std::cout << "   Заполнено клеток: " << initialEmpty << "\n";
+
     return 0;
 }
