@@ -1,17 +1,15 @@
 /**
  * @file sudoku_1.cpp
- * @brief Реализация консольной игры "Судоку" для курса «C++ и C# разработка» — Maestro7IT.
+ * @brief Консольная игра "Судоку" для курса «C++ и C# разработка» — Maestro7IT.
  *
- * Программа генерирует валидную головоломку судоку заданной сложности,
- * позволяет пользователю вводить числа, проверяет корректность ходов
- * и отображает итоговую статистику (ходы, ошибки).
+ * Генерирует валидную головоломку, проверяет ходы, ведёт статистику,
+ * отображает доску с нумерацией и подсказками.
  *
- * @note Требуется компилятор с поддержкой C++17.
  * @see https://school-maestro7it.ru/
  * @author Дуплей М.И. — Maestro7IT
+ * @note Требуется C++17.
  *
  * Компиляция: g++ -std=c++17 -O2 -Wall -Wextra -o sudoku sudoku_1.cpp
- * Запуск: ./sudoku
  */
 
 #include <iostream>
@@ -20,6 +18,7 @@
 #include <algorithm>
 #include <limits>
 #include <array>
+#include <cctype>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -28,17 +27,13 @@
     void clearScreen() { std::cout << "\033[2J\033[H"; }
 #endif
 
-/**
- * @class Sudoku
- * @brief Класс, реализующий логику игры Судоку.
- */
 class Sudoku {
 private:
     static constexpr int N = 9;
     static constexpr int EMPTY = 0;
 
-    std::vector<std::vector<int>> board;      ///< Текущее состояние доски
-    std::vector<std::vector<int>> solution;   ///< Полное решение
+    std::vector<std::vector<int>> board;
+    std::vector<std::vector<int>> solution;
 
     void fillBaseSolution();
     void shuffle();
@@ -50,6 +45,7 @@ public:
     bool makeMove(int row, int col, int num);
     [[nodiscard]] bool isSolved() const;
     [[nodiscard]] int countEmptyCells() const;
+    void printEmptyCellsHint() const;
 };
 
 void Sudoku::fillBaseSolution() {
@@ -113,9 +109,11 @@ Sudoku::Sudoku(int difficulty)
 }
 
 void Sudoku::printBoard() const {
-    std::cout << "+-------+-------+-------+\n";
+    // Заголовок с номерами столбцов
+    std::cout << "    1 2 3   4 5 6   7 8 9\n";
+    std::cout << "  +-------+-------+-------+\n";
     for (int i = 0; i < N; ++i) {
-        std::cout << "| ";
+        std::cout << i + 1 << " | ";
         for (int j = 0; j < N; ++j) {
             char ch = (board[i][j] == EMPTY) ? '.' : '0' + board[i][j];
             std::cout << ch << ' ';
@@ -123,21 +121,21 @@ void Sudoku::printBoard() const {
         }
         std::cout << '\n';
         if (i % 3 == 2)
-            std::cout << "+-------+-------+-------+\n";
+            std::cout << "  +-------+-------+-------+\n";
     }
 }
 
 bool Sudoku::makeMove(int row, int col, int num) {
     if (row < 0 || row >= N || col < 0 || col >= N || num < 1 || num > N) {
-        std::cout << "[Ошибка] Некорректные координаты или число (должно быть 1–9).\n";
+        std::cout << "[❌ Ошибка] Координаты или число вне диапазона (1–9).\n";
         return false;
     }
     if (board[row][col] != EMPTY) {
-        std::cout << "[Внимание] Клетка уже заполнена.\n";
+        std::cout << "[⚠️ Внимание] Клетка (" << (row + 1) << ", " << (col + 1) << ") уже заполнена.\n";
         return false;
     }
     if (!isValidMove(row, col, num)) {
-        std::cout << "[Ошибка] Неверное число для этой клетки.\n";
+        std::cout << "[❌ Ошибка] Число " << num << " не подходит для клетки (" << (row + 1) << ", " << (col + 1) << ").\n";
         return false;
     }
     board[row][col] = num;
@@ -156,29 +154,37 @@ int Sudoku::countEmptyCells() const {
     return count;
 }
 
-/**
- * @brief Безопасное чтение целого числа из стандартного ввода.
- */
+// void Sudoku::printEmptyCellsHint() const {
+//     std::cout << "🔍 Пустые клетки: ";
+//     bool first = true;
+//     for (int i = 0; i < N; ++i)
+//         for (int j = 0; j < N; ++j)
+//             if (board[i][j] == EMPTY) {
+//                 if (!first) std::cout << ", ";
+//                 std::cout << "(" << (i + 1) << "," << (j + 1) << ")";
+//                 first = false;
+//             }
+//     if (first) std::cout << "нет (головоломка решена!)";
+//     std::cout << "\n\n";
+// }
+
 int readInt() {
     int x;
     while (!(std::cin >> x)) {
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "Введите целое число: ";
+        std::cout << "🔢 Введите целое число: ";
     }
     return x;
 }
 
-/**
- * @brief Точка входа в программу.
- */
 int main() {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
 
-    std::cout << "Добро пожаловать в Судоку 😊\n";
+    std::cout << "🌟 Добро пожаловать в Судоку (Maestro7IT)\n";
     std::cout << "Уровень сложности (20–60 пустых клеток, рекомендуется 40): ";
     int diff = readInt();
     diff = std::clamp(diff, 20, 60);
@@ -186,33 +192,35 @@ int main() {
     Sudoku game(diff);
     clearScreen();
     game.printBoard();
+    game.printEmptyCellsHint();
 
-    const int initialEmpty = game.countEmptyCells();
     int totalMoves = 0;
     int invalidMoves = 0;
 
     while (!game.isSolved()) {
-        std::cout << "\nВведите: строка столбец число (1–9): ";
+        std::cout << "➡️ Введите: строка столбец число (1–9): ";
         int r = readInt();
         int c = readInt();
         int n = readInt();
 
-        ++totalMoves;
-        if (!game.makeMove(r - 1, c - 1, n)) {
-            ++invalidMoves;
-        } else {
+        if (game.makeMove(r - 1, c - 1, n)) {
             clearScreen();
             game.printBoard();
+            game.printEmptyCellsHint();
+        } else {
+            ++invalidMoves;
         }
+        ++totalMoves;
     }
 
-    // === Финальное сообщение с эмодзи и статистикой ===
-    std::cout << "\n🎉 Поздравляем ... Вы решили судоку 🏆\n";
+    // === Финал ===
+    clearScreen();
+    game.printBoard();
+    std::cout << "\n🎉 Поздравляем ... Вы решили судоку 🏆\n\n";
     std::cout << "📊 Статистика:\n";
     std::cout << "   Всего ходов: " << totalMoves << "\n";
     std::cout << "   Ошибок: " << invalidMoves << "\n";
-    std::cout << "   Успешных ходов: " << (totalMoves - invalidMoves) << "\n";
-    std::cout << "   Заполнено клеток: " << initialEmpty << "\n";
+    std::cout << "   Точность: " << (100 - (invalidMoves * 100 / std::max(1, totalMoves))) << "%\n";
 
     return 0;
 }

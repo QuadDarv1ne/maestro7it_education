@@ -1,5 +1,9 @@
 # Простая система управления HR
 
+![alt text](img/img_login.png)
+
+![alt text](img/img_reg.png)
+
 Простая система управления `HR`, построенная на `Flask` для управления сотрудниками, отделами, должностями, приказами и отпусками.
 
 ## Возможности
@@ -21,6 +25,20 @@
 - **Аутентификация**: Flask-Login
 - **Обработка данных**: pandas, chardet
 - **Другие**: python-dotenv, python-dateutil
+
+![alt text](img/img_1.png)
+
+![alt text](img/img_2.png)
+
+![alt text](img/img_3.png)
+
+![alt text](img/img_4.png)
+
+![alt text](img/img_5.png)
+
+![alt text](img/img_6.png)
+
+![alt text](img/img_7.png)
 
 ## Установка
 
