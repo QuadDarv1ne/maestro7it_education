@@ -55,6 +55,13 @@ class ErrorHandler:
         self.last_error_time = {}
         self.recovery_attempts = {}
         self.max_recovery_attempts = 3
+        self.error_cooldown_periods = {
+            'EngineInitializationError': 5.0,  # 5 seconds cooldown
+            'MoveValidationError': 0.1,        # 100ms cooldown
+            'GameLogicError': 1.0,             # 1 second cooldown
+            'SessionError': 1.0,               # 1 second cooldown
+            'CacheError': 0.5                  # 500ms cooldown
+        }
         
     def handle_error(self, error: Exception, context: str = "", recoverable: bool = True) -> dict:
         """
@@ -82,12 +89,18 @@ class ErrorHandler:
         # Determine if recovery is possible
         can_recover = recoverable and self._can_attempt_recovery(error_type)
         
+        # Add cooldown period check
+        cooldown_period = self.error_cooldown_periods.get(error_type, 1.0)
+        last_error_time = self.last_error_time.get(error_type, 0)
+        in_cooldown = (time.time() - last_error_time) < cooldown_period
+        
         error_info = {
             'type': error_type,
             'message': error_message,
             'context': context,
             'recoverable': recoverable,
             'can_recover': can_recover,
+            'in_cooldown': in_cooldown,
             'attempts': self.recovery_attempts.get(error_type, 0),
             'timestamp': time.time()
         }
@@ -105,7 +118,14 @@ class ErrorHandler:
             Boolean indicating if recovery can be attempted
         """
         attempts = self.recovery_attempts.get(error_type, 0)
-        return attempts < self.max_recovery_attempts
+        
+        # Check cooldown period
+        cooldown_period = self.error_cooldown_periods.get(error_type, 1.0)
+        last_error_time = self.last_error_time.get(error_type, 0)
+        in_cooldown = (time.time() - last_error_time) < cooldown_period
+        
+        # Don't attempt recovery if in cooldown or max attempts reached
+        return not in_cooldown and attempts < self.max_recovery_attempts
     
     def attempt_recovery(self, error_type: str, recovery_func: Callable) -> bool:
         """
@@ -125,6 +145,8 @@ class ErrorHandler:
             recovery_result = recovery_func()
             if recovery_result:
                 logger.info(f"Recovery successful for {error_type}")
+                # Reset error count on successful recovery
+                self.error_counts[error_type] = 0
                 return True
             else:
                 logger.warning(f"Recovery failed for {error_type}")

@@ -197,7 +197,7 @@ user_preferences = {}
 stockfish_engine = None
 
 # Maximum concurrent games to prevent server overload
-MAX_CONCURRENT_GAMES = 10
+MAX_CONCURRENT_GAMES = 20  # Increased from 10 to 20
 
 # Track active game count
 active_game_count = 0
@@ -210,6 +210,9 @@ CLEANUP_INTERVAL = 300  # 5 minutes
 
 # Game inactivity timeout in seconds
 GAME_TIMEOUT = 3600  # 1 hour
+
+# Game initialization timeout
+GAME_INIT_TIMEOUT = 30  # 30 seconds for game initialization
 
 def cleanup_stale_games():
     """Periodically clean up stale game sessions to prevent memory leaks."""
@@ -945,10 +948,19 @@ def handle_init(data):
         global active_game_count
         if active_game_count >= MAX_CONCURRENT_GAMES:
             logger.warning(f"Maximum concurrent games reached ({MAX_CONCURRENT_GAMES}). Rejecting new game request.")
-            emit('error', {'message': 'Server overload. Please try again later.'})
+            emit('error', {'message': 'Сервер перегружен. Пожалуйста, попробуйте позже.'})
             total_init_time = time.time() - start_time
             logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
             return
+        
+        # Check if session already has an active game
+        if session_id in games:
+            logger.info(f"Session {session_id} already has an active game. Cleaning up old game.")
+            try:
+                del games[session_id]
+                active_game_count = max(0, active_game_count - 1)
+            except:
+                pass
         
         # Create a new game instance for this session
         game_init_start = time.time()
@@ -957,65 +969,84 @@ def handle_init(data):
         logger.info(f"Game initialization took {game_init_time:.2f} seconds")
         logger.info(f"Game initialization result: {game.initialized}")
         
-        if game.init_engine():
-            games[session_id] = game
-            active_game_count += 1
-            # Update session timestamp
-            if session_id not in session_timestamps:
-                session_timestamps[session_id] = time.time()
-            else:
-                session_timestamps[session_id] = time.time()
-            fen = game.get_fen()
-            if fen is None:
-                logger.error("Failed to get initial FEN position")
-                emit('error', {'message': 'Ошибка получения начальной позиции. Попробуйте перезапустить игру.'})
-                # Clean up
-                if session_id in games:
-                    del games[session_id]
-                    active_game_count -= 1
-                return
-            logger.info(f"Game initialized successfully. Initial FEN: {fen}")
-            logger.info(f"Active games count: {active_game_count}")
-            
-            # Save game to database if user is logged in and database is enabled
-            game_id = None
-            user_id = session.get('user_id')
-            if DATABASE_ENABLED and user_id and Game is not None and db is not None:
-                try:
-                    db_game = Game(
-                        user_id=user_id,
-                        fen=fen,
-                        player_color=player_color,
-                        skill_level=skill_level,
-                        result='in_progress'
-                    )
-                    if db is not None:
-                        db.session.add(db_game)
-                        db.session.commit()
-                        game_id = db_game.id
-                        logger.info(f"Game saved to database with ID: {game_id}")
-                except Exception as e:
-                    logger.error(f"Failed to save game to database: {e}")
-            
-            emit('game_initialized', {'fen': fen, 'player_color': player_color, 'game_id': game_id})
-            logger.info("Sent game_initialized event to client")
-            total_init_time = time.time() - start_time
-            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
-        else:
-            logger.error("Failed to initialize Stockfish engine")
-            emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
-            total_init_time = time.time() - start_time
-            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
-    except EngineInitializationError as e:
-        logger.error(f"Engine initialization error: {e}")
-        emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
-        # Re-enable start button on error
+        # Initialize engine with timeout
+        engine_init_start = time.time()
         try:
-            emit('enable_start_button')
-        except:
-            pass  # Ignore if client is not connected
-        total_init_time = time.time() - start_time
-        logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
+            if game.init_engine():
+                engine_init_time = time.time() - engine_init_start
+                logger.info(f"Engine initialization took {engine_init_time:.2f} seconds")
+                
+                games[session_id] = game
+                active_game_count += 1
+                
+                # Update session timestamp
+                if session_id not in session_timestamps:
+                    session_timestamps[session_id] = time.time()
+                else:
+                    session_timestamps[session_id] = time.time()
+                
+                # Get initial FEN with timeout handling
+                try:
+                    fen = game.get_fen()
+                    if fen is None:
+                        logger.error("Failed to get initial FEN position")
+                        emit('error', {'message': 'Ошибка получения начальной позиции. Попробуйте перезапустить игру.'})
+                        # Clean up
+                        if session_id in games:
+                            del games[session_id]
+                            active_game_count -= 1
+                        return
+                    
+                    logger.info(f"Game initialized successfully. Initial FEN: {fen}")
+                    logger.info(f"Active games count: {active_game_count}")
+                    
+                    # Save game to database if user is logged in and database is enabled
+                    game_id = None
+                    user_id = session.get('user_id')
+                    if DATABASE_ENABLED and user_id and Game is not None and db is not None:
+                        try:
+                            db_game = Game(
+                                user_id=user_id,
+                                fen=fen,
+                                player_color=player_color,
+                                skill_level=skill_level,
+                                result='in_progress'
+                            )
+                            if db is not None:
+                                db.session.add(db_game)
+                                db.session.commit()
+                                game_id = db_game.id
+                                logger.info(f"Game saved to database with ID: {game_id}")
+                        except Exception as e:
+                            logger.error(f"Failed to save game to database: {e}")
+                    
+                    emit('game_initialized', {'fen': fen, 'player_color': player_color, 'game_id': game_id})
+                    logger.info("Sent game_initialized event to client")
+                    total_init_time = time.time() - start_time
+                    logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
+                except Exception as e:
+                    logger.error(f"Error getting initial FEN: {e}")
+                    emit('error', {'message': 'Ошибка получения начальной позиции. Попробуйте перезапустить игру.'})
+                    # Clean up
+                    if session_id in games:
+                        del games[session_id]
+                        active_game_count -= 1
+                    return
+            else:
+                logger.error("Failed to initialize Stockfish engine")
+                emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
+                total_init_time = time.time() - start_time
+                logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
+        except EngineInitializationError as e:
+            logger.error(f"Engine initialization error: {e}")
+            emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
+            # Re-enable start button on error
+            try:
+                emit('enable_start_button')
+            except:
+                pass  # Ignore if client is not connected
+            total_init_time = time.time() - start_time
+            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
     except Exception as e:
         logger.error(f"Error initializing game: {e}")
         import traceback
@@ -1062,27 +1093,46 @@ def handle_move(data):
         # Store the move as the last move
         game.last_move = uci_move
 
-        # Validate move using Stockfish
+        # Validate move using Stockfish with timeout
         move_validation_start = time.time()
-        is_valid_move = game.is_move_correct(uci_move)
-        move_validation_time = time.time() - move_validation_start
-        logger.info(f"Move validation took {move_validation_time:.2f} seconds")
+        try:
+            is_valid_move = game.is_move_correct(uci_move)
+            move_validation_time = time.time() - move_validation_start
+            logger.info(f"Move validation took {move_validation_time:.2f} seconds")
+        except MoveValidationError as e:
+            logger.warning(f"Move validation error: {e}")
+            emit('invalid_move', {'move': uci_move, 'message': str(e)})
+            return
+        except Exception as e:
+            logger.error(f"Unexpected error during move validation: {e}")
+            emit('error', {'message': 'Ошибка проверки хода'})
+            return
         
         if is_valid_move:
             move_execution_start = time.time()
-            if not game.make_move(uci_move):
-                logger.warning(f"Move execution failed for move: {uci_move}")
-                emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
+            try:
+                if not game.make_move(uci_move):
+                    logger.warning(f"Move execution failed for move: {uci_move}")
+                    emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
+                    return
+                move_execution_time = time.time() - move_execution_start
+                logger.info(f"Move execution took {move_execution_time:.2f} seconds")
+            except Exception as e:
+                logger.error(f"Error executing move {uci_move}: {e}")
+                emit('error', {'message': 'Ошибка выполнения хода'})
                 return
-            move_execution_time = time.time() - move_execution_start
-            logger.info(f"Move execution took {move_execution_time:.2f} seconds")
                 
             # Add move to history
             game.move_history.append(uci_move)
                 
-            fen = game.get_fen()
-            if fen is None:
-                logger.error("Failed to get FEN after move execution")
+            try:
+                fen = game.get_fen()
+                if fen is None:
+                    logger.error("Failed to get FEN after move execution")
+                    emit('error', {'message': 'Ошибка получения позиции после хода'})
+                    return
+            except Exception as e:
+                logger.error(f"Error getting FEN after move: {e}")
                 emit('error', {'message': 'Ошибка получения позиции после хода'})
                 return
             
@@ -1094,9 +1144,14 @@ def handle_move(data):
 
             # Check game status using improved logic
             game_status_start = time.time()
-            game_status = game.get_game_status(fen)
-            game_status_time = time.time() - game_status_start
-            logger.info(f"Game status check took {game_status_time:.2f} seconds")
+            try:
+                game_status = game.get_game_status(fen)
+                game_status_time = time.time() - game_status_start
+                logger.info(f"Game status check took {game_status_time:.2f} seconds")
+            except Exception as e:
+                logger.error(f"Error checking game status: {e}")
+                emit('error', {'message': 'Ошибка проверки статуса игры'})
+                return
             
             if game_status['game_over']:
                 # Update game result in database if user is logged in and database is enabled
@@ -1142,38 +1197,58 @@ def handle_move(data):
                 logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
                 return
 
-            # AI move
+            # AI move with timeout and retry logic
             ai_move_start = time.time()
-            ai_move = game.get_best_move()
-            ai_move_time = time.time() - ai_move_start
-            logger.info(f"AI move calculation took {ai_move_time:.2f} seconds")
+            try:
+                ai_move = game.get_best_move()
+                ai_move_time = time.time() - ai_move_start
+                logger.info(f"AI move calculation took {ai_move_time:.2f} seconds")
+            except Exception as e:
+                logger.error(f"Error getting AI move: {e}")
+                emit('error', {'message': 'Ошибка получения хода компьютера'})
+                return
             
             if ai_move:
                 # Store AI move as the last move
                 game.last_move = ai_move
                 
                 ai_move_execution_start = time.time()
-                if not game.make_move(ai_move):
-                    logger.warning(f"AI move execution failed for move: {ai_move}")
-                    emit('position_update', {'fen': fen, 'last_move': game.last_move})
+                try:
+                    if not game.make_move(ai_move):
+                        logger.warning(f"AI move execution failed for move: {ai_move}")
+                        emit('position_update', {'fen': fen, 'last_move': game.last_move})
+                        return
+                    ai_move_execution_time = time.time() - ai_move_execution_start
+                    logger.info(f"AI move execution took {ai_move_execution_time:.2f} seconds")
+                except Exception as e:
+                    logger.error(f"Error executing AI move {ai_move}: {e}")
+                    emit('error', {'message': 'Ошибка выполнения хода компьютера'})
                     return
-                ai_move_execution_time = time.time() - ai_move_execution_start
-                logger.info(f"AI move execution took {ai_move_execution_time:.2f} seconds")
                     
                 # Add AI move to history
                 game.move_history.append(ai_move)
                     
-                fen = game.get_fen()
-                if fen is None:
-                    logger.error("Failed to get FEN after AI move execution")
+                try:
+                    fen = game.get_fen()
+                    if fen is None:
+                        logger.error("Failed to get FEN after AI move execution")
+                        emit('error', {'message': 'Ошибка получения позиции после хода компьютера'})
+                        return
+                except Exception as e:
+                    logger.error(f"Error getting FEN after AI move: {e}")
                     emit('error', {'message': 'Ошибка получения позиции после хода компьютера'})
                     return
                 
                 # Check game status after AI move
                 game_status_start = time.time()
-                game_status = game.get_game_status(fen)
-                game_status_time = time.time() - game_status_start
-                logger.info(f"Post-AI game status check took {game_status_time:.2f} seconds")
+                try:
+                    game_status = game.get_game_status(fen)
+                    game_status_time = time.time() - game_status_start
+                    logger.info(f"Post-AI game status check took {game_status_time:.2f} seconds")
+                except Exception as e:
+                    logger.error(f"Error checking game status after AI move: {e}")
+                    emit('error', {'message': 'Ошибка проверки статуса игры после хода компьютера'})
+                    return
                 
                 if game_status['game_over']:
                     # Update game result in database if user is logged in and database is enabled
