@@ -282,6 +282,9 @@ class ChessGame:
         self._engine_context = None
         self.last_move = None  # Track the last move made
         self.move_history = []  # Track move history for takeback functionality
+        self._fen_cache = None  # Cache FEN position
+        self._fen_cache_timestamp = 0
+        self._fen_cache_ttl = 0.5  # 500ms cache for FEN positions
     
     def _is_engine_compatible(self, engine, skill_level):
         """
@@ -458,9 +461,20 @@ class ChessGame:
     def get_fen(self):
         if self.engine and self.initialized:
             try:
+                # Check cache first
+                current_time = time.time()
+                if (self._fen_cache and 
+                    current_time - self._fen_cache_timestamp < self._fen_cache_ttl):
+                    return self._fen_cache
+                
                 fen = self.engine.get_fen_position()
                 if fen is None:
                     logger.warning("Stockfish returned None for FEN position")
+                
+                # Update cache
+                self._fen_cache = fen
+                self._fen_cache_timestamp = current_time
+                
                 return fen
             except Exception as e:
                 logger.error(f"Error getting FEN position: {e}")
@@ -481,6 +495,9 @@ class ChessGame:
             logger.error(f"Invalid move format: {move}")
             raise MoveValidationError(f"Invalid move format: {move}")
         try:
+            # Clear FEN cache as position will change
+            self._fen_cache = None
+            
             # make_moves_from_current_position returns None on success, False on failure
             result = self.engine.make_moves_from_current_position([move])
             success = result is not False
@@ -541,6 +558,7 @@ class ChessGame:
     @cached('ai_move')
     @track_ai_calculation
     @handle_chess_errors(context="ai_move_calculation")
+    @retry_on_failure(max_attempts=2, delay=0.5, backoff=1.5)
     def get_best_move(self):
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")

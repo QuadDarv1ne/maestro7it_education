@@ -145,15 +145,20 @@ class CacheManager:
     """
     
     def __init__(self):
-        # Specialized caches for different operations
-        self.board_state_cache = LRUCache(max_size=500, ttl=1)  # 1 second TTL
-        self.valid_moves_cache = LRUCache(max_size=1000, ttl=2)  # 2 seconds TTL
-        self.ai_move_cache = LRUCache(max_size=1000, ttl=10)  # 10 seconds TTL
-        self.evaluation_cache = LRUCache(max_size=500, ttl=2)  # 2 seconds TTL
-        self.game_status_cache = LRUCache(max_size=500, ttl=1)  # 1 second TTL
+        # Specialized caches for different operations with optimized sizes and TTLs
+        # Increased cache sizes for better hit rates
+        self.board_state_cache = LRUCache(max_size=1000, ttl=1)  # 1 second TTL
+        self.valid_moves_cache = LRUCache(max_size=2000, ttl=2)  # 2 seconds TTL
+        self.ai_move_cache = LRUCache(max_size=2000, ttl=15)  # 15 seconds TTL (increased for better reuse)
+        self.evaluation_cache = LRUCache(max_size=1000, ttl=3)  # 3 seconds TTL
+        self.game_status_cache = LRUCache(max_size=1000, ttl=1)  # 1 second TTL
         
         # Generic cache for other operations
-        self.generic_cache = LRUCache(max_size=1000, ttl=300)  # 5 minutes TTL
+        self.generic_cache = LRUCache(max_size=2000, ttl=600)  # 10 minutes TTL (increased)
+        
+        # Performance tracking
+        self._last_cleanup_time = time.time()
+        self._cleanup_interval = 10  # Cleanup every 10 seconds
     
     def get_cache_stats(self) -> dict:
         """
@@ -162,6 +167,12 @@ class CacheManager:
         Returns:
             Dictionary with cache statistics
         """
+        # Perform periodic cleanup
+        current_time = time.time()
+        if current_time - self._last_cleanup_time > self._cleanup_interval:
+            # This will be done automatically by the LRU cache, but we track the time
+            self._last_cleanup_time = current_time
+        
         return {
             'board_state_cache': self.board_state_cache.get_stats(),
             'valid_moves_cache': self.valid_moves_cache.get_stats(),
