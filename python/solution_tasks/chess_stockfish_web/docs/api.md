@@ -1,15 +1,15 @@
-# Chess Stockfish Web API Documentation
+# Документация API веб-приложения Chess Stockfish
 
-This document describes the WebSocket API endpoints used by the Chess Stockfish Web application.
+Этот документ описывает эндпоинты WebSocket API, используемые в веб-приложении Chess Stockfish.
 
-## WebSocket Events
+## События WebSocket
 
-### Client to Server
+### От клиента к серверу
 
 #### `init_game`
-Initialize a new game.
+Инициализация новой игры.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "color": "white|black",
@@ -17,76 +17,76 @@ Initialize a new game.
 }
 ```
 
-**Response:**
-- `game_initialized` on success
-- `error` on failure
+**Ответ:**
+- `game_initialized` при успешном выполнении
+- `error` при ошибке
 
 #### `make_move`
-Make a move in the current game.
+Сделать ход в текущей игре.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
-  "move": "e2e4"  // UCI format
+  "move": "e2e4"  // Формат UCI
 }
 ```
 
-**Response:**
-- `position_update` on success
-- `invalid_move` for invalid moves
-- `game_over` if the game ends
-- `error` on failure
+**Ответ:**
+- `position_update` при успешном выполнении
+- `invalid_move` для недопустимых ходов
+- `game_over` если игра завершена
+- `error` при ошибке
 
 #### `takeback_move`
-Take back the last move.
+Отменить последний ход.
 
-**Payload:** None
+**Полезная нагрузка:** Нет
 
-**Response:**
-- `position_update` on success
-- `error` on failure
+**Ответ:**
+- `position_update` при успешном выполнении
+- `error` при ошибке
 
 #### `analyze_position`
-Analyze the current position.
+Анализ текущей позиции.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
-  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"  // Optional, uses current position if not provided
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"  // Необязательно, использует текущую позицию, если не указано
 }
 ```
 
-**Response:**
-- `analysis_result` on success
-- `error` on failure
+**Ответ:**
+- `analysis_result` при успешном выполнении
+- `error` при ошибке
 
 #### `save_game`
-Save the current game state.
+Сохранить текущее состояние игры.
 
-**Payload:** None
+**Полезная нагрузка:** Нет
 
-**Response:**
-- `game_saved` on success
-- `error` on failure
+**Ответ:**
+- `game_saved` при успешном выполнении
+- `error` при ошибке
 
 #### `load_game`
-Load a saved game state.
+Загрузить сохраненное состояние игры.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "game_state": "base64_encoded_game_state"
 }
 ```
 
-**Response:**
-- `game_loaded` on success
-- `error` on failure
+**Ответ:**
+- `game_loaded` при успешном выполнении
+- `error` при ошибке
 
 #### `save_preferences`
-Save user preferences.
+Сохранить настройки пользователя.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "preferences": {
@@ -100,25 +100,25 @@ Save user preferences.
 }
 ```
 
-**Response:**
-- `preferences_saved` on success
-- `error` on failure
+**Ответ:**
+- `preferences_saved` при успешном выполнении
+- `error` при ошибке
 
 #### `load_preferences`
-Load user preferences.
+Загрузить настройки пользователя.
 
-**Payload:** None
+**Полезная нагрузка:** Нет
 
-**Response:**
-- `preferences_loaded` on success
-- `error` on failure
+**Ответ:**
+- `preferences_loaded` при успешном выполнении
+- `error` при ошибке
 
-### Server to Client
+### От сервера к клиенту
 
 #### `connected`
-Sent when the WebSocket connection is established.
+Отправляется при установлении соединения WebSocket.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "status": "success",
@@ -127,9 +127,9 @@ Sent when the WebSocket connection is established.
 ```
 
 #### `game_initialized`
-Sent when a new game is successfully initialized.
+Отправляется при успешной инициализации новой игры.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -138,35 +138,35 @@ Sent when a new game is successfully initialized.
 ```
 
 #### `position_update`
-Sent when the board position is updated.
+Отправляется при обновлении позиции на доске.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-  "ai_move": "e7e5",  // Present if it's an AI move
-  "last_move": "e2e4",  // Present if it's a player move
-  "takeback": true  // Present if it's a takeback move
+  "ai_move": "e7e5",  // Присутствует, если это ход ИИ
+  "last_move": "e2e4",  // Присутствует, если это ход игрока
+  "takeback": true  // Присутствует, если это отмена хода
 }
 ```
 
 #### `game_over`
-Sent when the game ends.
+Отправляется при завершении игры.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "result": "checkmate|stalemate",
   "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-  "winner": "white|black",  // Present for checkmate
-  "last_move": "e2e4"  // Last move that ended the game
+  "winner": "white|black",  // Присутствует при мате
+  "last_move": "e2e4"  // Последний ход, завершивший игру
 }
 ```
 
 #### `invalid_move`
-Sent when an invalid move is attempted.
+Отправляется при попытке сделать недопустимый ход.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "move": "e2e5",
@@ -175,15 +175,15 @@ Sent when an invalid move is attempted.
 ```
 
 #### `analysis_result`
-Sent in response to an analysis request.
+Отправляется в ответ на запрос анализа.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
   "evaluation": {
     "type": "cp|mate",
-    "value": 0.25  // Centipawns or moves to mate
+    "value": 0.25  // Сантепешки или ходы до мата
   },
   "best_move": "e7e5",
   "top_moves": [
@@ -196,9 +196,9 @@ Sent in response to an analysis request.
 ```
 
 #### `game_saved`
-Sent when a game is successfully saved.
+Отправляется при успешном сохранении игры.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "success": true,
@@ -208,9 +208,9 @@ Sent when a game is successfully saved.
 ```
 
 #### `game_loaded`
-Sent when a game is successfully loaded.
+Отправляется при успешной загрузке игры.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
@@ -222,9 +222,9 @@ Sent when a game is successfully loaded.
 ```
 
 #### `preferences_saved`
-Sent when preferences are successfully saved.
+Отправляется при успешном сохранении настроек.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "success": true,
@@ -233,9 +233,9 @@ Sent when preferences are successfully saved.
 ```
 
 #### `preferences_loaded`
-Sent when preferences are successfully loaded.
+Отправляется при успешной загрузке настроек.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "preferences": {
@@ -250,9 +250,9 @@ Sent when preferences are successfully loaded.
 ```
 
 #### `error`
-Sent when an error occurs.
+Отправляется при возникновении ошибки.
 
-**Payload:**
+**Полезная нагрузка:**
 ```json
 {
   "message": "Error description"
@@ -260,19 +260,19 @@ Sent when an error occurs.
 ```
 
 #### `enable_start_button`
-Sent to re-enable the start button after an error.
+Отправляется для повторного включения кнопки начала игры после ошибки.
 
-**Payload:** None
+**Полезная нагрузка:** Нет
 
-## HTTP Endpoints
+## HTTP-эндпоинты
 
 ### `GET /`
-Serve the main application page.
+Отправка главной страницы приложения.
 
 ### `GET /health`
-Health check endpoint.
+Эндпоинт проверки состояния.
 
-**Response:**
+**Ответ:**
 ```json
 {
   "status": "healthy|unhealthy",
@@ -286,9 +286,9 @@ Health check endpoint.
 ```
 
 ### `GET /pool-stats`
-Connection pool statistics.
+Статистика пула соединений.
 
-**Response:**
+**Ответ:**
 ```json
 {
   "status": "success",
@@ -298,13 +298,13 @@ Connection pool statistics.
 }
 ```
 
-## Data Formats
+## Форматы данных
 
-### FEN (Forsyth-Edwards Notation)
-Standard chess position notation used throughout the application.
+### FEN (нотация Форсайта-Эдвардса)
+Стандартная шахматная нотация позиции, используемая в приложении.
 
-### UCI Move Format
-Moves are represented in UCI format (e.g., "e2e4", "g1f3").
+### Формат хода UCI
+Ходы представлены в формате UCI (например, "e2e4", "g1f3").
 
-### Game State Serialization
-Game states are serialized using pickle and encoded in base64 for storage and transmission.
+### Сериализация состояния игры
+Состояния игры сериализуются с помощью pickle и кодируются в base64 для хранения и передачи.

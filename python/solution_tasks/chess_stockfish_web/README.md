@@ -1,162 +1,162 @@
-# Chess Stockfish Web Application
+# Веб-приложение Chess Stockfish
 
-A web-based chess application that allows users to play against the Stockfish chess engine with a modern, responsive interface.
+Веб-приложение для игры в шахматы против движка Stockfish с современным, отзывчивым интерфейсом.
 
-## Features
+## Возможности
 
-### Current Features
-- Play chess against the Stockfish engine (levels 0-20)
-- Choose your side (white or black)
-- Drag-and-drop piece movement
-- Responsive design for desktop and mobile
-- Move highlighting and game state detection (check, checkmate, stalemate)
-- Move history navigation (⏮ ⬅ ➡ ⏭)
-- Position analysis and evaluation
-- Save/load games
-- User settings and personalization
-- Enhanced sound and visual effects
-- Real-time WebSocket communication
+### Текущие возможности
+- Игра в шахматы против движка Stockfish (уровни 0-20)
+- Выбор стороны (белые или черные)
+- Перетаскивание фигур для выполнения ходов
+- Адаптивный дизайн для настольных компьютеров и мобильных устройств
+- Подсветка ходов и определение состояния игры (шах, мат, пат)
+- Навигация по истории ходов (⏮ ⬅ ➡ ⏭)
+- Анализ позиции и оценка
+- Сохранение/загрузка игр
+- Настройки пользователя и персонализация
+- Улучшенные звуковые и визуальные эффекты
+- Обмен данными в реальном времени через WebSocket
 
-### Recent Improvements
-- **Move Highlighting**: Visual highlighting of the last move made
-- **Move List Panel**: Display of all moves in algebraic notation
-- **Takeback Functionality**: Ability to undo the last move
-- **Database Integration**: Models for user accounts and game persistence
-- **Docker Support**: Containerization for easy deployment
-- **API Documentation**: Comprehensive WebSocket API documentation
-- **Testing Framework**: Unit tests for application components
-- **CI/CD Pipeline**: GitHub Actions for automated testing
+### Последние улучшения
+- **Подсветка ходов**: Визуальная подсветка последнего сделанного хода
+- **Панель списка ходов**: Отображение всех ходов в алгебраической нотации
+- **Функция отмены хода**: Возможность отменить последний ход
+- **Интеграция базы данных**: Модели для учетных записей пользователей и сохранения игр
+- **Поддержка Docker**: Контейнеризация для простоты развертывания
+- **Документация API**: Полная документация WebSocket API
+- **Тестовый фреймворк**: Модульные тесты для компонентов приложения
+- **CI/CD пайплайн**: Автоматическое тестирование с помощью GitHub Actions
 
-## Technology Stack
+## Технологический стек
 
-- **Backend**: Python, Flask, Flask-SocketIO
-- **Frontend**: HTML, CSS, JavaScript, Chessboard.js, Chess.js
-- **Chess Engine**: Stockfish
-- **Database**: PostgreSQL (planned), SQLite (development)
-- **Caching**: Redis (planned)
-- **Containerization**: Docker, Docker Compose
+- **Бэкенд**: Python, Flask, Flask-SocketIO
+- **Фронтенд**: HTML, CSS, JavaScript, Chessboard.js, Chess.js
+- **Шахматный движок**: Stockfish
+- **База данных**: PostgreSQL (планируется), SQLite (для разработки)
+- **Кэширование**: Redis (планируется)
+- **Контейнеризация**: Docker, Docker Compose
 
-## Installation
+## Установка
 
-### Prerequisites
+### Предварительные требования
 - Python 3.8+
-- Stockfish chess engine
-- Node.js and npm (for development)
+- Шахматный движок Stockfish
+- Node.js и npm (для разработки)
 
-### Quick Start
-1. Clone the repository:
+### Быстрый старт
+1. Клонируйте репозиторий:
    ```bash
    git clone <repository-url>
    cd chess_stockfish_web
    ```
 
-2. Install Python dependencies:
+2. Установите зависимости Python:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Install Stockfish:
-   - **Windows**: Download from https://stockfishchess.org/download/
+3. Установите Stockfish:
+   - **Windows**: Скачайте с https://stockfishchess.org/download/
    - **macOS**: `brew install stockfish`
    - **Linux**: `sudo apt-get install stockfish`
 
-4. Run the application:
+4. Запустите приложение:
    ```bash
    python app_improved.py
    ```
 
-5. Open your browser to http://localhost:5001
+5. Откройте браузер по адресу http://localhost:5001
 
-### Docker Installation
-1. Build and run with Docker Compose:
+### Установка через Docker
+1. Соберите и запустите с помощью Docker Compose:
    ```bash
    docker-compose up --build
    ```
 
-2. Access the application at http://localhost:5001
+2. Доступ к приложению по адресу http://localhost:5001
 
-## Usage
+## Использование
 
-1. Select your side (white or black)
-2. Choose difficulty level (0-20)
-3. Click "Начать игру" to start
-4. Drag pieces to make moves
-5. Use navigation buttons to review game history
-6. Click "Анализ" to analyze the current position
-7. Use "Сохранить" and "Загрузить" to save/load games
-8. Adjust settings in the "⚙️ Настройки" panel
+1. Выберите свою сторону (белые или черные)
+2. Выберите уровень сложности (0-20)
+3. Нажмите "Начать игру" для начала
+4. Перетаскивайте фигуры для выполнения ходов
+5. Используйте кнопки навигации для просмотра истории игры
+6. Нажмите "Анализ" для анализа текущей позиции
+7. Используйте "Сохранить" и "Загрузить" для сохранения/загрузки игр
+8. Настройте параметры в панели "⚙️ Настройки"
 
-## API Documentation
+## Документация API
 
-See [API Documentation](docs/api.md) for detailed information about WebSocket events and HTTP endpoints.
+См. [Документация API](docs/api.md) для подробной информации о событиях WebSocket и HTTP-эндпоинтах.
 
-## Development
+## Разработка
 
-### Project Structure
+### Структура проекта
 ```
 chess_stockfish_web/
-├── app_improved.py          # Main application
-├── models.py                # Database models
-├── requirements.txt         # Python dependencies
-├── Dockerfile               # Docker configuration
-├── docker-compose.yml       # Multi-service configuration
-├── README.md                # This file
-├── DOCKER_README.md         # Docker setup guide
-├── IMPROVEMENT_SUMMARY.md   # Previous improvements
-├── IMPROVEMENT_PLAN.md      # Future improvements
-├── static/                  # Web assets
+├── app_improved.py          # Основное приложение
+├── models.py                # Модели базы данных
+├── requirements.txt         # Зависимости Python
+├── Dockerfile               # Конфигурация Docker
+├── docker-compose.yml       # Конфигурация мультисервисов
+├── README.md                # Этот файл
+├── DOCKER_README.md         # Руководство по настройке Docker
+├── IMPROVEMENT_SUMMARY.md   # Предыдущие улучшения
+├── IMPROVEMENT_PLAN.md      # План будущих улучшений
+├── static/                  # Веб-ресурсы
 │   ├── css/
 │   ├── js/
 │   └── images/
-├── templates/               # HTML templates
-├── utils/                   # Utility modules
-├── tests/                   # Test suite
-├── docs/                    # Documentation
-└── .github/workflows/       # CI/CD pipelines
+├── templates/               # HTML-шаблоны
+├── utils/                   # Вспомогательные модули
+├── tests/                   # Набор тестов
+├── docs/                    # Документация
+└── .github/workflows/       # CI/CD пайплайны
 ```
 
-### Running Tests
+### Запуск тестов
 ```bash
 python -m pytest tests/ -v
 ```
 
-### Code Quality
+### Качество кода
 ```bash
 flake8 . --max-complexity=10 --max-line-length=127
 ```
 
-## Deployment
+## Развертывание
 
-### Production Deployment
-1. Update database credentials in docker-compose.yml
-2. Set secure environment variables
-3. Configure SSL termination
-4. Add monitoring and logging solutions
-5. Run with Docker Compose:
+### Развертывание в производственной среде
+1. Обновите учетные данные базы данных в docker-compose.yml
+2. Установите безопасные переменные окружения
+3. Настройте завершение SSL
+4. Добавьте решения для мониторинга и логирования
+5. Запустите с помощью Docker Compose:
    ```bash
    docker-compose up -d
    ```
 
-## Contributing
+## Участие в разработке
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+1. Сделайте форк репозитория
+2. Создайте ветку для новой функции
+3. Зафиксируйте изменения
+4. Отправьте изменения в ветку
+5. Создайте Pull Request
 
-## License
+## Лицензия
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Этот проект лицензирован по лицензии MIT - см. файл LICENSE для подробностей.
 
-## Acknowledgments
+## Благодарности
 
-- [Stockfish](https://stockfishchess.org/) - Open source chess engine
-- [Chessboard.js](https://chessboardjs.com/) - JavaScript chessboard component
-- [Chess.js](https://github.com/jhlywa/chess.js) - JavaScript chess library
-- [Flask](https://flask.palletsprojects.com/) - Python web framework
-- [Flask-SocketIO](https://flask-socketio.readthedocs.io/) - Real-time web framework
+- [Stockfish](https://stockfishchess.org/) - Открытый шахматный движок
+- [Chessboard.js](https://chessboardjs.com/) - Компонент шахматной доски на JavaScript
+- [Chess.js](https://github.com/jhlywa/chess.js) - Шахматная библиотека на JavaScript
+- [Flask](https://flask.palletsprojects.com/) - Веб-фреймворк на Python
+- [Flask-SocketIO](https://flask-socketio.readthedocs.io/) - Фреймворк для веб-приложений реального времени
 
-## Future Improvements
+## Будущие улучшения
 
-See [Improvement Plan](IMPROVEMENT_PLAN.md) for a comprehensive roadmap of planned features and enhancements.
+См. [План улучшений](IMPROVEMENT_PLAN.md) для комплексной дорожной карты запланированных функций и улучшений.
