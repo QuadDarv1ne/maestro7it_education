@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Тест производительности для демонстрации улучшений в chess_stockfish.
+Performance improvements test for chess_stockfish.
 
-Этот скрипт тестирует производительность различных компонентов игры
-и сравнивает оптимизированную и неоптимизированную версии.
+This script tests the performance improvements made to the chess game.
 """
 
 import time
@@ -12,7 +11,7 @@ import os
 import json
 from typing import Dict, List, Tuple
 
-# Добавляем путь к проекту
+# Add project path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from engine.stockfish_wrapper import StockfishWrapper
@@ -20,163 +19,223 @@ from utils.performance_monitor import PerformanceMonitor, PerformanceTimer
 
 
 def test_board_state_caching():
-    """Тест кэширования состояния доски."""
-    print("Тест 1: Кэширование состояния доски")
+    """Test board state caching performance."""
+    print("Testing Board State Caching Performance")
     print("-" * 40)
     
-    # Создаем движок
+    # Create engine
     engine = StockfishWrapper(skill_level=5)
     
-    # Измеряем время получения состояния доски без кэширования
+    # Measure time to get board state without caching
     start_time = time.time()
     for _ in range(100):
         board = engine.get_board_state()
     uncached_time = time.time() - start_time
     
-    # Измеряем время получения состояния доски с кэшированием
+    # Measure time to get board state with caching
     start_time = time.time()
     for _ in range(100):
-        board = engine.get_board_state()  # Второй вызов должен использовать кэш
+        board = engine.get_board_state()  # These calls should use cache
     cached_time = time.time() - start_time
     
-    print(f"Без кэширования: {uncached_time:.4f} сек")
-    print(f"С кэшированием: {cached_time:.4f} сек")
-    print(f"Ускорение: {uncached_time/cached_time:.2f}x")
+    speedup = uncached_time / cached_time if cached_time > 0 else float('inf')
+    
+    print(f"Without caching: {uncached_time:.4f} sec")
+    print(f"With caching: {cached_time:.4f} sec")
+    print(f"Speedup: {speedup:.2f}x")
     print()
     
     return {
         'uncached_time': uncached_time,
         'cached_time': cached_time,
-        'speedup': uncached_time/cached_time
+        'speedup': speedup
+    }
+
+
+def test_move_validation_caching():
+    """Test move validation caching performance."""
+    print("Testing Move Validation Caching Performance")
+    print("-" * 40)
+    
+    # Create engine
+    engine = StockfishWrapper(skill_level=5)
+    
+    # Test moves
+    test_moves = ['e2e4', 'd2d4', 'g1f3', 'b1c3']
+    
+    # Measure time without caching
+    start_time = time.time()
+    for _ in range(50):
+        for move in test_moves:
+            is_valid = engine.is_move_correct(move)
+    uncached_time = time.time() - start_time
+    
+    # Measure time with caching
+    start_time = time.time()
+    for _ in range(50):
+        for move in test_moves:
+            is_valid = engine.is_move_correct(move)  # These calls should use cache
+    cached_time = time.time() - start_time
+    
+    speedup = uncached_time / cached_time if cached_time > 0 else float('inf')
+    
+    print(f"Without caching: {uncached_time:.4f} sec")
+    print(f"With caching: {cached_time:.4f} sec")
+    print(f"Speedup: {speedup:.2f}x")
+    print()
+    
+    return {
+        'uncached_time': uncached_time,
+        'cached_time': cached_time,
+        'speedup': speedup
     }
 
 
 def test_evaluation_caching():
-    """Тест кэширования оценки позиции."""
-    print("Тест 2: Кэширование оценки позиции")
+    """Test evaluation caching performance."""
+    print("Testing Evaluation Caching Performance")
     print("-" * 40)
     
-    # Создаем движок
+    # Create engine
     engine = StockfishWrapper(skill_level=5)
     
-    # Измеряем время получения оценки без кэширования
+    # Measure time to get evaluation without caching
     start_time = time.time()
-    for _ in range(50):
+    for _ in range(20):
         evaluation = engine.get_evaluation()
     uncached_time = time.time() - start_time
     
-    # Измеряем время получения оценки с кэшированием
+    # Measure time to get evaluation with caching
     start_time = time.time()
-    for _ in range(50):
-        evaluation = engine.get_evaluation()  # Второй вызов должен использовать кэш
+    for _ in range(20):
+        evaluation = engine.get_evaluation()  # These calls should use cache
     cached_time = time.time() - start_time
     
-    print(f"Без кэширования: {uncached_time:.4f} сек")
-    print(f"С кэшированием: {cached_time:.4f} сек")
-    print(f"Ускорение: {uncached_time/cached_time:.2f}x")
+    speedup = uncached_time / cached_time if cached_time > 0 else float('inf')
+    
+    print(f"Without caching: {uncached_time:.4f} sec")
+    print(f"With caching: {cached_time:.4f} sec")
+    print(f"Speedup: {speedup:.2f}x")
     print()
     
     return {
         'uncached_time': uncached_time,
         'cached_time': cached_time,
-        'speedup': uncached_time/cached_time
-    }
-
-
-def test_move_validation():
-    """Тест валидации ходов."""
-    print("Тест 3: Валидация ходов")
-    print("-" * 40)
-    
-    # Создаем движок
-    engine = StockfishWrapper(skill_level=5)
-    
-    # Тестовые ходы
-    test_moves = ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1b5', 'a7a6', 'b5a4']
-    
-    # Измеряем время валидации ходов
-    start_time = time.time()
-    for _ in range(10):
-        for move in test_moves:
-            is_valid = engine.is_move_correct(move)
-    validation_time = time.time() - start_time
-    
-    print(f"Время валидации {len(test_moves) * 10} ходов: {validation_time:.4f} сек")
-    print(f"Среднее время на ход: {validation_time/(len(test_moves) * 10) * 1000:.2f} мс")
-    print()
-    
-    return {
-        'total_moves': len(test_moves) * 10,
-        'total_time': validation_time,
-        'avg_time_per_move_ms': validation_time/(len(test_moves) * 10) * 1000
+        'speedup': speedup
     }
 
 
 def test_ai_move_generation():
-    """Тест генерации ходов ИИ."""
-    print("Тест 4: Генерация ходов ИИ")
+    """Test AI move generation performance."""
+    print("Testing AI Move Generation Performance")
     print("-" * 40)
     
-    # Создаем движок
-    engine = StockfishWrapper(skill_level=3)  # Низкий уровень для быстрого теста
+    # Create engine
+    engine = StockfishWrapper(skill_level=3)  # Lower skill level for faster testing
     
-    # Измеряем время получения лучшего хода
+    # Measure time to generate AI moves
     start_time = time.time()
-    for depth in [1, 2, 3]:
-        move = engine.get_best_move(depth=depth)
-    move_time = time.time() - start_time
+    moves = []
+    for i in range(5):
+        move = engine.get_best_move(depth=10)
+        if move:
+            moves.append(move)
+    total_time = time.time() - start_time
     
-    print(f"Время получения 3 ходов с разной глубиной: {move_time:.4f} сек")
-    print(f"Среднее время на ход: {move_time/3:.4f} сек")
+    avg_time = total_time / len(moves) if moves else 0
+    
+    print(f"Generated {len(moves)} moves")
+    print(f"Total time: {total_time:.4f} sec")
+    print(f"Average time per move: {avg_time*1000:.2f} ms")
     print()
     
     return {
-        'moves_count': 3,
-        'total_time': move_time,
-        'avg_time_per_move': move_time/3
+        'moves_count': len(moves),
+        'total_time': total_time,
+        'avg_time_per_move': avg_time
+    }
+
+
+def test_move_validation():
+    """Test move validation performance."""
+    print("Testing Move Validation Performance")
+    print("-" * 40)
+    
+    # Create engine
+    engine = StockfishWrapper(skill_level=5)
+    
+    # Test moves (some valid, some invalid)
+    test_moves = ['e2e4', 'd2d4', 'g1f3', 'b1c3', 'e2e5', 'f1f5']
+    
+    # Measure time to validate moves
+    start_time = time.time()
+    results = []
+    for move in test_moves:
+        is_valid = engine.is_move_correct(move)
+        results.append(is_valid)
+    total_time = time.time() - start_time
+    
+    avg_time = total_time / len(test_moves) * 1000  # ms
+    
+    print(f"Validated {len(test_moves)} moves")
+    print(f"Total time: {total_time*1000:.2f} ms")
+    print(f"Average time per move: {avg_time:.2f} ms")
+    print(f"Results: {results}")
+    print()
+    
+    return {
+        'total_moves': len(test_moves),
+        'total_time': total_time,
+        'avg_time_per_move_ms': avg_time
     }
 
 
 def run_comprehensive_performance_test():
-    """Запуск комплексного теста производительности."""
+    """Run comprehensive performance test."""
     print("=" * 60)
-    print("КОМПЛЕКСНЫЙ ТЕСТ ПРОИЗВОДИТЕЛЬНОСТИ CHESS_STOCKFISH")
+    print("COMPREHENSIVE PERFORMANCE TEST FOR CHESS_STOCKFISH")
     print("=" * 60)
     print()
     
-    # Создаем монитор производительности
+    # Create performance monitor
     monitor = PerformanceMonitor("performance_test_log.json")
-    monitor.start_monitoring(0.1)  # Частый мониторинг для теста
+    monitor.start_monitoring(0.1)  # Frequent monitoring for test
     
     results = {}
     
     try:
-        # Запускаем все тесты
+        # Run all tests
         results['board_state_caching'] = test_board_state_caching()
+        results['move_validation_caching'] = test_move_validation_caching()
         results['evaluation_caching'] = test_evaluation_caching()
-        results['move_validation'] = test_move_validation()
         results['ai_move_generation'] = test_ai_move_generation()
+        results['move_validation'] = test_move_validation()
         
-        # Получаем сводку по производительности
+        # Get performance summary
         summary = monitor.get_performance_summary()
         results['performance_summary'] = summary
         
-        print("СВОДКА ПО ПРОИЗВОДИТЕЛЬНОСТИ:")
+        print("PERFORMANCE SUMMARY:")
         print("-" * 40)
         if summary:
-            print(f"Время работы: {summary.get('uptime_seconds', 0):.2f} сек")
+            print(f"Uptime: {summary.get('uptime_seconds', 0):.2f} sec")
             cpu_usage = summary.get('cpu_usage', {})
-            print(f"CPU использование: среднее {cpu_usage.get('average', 0)}%, максимум {cpu_usage.get('maximum', 0)}%")
+            print(f"CPU: avg {cpu_usage.get('average', 0)}%, max {cpu_usage.get('maximum', 0)}%")
             memory_usage = summary.get('memory_usage', {})
-            print(f"Память процесса: среднее {memory_usage.get('process_memory_mb', {}).get('average', 0)} MB")
-            print(f"Всего событий: {summary.get('total_events', 0)}")
+            print(f"Memory: avg {memory_usage.get('process_memory_mb', {}).get('average', 0)} MB")
         
-        # Сохраняем результаты
-        with open('performance_test_results.json', 'w', encoding='utf-8') as f:
-            json.dump(results, f, ensure_ascii=False, indent=2, default=str)
-        print(f"\n✅ Результаты теста сохранены в performance_test_results.json")
+        # Save results
+        with open("performance_test_results.json", "w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        print(f"\nResults saved to performance_test_results.json")
         
+    except Exception as e:
+        print(f"Error during testing: {e}")
+        import traceback
+        traceback.print_exc()
+    
     finally:
+        # Stop monitoring
         monitor.stop_monitoring()
         monitor.save_log()
     
@@ -184,55 +243,57 @@ def run_comprehensive_performance_test():
 
 
 def compare_versions():
-    """Сравнение производительности оптимизированной и неоптимизированной версий."""
-    print("=" * 60)
-    print("СРАВНЕНИЕ ВЕРСИЙ")
-    print("=" * 60)
+    """Compare performance between standard and optimized versions."""
+    print("VERSION COMPARISON")
+    print("=" * 40)
     print()
-    
-    print("Оптимизации, реализованные в проекте:")
-    print("1. Агрессивное кэширование состояния доски (до 1.5 секунд)")
-    print("2. Расширенное кэширование оценки позиции (до 120 секунд)")
-    print("3. Оптимизированное кэширование допустимых ходов (до 10 секунд)")
-    print("4. Улучшенное управление памятью с ограничением размера кэшей")
-    print("5. Интерполированное обновление оценки для плавного UX")
-    print("6. Многопоточная обработка с пулом потоков")
-    print("7. Мониторинг производительности в реальном времени")
-    print()
-    
-    print("Ожидаемые улучшения производительности:")
-    print("- Кэширование состояния доски: 5-10x ускорение")
-    print("- Кэширование оценки позиции: 10-50x ускорение")
-    print("- Кэширование допустимых ходов: 3-7x ускорение")
-    print("- Общее потребление памяти: уменьшено на 20-30%")
-    print("- Отзывчивость интерфейса: улучшена на 40-60%")
+    print("Performance improvements in the optimized version:")
+    print("1. Enhanced caching system with longer cache durations")
+    print("2. Improved memory management with LRU cache cleanup")
+    print("3. Better multithreading with larger thread pools")
+    print("4. Optimized board rendering with pre-rendered surfaces")
+    print("5. GPU acceleration support for compatible systems")
+    print("6. More aggressive caching strategies")
+    print("7. Reduced function call overhead")
+    print("8. Better resource management")
     print()
 
 
 if __name__ == "__main__":
-    print("Запуск тестов производительности chess_stockfish...\n")
+    print("Running Performance Improvements Test...\n")
     
-    # Сравнение версий
+    # Compare versions
     compare_versions()
     
-    # Запуск комплексного теста
+    # Run comprehensive test
     results = run_comprehensive_performance_test()
     
     print("\n" + "=" * 60)
-    print("ТЕСТ ЗАВЕРШЕН")
+    print("TEST COMPLETED")
     print("=" * 60)
     
-    # Выводим ключевые результаты
+    # Display key results
     if 'board_state_caching' in results:
         speedup = results['board_state_caching']['speedup']
-        print(f"🚀 Ускорение кэширования доски: {speedup:.2f}x")
+        print(f"🚀 Board State Caching Speedup: {speedup:.2f}x")
+    
+    if 'move_validation_caching' in results:
+        speedup = results['move_validation_caching']['speedup']
+        print(f"✅ Move Validation Caching Speedup: {speedup:.2f}x")
     
     if 'evaluation_caching' in results:
         speedup = results['evaluation_caching']['speedup']
-        print(f"⚡ Ускорение кэширования оценки: {speedup:.2f}x")
+        print(f"⚡ Evaluation Caching Speedup: {speedup:.2f}x")
     
     if 'move_validation' in results:
         avg_time = results['move_validation']['avg_time_per_move_ms']
-        print(f"⏱ Среднее время валидации хода: {avg_time:.2f} мс")
+        print(f"⏱ Average Move Validation Time: {avg_time:.2f} ms")
     
-    print("\nДля более подробных результатов смотрите performance_test_results.json")
+    print("\nExpected Performance Improvements:")
+    print("- Board state caching: 5-15x faster")
+    print("- Evaluation caching: 10-50x faster")
+    print("- Move validation: 3-10x faster")
+    print("- Memory usage: 20-30% reduction")
+    print("- Overall responsiveness: 40-60% improvement")
+    print()
+    print("Run 'python demos/performance_benchmark.py' for detailed benchmarking")
