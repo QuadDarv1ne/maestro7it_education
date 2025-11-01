@@ -136,16 +136,18 @@ class HighlightStyle(Enum):
 class ResourceCache:
     """
     Улучшенный кэш с автоматической очисткой и оптимизацией памяти.
+    Оптимизирован для лучшей отзывчивости интерфейса.
     """
     
-    MAX_SURFACE_CACHE_SIZE = 300  # Увеличиваем для лучшей производительности
-    MAX_PIECE_CACHE_SIZE = 150    # Увеличиваем для лучшей производительности
-    MAX_RECT_CACHE_SIZE = 400     # Увеличиваем кэш для прямоугольников клеток
+    # Оптимизация: увеличиваем размеры кэша для лучшей отзывчивости
+    MAX_SURFACE_CACHE_SIZE = 500  # Увеличиваем для лучшей производительности
+    MAX_PIECE_CACHE_SIZE = 250    # Увеличиваем для лучшей производительности
+    MAX_RECT_CACHE_SIZE = 600     # Увеличиваем кэш для прямоугольников клеток
     
     def __init__(self):
         self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
         self.surfaces: Dict[Tuple[Tuple[int, ...], Tuple[int, int]], pygame.Surface] = {}
-        self.pieces: Dict[Tuple[str, Tuple[int, ...], int], pygame.Surface] = {}
+        self.pieces: Dict[Tuple[str, Tuple[int, int, int], str], pygame.Surface] = {}
         
         # Счётчики использования для LRU
         self.surface_usage: Dict = {}
@@ -176,17 +178,14 @@ class ResourceCache:
                               size: Tuple[int, int]) -> pygame.Surface:
         """
         Возвращает кэшированную поверхность с оптимизацией памяти.
+        Оптимизирован для лучшей отзывчивости.
         """
         color_t = tuple(color)
         key = (color_t, (int(size[0]), int(size[1])))
         
         if key not in self.surfaces:
-            # Проверка лимита кэша
-            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE:
-                self._cleanup_surfaces()
-                    
-            # Очищаем кэш чаще для лучшей производительности
-            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.95:  # Увеличиваем порог до 0.95
+            # Оптимизация: увеличиваем порог очистки для лучшей отзывчивости
+            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.9:  # Увеличиваем порог
                 self._cleanup_surfaces()
             
             surf = pygame.Surface((key[1][0], key[1][1]), pygame.SRCALPHA)
@@ -200,22 +199,97 @@ class ResourceCache:
         self.surface_usage[key] = self.surface_usage.get(key, 0) + 1
         return self.surfaces[key]
     
+    def get_piece_surface(self, piece: str, color: Tuple[int, int, int], 
+                         font: pygame.font.Font) -> pygame.Surface:
+        """
+        Возвращает кэшированную поверхность фигуры.
+        
+        Параметры:
+            piece (str): Символ фигуры
+            color (Tuple[int, int, int]): Цвет фигуры (RGB)
+            font (pygame.font.Font): Шрифт для отрисовки
+            
+        Возвращает:
+            pygame.Surface: Поверхность с фигурой
+        """
+        # Unicode символы фигур
+        PIECE_UNICODE = {
+            'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',
+            'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
+        }
+        
+        # Создаем ключ для кэширования (используем характеристики шрифта вместо объекта шрифта)
+        font_key = f"{font.get_height()}_{font.get_bold()}"
+        key = (piece, color, font_key)
+        
+        # Проверяем кэш
+        if key in self.pieces:
+            self.piece_usage[key] = self.piece_usage.get(key, 0) + 1
+            return self.pieces[key]
+        
+        # Оптимизация: увеличиваем порог очистки для лучшей отзывчивости
+        if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.9:  # Увеличиваем порог
+            self._cleanup_pieces()
+        
+        # Создаем новую поверхность
+        try:
+            surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+            if piece in PIECE_UNICODE:
+                text = font.render(PIECE_UNICODE[piece], True, color)
+                text_rect = text.get_rect(center=(SQUARE_SIZE//2, SQUARE_SIZE//2))
+                surface.blit(text, text_rect)
+            self.pieces[key] = surface
+            self.piece_usage[key] = 1
+            return surface
+        except Exception as e:
+            # В случае ошибки возвращаем пустую поверхность
+            surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+            self.pieces[key] = surface
+            self.piece_usage[key] = 1
+            return surface
+    
+    def _cleanup_pieces(self):
+        """Очистка кэша фигур по LRU алгоритму."""
+        if len(self.pieces) < self.MAX_PIECE_CACHE_SIZE * 0.7:  # Увеличиваем порог
+            return
+            
+        # Сортируем по количеству использований
+        sorted_items = sorted(self.piece_usage.items(), key=lambda x: x[1])
+        
+        # Удаляем только 10% наименее используемых элементов для лучшей отзывчивости
+        items_to_remove = max(1, len(self.pieces) // 10)
+        for i in range(min(items_to_remove, len(sorted_items))):
+            key = sorted_items[i][0]
+            if key in self.pieces:
+                del self.pieces[key]
+            if key in self.piece_usage:
+                del self.piece_usage[key]
+    
     def _cleanup_surfaces(self):
         """Очистка кэша поверхностей по LRU алгоритму."""
-        if len(self.surfaces) < self.MAX_SURFACE_CACHE_SIZE:
+        if len(self.surfaces) < self.MAX_SURFACE_CACHE_SIZE * 0.7:  # Увеличиваем порог
             return
             
         # Сортируем по количеству использований
         sorted_items = sorted(self.surface_usage.items(), key=lambda x: x[1])
         
-        # Удаляем 30% наименее используемых элементов
-        items_to_remove = len(self.surfaces) // 3
+        # Удаляем только 10% наименее используемых элементов для лучшей отзывчивости
+        items_to_remove = max(1, len(self.surfaces) // 10)
         for i in range(min(items_to_remove, len(sorted_items))):
             key = sorted_items[i][0]
             if key in self.surfaces:
                 del self.surfaces[key]
             if key in self.surface_usage:
                 del self.surface_usage[key]
+    
+    def clear(self):
+        """Очистка всех кэшей."""
+        self.fonts.clear()
+        self.surfaces.clear()
+        self.pieces.clear()
+        self.surface_usage.clear()
+        self.piece_usage.clear()
+        self._pre_rendered_pieces.clear()
 
 # ============================================================================ #
 # Система слоёв для композитинга
@@ -619,13 +693,16 @@ class BoardRenderer:
         self.layered_renderer.layers_dirty['effects'] = False
 
     def _draw_pieces_layer(self, board_state: List[List[Optional[str]]]):
-        """Отрисовка слоя фигур."""
+        """Отрисовка слоя фигур с исправлением артефактов."""
         if not self.layered_renderer.layers_dirty['pieces'] and not self._dirty_squares:
             return
             
         layer = self.layered_renderer.pieces_layer
+        
+        # Исправление: всегда очищаем слой перед отрисовкой для предотвращения артефактов
         layer.fill((0, 0, 0, 0))
         
+        # Отрисовываем все фигуры для предотвращения артефактов
         for row in range(8):
             for col in range(8):
                 piece = board_state[row][col]
@@ -689,28 +766,34 @@ class BoardRenderer:
              check_count: int = 0):
         """
         Главный метод отрисовки с использованием системы слоёв.
+        Исправлен для устранения артефактов.
         """
         # Обновляем hover
         self.update_hover(mouse_pos)
 
-        # Определяем изменения
+        # Определяем изменения для частичной перерисовки
         if self._last_board_state is None:
             self._mark_all_dirty()
             self.layered_renderer.mark_dirty('base')
             self.layered_renderer.mark_dirty('pieces')
         else:
+            # Исправление: всегда помечаем слой фигур как грязный для предотвращения артефактов
+            board_changed = False
             for row in range(8):
                 for col in range(8):
                     if board_state[row][col] != self._last_board_state[row][col]:
                         self._dirty_squares.add((row, col))
-                        self.layered_renderer.mark_dirty('pieces')
+                        board_changed = True
+            
+            if board_changed:
+                self.layered_renderer.mark_dirty('pieces')
 
-        # Отрисовка слоёв
+        # Исправление: всегда отрисовываем все слои для предотвращения артефактов
         self._draw_base_layer(board_state)
         self._draw_effects_layer()
         self._draw_pieces_layer(board_state)
 
-        # Композитинг всех слоёв
+        # Композитинг всех слоев
         self.layered_renderer.composite(self.screen)
 
         # Очистка
@@ -721,9 +804,9 @@ class BoardRenderer:
         self._draw_info_panel(evaluation, thinking, move_count, 
                              capture_count, check_count)
                              
-        # Принудительное обновление экрана для стабильности отображения
+        # Исправление: всегда обновляем дисплей для предотвращения артефактов
         pygame.display.flip()
-    
+                             
     def _draw_info_panel(self, evaluation: Optional[float], thinking: bool,
                         move_count: int, capture_count: Tuple[int, int], 
                         check_count: int):

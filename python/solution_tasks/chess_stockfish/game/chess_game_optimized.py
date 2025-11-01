@@ -64,40 +64,19 @@ class ChessGameOptimized:
     Оптимизированная версия класса ChessGame с улучшенной производительностью.
     """
     
-    def __init__(self, player_color: str = 'white', skill_level: int = 5, theme: str = 'classic'):
+    def __init__(self, player_color: str = 'white', skill_level: int = 10, theme: str = 'classic'):
         """
-        Инициализация оптимизированной игры.
+        Инициализация оптимизированной шахматной игры.
         
         Параметры:
-            player_color (str): Выбранная сторона ('white' или 'black')
+            player_color (str): Цвет фигур игрока ('white' или 'black')
             skill_level (int): Уровень сложности Stockfish (0-20)
-            theme (str): Цветовая тема доски
+            theme (str): Тема оформления доски
         """
-        # Инициализируем монитор производительности
-        self.performance_monitor = get_performance_monitor()
-        self.performance_monitor.start_monitoring(0.25)  # Мониторим каждые 0.25 секунды для оптимизированной версии
-        
-        self.player_color = player_color
-        self.ai_color = 'black' if player_color == 'white' else 'white'
-        self.skill_level = skill_level
-        self.theme = theme
-        
-        try:
-            self.engine = StockfishWrapper(skill_level=skill_level)
-        except RuntimeError as e:
-            raise e
-        except Exception as e:
-            raise RuntimeError(f"❌ Не удалось инициализировать игру: {e}")
-        
-        # Инициализация Pygame UI
-        try:
-            if not pygame.get_init():
-                pygame.init()
-            
-            self.screen = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE + 100))
-            pygame.display.set_caption(f"♟️  chess_stockfish OPTIMIZED — Maestro7IT (уровень {skill_level})")
-        except Exception as e:
-            raise RuntimeError(f"❌ Не удалось инициализировать графический интерфейс: {e}")
+        # Инициализация pygame
+        pygame.init()
+        self.screen = pygame.display.set_mode((BOARD_SIZE, BOARD_SIZE + 100))
+        pygame.display.set_caption("Chess Game - Optimized Version")
         
         # Создаём рендерер
         self.renderer = BoardRenderer(self.screen, player_color)
@@ -112,13 +91,26 @@ class ChessGameOptimized:
         self.educator = ChessEducator()
         self.opening_book = OpeningBook()
         
-        # Инициализируем менеджер звуков
-        self.sound_manager = SoundManager()
+        # Инициализируем менеджер звуков (звуковые эффекты отключены по умолчанию)
+        self.sound_manager = SoundManager(sound_enabled=False, music_enabled=True)
         self.sound_manager.load_sounds()
         self.sound_manager.play_background_music()
         
         # Инициализируем игровое меню
         self.in_game_menu = InGameMenu(self.screen, self.sound_manager)
+        
+        # Инициализируем шахматный движок
+        self.player_color = player_color
+        self.ai_color = 'black' if player_color == 'white' else 'white'
+        self.skill_level = skill_level
+        self.theme = theme
+        
+        try:
+            self.engine = StockfishWrapper(skill_level=skill_level)
+        except RuntimeError as e:
+            raise e
+        except Exception as e:
+            raise RuntimeError(f"❌ Не удалось инициализировать игру: {e}")
         
         # Состояние игры
         self.move_history = []
@@ -920,8 +912,18 @@ class ChessGameOptimized:
                 current_time = time.time()
                 has_events = False
                 
+                # Оптимизация: ограничиваем количество обработки событий для лучшей отзывчивости
+                event_count = 0
+                max_events_per_frame = 10  # Ограничиваем количество событий за кадр
+                
                 for event in pygame.event.get():
                     has_events = True
+                    event_count += 1
+                    
+                    # Оптимизация: пропускаем лишние события для лучшей отзывчивости
+                    if event_count > max_events_per_frame and event.type not in [pygame.QUIT, pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN]:
+                        continue
+                        
                     if event.type == pygame.QUIT:
                         running = False
 
@@ -976,18 +978,22 @@ class ChessGameOptimized:
                 if last_board_state is None:
                     board_changed = True
                 else:
-                    current_hash = hash(str(current_board_state))
-                    last_hash = hash(str(last_board_state))
-                    if current_hash != last_hash:
-                        board_changed = (str(last_board_state) != str(current_board_state))
+                    # Оптимизация: быстрая проверка изменений для лучшей отзывчивости
+                    for row in range(8):
+                        if board_changed:
+                            break
+                        for col in range(8):
+                            if current_board_state[row][col] != last_board_state[row][col]:
+                                board_changed = True
+                                break
                 
-                # Увеличиваем минимальный интервал для лучшей производительности
+                # Оптимизация: адаптивная частота обновления для лучшей отзывчивости
                 min_update_interval = 1.0/144  # 144 FPS минимум
                 if not has_events and not board_changed and not self.in_game_menu.visible:
                     time_since_last_update = current_time - max(last_board_update, last_ui_update)
                     if time_since_last_update < min_update_interval:
-                        # Ограничиваем FPS для экономии CPU при бездействии
-                        self.clock.tick(144)
+                        # Ограничиваем FPS для экономии CPU при бездействии, но с лучшей отзывчивостью
+                        self.clock.tick(144)  # Повышаем до 144 FPS для лучшей отзывчивости
                         continue
                 
                 if board_changed or (time_to_update_board and board_needs_update) or time_to_update_ai:
@@ -1017,7 +1023,6 @@ class ChessGameOptimized:
                                          check_count=self.game_stats['check_count'])
                         
                         self.screen.set_clip(old_clip)
-                        pygame.display.flip()
                         last_board_update = current_time
                         board_needs_update = False
                         last_board_state = [row[:] for row in current_board_state]
@@ -1030,28 +1035,25 @@ class ChessGameOptimized:
                 if self.in_game_menu.visible:
                     self.screen.set_clip(None)
                     self.in_game_menu.draw()
-
+                    pygame.display.flip()  # Принудительное обновление для лучшей отзывчивости
                     menu_active = True
                 else:
                     menu_active = False
 
                 self.frame_count += 1
-                if self.frame_count % 600 == 0:  # Каждые 10 секунд при 60 FPS
+                # Оптимизация: уменьшаем частоту очистки кэша для лучшей отзывчивости
+                if self.frame_count % 1200 == 0:  # Каждые 20 секунд при 60 FPS вместо 10
                     self.renderer.clear_temp_surfaces()
                     self._clear_caches()
                     self._clear_old_ai_cache()
 
-                if board_needs_update or ui_needs_update or has_events or board_changed or self.in_game_menu.visible:
-                    pygame.display.flip()
+                # Оптимизация: улучшенное управление FPS для лучшей отзывчивости
+                if has_events or board_needs_update or ui_needs_update or board_changed or self.in_game_menu.visible:
+                    pygame.display.flip()  # Принудительное обновление при активности
+                    self.clock.tick(144)   # Максимальная отзывчивость
                 else:
-                    self.clock.tick(45)
-                    continue
-
-                # Адаптивное ограничение FPS для максимальной плавности
-                if not has_events and not board_needs_update and not ui_needs_update:
-                    self.clock.tick(90)  # В режиме простоя
-                else:
-                    self.clock.tick(144)  # В активном режиме
+                    # В режиме простоя используем адаптивную частоту
+                    self.clock.tick(60)    # Баланс между отзывчивостью и производительностью
 
         finally:
             self.executor.shutdown(wait=False)

@@ -31,12 +31,12 @@ class SoundManager:
     Менеджер звуковых эффектов для шахматной игры.
     """
     
-    def __init__(self, sound_enabled: bool = True, music_enabled: bool = True, volume: float = 0.7):
+    def __init__(self, sound_enabled: bool = False, music_enabled: bool = True, volume: float = 0.7):
         """
         Инициализация менеджера звуков.
         
         Параметры:
-            sound_enabled (bool): Включены ли звуковые эффекты по умолчанию
+            sound_enabled (bool): Включены ли звуковые эффекты по умолчанию (отключены по умолчанию)
             music_enabled (bool): Включена ли фоновая музыка по умолчанию
             volume (float): Громкость звуков (0.0 - 1.0)
         """
@@ -217,55 +217,54 @@ class SoundManager:
             
     def play_background_music(self):
         """
-        Воспроизведение фоновой музыки.
+        Воспроизведение фоновой музыки из папки music.
         """
         if not self.music_enabled or not self._initialized:
             return
             
         try:
-            # Используем файлы из папки soundtrack
-            if self.background_music is None:
-                soundtrack_path = os.path.join(os.path.dirname(__file__), "..", "soundtrack")
-                if os.path.exists(soundtrack_path):
-                    # Получаем список MP3 файлов
-                    mp3_files = [f for f in os.listdir(soundtrack_path) if f.endswith('.mp3')]
-                    if mp3_files:
-                        # Выбираем случайный файл из доступных
-                        import random
-                        selected_file = random.choice(mp3_files)
-                        self.background_music = os.path.join(soundtrack_path, selected_file)
-                    else:
-                        # Если нет MP3 файлов, создаем музыку программно
-                        self.background_music = self._create_background_music()
+            # Используем файлы из папки music
+            music_path = os.path.join(os.path.dirname(__file__), "..", "music")
+            if os.path.exists(music_path):
+                # Получаем список MP3 и WAV файлов
+                music_files = [f for f in os.listdir(music_path) 
+                              if f.endswith('.mp3') or f.endswith('.wav')]
+                if music_files:
+                    # Выбираем случайный файл из доступных
+                    import random
+                    selected_file = random.choice(music_files)
+                    full_path = os.path.join(music_path, selected_file)
+                    pygame.mixer.music.load(full_path)
+                    pygame.mixer.music.set_volume(self.volume * 0.7)  # Меньше громкость для фона
+                    pygame.mixer.music.play(-1)  # Повторять бесконечно
+                    print(f"🎵 Воспроизводится музыка: {selected_file}")
                 else:
-                    # Если папка soundtrack не существует, создаем музыку программно
-                    self.background_music = self._create_background_music()
-            
-            if self.background_music:
-                pygame.mixer.music.load(self.background_music)
-                pygame.mixer.music.set_volume(self.volume * 0.7)  # Меньше громкость для фона
-                pygame.mixer.music.play(-1)  # Повторять бесконечно
+                    print("⚠️  В папке music нет файлов .mp3 или .wav")
+                    # Если нет файлов, создаем тихую музыку программно
+                    self._create_quiet_background_music()
+            else:
+                print("⚠️  Папка music не найдена")
+                # Если папка music не существует, создаем тихую музыку программно
+                self._create_quiet_background_music()
         except Exception as e:
             logging.warning(f"Failed to play background music: {e}")
+            print(f"⚠️  Ошибка воспроизведения музыки: {e}")
             
-    def _create_background_music(self):
+    def _create_quiet_background_music(self):
         """
-        Создание фоновой музыки программно.
-        
-        Возвращает:
-            str: Путь к временному файлу с музыкой
+        Создание тихой фоновой музыки программно (почти без звука).
         """
         import numpy as np
         import tempfile
         
         try:
-            # Создаем простую мелодию
+            # Создаем почти тихую мелодию
             sample_rate = 22050
             duration = 30  # 30 секунд
             frames = int(duration * sample_rate)
             arr = np.zeros(frames)
             
-            # Основная мелодия (простая арпеджио)
+            # Очень тихая мелодия (почти без звука)
             notes = [261.63, 329.63, 392.00, 523.25]  # До, Ми, Соль, До
             note_duration = sample_rate // 2  # Полсекунды на ноту
             
@@ -278,7 +277,7 @@ class SoundManager:
                 for j in range(start, end):
                     t = (j - start) / note_duration
                     envelope = np.sin(np.pi * t)  # Плавное нарастание и спад
-                    wave = envelope * 2048 * np.sin(2 * np.pi * freq * j / sample_rate)
+                    wave = envelope * 10 * np.sin(2 * np.pi * freq * j / sample_rate)  # Очень тихо
                     arr[j] = wave
                     
             # Преобразуем в стерео
@@ -300,10 +299,15 @@ class SoundManager:
             wav_file.writeframes(stereo_arr.tobytes())
             wav_file.close()
             
-            return temp_file.name
+            # Загружаем тихую музыку
+            pygame.mixer.music.load(temp_file.name)
+            pygame.mixer.music.set_volume(0.01)  # Почти без звука
+            pygame.mixer.music.play(-1)  # Повторять бесконечно
+            
         except Exception as e:
-            logging.warning(f"Failed to create background music: {e}")
-            return None
+            logging.warning(f"Failed to create quiet background music: {e}")
+            # Если не удалось создать музыку, просто отключаем звук
+            pygame.mixer.music.set_volume(0.0)
             
     def stop_background_music(self):
         """

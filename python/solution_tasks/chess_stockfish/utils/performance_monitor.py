@@ -17,6 +17,7 @@ import os
 class PerformanceMonitor:
     """
     Класс для мониторинга производительности приложения.
+    Оптимизирован для минимального влияния на производительность.
     """
     
     def __init__(self, log_file: str = "performance_log.json"):
@@ -31,10 +32,11 @@ class PerformanceMonitor:
         self.start_time = time.time()
         self.monitoring = False
         self.monitor_thread = None
-        self.max_log_entries = 2000  # Увеличиваем для лучшего анализа
+        self.max_log_entries = 1000  # Уменьшаем для лучшей производительности
         self.event_counter = defaultdict(int)  # Счетчик событий
+        self.sampling_interval = 2.0  # Увеличиваем интервал сбора метрик для лучшей производительности
         
-    def start_monitoring(self, interval: float = 1.0):
+    def start_monitoring(self, interval: float = 2.0):  # Увеличиваем интервал для лучшей производительности
         """
         Начать мониторинг производительности.
         
@@ -44,6 +46,7 @@ class PerformanceMonitor:
         if self.monitoring:
             return
             
+        self.sampling_interval = interval
         self.monitoring = True
         self.monitor_thread = threading.Thread(target=self._monitor_loop, args=(interval,), daemon=True)
         self.monitor_thread.start()
@@ -60,31 +63,20 @@ class PerformanceMonitor:
         """Цикл мониторинга в отдельном потоке."""
         while self.monitoring:
             try:
-                # Сбор метрик
+                # Сбор метрик с минимальным влиянием на производительность
                 timestamp = time.time()
-                cpu_percent = psutil.cpu_percent(interval=0.1)
+                cpu_percent = psutil.cpu_percent(interval=0.05)  # Уменьшаем интервал для лучшей отзывчивости
                 memory_info = psutil.virtual_memory()
                 process = psutil.Process()
                 process_memory = process.memory_info().rss / 1024 / 1024  # MB
                 
-                # Сбор дополнительных метрик
-                cpu_freq = psutil.cpu_freq()
-                cpu_freq_current = cpu_freq.current if cpu_freq else 0
-                
-                # Сбор метрик диска
-                disk_io = psutil.disk_io_counters()
-                disk_read_mb = disk_io.read_bytes / 1024 / 1024 if disk_io else 0
-                disk_write_mb = disk_io.write_bytes / 1024 / 1024 if disk_io else 0
-                
-                # Сохранение метрик
+                # Оптимизация: собираем только основные метрики для лучшей производительности
+                # Сбор метрик
                 self.metrics['timestamp'].append(timestamp)
                 self.metrics['cpu_percent'].append(cpu_percent)
                 self.metrics['memory_percent'].append(memory_info.percent)
                 self.metrics['process_memory_mb'].append(process_memory)
                 self.metrics['available_memory_mb'].append(memory_info.available / 1024 / 1024)
-                self.metrics['cpu_frequency_mhz'].append(cpu_freq_current)
-                self.metrics['disk_read_mb'].append(disk_read_mb)
-                self.metrics['disk_write_mb'].append(disk_write_mb)
                 
                 # Ограничение размера лога
                 self._trim_log()
@@ -105,12 +97,12 @@ class PerformanceMonitor:
                   additional_data: Optional[Dict] = None):
         """
         Залогировать событие производительности.
-        
-        Параметры:
-            event_name (str): Название события
-            duration (float): Длительность события в секундах
-            additional_data (dict): Дополнительные данные
+        Оптимизирован для минимального влияния на производительность.
         """
+        # Оптимизация: ограничиваем количество логируемых событий для лучшей производительности
+        if self.event_counter[event_name] > 1000:  # Ограничиваем количество событий одного типа
+            return
+            
         try:
             entry = {
                 'timestamp': time.time(),
@@ -123,7 +115,8 @@ class PerformanceMonitor:
             self.event_counter[event_name] += 1
             self._trim_log()
         except Exception as e:
-            print(f"⚠️  Ошибка при логировании события: {e}")
+            # Игнорируем ошибки логирования для лучшей производительности
+            pass
     
     def get_performance_summary(self) -> Dict:
         """

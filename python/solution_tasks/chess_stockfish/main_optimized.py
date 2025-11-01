@@ -115,13 +115,17 @@ def main():
     game = None
     try:
         while True:  # Цикл для возвращения в главное меню
-            menu_result: Union[Tuple[str, int], Tuple[str, int, str]] = main_menu()
-            # Handle both old and new menu return types
-            if len(menu_result) == 3:
+            menu_result = main_menu()
+            # Handle different menu return types
+            if len(menu_result) == 4:
+                player_color, skill_level, theme, game_mode = menu_result
+            elif len(menu_result) == 3:
                 player_color, skill_level, theme = menu_result
+                game_mode = 'classic'  # Default game mode
             else:
                 player_color, skill_level = menu_result
                 theme = 'classic'
+                game_mode = 'classic'
             
             # Используем оптимизированную версию игры
             game = ChessGameOptimized(player_color=player_color, skill_level=skill_level, theme=theme)
