@@ -630,3 +630,46 @@ a:hover {
         height: 95vw !important;
     }
 }
+
+/* Move highlight */
+.highlight {
+    box-shadow: inset 0 0 3px 3px rgba(106, 196, 228, 0.8) !important;
+}
+
+/* Move list panel */
+#move-list {
+    margin: 15px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    text-align: left;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#move-list h3 {
+    color: #4FC3F7;
+    margin-top: 0;
+}
+
+#move-list ol {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+#move-list li {
+    margin: 3px 0;
+    font-family: 'Courier New', monospace;
+}
+
+/* Touch-friendly adjustments for mobile */
+@media (hover: none) and (pointer: coarse) {
+    #board .square-55d63 {
+        touch-action: manipulation;
+    }
+    
+    button {
+        min-height: 44px; /* Minimum touch target size */
+        min-width: 44px;
+    }
+}

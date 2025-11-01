@@ -24,6 +24,7 @@ let userPreferences = {
     defaultDifficulty: 5,
     defaultColor: 'white'
 };
+let moveList = []; // Track moves in algebraic notation
 
 // Initialize audio
 function initAudio() {
@@ -279,6 +280,7 @@ function addResetButton() {
         gameActive = false;
         gameHistory = [];
         currentHistoryIndex = -1;
+        moveList = [];
         savedGameState = null;
         
         // Remove navigation buttons
@@ -305,6 +307,12 @@ function addResetButton() {
             preferencesBtn.remove();
         }
         
+        // Remove move list
+        const moveListPanel = document.getElementById('move-list');
+        if (moveListPanel) {
+            moveListPanel.remove();
+        }
+        
         // Remove button container
         const buttonContainer = document.getElementById('button-container');
         if (buttonContainer) {
@@ -314,6 +322,12 @@ function addResetButton() {
         document.getElementById('status').innerText = 'Готовы начать игру!';
     });
     
+    // Create takeback button
+    const takebackBtn = document.createElement('button');
+    takebackBtn.id = 'takeback';
+    takebackBtn.textContent = '↩️ Отменить ход';
+    takebackBtn.addEventListener('click', takebackMove);
+    
     // Create analyze button
     const analyzeBtn = document.createElement('button');
     analyzeBtn.id = 'analyze';
@@ -322,6 +336,7 @@ function addResetButton() {
     
     // Add buttons to container
     buttonContainer.appendChild(resetBtn);
+    buttonContainer.appendChild(takebackBtn);
     buttonContainer.appendChild(analyzeBtn);
     
     // Add container to page
@@ -335,6 +350,12 @@ function addResetButton() {
     
     // Add navigation controls
     addNavigationControls();
+}
+
+function takebackMove() {
+    // Request takeback from server
+    document.getElementById('status').innerText = 'Отмена последнего хода...';
+    socket.emit('takeback_move');
 }
 
 function addPreferencesButton() {
@@ -785,9 +806,10 @@ socket.on('game_initialized', (data) => {
     document.getElementById('board').style.display = 'block';
     gameActive = true;
     
-    // Clear previous history
+    // Clear previous history and move list
     gameHistory = [];
     currentHistoryIndex = -1;
+    moveList = [];
 
     // Destroy existing board if it exists
     if (board) {
@@ -914,6 +936,15 @@ socket.on('position_update', (data) => {
         currentHistoryIndex = gameHistory.length - 1;
         updateNavigationButtons();
         
+        // Highlight the last move if provided
+        if (data.last_move || data.ai_move) {
+            const move = data.ai_move || data.last_move;
+            highlightMove(move);
+            if (!data.takeback) { // Only add to move list if not a takeback
+                addMoveToList(move);
+            }
+        }
+        
         // Play capture sound if it was a capture
         if (data.ai_move && (data.ai_move.includes('x') || data.ai_move.length > 4)) {
             if (captureSound) captureSound();
@@ -928,6 +959,9 @@ socket.on('position_update', (data) => {
         if (data.ai_move) {
             document.getElementById('status').innerText = `Компьютер сходил: ${data.ai_move}`;
             showNotification(`Компьютер сходил: ${data.ai_move}`, 'info');
+        } else if (data.takeback) {
+            document.getElementById('status').innerText = 'Ход отменен';
+            showNotification('Ход отменен', 'info');
         } else {
             document.getElementById('status').innerText = playerColor === 'white' ? 
                 'Ваш ход: белые' : 'Ваш ход: черные';
@@ -950,6 +984,12 @@ socket.on('game_over', (data) => {
         gameHistory.push(data.fen);
         currentHistoryIndex = gameHistory.length - 1;
         updateNavigationButtons();
+        
+        // Highlight the last move if provided
+        if (data.last_move) {
+            highlightMove(data.last_move);
+            addMoveToList(data.last_move);
+        }
     }
     
     // Play game over sound
@@ -1090,6 +1130,48 @@ socket.on('game_loaded', (data) => {
     showNotification('Игра загружена успешно!', 'success');
 });
 
+function addMoveToList(move) {
+    // Add move to the move list
+    moveList.push(move);
+    
+    // Update the move list display
+    updateMoveListDisplay();
+}
+
+function updateMoveListDisplay() {
+    // Remove existing move list if it exists
+    const existingMoveList = document.getElementById('move-list');
+    if (existingMoveList) {
+        existingMoveList.remove();
+    }
+    
+    // Create move list panel
+    const moveListPanel = document.createElement('div');
+    moveListPanel.id = 'move-list';
+    
+    // Add title
+    const title = document.createElement('h3');
+    title.textContent = 'Ходы';
+    moveListPanel.appendChild(title);
+    
+    // Add move list
+    const moveListOl = document.createElement('ol');
+    moveList.forEach((move, index) => {
+        const moveItem = document.createElement('li');
+        moveItem.textContent = move;
+        moveListOl.appendChild(moveItem);
+    });
+    moveListPanel.appendChild(moveListOl);
+    
+    // Insert after navigation container
+    const navContainer = document.getElementById('navigation-container');
+    if (navContainer) {
+        navContainer.parentNode.insertBefore(moveListPanel, navContainer.nextSibling);
+    } else {
+        document.querySelector('.container').insertBefore(moveListPanel, document.getElementById('status'));
+    }
+}
+
 // New function to show notifications
 function showNotification(message, type = 'info') {
     // Remove existing notifications
@@ -1128,4 +1210,33 @@ function showNotification(message, type = 'info') {
             notification.remove();
         }
     }, 3000);
+}
+
+// Add move highlighting functionality
+function highlightMove(move) {
+    if (!board) return;
+    
+    // Remove previous highlights
+    removeMoveHighlights();
+    
+    // Highlight source and target squares
+    if (move && move.length >= 4) {
+        const sourceSquare = move.substring(0, 2);
+        const targetSquare = move.substring(2, 4);
+        
+        // Add highlight class to squares
+        const sourceEl = document.querySelector(`#board .square-${sourceSquare}`);
+        const targetEl = document.querySelector(`#board .square-${targetSquare}`);
+        
+        if (sourceEl) sourceEl.classList.add('highlight');
+        if (targetEl) targetEl.classList.add('highlight');
+    }
+}
+
+function removeMoveHighlights() {
+    // Remove highlight class from all squares
+    const highlightedSquares = document.querySelectorAll('#board .square-55d63.highlight');
+    highlightedSquares.forEach(square => {
+        square.classList.remove('highlight');
+    });
 }

@@ -1,5 +1,5 @@
 # app_improved.py
-from flask import Flask, render_template, session
+from flask import Flask, render_template, session, request
 from flask_socketio import SocketIO, emit, disconnect
 from stockfish import Stockfish
 import os
@@ -15,6 +15,7 @@ import base64
 import functools
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
+from datetime import datetime
 
 # Import performance tracking
 try:
@@ -258,7 +259,9 @@ class ChessGame:
         self.initialized = False
         self.engine_path = None
         self._engine_context = None
-        
+        self.last_move = None  # Track the last move made
+        self.move_history = []  # Track move history for takeback functionality
+    
     def _is_engine_compatible(self, engine, skill_level):
         """
         Check if the existing engine can be reused with the requested skill level.
@@ -841,6 +844,9 @@ def handle_move(data):
             emit('invalid_move', {'move': uci_move, 'message': 'Invalid move format'})
             return
 
+        # Store the move as the last move
+        game.last_move = uci_move
+
         # Validate move using Stockfish
         move_validation_start = time.time()
         is_valid_move = game.is_move_correct(uci_move)
@@ -855,6 +861,9 @@ def handle_move(data):
                 return
             move_execution_time = time.time() - move_execution_start
             logger.info(f"Move execution took {move_execution_time:.2f} seconds")
+                
+            # Add move to history
+            game.move_history.append(uci_move)
                 
             fen = game.get_fen()
             if fen is None:
@@ -878,7 +887,8 @@ def handle_move(data):
                 emit('game_over', {
                     'result': game_status['result'],
                     'fen': fen,
-                    'winner': game_status.get('winner')
+                    'winner': game_status.get('winner'),
+                    'last_move': game.last_move
                 })
                 total_move_time = time.time() - start_time
                 logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
@@ -891,13 +901,19 @@ def handle_move(data):
             logger.info(f"AI move calculation took {ai_move_time:.2f} seconds")
             
             if ai_move:
+                # Store AI move as the last move
+                game.last_move = ai_move
+                
                 ai_move_execution_start = time.time()
                 if not game.make_move(ai_move):
                     logger.warning(f"AI move execution failed for move: {ai_move}")
-                    emit('position_update', {'fen': fen})
+                    emit('position_update', {'fen': fen, 'last_move': game.last_move})
                     return
                 ai_move_execution_time = time.time() - ai_move_execution_start
                 logger.info(f"AI move execution took {ai_move_execution_time:.2f} seconds")
+                    
+                # Add AI move to history
+                game.move_history.append(ai_move)
                     
                 fen = game.get_fen()
                 if fen is None:
@@ -915,16 +931,17 @@ def handle_move(data):
                     emit('game_over', {
                         'result': game_status['result'],
                         'fen': fen,
-                        'winner': game_status.get('winner')
+                        'winner': game_status.get('winner'),
+                        'last_move': game.last_move
                     })
                     total_move_time = time.time() - start_time
                     logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
                     return
                     
-                emit('position_update', {'fen': fen, 'ai_move': ai_move})
+                emit('position_update', {'fen': fen, 'ai_move': ai_move, 'last_move': game.last_move})
             else:
                 logger.warning("No AI move available")
-                emit('position_update', {'fen': fen})
+                emit('position_update', {'fen': fen, 'last_move': game.last_move})
                 
             total_move_time = time.time() - start_time
             logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
@@ -955,6 +972,55 @@ def handle_move(data):
         emit('error', {'message': 'Ошибка обработки хода'})
         total_move_time = time.time() - start_time
         logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
+
+@socketio.on('takeback_move')
+@handle_chess_errors(context="move_takeback")
+def handle_takeback():
+    """Handle takeback move request"""
+    try:
+        session_id = session.get('session_id')
+        if not session_id or session_id not in games:
+            emit('error', {'message': 'Game not initialized'})
+            return
+
+        game = games[session_id]
+        
+        if not game.engine or not game.initialized:
+            emit('error', {'message': 'Engine not initialized'})
+            return
+            
+        # Check if there are moves to take back
+        if len(game.move_history) < 1:
+            emit('error', {'message': 'No moves to take back'})
+            return
+            
+        # Remove the last move from history
+        last_move = game.move_history.pop()
+        
+        # Set the engine to the previous position
+        if game.move_history:
+            # Apply all moves except the last one
+            game.engine.set_position(game.move_history)
+        else:
+            # Reset to starting position
+            game.engine.set_fen_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+        
+        fen = game.get_fen()
+        if fen is None:
+            logger.error("Failed to get FEN after takeback")
+            emit('error', {'message': 'Ошибка получения позиции после отмены хода'})
+            return
+            
+        # Update session timestamp
+        session_timestamps[session_id] = time.time()
+        
+        emit('position_update', {'fen': fen, 'takeback': True})
+        
+    except Exception as e:
+        logger.error(f"Error processing takeback: {e}")
+        import traceback
+        traceback.print_exc()
+        emit('error', {'message': 'Ошибка отмены хода'})
 
 @socketio.on('analyze_position')
 @handle_chess_errors(context="position_analysis")
