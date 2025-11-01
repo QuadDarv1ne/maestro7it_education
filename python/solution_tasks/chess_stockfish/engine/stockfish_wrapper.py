@@ -75,8 +75,9 @@ class StockfishWrapper:
         self._weakref_cache = weakref.WeakValueDictionary()  # Кэш слабых ссылок для предотвращения утечек памяти
         
         # Ограничение размера кэша для предотвращения утечек памяти
-        self._max_cache_size = 50
+        self._max_cache_size = 100  # Увеличиваем для лучшей производительности
         self._cache_access_count = {}
+        self._cache_timestamps = {}  # Добавляем временные метки для кэша
         
         # Получаем движок из пула вместо создания нового
         try:
@@ -111,16 +112,18 @@ class StockfishWrapper:
                     del self.analysis_cache[key]
                 if key in self._cache_access_count:
                     del self._cache_access_count[key]
+                if key in self._cache_timestamps:
+                    del self._cache_timestamps[key]
         
-        # Очистка move_validation_cache по времени (устаревшие записи старше 30 секунд)
+        # Очистка move_validation_cache по времени (устаревшие записи старше 60 секунд)
         expired_keys = [key for key, timestamp in self.move_validation_cache.items() 
-                       if isinstance(timestamp, tuple) and current_time - timestamp[1] > 30]
+                       if isinstance(timestamp, tuple) and current_time - timestamp[1] > 60]  # Увеличиваем до 60 секунд
         for key in expired_keys:
             del self.move_validation_cache[key]
         
-        # Очистка position_analysis_cache по времени (устаревшие записи старше 60 секунд)
+        # Очистка position_analysis_cache по времени (устаревшие записи старше 120 секунд)
         expired_keys = [key for key, data in self.position_analysis_cache.items() 
-                       if isinstance(data, dict) and 'timestamp' in data and current_time - data['timestamp'] > 60]
+                       if isinstance(data, dict) and 'timestamp' in data and current_time - data['timestamp'] > 120]  # Увеличиваем до 120 секунд
         for key in expired_keys:
             del self.position_analysis_cache[key]
     
@@ -149,10 +152,10 @@ class StockfishWrapper:
             fen = self.engine.get_fen_position()
             # Check cache first with more aggressive caching
             if self.board_state_cache_fen == fen and self.board_state_cache is not None:
-                # Проверяем время кэша - используем кэш до 2 секунд (увеличено с 1.5 секунд)
+                # Проверяем время кэша - используем кэш до 3 секунд (увеличено с 2 секунд)
                 if hasattr(self, '_last_board_cache_time'):
                     current_time = time.time()
-                    if (current_time - self._last_board_cache_time) < 2.0:
+                    if (current_time - self._last_board_cache_time) < 3.0:
                         return self.board_state_cache  # type: ignore
             
             board_str = fen.split()[0]
@@ -198,9 +201,9 @@ class StockfishWrapper:
         current_time = time.time()
         
         if cache_key in self.move_validation_cache:
-            cached_result, timestamp = self.move_validation_cache[cache_key]
-            # Используем кэш если он свежий (меньше 10 секунд)
-            if current_time - timestamp < 10:
+            # Проверяем время кэширования - увеличиваем до 60 секунд
+            cached_result, cache_time = self.move_validation_cache[cache_key]
+            if current_time - cache_time < 60.0:
                 return cached_result
         
         try:

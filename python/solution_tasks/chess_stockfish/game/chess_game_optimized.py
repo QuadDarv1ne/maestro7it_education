@@ -143,15 +143,15 @@ class ChessGameOptimized:
             'last_eval_fen': None
         }
         
-        # Расширенные кэши
+        # Расширенные кэши с увеличенным временем жизни
         self._valid_moves_cache = {}
         self._valid_moves_cache_time = {}
-        self._valid_moves_cache_duration = 8.0  # Еще более агрессивное кэширование
+        self._valid_moves_cache_duration = 15.0  # Увеличиваем до 15 секунд для лучшей производительности
         self._valid_moves_board_hash = {}
         
         self._ai_move_cache = {}
         self._ai_move_cache_time = {}
-        self._ai_move_cache_duration = 120.0  # Максимальное кэширование ИИ
+        self._ai_move_cache_duration = 300.0  # Увеличиваем до 5 минут для максимального кэширования
         self._ai_move_board_hash = {}
         
         # Графические оптимизации
@@ -162,7 +162,7 @@ class ChessGameOptimized:
         self.last_board_update = 0
         self.last_ui_update = 0
         self.board_update_interval = 1.0/144  # 144 FPS для доски
-        self.ui_update_interval = 1.0/75     # 75 FPS для UI
+        self.ui_update_interval = 1.0/90     # Увеличиваем до 90 FPS для UI
         
         # Инициализация графических ресурсов
         self._init_fonts_optimized()
@@ -172,12 +172,12 @@ class ChessGameOptimized:
         # Оптимизация AI
         self.ai_move_cache = {}
         self.last_ai_move_time = 0
-        self.ai_move_cooldown = 0.0005  # Минимальная задержка ИИ
+        self.ai_move_cooldown = 0.0001  # Уменьшаем минимальную задержку ИИ для более быстрой игры
         
         # Дополнительные оптимизации
         self.board_state_cache = None
         self.board_state_cache_time = 0
-        self.board_state_cache_duration = 2.0  # 2 секунды кэширования состояния доски для лучшей производительности
+        self.board_state_cache_duration = 5.0  # Увеличиваем до 5 секунд кэширования состояния доски
         self.board_state_last_fen = None
         
         # Расширенная статистика игры
@@ -207,7 +207,7 @@ class ChessGameOptimized:
         self.saved_games = []
         
         # Многопоточность с увеличенным пулом
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=32)  # Увеличиваем до 32 потоков
         self.ai_move_queue = Queue()
         self.render_queue = Queue()
         self.ai_thread = None
@@ -225,13 +225,13 @@ class ChessGameOptimized:
         # Асинхронная оценка позиции
         self._async_eval_future = None
         self._last_async_eval_time = 0
-        self._async_eval_interval = 0.025  # 40 FPS для оценки позиции
+        self._async_eval_interval = 0.01  # Увеличиваем частоту до 100 FPS для оценки позиции
         
         # Прогрессивная оценка позиции
         self._displayed_evaluation = 0.0
         self._target_evaluation = 0.0
         self._eval_update_time = 0
-        self._eval_interpolation_duration = 0.025  # Быстрая интерполяция
+        self._eval_interpolation_duration = 0.01  # Быстрая интерполяция 100 FPS
         
         # Слабые ссылки для предотвращения утечек памяти
         self._weakref_cache = weakref.WeakValueDictionary()
