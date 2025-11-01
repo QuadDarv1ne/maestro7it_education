@@ -138,9 +138,9 @@ class ResourceCache:
     Улучшенный кэш с автоматической очисткой и оптимизацией памяти.
     """
     
-    MAX_SURFACE_CACHE_SIZE = 150  # Увеличиваем для лучшей производительности
-    MAX_PIECE_CACHE_SIZE = 75    # Увеличиваем для лучшей производительности
-    MAX_RECT_CACHE_SIZE = 200    # Кэш для прямоугольников клеток
+    MAX_SURFACE_CACHE_SIZE = 300  # Увеличиваем для лучшей производительности
+    MAX_PIECE_CACHE_SIZE = 150    # Увеличиваем для лучшей производительности
+    MAX_RECT_CACHE_SIZE = 400     # Увеличиваем кэш для прямоугольников клеток
     
     def __init__(self):
         self.fonts: Dict[Tuple[str, int, bool], pygame.font.Font] = {}
@@ -186,7 +186,7 @@ class ResourceCache:
                 self._cleanup_surfaces()
                     
             # Очищаем кэш чаще для лучшей производительности
-            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.9:  # Увеличено с 0.8
+            if len(self.surfaces) >= self.MAX_SURFACE_CACHE_SIZE * 0.95:  # Увеличиваем порог до 0.95
                 self._cleanup_surfaces()
             
             surf = pygame.Surface((key[1][0], key[1][1]), pygame.SRCALPHA)
@@ -199,90 +199,23 @@ class ResourceCache:
             
         self.surface_usage[key] = self.surface_usage.get(key, 0) + 1
         return self.surfaces[key]
-
-    def get_piece_surface(self, piece: str, color: Tuple[int, int, int],
-                          font: pygame.font.Font) -> Optional[pygame.Surface]:
-        """Получить или создать отрендеренную фигуру с кэшированием."""
-        key = (piece, tuple(color), id(font))
-        
-        if key not in self.pieces:
-            if piece not in PIECE_UNICODE:
-                return None
-            
-            # Проверка лимита кэша
-            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE:
-                self._cleanup_pieces()
-                    
-            # Очищаем кэш чаще для лучшей производительности
-            if len(self.pieces) >= self.MAX_PIECE_CACHE_SIZE * 0.9:  # Увеличено с 0.8
-                self._cleanup_pieces()
-                
-            try:
-                surf = font.render(PIECE_UNICODE[piece], True, color)
-                self.pieces[key] = surf
-                self.piece_usage[key] = 0
-            except Exception as e:
-                logging.warning(f"Failed to render piece '{piece}': {e}")
-                return None
-                
-        self.piece_usage[key] = self.piece_usage.get(key, 0) + 1
-        return self.pieces[key]
     
-    def _process_surface_with_gpu(self, surface: pygame.Surface) -> pygame.Surface:
-        """
-        Обработка поверхности с использованием GPU ускорения (если доступно).
-        
-        Параметры:
-            surface: Поверхность для обработки
-            
-        Возвращает:
-            Обработанная поверхность
-        """
-        try:
-            if self.cuda_available and cp is not None:
-                # Преобразуем поверхность в массив для GPU обработки
-                # Это упрощенный пример - в реальном приложении здесь будут более сложные вычисления
-                return surface
-            else:
-                # Используем CPU для обработки
-                return surface
-        except Exception as e:
-            logging.warning(f"Failed to process surface with GPU: {e}")
-            return surface
-
     def _cleanup_surfaces(self):
-        """LRU очистка кэша поверхностей."""
-        if not self.surface_usage:
-            return
-        
-        # Удаляем 60% наименее используемых (увеличено с 50%)
-        sorted_items = sorted(self.surface_usage.items(), key=lambda x: x[1])
-        to_remove = max(1, len(sorted_items) * 3 // 5)  # Увеличено с 2 до 5
-        
-        for key, _ in sorted_items[:to_remove]:
-            self.surfaces.pop(key, None)
-            self.surface_usage.pop(key, None)
-
-    def _cleanup_pieces(self):
-        """LRU очистка кэша фигур."""
-        if not self.piece_usage:
+        """Очистка кэша поверхностей по LRU алгоритму."""
+        if len(self.surfaces) < self.MAX_SURFACE_CACHE_SIZE:
             return
             
-        sorted_items = sorted(self.piece_usage.items(), key=lambda x: x[1])
-        to_remove = max(1, len(sorted_items) * 3 // 5)  # Увеличено с 2 до 5
+        # Сортируем по количеству использований
+        sorted_items = sorted(self.surface_usage.items(), key=lambda x: x[1])
         
-        for key, _ in sorted_items[:to_remove]:
-            self.pieces.pop(key, None)
-            self.piece_usage.pop(key, None)
-
-    def clear(self):
-        """Полная очистка кэша."""
-        self.fonts.clear()
-        self.surfaces.clear()
-        self.pieces.clear()
-        self.surface_usage.clear()
-        self.piece_usage.clear()
-        self._pre_rendered_pieces.clear()
+        # Удаляем 30% наименее используемых элементов
+        items_to_remove = len(self.surfaces) // 3
+        for i in range(min(items_to_remove, len(sorted_items))):
+            key = sorted_items[i][0]
+            if key in self.surfaces:
+                del self.surfaces[key]
+            if key in self.surface_usage:
+                del self.surface_usage[key]
 
 # ============================================================================ #
 # Система слоёв для композитинга
