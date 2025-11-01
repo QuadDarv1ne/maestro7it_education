@@ -244,6 +244,17 @@ document.getElementById('start').addEventListener('click', () => {
     // Update status to show we're initializing
     document.getElementById('status').innerText = '⏳ Инициализация игры...';
     
+    // Set a timeout to handle initialization errors
+    const initTimeout = setTimeout(() => {
+        document.getElementById('status').innerText = '⚠️ Превышено время ожидания инициализации. Попробуйте еще раз.';
+        startBtn.disabled = false;
+        startBtn.textContent = 'Начать игру';
+        showNotification('Превышено время ожидания инициализации. Попробуйте еще раз.', 'error');
+    }, 30000); // 30 seconds timeout
+    
+    // Store timeout ID to clear it later
+    window.initTimeout = initTimeout;
+    
     // Emit init_game event
     socket.emit('init_game', { color: playerColor, level: parseInt(level) });
     console.log('Sent init_game event');
@@ -806,6 +817,12 @@ socket.on('game_initialized', (data) => {
     document.getElementById('board').style.display = 'block';
     gameActive = true;
     
+    // Clear initialization timeout
+    if (window.initTimeout) {
+        clearTimeout(window.initTimeout);
+        window.initTimeout = null;
+    }
+    
     // Clear previous history and move list
     gameHistory = [];
     currentHistoryIndex = -1;
@@ -1037,6 +1054,12 @@ socket.on('invalid_move', (data) => {
 socket.on('error', (data) => {
     console.log('Error:', data);
     
+    // Clear initialization timeout
+    if (window.initTimeout) {
+        clearTimeout(window.initTimeout);
+        window.initTimeout = null;
+    }
+    
     // Re-enable board interaction and start button
     gameActive = false;
     const startBtn = document.getElementById('start');
@@ -1057,6 +1080,8 @@ socket.on('error', (data) => {
         errorMessage = 'Ошибка инициализации. Попробуйте перезапустить игру.';
     } else if (errorMessage.includes('move')) {
         errorMessage = 'Ошибка обработки хода. Попробуйте повторить ход.';
+    } else if (errorMessage.includes('timeout')) {
+        errorMessage = 'Превышено время ожидания. Попробуйте еще раз.';
     }
     
     document.getElementById('status').innerText = '⚠️ Ошибка: ' + errorMessage;

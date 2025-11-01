@@ -325,13 +325,20 @@ class ChessGame:
             '/usr/local/bin',  # Common Unix paths
             '/usr/bin',
             'C:\\Program Files\\Stockfish',
-            'C:\\Program Files (x86)\\Stockfish'
+            'C:\\Program Files (x86)\\Stockfish',
+            'C:\\Program Files\\stockfish'  # Additional path where Stockfish was found
         ]
         
         # Check environment variable
         env_path = os.getenv('STOCKFISH_PATH')
         if env_path:
             search_paths.insert(0, env_path)
+        
+        # Check for specific Stockfish executable that we know exists
+        specific_stockfish_path = 'C:\\Program Files\\stockfish\\stockfish-windows-x86-64.exe'
+        if os.path.exists(specific_stockfish_path):
+            logger.info(f"Found Stockfish executable at specific path: {specific_stockfish_path}")
+            return specific_stockfish_path
         
         # Try to find executable in search paths
         import shutil
@@ -401,29 +408,54 @@ class ChessGame:
                 logger.error("Stockfish executable not found")
                 raise EngineInitializationError("Stockfish executable not found")
             
-            # Initialize new engine
+            # Initialize new engine with timeout
             logger.info(f"Initializing Stockfish engine from: {self.engine_path}")
-            self.engine = Stockfish(path=self.engine_path)
-            
-            # Configure engine for optimal performance
-            self.engine.set_skill_level(self.skill_level)
-            self.engine.set_depth(10)  # Reduced depth for faster moves, adjustable
-            self.engine.update_engine_parameters({
-                'Threads': 2,  # Use multiple threads for better performance
-                'Hash': 128,   # Allocate 128 MB hash for position evaluation
-                'Contempt': 0, # Neutral contempt factor
-                'Ponder': False # Disable pondering for faster response
-            })
-            
-            # Test engine with a simple operation
-            test_fen = self.engine.get_fen_position()
-            logger.info(f"Engine test successful. Initial FEN: {test_fen}")
-            
-            # Store engine for reuse
-            stockfish_engine = self.engine
-            self.initialized = True
-            logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {time.time() - start_time:.2f} seconds")
-            return True
+            try:
+                # Add timeout to prevent infinite waiting
+                import signal
+                
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("Stockfish engine initialization timed out")
+                
+                # Set up timeout (10 seconds)
+                old_handler = None
+                if hasattr(signal, 'SIGALRM'):
+                    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(10)
+                
+                try:
+                    self.engine = Stockfish(path=self.engine_path)
+                    
+                    # Configure engine for optimal performance
+                    self.engine.set_skill_level(self.skill_level)
+                    self.engine.set_depth(10)  # Reduced depth for faster moves, adjustable
+                    self.engine.update_engine_parameters({
+                        'Threads': 2,  # Use multiple threads for better performance
+                        'Hash': 128,   # Allocate 128 MB hash for position evaluation
+                        'Contempt': 0, # Neutral contempt factor
+                        'Ponder': False # Disable pondering for faster response
+                    })
+                    
+                    # Test engine with a simple operation
+                    test_fen = self.engine.get_fen_position()
+                    logger.info(f"Engine test successful. Initial FEN: {test_fen}")
+                    
+                    # Store engine for reuse
+                    stockfish_engine = self.engine
+                    self.initialized = True
+                    logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {time.time() - start_time:.2f} seconds")
+                    return True
+                finally:
+                    # Cancel timeout
+                    if hasattr(signal, 'SIGALRM') and old_handler:
+                        signal.alarm(0)
+                        signal.signal(signal.SIGALRM, old_handler)
+            except TimeoutError:
+                logger.error("Stockfish engine initialization timed out")
+                raise EngineInitializationError("Stockfish engine initialization timed out")
+            except Exception as e:
+                logger.error(f"Stockfish engine initialization failed: {e}")
+                raise EngineInitializationError(f"Stockfish engine initialization failed: {str(e)}")
         except Exception as e:
             logger.error(f"Stockfish initialization error: {e}")
             import traceback
