@@ -1,0 +1,49 @@
+{
+  "board_state_caching": {
+    "uncached_time": 0.010477304458618164,
+    "cached_time": 0.01246953010559082,
+    "speedup": 0.8402325003346016
+  },
+  "move_validation_caching": {
+    "uncached_time": 0.04961895942687988,
+    "cached_time": 0.029721975326538086,
+    "speedup": 1.66943680161716
+  },
+  "evaluation_caching": {
+    "uncached_time": 0.5473964214324951,
+    "cached_time": 0.003052234649658203,
+    "speedup": 179.3428370567099
+  },
+  "ai_move_generation": {
+    "moves_count": 5,
+    "total_time": 0.1639080047607422,
+    "avg_time_per_move": 0.03278160095214844
+  },
+  "move_validation": {
+    "total_moves": 6,
+    "total_time": 0.026360511779785156,
+    "avg_time_per_move_ms": 4.393418629964192
+  },
+  "performance_summary": {
+    "uptime_seconds": 18.710078477859497,
+    "cpu_usage": {
+      "average": 23.13,
+      "maximum": 67.3,
+      "frequency_mhz_avg": 3201.0
+    },
+    "memory_usage": {
+      "average_percent": 94.04,
+      "maximum_percent": 96.6,
+      "process_memory_mb": {
+        "average": 22.42,
+        "maximum": 22.45
+      }
+    },
+    "disk_io": {
+      "total_read_mb": 3291716.62,
+      "total_write_mb": 2434055.83
+    },
+    "total_events": 0,
+    "event_counts": {}
+  }
+}
