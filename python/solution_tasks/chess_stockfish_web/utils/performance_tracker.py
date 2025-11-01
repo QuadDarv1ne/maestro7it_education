@@ -26,6 +26,12 @@ class PerformanceTracker:
         self.error_counts = defaultdict(int)
         self.active_operations = {}
         
+        # Performance optimization: Only log slow operations
+        self.slow_operation_threshold = 0.5  # Reduced threshold to 0.5 seconds
+        
+        # Sampling rate to reduce logging overhead (0.0 = no sampling, 1.0 = log everything)
+        self.sampling_rate = 0.1  # Only log 10% of operations to reduce overhead
+        
         # Set up performance logger
         perf_handler = logging.FileHandler(log_file, encoding='utf-8')
         perf_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -40,6 +46,11 @@ class PerformanceTracker:
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
+                # Sampling to reduce overhead
+                if self.sampling_rate < 1.0 and random.random() > self.sampling_rate:
+                    # Skip tracking for most operations to reduce overhead
+                    return func(*args, **kwargs)
+                
                 start_time = time.time()
                 operation_id = f"{operation_name}_{int(start_time * 1000000)}"
                 self.active_operations[operation_id] = {
@@ -54,13 +65,17 @@ class PerformanceTracker:
                     end_time = time.time()
                     duration = end_time - start_time
                     
-                    # Log timing
-                    perf_logger.info(json.dumps({
-                        'operation': operation_name,
-                        'duration': duration,
-                        'timestamp': time.time(),
-                        'success': True
-                    }))
+                    # Only log operations that meet the threshold or are particularly important
+                    if duration > self.slow_operation_threshold or operation_name in [
+                        'engine_initialization', 'ai_move_calculation'
+                    ]:
+                        # Log timing
+                        perf_logger.info(json.dumps({
+                            'operation': operation_name,
+                            'duration': duration,
+                            'timestamp': time.time(),
+                            'success': True
+                        }))
                     
                     # Store metric
                     self.metrics[operation_name].append(duration)
@@ -76,6 +91,7 @@ class PerformanceTracker:
                     duration = end_time - start_time
                     self.error_counts[operation_name] += 1
                     
+                    # Always log errors
                     perf_logger.error(json.dumps({
                         'operation': operation_name,
                         'duration': duration,
