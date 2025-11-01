@@ -31,7 +31,8 @@ class PerformanceMonitor:
         self.start_time = time.time()
         self.monitoring = False
         self.monitor_thread = None
-        self.max_log_entries = 1000  # Ограничение на количество записей в логе
+        self.max_log_entries = 2000  # Увеличиваем для лучшего анализа
+        self.event_counter = defaultdict(int)  # Счетчик событий
         
     def start_monitoring(self, interval: float = 1.0):
         """
@@ -66,12 +67,24 @@ class PerformanceMonitor:
                 process = psutil.Process()
                 process_memory = process.memory_info().rss / 1024 / 1024  # MB
                 
+                # Сбор дополнительных метрик
+                cpu_freq = psutil.cpu_freq()
+                cpu_freq_current = cpu_freq.current if cpu_freq else 0
+                
+                # Сбор метрик диска
+                disk_io = psutil.disk_io_counters()
+                disk_read_mb = disk_io.read_bytes / 1024 / 1024 if disk_io else 0
+                disk_write_mb = disk_io.write_bytes / 1024 / 1024 if disk_io else 0
+                
                 # Сохранение метрик
                 self.metrics['timestamp'].append(timestamp)
                 self.metrics['cpu_percent'].append(cpu_percent)
                 self.metrics['memory_percent'].append(memory_info.percent)
                 self.metrics['process_memory_mb'].append(process_memory)
                 self.metrics['available_memory_mb'].append(memory_info.available / 1024 / 1024)
+                self.metrics['cpu_frequency_mhz'].append(cpu_freq_current)
+                self.metrics['disk_read_mb'].append(disk_read_mb)
+                self.metrics['disk_write_mb'].append(disk_write_mb)
                 
                 # Ограничение размера лога
                 self._trim_log()
@@ -107,6 +120,7 @@ class PerformanceMonitor:
             }
             
             self.metrics['events'].append(entry)
+            self.event_counter[event_name] += 1
             self._trim_log()
         except Exception as e:
             print(f"⚠️  Ошибка при логировании события: {e}")
@@ -132,6 +146,12 @@ class PerformanceMonitor:
             process_memory_avg = sum(self.metrics['process_memory_mb']) / len(self.metrics['process_memory_mb'])
             process_memory_max = max(self.metrics['process_memory_mb'])
             
+            # Дополнительные метрики
+            cpu_freq_avg = sum(self.metrics['cpu_frequency_mhz']) / len(self.metrics['cpu_frequency_mhz']) if self.metrics['cpu_frequency_mhz'] else 0
+            
+            disk_read_total = sum(self.metrics['disk_read_mb']) if self.metrics['disk_read_mb'] else 0
+            disk_write_total = sum(self.metrics['disk_write_mb']) if self.metrics['disk_write_mb'] else 0
+            
             # Длительность работы
             uptime = time.time() - self.start_time
             
@@ -139,7 +159,8 @@ class PerformanceMonitor:
                 'uptime_seconds': uptime,
                 'cpu_usage': {
                     'average': round(cpu_avg, 2),
-                    'maximum': round(cpu_max, 2)
+                    'maximum': round(cpu_max, 2),
+                    'frequency_mhz_avg': round(cpu_freq_avg, 2)
                 },
                 'memory_usage': {
                     'average_percent': round(memory_avg, 2),
@@ -149,7 +170,12 @@ class PerformanceMonitor:
                         'maximum': round(process_memory_max, 2)
                     }
                 },
-                'total_events': len(self.metrics['events']) if 'events' in self.metrics else 0
+                'disk_io': {
+                    'total_read_mb': round(disk_read_total, 2),
+                    'total_write_mb': round(disk_write_total, 2)
+                },
+                'total_events': len(self.metrics['events']) if 'events' in self.metrics else 0,
+                'event_counts': dict(self.event_counter)
             }
             
             return summary
