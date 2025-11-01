@@ -17,6 +17,17 @@ from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 from datetime import datetime
 
+# Import database models
+try:
+    from models import db, init_db, User, Game, Puzzle
+    DATABASE_ENABLED = True
+except ImportError:
+    DATABASE_ENABLED = False
+    db = None
+    User = None
+    Game = None
+    Puzzle = None
+
 # Import performance tracking
 try:
     from utils.performance_tracker import performance_tracker, track_engine_init, track_move_validation, track_move_execution, track_ai_calculation, track_game_status_check, track_fen_retrieval
