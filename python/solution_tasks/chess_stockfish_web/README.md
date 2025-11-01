@@ -1,180 +1,162 @@
-# ♟️ Chess Stockfish Web
+# Chess Stockfish Web Application
 
-Веб-приложение для игры в шахматы против движка `Stockfish`, созданное в рамках образовательного проекта [Maestro7IT](https://school-maestro7it.ru/).
+A web-based chess application that allows users to play against the Stockfish chess engine with a modern, responsive interface.
 
-## 📋 Описание
+## Features
 
-`Chess Stockfish Web` - это интерактивное веб-приложение, позволяющее играть в шахматы против одного из самых сильных шахматных движков в мире - Stockfish.
+### Current Features
+- Play chess against the Stockfish engine (levels 0-20)
+- Choose your side (white or black)
+- Drag-and-drop piece movement
+- Responsive design for desktop and mobile
+- Move highlighting and game state detection (check, checkmate, stalemate)
+- Move history navigation (⏮ ⬅ ➡ ⏭)
+- Position analysis and evaluation
+- Save/load games
+- User settings and personalization
+- Enhanced sound and visual effects
+- Real-time WebSocket communication
 
-**Приложение предоставляет пользователю возможность выбирать сторону (белые или черные) и уровень сложности игры (от 0 до 20).**
+### Recent Improvements
+- **Move Highlighting**: Visual highlighting of the last move made
+- **Move List Panel**: Display of all moves in algebraic notation
+- **Takeback Functionality**: Ability to undo the last move
+- **Database Integration**: Models for user accounts and game persistence
+- **Docker Support**: Containerization for easy deployment
+- **API Documentation**: Comprehensive WebSocket API documentation
+- **Testing Framework**: Unit tests for application components
+- **CI/CD Pipeline**: GitHub Actions for automated testing
 
-## 🚀 Основные возможности
-
-- Игра против Stockfish с настраиваемым уровнем сложности
-- Выбор стороны (белые или черные)
-- Визуализация шахматной доски с возможностью перетаскивания фигур
-- Подсветка возможных ходов
-- Отслеживание состояния игры (шах, мат, пат)
-- Поддержка WebSocket для реального времени взаимодействия
-- **Навигация по истории ходов** ⏮️
-- **Анализ позиций и оценка позиции** 📊
-- **Сохранение и загрузка игр** 💾
-- **Настройки пользователя и персонализация** ⚙️
-- **Улучшенный звук и визуальные эффекты** 🔊
-- **Полностью адаптивный дизайн для мобильных устройств** 📱
-
-## 🛠 Технологии
+## Technology Stack
 
 - **Backend**: Python, Flask, Flask-SocketIO
 - **Frontend**: HTML, CSS, JavaScript, Chessboard.js, Chess.js
-- **Шахматный движок**: Stockfish
+- **Chess Engine**: Stockfish
+- **Database**: PostgreSQL (planned), SQLite (development)
+- **Caching**: Redis (planned)
+- **Containerization**: Docker, Docker Compose
 
-## 📦 Установка
+## Installation
 
-1. Клонируйте репозиторий:
+### Prerequisites
+- Python 3.8+
+- Stockfish chess engine
+- Node.js and npm (for development)
 
+### Quick Start
+1. Clone the repository:
    ```bash
    git clone <repository-url>
    cd chess_stockfish_web
    ```
 
-2. Установите зависимости:
-
+2. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Установите Stockfish:
-
-   - **Windows**: Скачайте исполняемый файл с [официального сайта Stockfish](https://stockfishchess.org/download/)
-   - **Linux**: `sudo apt install stockfish`
+3. Install Stockfish:
+   - **Windows**: Download from https://stockfishchess.org/download/
    - **macOS**: `brew install stockfish`
+   - **Linux**: `sudo apt-get install stockfish`
 
-4. Установите путь к Stockfish (если не добавлен в PATH):
-
+4. Run the application:
    ```bash
-   export STOCKFISH_PATH=/path/to/stockfish
+   python app_improved.py
    ```
 
-## ▶️ Запуск
+5. Open your browser to http://localhost:5001
 
-**Запустите приложение:**
+### Docker Installation
+1. Build and run with Docker Compose:
+   ```bash
+   docker-compose up --build
+   ```
 
-```bash
-python app.py
-```
+2. Access the application at http://localhost:5001
 
-Откройте в браузере: http://127.0.0.1:5001
+## Usage
 
-## ⚙️ Настройки игры
+1. Select your side (white or black)
+2. Choose difficulty level (0-20)
+3. Click "Начать игру" to start
+4. Drag pieces to make moves
+5. Use navigation buttons to review game history
+6. Click "Анализ" to analyze the current position
+7. Use "Сохранить" and "Загрузить" to save/load games
+8. Adjust settings in the "⚙️ Настройки" panel
 
-**При запуске игры можно настроить:**
+## API Documentation
 
-- **Ваша сторона**: белые или черные
-- **Уровень сложности**: от 0 (самый легкий) до 20 (мастер)
-- **Персональные настройки**: звук, анимации, ориентация доски
+See [API Documentation](docs/api.md) for detailed information about WebSocket events and HTTP endpoints.
 
-## 🎮 Управление
+## Development
 
-1. Выберите настройки игры
-2. Нажмите "Начать игру"
-3. Перетаскивайте фигуры для выполнения ходов
-4. Используйте кнопки навигации для просмотра истории игры
-5. Нажмите "Анализ" для получения оценки текущей позиции
-6. Используйте "Сохранить/Загрузить" для управления играми
-7. Используйте "Новая игра" для перезапуска
-
-## 📁 Структура проекта
-
+### Project Structure
 ```
 chess_stockfish_web/
-├── app.py              # Основное Flask-приложение
-├── requirements.txt    # Зависимости Python
-├── templates/
-│   └── index.html      # Главная страница
-├── static/
+├── app_improved.py          # Main application
+├── models.py                # Database models
+├── requirements.txt         # Python dependencies
+├── Dockerfile               # Docker configuration
+├── docker-compose.yml       # Multi-service configuration
+├── README.md                # This file
+├── DOCKER_README.md         # Docker setup guide
+├── IMPROVEMENT_SUMMARY.md   # Previous improvements
+├── IMPROVEMENT_PLAN.md      # Future improvements
+├── static/                  # Web assets
 │   ├── css/
-│   │   └── style.css   # Стили приложения
-│   └── js/
-│       └── game.js     # Логика клиентской части
-├── README.md           # Документация проекта
-├── GAME_TEST_REPORT.md # Отчет о тестировании
-├── DEVELOPMENT_SUMMARY.md # Сводка по разработке
-├── IMPROVEMENT_PLAN.md # План улучшений
-└── OPTIMIZATION_SUMMARY.md # Сводка по оптимизации
+│   ├── js/
+│   └── images/
+├── templates/               # HTML templates
+├── utils/                   # Utility modules
+├── tests/                   # Test suite
+├── docs/                    # Documentation
+└── .github/workflows/       # CI/CD pipelines
 ```
 
-## 🧪 Тестирование
+### Running Tests
+```bash
+python -m pytest tests/ -v
+```
 
-Подробный отчет о тестировании функциональности игры доступен в файле [GAME_TEST_REPORT.md](GAME_TEST_REPORT.md).
+### Code Quality
+```bash
+flake8 . --max-complexity=10 --max-line-length=127
+```
 
-**Кратко о тестировании:**
+## Deployment
 
-- ✅ Движок Stockfish работает корректно
-- ✅ Все шахматные фигуры функционируют правильно
-- ✅ Игровые раунды обрабатываются верно
-- ✅ Веб-интерфейс взаимодействует с сервером без ошибок
-- ✅ Навигация по истории работает корректно
-- ✅ Функция анализа позиций работает правильно
-- ✅ Система сохранения/загрузки функционирует
-- ✅ Адаптивный дизайн работает на всех устройствах
-
-## 🚀 Потенциальные улучшения
-
-Подробный план потенциальных улучшений доступен в файле [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md). Основные направления:
-
-### 🥇 Высокий приоритет
-
-- История ходов и навигация **(РЕАЛИЗОВАНО)**
-- Расширенная валидация ходов **(УЛУЧШЕНО)**
-- Сохранение/загрузка игр **(РЕАЛИЗОВАНО)**
-- Адаптивный интерфейс для мобильных устройств **(РЕАЛИЗОВАНО)**
-
-### 🥈 Средний приоритет
-
-- Система пользовательских аккаунтов
-- Многопользовательская игра
-- Анализ позиций **(РЕАЛИЗОВАНО)**
-- Образовательные функции
-
-### 🥉 Низкий приоритет
-
-- Настройка интерфейса **(РЕАЛИЗОВАНО)**
-- Расширенные режимы игры
-- Оптимизация производительности **(УЛУЧШЕНО)**
-- Поддержка шахматных вариантов
-
-## ❗ Распространенные проблемы
-
-### Ошибка сессии ("⚠️ Ошибка: Ошибка сессии")
-
-Эта ошибка возникает, когда Flask не может правильно обработать сессию пользователя. Обычно это происходит по одной из следующих причин:
-
-1. **Проблемы с SECRET_KEY**: Убедитесь, что в приложении установлен уникальный секретный ключ.
-2. **Проблемы с cookies**: Попробуйте очистить cookies браузера для localhost.
-3. **Проблемы с Socket.IO**: Приложение должно корректно обрабатывать соединения Socket.IO.
-
-**Решения:**
-
-- Перезапустите приложение
-- Очистите cookies браузера
-- Проверьте, что все зависимости установлены корректно
-
-### Stockfish не запускается
-
-Если вы видите сообщение "Не удалось запустить Stockfish. Проверьте установку движка":
-
-1. Убедитесь, что Stockfish установлен и доступен в PATH
-2. Или установите переменную окружения STOCKFISH_PATH:
-   
+### Production Deployment
+1. Update database credentials in docker-compose.yml
+2. Set secure environment variables
+3. Configure SSL termination
+4. Add monitoring and logging solutions
+5. Run with Docker Compose:
    ```bash
-   export STOCKFISH_PATH=/path/to/stockfish
+   docker-compose up -d
    ```
 
-## 🤝 Разработка
+## Contributing
 
-Проект разработан как образовательный в рамках курсов [Maestro7IT](https://school-maestro7it.ru/).
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-## 📄 Лицензия
+## License
 
-MIT License - см. файл [LICENSE](LICENSE) для подробностей.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [Stockfish](https://stockfishchess.org/) - Open source chess engine
+- [Chessboard.js](https://chessboardjs.com/) - JavaScript chessboard component
+- [Chess.js](https://github.com/jhlywa/chess.js) - JavaScript chess library
+- [Flask](https://flask.palletsprojects.com/) - Python web framework
+- [Flask-SocketIO](https://flask-socketio.readthedocs.io/) - Real-time web framework
+
+## Future Improvements
+
+See [Improvement Plan](IMPROVEMENT_PLAN.md) for a comprehensive roadmap of planned features and enhancements.

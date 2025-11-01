@@ -258,6 +258,13 @@ def cleanup_stale_games():
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'maestro7it-chess-secret'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///chess.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize database if enabled
+if DATABASE_ENABLED:
+    db = init_db(app)
+
 socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=30, ping_interval=25)
 
 # Start cleanup thread after all variables are defined to prevent race conditions
@@ -1255,4 +1262,10 @@ cleanup_thread.start()
 
 if __name__ == '__main__':
     logger.info("Starting Chess Stockfish Web application...")
+    
+    # Create database tables if they don't exist
+    if DATABASE_ENABLED:
+        with app.app_context():
+            db.create_all()
+    
     socketio.run(app, host='127.0.0.1', port=5001, debug=False)
