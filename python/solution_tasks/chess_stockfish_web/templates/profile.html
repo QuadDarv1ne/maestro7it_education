@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>♟️ Профиль — Chess Stockfish Web</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♟️</text></svg>">
+    <style>
+        .profile-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .user-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4FC3F7;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #ccc;
+        }
+        
+        .games-history {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .games-history h2 {
+            color: #4FC3F7;
+            margin-top: 0;
+        }
+        
+        .game-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .game-item:last-child {
+            border-bottom: none;
+        }
+        
+        .game-result {
+            font-weight: bold;
+        }
+        
+        .win {
+            color: #4CAF50;
+        }
+        
+        .loss {
+            color: #f44336;
+        }
+        
+        .draw {
+            color: #FFD700;
+        }
+        
+        .back-button {
+            background: linear-gradient(to bottom, #616161, #424242);
+            margin-bottom: 20px;
+        }
+        
+        .back-button:hover {
+            background: linear-gradient(to bottom, #757575, #616161);
+        }
+    </style>
+</head>
+<body>
+    <div class="container profile-container">
+        <h1>♟️ Профиль пользователя</h1>
+        
+        <button id="back-to-game" class="back-button">← Вернуться к игре</button>
+        
+        <div class="user-info">
+            <div>
+                <h2 id="username">Загрузка...</h2>
+                <p id="email">Загрузка...</p>
+            </div>
+            <div>
+                <div class="stat-card">
+                    <div class="stat-value" id="rating">1200</div>
+                    <div class="stat-label">Рейтинг</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="user-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="games-played">0</div>
+                <div class="stat-label">Игр сыграно</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="wins">0</div>
+                <div class="stat-label">Побед</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="losses">0</div>
+                <div class="stat-label">Поражений</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="win-rate">0%</div>
+                <div class="stat-label">Процент побед</div>
+            </div>
+        </div>
+        
+        <div class="games-history">
+            <h2>История игр</h2>
+            <div id="games-list">
+                <p>Загрузка истории игр...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load user profile data
+        async function loadProfile() {
+            try {
+                const response = await fetch('/profile');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update user info
+                    document.getElementById('username').textContent = data.user.username;
+                    document.getElementById('email').textContent = data.user.email;
+                    document.getElementById('rating').textContent = data.user.rating;
+                    document.getElementById('games-played').textContent = data.user.games_played;
+                    document.getElementById('wins').textContent = data.user.wins;
+                    document.getElementById('losses').textContent = data.user.losses;
+                    document.getElementById('win-rate').textContent = data.user.win_rate + '%';
+                    
+                    // Update games history
+                    const gamesList = document.getElementById('games-list');
+                    if (data.recent_games.length > 0) {
+                        gamesList.innerHTML = data.recent_games.map(game => `
+                            <div class="game-item">
+                                <div>
+                                    <span class="game-result ${game.result === 'win' ? 'win' : game.result === 'loss' ? 'loss' : 'draw'}">
+                                        ${game.result === 'win' ? 'Победа' : game.result === 'loss' ? 'Поражение' : 'Ничья'}
+                                    </span>
+                                    <span> как ${game.player_color === 'white' ? 'белые' : 'черные'}</span>
+                                </div>
+                                <div>
+                                    Уровень: ${game.skill_level}
+                                    ${game.duration ? ` | ${Math.floor(game.duration / 60)}м ${game.duration % 60}с` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        gamesList.innerHTML = '<p>Пока нет сыгранных игр</p>';
+                    }
+                } else {
+                    gamesList.innerHTML = '<p>Ошибка загрузки профиля</p>';
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                document.getElementById('games-list').innerHTML = '<p>Ошибка загрузки профиля</p>';
+            }
+        }
+        
+        // Back to game button
+        document.getElementById('back-to-game').addEventListener('click', () => {
+            window.location.href = '/';
+        });
+        
+        // Load profile when page loads
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+</html>

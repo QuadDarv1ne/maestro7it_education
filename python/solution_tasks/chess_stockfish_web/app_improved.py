@@ -1,5 +1,5 @@
 # app_improved.py
-from flask import Flask, render_template, session, request
+from flask import Flask, render_template, session, request, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit, disconnect
 from stockfish import Stockfish
 import os
@@ -19,14 +19,17 @@ from datetime import datetime
 
 # Import database models
 try:
-    from models import db, init_db, User, Game, Puzzle
+    from models import db, init_db, User, Game, Puzzle, create_user
     DATABASE_ENABLED = True
-except ImportError:
+except ImportError as e:
+    print(f"Database models import failed: {e}")
     DATABASE_ENABLED = False
     db = None
+    init_db = None
     User = None
     Game = None
     Puzzle = None
+    create_user = None
 
 # Import performance tracking
 try:
@@ -262,7 +265,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize database if enabled
-if DATABASE_ENABLED:
+if DATABASE_ENABLED and init_db:
     db = init_db(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=30, ping_interval=25)
@@ -649,6 +652,16 @@ def index():
     logger.info(f"HTTP session created with session_id: {session.get('session_id')}")
     return render_template('index.html')
 
+@app.route('/profile_page')
+def profile_page():
+    """Serve the profile page"""
+    # Check if user is logged in
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('index'))
+    
+    return render_template('profile.html')
+
 @socketio.on('connect')
 @handle_chess_errors(context="websocket_connect")
 def handle_connect():
@@ -702,6 +715,151 @@ def handle_disconnect():
         logger.info("Client disconnected successfully")
     except Exception as e:
         logger.error(f"Error in disconnect handler: {e}")
+
+# Add this after the existing routes and before the health check endpoint
+
+@app.route('/register', methods=['POST'])
+@handle_chess_errors(context="user_registration")
+def register_user():
+    """Register a new user"""
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        
+        # Validate input
+        if not username or not email or not password:
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        
+        # Check if database is enabled and models are available
+        if not DATABASE_ENABLED or User is None or db is None:
+            return jsonify({'success': False, 'message': 'Database not enabled'}), 500
+        
+        # Check if user already exists
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        if existing_user:
+            return jsonify({'success': False, 'message': 'User already exists'}), 400
+        
+        # Create new user (in a real app, you would hash the password)
+        if create_user is not None:
+            user = create_user(username, email, password)  # Password hashing should be added in production
+            return jsonify({'success': True, 'message': 'User registered successfully', 'user_id': user.id})
+        else:
+            return jsonify({'success': False, 'message': 'User creation failed'}), 500
+    except Exception as e:
+        logger.error(f"Error registering user: {e}")
+        return jsonify({'success': False, 'message': 'Registration failed'}), 500
+
+@app.route('/login', methods=['POST'])
+@handle_chess_errors(context="user_login")
+def login_user():
+    """Login a user"""
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        # Validate input
+        if not username or not password:
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        
+        # Check if database is enabled and models are available
+        if not DATABASE_ENABLED or User is None or db is None:
+            return jsonify({'success': False, 'message': 'Database not enabled'}), 500
+        
+        # Check if user exists
+        user = User.query.filter(User.username == username).first() if User is not None else None
+        if user and user.password_hash == password:  # In production, use proper password hashing
+            # Update last login
+            user.last_login = datetime.utcnow()
+            if db is not None:
+                db.session.commit()
+            
+            # Store user ID in session
+            session['user_id'] = user.id
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Login successful', 
+                'user_id': user.id,
+                'username': user.username
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+    except Exception as e:
+        logger.error(f"Error logging in user: {e}")
+        return jsonify({'success': False, 'message': 'Login failed'}), 500
+
+@app.route('/logout')
+@handle_chess_errors(context="user_logout")
+def logout_user():
+    """Logout a user"""
+    try:
+        # Remove user ID from session
+        session.pop('user_id', None)
+        return jsonify({'success': True, 'message': 'Logout successful'})
+    except Exception as e:
+        logger.error(f"Error logging out user: {e}")
+        return jsonify({'success': False, 'message': 'Logout failed'}), 500
+
+@app.route('/profile')
+@handle_chess_errors(context="user_profile")
+def user_profile():
+    """Display user profile"""
+    try:
+        # Check if user is logged in
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': 'User not logged in'}), 401
+        
+        # Check if database is enabled
+        if not DATABASE_ENABLED or User is None or Game is None:
+            return jsonify({'success': False, 'message': 'Database not enabled'}), 500
+        
+        # Get user information
+        user = User.query.get(user_id) if User is not None else None
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        # Get user's recent games
+        recent_games = Game.query.filter_by(user_id=user_id).order_by(Game.start_time.desc()).limit(10).all() if Game is not None else []
+        
+        # Calculate statistics
+        total_games = user.games_played or 0
+        wins = user.games_won or 0
+        losses = total_games - wins
+        win_rate = (wins / total_games * 100) if total_games > 0 else 0
+        
+        # Prepare game history data
+        game_history = []
+        for game in recent_games:
+            game_history.append({
+                'id': game.id,
+                'result': game.result,
+                'player_color': game.player_color,
+                'skill_level': game.skill_level,
+                'start_time': game.start_time.isoformat() if game.start_time else None,
+                'duration': game.duration
+            })
+        
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'rating': user.rating or 1200,
+                'games_played': total_games,
+                'wins': wins,
+                'losses': losses,
+                'win_rate': round(win_rate, 2)
+            },
+            'recent_games': game_history
+        })
+    except Exception as e:
+        logger.error(f"Error fetching user profile: {e}")
+        return jsonify({'success': False, 'message': 'Failed to fetch profile'}), 500
 
 # Add health check endpoint
 @app.route('/health')
@@ -800,7 +958,28 @@ def handle_init(data):
                 return
             logger.info(f"Game initialized successfully. Initial FEN: {fen}")
             logger.info(f"Active games count: {active_game_count}")
-            emit('game_initialized', {'fen': fen, 'player_color': player_color})
+            
+            # Save game to database if user is logged in and database is enabled
+            game_id = None
+            user_id = session.get('user_id')
+            if DATABASE_ENABLED and user_id and Game is not None and db is not None:
+                try:
+                    db_game = Game(
+                        user_id=user_id,
+                        fen=fen,
+                        player_color=player_color,
+                        skill_level=skill_level,
+                        result='in_progress'
+                    )
+                    if db is not None:
+                        db.session.add(db_game)
+                        db.session.commit()
+                        game_id = db_game.id
+                        logger.info(f"Game saved to database with ID: {game_id}")
+                except Exception as e:
+                    logger.error(f"Failed to save game to database: {e}")
+            
+            emit('game_initialized', {'fen': fen, 'player_color': player_color, 'game_id': game_id})
             logger.info("Sent game_initialized event to client")
             total_init_time = time.time() - start_time
             logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
@@ -902,6 +1081,39 @@ def handle_move(data):
             logger.info(f"Game status check took {game_status_time:.2f} seconds")
             
             if game_status['game_over']:
+                # Update game result in database if user is logged in and database is enabled
+                user_id = session.get('user_id')
+                if DATABASE_ENABLED and user_id and Game is not None and db is not None:
+                    try:
+                        # Find the game in the database
+                        db_game = Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first()
+                        if db_game:
+                            # Update game result
+                            db_game.result = game_status['result']
+                            db_game.end_time = datetime.utcnow()
+                            db_game.duration = int((db_game.end_time - db_game.start_time).total_seconds()) if db_game.start_time else 0
+                            db_game.move_history = json.dumps(game.move_history) if game.move_history else None
+                            
+                            # Update user stats
+                            user = User.query.get(user_id) if User is not None else None
+                            if user:
+                                user.games_played = (user.games_played or 0) + 1
+                                if game_status.get('winner') == game.player_color:
+                                    user.games_won = (user.games_won or 0) + 1
+                                    # Simple rating update - in a real app, you'd use a proper rating system
+                                    user.rating = (user.rating or 1200) + 10
+                                elif game_status['result'] == 'stalemate':
+                                    # No rating change for stalemate
+                                    pass
+                                else:
+                                    # Loss - decrease rating
+                                    user.rating = max(100, (user.rating or 1200) - 5)
+                            
+                            db.session.commit()
+                            logger.info(f"Game result saved to database: {game_status['result']}")
+                    except Exception as e:
+                        logger.error(f"Failed to save game result to database: {e}")
+                
                 emit('game_over', {
                     'result': game_status['result'],
                     'fen': fen,
@@ -946,6 +1158,39 @@ def handle_move(data):
                 logger.info(f"Post-AI game status check took {game_status_time:.2f} seconds")
                 
                 if game_status['game_over']:
+                    # Update game result in database if user is logged in and database is enabled
+                    user_id = session.get('user_id')
+                    if DATABASE_ENABLED and user_id and Game is not None and db is not None:
+                        try:
+                            # Find the game in the database
+                            db_game = Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first()
+                            if db_game:
+                                # Update game result
+                                db_game.result = game_status['result']
+                                db_game.end_time = datetime.utcnow()
+                                db_game.duration = int((db_game.end_time - db_game.start_time).total_seconds()) if db_game.start_time else 0
+                                db_game.move_history = json.dumps(game.move_history) if game.move_history else None
+                                
+                                # Update user stats
+                                user = User.query.get(user_id) if User is not None else None
+                                if user and User is not None:
+                                    user.games_played = (user.games_played or 0) + 1
+                                    if game_status.get('winner') == game.player_color:
+                                        user.games_won = (user.games_won or 0) + 1
+                                        # Simple rating update - in a real app, you'd use a proper rating system
+                                        user.rating = (user.rating or 1200) + 10
+                                    elif game_status['result'] == 'stalemate':
+                                        # No rating change for stalemate
+                                        pass
+                                    else:
+                                        # Loss - decrease rating
+                                        user.rating = max(100, (user.rating or 1200) - 5)
+                                
+                                db.session.commit()
+                                logger.info(f"Game result saved to database: {game_status['result']}")
+                        except Exception as e:
+                            logger.error(f"Failed to save game result to database: {e}")
+                    
                     emit('game_over', {
                         'result': game_status['result'],
                         'fen': fen,
@@ -1264,7 +1509,7 @@ if __name__ == '__main__':
     logger.info("Starting Chess Stockfish Web application...")
     
     # Create database tables if they don't exist
-    if DATABASE_ENABLED:
+    if DATABASE_ENABLED and db is not None:
         with app.app_context():
             db.create_all()
     

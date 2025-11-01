@@ -4,6 +4,7 @@ This module defines the database schema and ORM models.
 """
 
 from datetime import datetime
+import json
 from flask_sqlalchemy import SQLAlchemy
 
 # Initialize SQLAlchemy

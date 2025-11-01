@@ -13,6 +13,30 @@
         <h1>♟️ Chess Stockfish Web</h1>
         <p>Создано в <a href="https://school-maestro7it.ru/" target="_blank">Maestro7IT</a></p>
 
+        <!-- User authentication section -->
+        <div id="auth-section" style="margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+            <div id="login-form" style="display: none;">
+                <h3>Вход в систему</h3>
+                <input type="text" id="login-username" placeholder="Имя пользователя" style="margin: 5px; padding: 5px;">
+                <input type="password" id="login-password" placeholder="Пароль" style="margin: 5px; padding: 5px;">
+                <button id="login-btn">Войти</button>
+                <button id="show-register">Регистрация</button>
+            </div>
+            <div id="register-form" style="display: none;">
+                <h3>Регистрация</h3>
+                <input type="text" id="register-username" placeholder="Имя пользователя" style="margin: 5px; padding: 5px;">
+                <input type="email" id="register-email" placeholder="Email" style="margin: 5px; padding: 5px;">
+                <input type="password" id="register-password" placeholder="Пароль" style="margin: 5px; padding: 5px;">
+                <button id="register-btn">Зарегистрироваться</button>
+                <button id="show-login">Вход</button>
+            </div>
+            <div id="user-info" style="display: none;">
+                <span>Привет, <span id="user-name"></span>! </span>
+                <button id="profile-btn">Профиль</button>
+                <button id="logout-btn">Выйти</button>
+            </div>
+        </div>
+
         <div id="setup" class="setup">
             <h2>Настройки игры</h2>
             <label>Ваша сторона: 
@@ -47,5 +71,118 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
     <script src="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+    <script>
+        // Authentication functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is already logged in
+            checkLoginStatus();
+            
+            // Login form handlers
+            document.getElementById('login-btn').addEventListener('click', loginUser);
+            document.getElementById('register-btn').addEventListener('click', registerUser);
+            document.getElementById('logout-btn').addEventListener('click', logoutUser);
+            document.getElementById('profile-btn').addEventListener('click', () => {
+                window.location.href = '/profile_page';
+            });
+            
+            // Form toggle handlers
+            document.getElementById('show-register').addEventListener('click', () => {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('register-form').style.display = 'block';
+            });
+            
+            document.getElementById('show-login').addEventListener('click', () => {
+                document.getElementById('register-form').style.display = 'none';
+                document.getElementById('login-form').style.display = 'block';
+            });
+        });
+        
+        function checkLoginStatus() {
+            // In a real implementation, you would check with the server
+            // For now, we'll just show the login form
+            document.getElementById('login-form').style.display = 'block';
+        }
+        
+        async function loginUser() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Hide auth forms and show user info
+                    document.getElementById('login-form').style.display = 'none';
+                    document.getElementById('user-info').style.display = 'block';
+                    document.getElementById('user-name').textContent = data.username;
+                    
+                    // Show success message
+                    document.getElementById('status').innerText = 'Вы вошли как ' + data.username;
+                } else {
+                    document.getElementById('status').innerText = 'Ошибка входа: ' + data.message;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                document.getElementById('status').innerText = 'Ошибка входа';
+            }
+        }
+        
+        async function registerUser() {
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Switch to login form
+                    document.getElementById('register-form').style.display = 'none';
+                    document.getElementById('login-form').style.display = 'block';
+                    document.getElementById('status').innerText = 'Регистрация успешна! Теперь вы можете войти.';
+                } else {
+                    document.getElementById('status').innerText = 'Ошибка регистрации: ' + data.message;
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                document.getElementById('status').innerText = 'Ошибка регистрации';
+            }
+        }
+        
+        async function logoutUser() {
+            try {
+                const response = await fetch('/logout');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Hide user info and show login form
+                    document.getElementById('user-info').style.display = 'none';
+                    document.getElementById('login-form').style.display = 'block';
+                    document.getElementById('status').innerText = 'Вы вышли из системы';
+                } else {
+                    document.getElementById('status').innerText = 'Ошибка выхода: ' + data.message;
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                document.getElementById('status').innerText = 'Ошибка выхода';
+            }
+        }
+    </script>
 </body>
 </html>
