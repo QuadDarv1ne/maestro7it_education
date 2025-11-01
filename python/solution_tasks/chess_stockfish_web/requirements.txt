@@ -3,5 +3,5 @@ Flask-SocketIO==5.3.4
 stockfish==3.28.0
 python-socketio[client]==5.7.2
 Flask-SQLAlchemy==3.0.5
-psycopg2-binary==2.9.7
+# psycopg2-binary==2.9.7  # Removed due to build issues on Windows
 pytest==7.4.0
