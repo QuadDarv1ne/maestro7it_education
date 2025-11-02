@@ -63,9 +63,7 @@ except ImportError:
 try:
     from utils.error_handler import error_handler, handle_chess_errors, retry_on_failure
     # Import exception classes
-    from utils.error_handler import EngineInitializationError as ErrorHandlerEngineInitializationError
-    from utils.error_handler import MoveValidationError as ErrorHandlerMoveValidationError
-    from utils.error_handler import GameLogicError as ErrorHandlerGameLogicError
+    from utils.error_handler import EngineInitializationError, MoveValidationError, GameLogicError
     ERROR_HANDLER_ENABLED = True
 except ImportError:
     # Fallback if error handler is not available
@@ -827,7 +825,12 @@ def login_user():
             # Update last login
             user.last_login = datetime.utcnow()
             if db is not None:
-                db.session.commit()
+                try:
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Error updating user login timestamp: {e}")
+                    return jsonify({'success': False, 'message': 'Login failed'}), 500
             
             # Store user ID in session
             session['user_id'] = user.id
@@ -1050,8 +1053,8 @@ def handle_init(data):
                                 game_id = db_game.id
                                 logger.info(f"Game saved to database with ID: {game_id}")
                         except Exception as e:
+                            db.session.rollback()
                             logger.error(f"Failed to save game to database: {e}")
-                    
                     emit('game_initialized', {'fen': fen, 'player_color': player_color, 'game_id': game_id})
                     logger.info("Sent game_initialized event to client")
                     total_init_time = time.time() - start_time
@@ -1217,6 +1220,7 @@ def handle_move(data):
                             db.session.commit()
                             logger.info(f"Game result saved to database: {game_status['result']}")
                     except Exception as e:
+                        db.session.rollback()
                         logger.error(f"Failed to save game result to database: {e}")
                 
                 emit('game_over', {
@@ -1314,6 +1318,7 @@ def handle_move(data):
                                 db.session.commit()
                                 logger.info(f"Game result saved to database: {game_status['result']}")
                         except Exception as e:
+                            db.session.rollback()
                             logger.error(f"Failed to save game result to database: {e}")
                     
                     emit('game_over', {

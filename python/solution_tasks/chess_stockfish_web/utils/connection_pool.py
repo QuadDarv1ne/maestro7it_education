@@ -51,6 +51,23 @@ class ConnectionPool:
             logger.error(f"Failed to create connection: {e}")
             raise
     
+    def _close_connection(self, connection: Any) -> None:
+        """
+        Close a connection.
+        
+        Args:
+            connection: Connection to close
+        """
+        try:
+            if hasattr(connection, 'close'):
+                connection.close()
+            elif hasattr(connection, 'quit'):
+                connection.quit()
+            elif hasattr(connection, '__del__'):
+                connection.__del__()
+        except Exception as e:
+            logger.warning(f"Error closing connection: {e}")
+    
     def get_connection(self, timeout: float = 30.0) -> Any:
         """
         Get a connection from the pool.
@@ -126,23 +143,6 @@ class ConnectionPool:
                     logger.debug("Closed connection (pool full)")
                 except Exception as e:
                     logger.error(f"Error closing connection: {e}")
-    
-    def _close_connection(self, connection: Any) -> None:
-        """
-        Close a connection.
-        
-        Args:
-            connection: Connection to close
-        """
-        try:
-            if hasattr(connection, 'close'):
-                connection.close()
-            elif hasattr(connection, 'quit'):
-                connection.quit()
-            elif hasattr(connection, '__del__'):
-                connection.__del__()
-        except Exception as e:
-            logger.warning(f"Error closing connection: {e}")
     
     def close_all(self) -> None:
         """Close all connections in the pool."""
@@ -308,6 +308,20 @@ class StockfishEnginePool:
         
         return None
     
+    def _close_engine(self, engine: Any) -> None:
+        """
+        Close a Stockfish engine properly.
+        
+        Args:
+            engine: Stockfish engine to close
+        """
+        try:
+            # Stockfish engines don't have a quit method, just dereference
+            # The engine will be garbage collected
+            del engine
+        except Exception as e:
+            logger.warning(f"Error closing Stockfish engine: {e}")
+
     def get_engine(self, skill_level: int = 5, timeout: float = 30.0) -> Any:
         """
         Get a Stockfish engine from the pool.
@@ -354,7 +368,7 @@ class StockfishEnginePool:
                 else:
                     # Engine timed out, close it
                     try:
-                        engine.quit()
+                        self._close_engine(engine)
                     except:
                         pass
             
@@ -399,7 +413,7 @@ class StockfishEnginePool:
                     else:
                         # Engine timed out, close it
                         try:
-                            engine.quit()
+                            self._close_engine(engine)
                         except:
                             pass
         
@@ -427,7 +441,7 @@ class StockfishEnginePool:
             else:
                 # Pool is full, close the engine
                 try:
-                    engine.quit()
+                    self._close_engine(engine)
                     logger.debug("Closed Stockfish engine (pool full)")
                 except Exception as e:
                     logger.error(f"Error closing Stockfish engine: {e}")
@@ -443,7 +457,7 @@ class StockfishEnginePool:
             while self.pool:
                 engine, _, _ = self.pool.popleft()
                 try:
-                    engine.quit()
+                    self._close_engine(engine)
                 except Exception as e:
                     logger.error(f"Error closing Stockfish engine: {e}")
             

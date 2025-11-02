@@ -10,7 +10,6 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app_improved import app, ChessGame
-from flask import session
 
 class ChessGameTestCase(unittest.TestCase):
     """Test cases for the ChessGame class"""
@@ -47,7 +46,7 @@ class FlaskAppTestCase(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         self.app = app.test_client()
-        self.app.testing = True
+        app.config['TESTING'] = True
     
     def test_index_page(self):
         """Test that the index page loads correctly"""
