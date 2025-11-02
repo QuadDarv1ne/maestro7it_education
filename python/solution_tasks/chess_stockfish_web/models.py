@@ -44,10 +44,15 @@ class Game(db.Model):
     start_time = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     end_time = db.Column(db.DateTime, index=True)
     duration = db.Column(db.Integer)  # в секундах
+    last_move = db.Column(db.String(10))  # Последний ход в игре
+    is_active = db.Column(db.Boolean, default=True, index=True)  # Флаг активной игры
     
-    # Составной индекс для частых запросов
+    # Составные индексы для частых запросов
     __table_args__ = (
         db.Index('idx_user_result_time', 'user_id', 'result', 'start_time'),
+        db.Index('idx_user_active_time', 'user_id', 'is_active', 'start_time'),
+        db.Index('idx_result_skill', 'result', 'skill_level'),
+        db.Index('idx_active_duration', 'is_active', 'duration')
     )
     
     def __repr__(self):
@@ -94,13 +99,16 @@ def create_user(username, email, password_hash):
     db.session.commit()
     return user
 
-def create_game(user_id, fen, player_color, skill_level):
+def create_game(user_id, fen, player_color, skill_level, last_move=None):
     """Создание новой игры"""
     game = Game(
         user_id=user_id,
         fen=fen,
         player_color=player_color,
-        skill_level=skill_level
+        skill_level=skill_level,
+        last_move=last_move,
+        is_active=True,
+        result='in_progress'
     )
     db.session.add(game)
     db.session.commit()

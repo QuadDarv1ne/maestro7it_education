@@ -9,6 +9,19 @@ import os
 import uuid
 import sys
 import time
+
+# Глобальные переменные
+active_game_count = 0
+games = {}
+stockfish_engine = None
+game_histories = {}
+session_timestamps = {}
+user_preferences = {}
+resource_stats = {
+    'peak_active_games': 0,
+    'peak_sessions': 0,
+    'total_games_cleaned': 0
+}
 import logging
 import json
 import threading
@@ -1980,59 +1993,71 @@ def resource_stats_endpoint():
         # Получение статистики через AppState
         app_stats = app_state.get_stats()
         
-        stats = {
+        # Сбор статистики использования памяти
+        memory_stats = {}
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            memory_stats = {
+                'rss': memory_info.rss / (1024 * 1024),  # MB
+                'vms': memory_info.vms / (1024 * 1024),  # MB
+                'percent': process.memory_percent(),
+                'cpu_percent': process.cpu_percent()
+            }
+        except ImportError:
+            memory_stats = {'error': 'psutil not available'}
+        except Exception as e:
+            memory_stats = {'error': str(e)}
+
+        # Сбор статистики кэша
+        cache_stats = {}
+        if CACHE_MANAGER_ENABLED and cache_manager:
+            try:
+                cache_stats = cache_manager.get_cache_stats()
+            except Exception as e:
+                cache_stats = {'error': str(e)}
+
+        # Сбор статистики пула соединений
+        pool_stats = {}
+        if CONNECTION_POOLING_ENABLED and stockfish_pool:
+            try:
+                pool_stats = stockfish_pool.get_stats()
+            except Exception as e:
+                pool_stats = {'error': str(e)}
+        
+        # Сбор статистики производительности
+        perf_metrics = {}
+        if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
+            try:
+                perf_metrics = performance_tracker.get_metrics_summary()
+            except Exception as e:
+                perf_metrics = {'error': str(e)}
+        
+        response = {
             'status': 'success',
+            'timestamp': time.time(),
             'resource_stats': app_stats['resource_stats'],
             'current_stats': {
                 'active_games': app_stats['active_games'],
                 'tracked_sessions': len(app_stats['game_stats']),
-                'memory_usage': {}
+                'game_stats': app_stats['game_stats'],
+                'memory_usage': memory_stats,
+                'cache_stats': cache_stats,
+                'pool_stats': pool_stats,
+                'performance_metrics': perf_metrics,
+                'recent_errors': app_stats.get('recent_errors', [])
+            }
         }
         
-        # Try to get memory usage if psutil is available
-        try:
-            import psutil
-            import os
-            process = psutil.Process(os.getpid())
-            stats['memory_usage'] = {
-                'rss': process.memory_info().rss / 1024 / 1024,  # MB
-                'vms': process.memory_info().vms / 1024 / 1024,  # MB
-                'percent': process.memory_percent()
-            }
-        except ImportError:
-            stats['memory_usage'] = {
-                'message': 'psutil not available for memory monitoring'
-            }
-        except Exception as e:
-            stats['memory_usage'] = {
-                'error': f'Error getting memory stats: {e}'
-            }
+        return jsonify(response)
         
-        # Add cache statistics if enabled
-        if CACHE_MANAGER_ENABLED and cache_manager:
-            try:
-                stats['cache_stats'] = cache_manager.get_cache_stats()
-            except Exception as e:
-                stats['cache_stats'] = {
-                    'error': f'Error getting cache stats: {e}'
-                }
-        
-        # Add performance metrics if enabled
-        if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
-            try:
-                stats['performance_metrics'] = performance_tracker.get_metrics_summary()
-            except Exception as e:
-                stats['performance_metrics'] = {
-                    'error': f'Error getting performance metrics: {e}'
-                }
-        
-        return stats
     except Exception as e:
-        logger.error(f"Resource stats endpoint failed: {e}")
-        return {
+        logger.error(f"Error in resource stats endpoint: {e}")
+        return jsonify({
             'status': 'error',
             'error': str(e)
-        }, 500
+        }), 500
 
 # Запуск потока очистки после определения всех переменных для предотвращения гонок
 cleanup_thread = threading.Thread(target=cleanup_stale_games, daemon=True)
