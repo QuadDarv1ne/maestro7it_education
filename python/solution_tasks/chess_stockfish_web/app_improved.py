@@ -1143,7 +1143,7 @@ def user_profile():
         losses = total_games - wins
         win_rate = (wins / total_games * 100) if total_games > 0 else 0
         
-        # Prepare game history data
+        # Подготовка данных истории игр
         game_history = []
         for game in recent_games:
             game_history.append({
@@ -1173,7 +1173,7 @@ def user_profile():
         logger.error(f"Error fetching user profile: {e}")
         return jsonify({'success': False, 'message': 'Failed to fetch profile'}), 500
 
-# Add health check endpoint
+# Добавление endpoint проверки здоровья
 @app.route('/health')
 @handle_chess_errors(context="health_check")
 def health_check():
