@@ -132,6 +132,7 @@ except ImportError:
             'stockfish',        # Linux/Mac
             'stockfish_15_x64.exe',
             'stockfish_14_x64.exe',
+            'stockfish_13_x64.exe',
             'stockfish-windows-x86-64.exe',
             'stockfish-linux-x64',
             'stockfish-mac-x64'
@@ -146,13 +147,19 @@ except ImportError:
             '/usr/local/bin',
             '/usr/bin',
             'C:\\Program Files\\Stockfish',
-            'C:\\Program Files (x86)\\Stockfish'
+            'C:\\Program Files (x86)\\Stockfish',
+            'C:\\Program Files\\stockfish'  # Additional path where Stockfish was found
         ]
         
         # Check environment variable
         env_path = os.getenv('STOCKFISH_PATH')
         if env_path:
             search_paths.insert(0, env_path)
+        
+        # Check for specific Stockfish executable that we know exists
+        specific_stockfish_path = 'C:\\Program Files\\stockfish\\stockfish-windows-x86-64.exe'
+        if os.path.exists(specific_stockfish_path):
+            return specific_stockfish_path
         
         # Try to find executable
         for search_path in search_paths:
@@ -178,8 +185,15 @@ except ImportError:
         
         return None
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Set up logging with better formatting
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('chess_app.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # Store game instances per session
@@ -212,9 +226,18 @@ GAME_TIMEOUT = 3600  # 1 hour
 # Game initialization timeout
 GAME_INIT_TIMEOUT = 30  # 30 seconds for game initialization
 
+# Resource tracking
+resource_stats = {
+    'total_games_created': 0,
+    'total_games_cleaned': 0,
+    'peak_active_games': 0,
+    'total_sessions': 0,
+    'peak_sessions': 0
+}
+
 def cleanup_stale_games():
     """Periodically clean up stale game sessions to prevent memory leaks."""
-    global games, session_timestamps, active_game_count
+    global games, session_timestamps, active_game_count, resource_stats
     while True:
         try:
             time.sleep(CLEANUP_INTERVAL)
@@ -231,13 +254,28 @@ def cleanup_stale_games():
                 stale_sessions = []
             
             # Clean up stale sessions
+            cleanup_count = 0
             for session_id in stale_sessions:
                 try:
                     if session_id in games:
                         # Clean up game resources
                         try:
+                            game = games[session_id]
+                            # Properly clean up the game engine
+                            if hasattr(game, 'engine') and game.engine:
+                                if CONNECTION_POOLING_ENABLED and hasattr(game, '_engine_context') and game._engine_context:
+                                    try:
+                                        game._engine_context.__exit__(None, None, None)
+                                    except Exception as pool_error:
+                                        logger.warning(f"Error returning engine to pool for session {session_id}: {pool_error}")
+                                else:
+                                    # For non-pooled engines, just dereference
+                                    game.engine = None
+                            
                             del games[session_id]
                             active_game_count = max(0, active_game_count - 1)
+                            resource_stats['total_games_cleaned'] += 1
+                            cleanup_count += 1
                             logger.info(f"Cleaned up stale game for session: {session_id}")
                         except Exception as e:
                             logger.error(f"Error cleaning up stale game for session {session_id}: {e}")
@@ -250,15 +288,56 @@ def cleanup_stale_games():
                         del session_timestamps[session_id]
                 except Exception as e:
                     logger.error(f"Error removing timestamp for session {session_id}: {e}")
+                
+                # Remove user preferences
+                try:
+                    if session_id in user_preferences:
+                        del user_preferences[session_id]
+                except Exception as e:
+                    logger.warning(f"Error removing user preferences for session {session_id}: {e}")
+                
+                # Remove game history
+                try:
+                    if session_id in game_histories:
+                        del game_histories[session_id]
+                except Exception as e:
+                    logger.warning(f"Error removing game history for session {session_id}: {e}")
             
             # Clear expired cache entries
             if CACHE_MANAGER_ENABLED:
                 # The cache manager automatically handles TTL expiration
                 pass
             
-            logger.info(f"Cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}")
+            # Update resource statistics
+            resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
+            resource_stats['peak_sessions'] = max(resource_stats['peak_sessions'], len(session_timestamps))
+            
+            logger.info(f"Cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}, Cleaned up: {cleanup_count}")
+            logger.info(f"Resource stats: {resource_stats}")
         except Exception as e:
             logger.error(f"Error in cleanup thread: {e}")
+
+
+
+# Maximum concurrent games to prevent server overload
+MAX_CONCURRENT_GAMES = 20  # Increased from 10 to 20
+
+# Track active game count
+active_game_count = 0
+
+# Session timestamps for cleanup
+session_timestamps = {}
+
+# Cleanup interval in seconds
+CLEANUP_INTERVAL = 300  # 5 minutes
+
+# Game inactivity timeout in seconds
+GAME_TIMEOUT = 3600  # 1 hour
+
+# Game initialization timeout
+GAME_INIT_TIMEOUT = 30  # 30 seconds for game initialization
+
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'maestro7it-chess-secret'
@@ -298,6 +377,49 @@ class ChessGame:
         except:
             return False
     
+    def _calculate_engine_parameters(self, skill_level):
+        """
+        Calculate optimal engine parameters based on skill level.
+        
+        Args:
+            skill_level: Skill level (0-20)
+            
+        Returns:
+            Dictionary with engine parameters
+        """
+        # Adjust parameters based on skill level for better performance/accuracy balance
+        if skill_level <= 5:
+            # Beginner level - faster but less accurate
+            depth = 5
+            threads = 1
+            hash_size = 64
+        elif skill_level <= 10:
+            # Intermediate level - balanced
+            depth = 8
+            threads = 2
+            hash_size = 128
+        elif skill_level <= 15:
+            # Advanced level - more accurate
+            depth = 12
+            threads = 2
+            hash_size = 256
+        else:
+            # Expert level - maximum accuracy
+            depth = 15
+            threads = 4
+            hash_size = 512
+        
+        return {
+            'Threads': threads,
+            'Hash': hash_size,
+            'Contempt': 0,
+            'Ponder': False,
+            'Slow Mover': 100,
+            'Move Overhead': 10,
+            'Skill Level': skill_level,
+            'Depth': depth
+        }
+    
     def _find_stockfish_executable(self):
         """Find Stockfish executable in various possible locations with enhanced detection"""
         # Common executable names for different platforms
@@ -331,6 +453,7 @@ class ChessGame:
         env_path = os.getenv('STOCKFISH_PATH')
         if env_path:
             search_paths.insert(0, env_path)
+            logger.info(f"Using STOCKFISH_PATH environment variable: {env_path}")
         
         # Check for specific Stockfish executable that we know exists
         specific_stockfish_path = 'C:\\Program Files\\stockfish\\stockfish-windows-x86-64.exe'
@@ -340,19 +463,20 @@ class ChessGame:
         
         # Try to find executable in search paths
         import shutil
+        found_paths = []
         for search_path in search_paths:
             if search_path and os.path.exists(search_path):
                 # Check direct path first
                 if os.path.isfile(search_path) and any(search_path.endswith(ext) for ext in ['.exe', '']):
                     logger.info(f"Found Stockfish executable at direct path: {search_path}")
-                    return search_path
+                    found_paths.append(search_path)
                 
                 # Check in directory
                 for exe_name in executable_names:
                     full_path = os.path.join(search_path, exe_name)
                     if os.path.exists(full_path) and os.access(full_path, os.X_OK):
                         logger.info(f"Found Stockfish executable at: {full_path}")
-                        return full_path
+                        found_paths.append(full_path)
         
         # Check system PATH
         for exe_name in executable_names:
@@ -360,11 +484,19 @@ class ChessGame:
                 path = shutil.which(exe_name)
                 if path:
                     logger.info(f"Found Stockfish executable in PATH: {path}")
-                    return path
-            except:
-                pass
+                    found_paths.append(path)
+            except Exception as e:
+                logger.warning(f"Error checking PATH for {exe_name}: {e}")
+                continue
         
-        logger.warning("Stockfish executable not found in any expected location")
+        # Return the first found path, or None if none found
+        if found_paths:
+            selected_path = found_paths[0]
+            logger.info(f"Selected Stockfish executable: {selected_path}")
+            return selected_path
+        
+        logger.error("Stockfish executable not found in any expected location")
+        logger.error(f"Search paths checked: {search_paths}")
         return None
     
     @retry_on_failure(max_attempts=3, delay=1.0, backoff=2.0)
@@ -374,37 +506,48 @@ class ChessGame:
         global stockfish_engine
         start_time = time.time()
         try:
+            logger.info(f"Starting engine initialization for skill level {self.skill_level}")
+            
             # Use connection pooling if available
             if CONNECTION_POOLING_ENABLED and stockfish_pool:
+                logger.info("Using connection pooling for Stockfish engine")
                 # Get engine from pool using context manager
                 self._engine_context = pool_get_stockfish_engine(self.skill_level)
                 # Correctly use the context manager
                 self.engine = self._engine_context.__enter__()
                 self.initialized = True
-                logger.info(f"Got Stockfish engine from pool with skill level {self.skill_level} in {time.time() - start_time:.2f} seconds")
+                init_duration = time.time() - start_time
+                logger.info(f"Got Stockfish engine from pool with skill level {self.skill_level} in {init_duration:.2f} seconds")
                 return True
             
             # Reuse existing engine if available and properly configured
             if stockfish_engine and self._is_engine_compatible(stockfish_engine, self.skill_level):
                 logger.info(f"Reusing existing Stockfish engine with skill level {self.skill_level}")
                 self.engine = stockfish_engine
-                # Configure engine for optimal performance
-                self.engine.set_depth(10)  # Reduced depth for faster moves, adjustable
+                # Configure engine with optimized parameters based on skill level
+                engine_params = self._calculate_engine_parameters(self.skill_level)
+                self.engine.set_skill_level(self.skill_level)
+                self.engine.set_depth(engine_params['Depth'])
                 self.engine.update_engine_parameters({
-                    'Threads': 2,  # Use multiple threads for better performance
-                    'Hash': 128,   # Allocate 128 MB hash for position evaluation
-                    'Contempt': 0, # Neutral contempt factor
-                    'Ponder': False # Disable pondering for faster response
+                    'Threads': engine_params['Threads'],
+                    'Hash': engine_params['Hash'],
+                    'Contempt': engine_params['Contempt'],
+                    'Ponder': engine_params['Ponder'],
+                    'Slow Mover': engine_params['Slow Mover'],
+                    'Move Overhead': engine_params['Move Overhead']
                 })
                 self.initialized = True
-                logger.info(f"Engine reuse took {time.time() - start_time:.2f} seconds")
+                init_duration = time.time() - start_time
+                logger.info(f"Engine reuse took {init_duration:.2f} seconds with parameters: {engine_params}")
                 return True
             
             # Find Stockfish executable
+            logger.info("Searching for Stockfish executable")
             self.engine_path = self._find_stockfish_executable()
             if not self.engine_path:
-                logger.error("Stockfish executable not found")
-                raise EngineInitializationError("Stockfish executable not found")
+                error_msg = "Stockfish executable not found"
+                logger.error(error_msg)
+                raise EngineInitializationError(error_msg)
             
             # Initialize new engine with timeout
             logger.info(f"Initializing Stockfish engine from: {self.engine_path}")
@@ -422,57 +565,72 @@ class ChessGame:
                     signal.alarm(10)
                 
                 try:
+                    logger.info(f"Creating Stockfish engine instance with skill level {self.skill_level}")
                     self.engine = Stockfish(path=self.engine_path)
                     
-                    # Configure engine for optimal performance
+                    # Configure engine with optimized parameters based on skill level
+                    engine_params = self._calculate_engine_parameters(self.skill_level)
+                    logger.info(f"Configuring engine parameters: {engine_params}")
                     self.engine.set_skill_level(self.skill_level)
-                    self.engine.set_depth(10)  # Reduced depth for faster moves, adjustable
+                    self.engine.set_depth(engine_params['Depth'])
                     self.engine.update_engine_parameters({
-                        'Threads': 2,  # Use multiple threads for better performance
-                        'Hash': 128,   # Allocate 128 MB hash for position evaluation
-                        'Contempt': 0, # Neutral contempt factor
-                        'Ponder': False # Disable pondering for faster response
+                        'Threads': engine_params['Threads'],
+                        'Hash': engine_params['Hash'],
+                        'Contempt': engine_params['Contempt'],
+                        'Ponder': engine_params['Ponder'],
+                        'Slow Mover': engine_params['Slow Mover'],
+                        'Move Overhead': engine_params['Move Overhead']
                     })
                     
                     # Test engine with a simple operation
+                    logger.info("Testing engine functionality")
                     test_fen = self.engine.get_fen_position()
+                    if test_fen is None:
+                        raise EngineInitializationError("Engine test failed - returned None for FEN position")
                     logger.info(f"Engine test successful. Initial FEN: {test_fen}")
                     
                     # Store engine for reuse
                     stockfish_engine = self.engine
                     self.initialized = True
-                    logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {time.time() - start_time:.2f} seconds")
+                    init_duration = time.time() - start_time
+                    logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {init_duration:.2f} seconds")
                     return True
                 finally:
                     # Cancel timeout
                     if hasattr(signal, 'SIGALRM') and old_handler:
                         signal.alarm(0)
                         signal.signal(signal.SIGALRM, old_handler)
-            except TimeoutError:
-                logger.error("Stockfish engine initialization timed out")
-                raise EngineInitializationError("Stockfish engine initialization timed out")
+            except TimeoutError as e:
+                error_msg = "Stockfish engine initialization timed out"
+                logger.error(error_msg)
+                raise EngineInitializationError(error_msg) from e
             except Exception as e:
-                logger.error(f"Stockfish engine initialization failed: {e}")
-                raise EngineInitializationError(f"Stockfish engine initialization failed: {str(e)}")
+                error_msg = f"Stockfish engine initialization failed: {str(e)}"
+                logger.error(error_msg)
+                logger.exception("Full traceback:")
+                raise EngineInitializationError(error_msg) from e
+        except EngineInitializationError:
+            # Re-raise engine initialization errors
+            raise
         except Exception as e:
-            logger.error(f"Stockfish initialization error: {e}")
-            import traceback
-            traceback.print_exc()
+            error_msg = f"Stockfish initialization error: {str(e)}"
+            logger.error(error_msg)
+            logger.exception("Full traceback:")
             # Try to clean up any partially initialized engine
             try:
                 if hasattr(self, 'engine') and self.engine:
                     if CONNECTION_POOLING_ENABLED and self._engine_context:
                         try:
                             self._engine_context.__exit__(None, None, None)
-                        except:
-                            pass
+                        except Exception as cleanup_error:
+                            logger.warning(f"Error cleaning up engine context: {cleanup_error}")
                     else:
                         # Stockfish doesn't have explicit close method, just dereference
                         self.engine = None
-            except:
-                pass
+            except Exception as cleanup_error:
+                logger.warning(f"Error during engine cleanup: {cleanup_error}")
             self.initialized = False
-            raise EngineInitializationError(f"Failed to initialize Stockfish engine: {str(e)}") from e
+            raise EngineInitializationError(error_msg) from e
     
     def __del__(self):
         """Clean up engine when ChessGame instance is destroyed"""
@@ -749,18 +907,43 @@ def handle_disconnect():
         session_id = session.get('session_id')
         logger.info(f"WebSocket disconnect event received for session: {session_id}")
         if session_id:
+            # Clean up game instance when user disconnects
             if session_id in games:
-                # Clean up game instance when user disconnects
-                del games[session_id]
-                global active_game_count
-                active_game_count = max(0, active_game_count - 1)  # Ensure it doesn't go below 0
-                logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
-                logger.info(f"Active games count: {active_game_count}")
+                try:
+                    game = games[session_id]
+                    # Properly clean up the game engine
+                    if hasattr(game, 'engine') and game.engine:
+                        if CONNECTION_POOLING_ENABLED and hasattr(game, '_engine_context') and game._engine_context:
+                            try:
+                                game._engine_context.__exit__(None, None, None)
+                            except Exception as pool_error:
+                                logger.warning(f"Error returning engine to pool for session {session_id}: {pool_error}")
+                        else:
+                            # For non-pooled engines, just dereference
+                            game.engine = None
+                    
+                    del games[session_id]
+                    global active_game_count
+                    active_game_count = max(0, active_game_count - 1)
+                    logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
+                    logger.info(f"Active games count: {active_game_count}")
+                except Exception as e:
+                    logger.error(f"Error cleaning up game for session {session_id}: {e}")
             
             # Remove timestamp
             if session_id in session_timestamps:
                 del session_timestamps[session_id]
                 logger.info(f"Removed timestamp for session: {session_id}")
+            
+            # Remove user preferences
+            if session_id in user_preferences:
+                del user_preferences[session_id]
+                logger.info(f"Removed user preferences for session: {session_id}")
+            
+            # Remove game history
+            if session_id in game_histories:
+                del game_histories[session_id]
+                logger.info(f"Removed game history for session: {session_id}")
         
         # Send disconnection confirmation
         logger.info("Client disconnected successfully")
@@ -1205,6 +1388,7 @@ def handle_move(data):
                             # Update user stats
                             user = User.query.get(user_id) if User is not None else None
                             if user:
+                                # Use a transaction to ensure consistency
                                 user.games_played = (user.games_played or 0) + 1
                                 if game_status.get('winner') == game.player_color:
                                     user.games_won = (user.games_won or 0) + 1
@@ -1222,6 +1406,7 @@ def handle_move(data):
                     except Exception as e:
                         db.session.rollback()
                         logger.error(f"Failed to save game result to database: {e}")
+                        logger.exception("Full traceback:")
                 
                 emit('game_over', {
                     'result': game_status['result'],
@@ -1303,6 +1488,7 @@ def handle_move(data):
                                 # Update user stats
                                 user = User.query.get(user_id) if User is not None else None
                                 if user and User is not None:
+                                    # Use a transaction to ensure consistency
                                     user.games_played = (user.games_played or 0) + 1
                                     if game_status.get('winner') == game.player_color:
                                         user.games_won = (user.games_won or 0) + 1
@@ -1320,6 +1506,7 @@ def handle_move(data):
                         except Exception as e:
                             db.session.rollback()
                             logger.error(f"Failed to save game result to database: {e}")
+                            logger.exception("Full traceback:")
                     
                     emit('game_over', {
                         'result': game_status['result'],
@@ -1631,7 +1818,75 @@ def pool_stats():
             'error': str(e)
         }, 500
 
-# Start cleanup thread
+@app.route('/resource-stats')
+def resource_stats_endpoint():
+    """Endpoint to get resource usage statistics"""
+    try:
+        global resource_stats, active_game_count, session_timestamps, games, user_preferences, game_histories
+        
+        # Update resource statistics
+        resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
+        resource_stats['peak_sessions'] = max(resource_stats['peak_sessions'], len(session_timestamps))
+        
+        stats = {
+            'status': 'success',
+            'resource_stats': resource_stats,
+            'current_stats': {
+                'active_games': active_game_count,
+                'tracked_sessions': len(session_timestamps),
+                'games_in_memory': len(games),
+                'user_preferences_count': len(user_preferences),
+                'game_histories_count': len(game_histories)
+            },
+            'memory_usage': {}
+        }
+        
+        # Try to get memory usage if psutil is available
+        try:
+            import psutil
+            import os
+            process = psutil.Process(os.getpid())
+            stats['memory_usage'] = {
+                'rss': process.memory_info().rss / 1024 / 1024,  # MB
+                'vms': process.memory_info().vms / 1024 / 1024,  # MB
+                'percent': process.memory_percent()
+            }
+        except ImportError:
+            stats['memory_usage'] = {
+                'message': 'psutil not available for memory monitoring'
+            }
+        except Exception as e:
+            stats['memory_usage'] = {
+                'error': f'Error getting memory stats: {e}'
+            }
+        
+        # Add cache statistics if enabled
+        if CACHE_MANAGER_ENABLED and cache_manager:
+            try:
+                stats['cache_stats'] = cache_manager.get_cache_stats()
+            except Exception as e:
+                stats['cache_stats'] = {
+                    'error': f'Error getting cache stats: {e}'
+                }
+        
+        # Add performance metrics if enabled
+        if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
+            try:
+                stats['performance_metrics'] = performance_tracker.get_metrics_summary()
+            except Exception as e:
+                stats['performance_metrics'] = {
+                    'error': f'Error getting performance metrics: {e}'
+                }
+        
+        return stats
+    except Exception as e:
+        logger.error(f"Resource stats endpoint failed: {e}")
+        return {
+            'status': 'error',
+            'error': str(e)
+        }, 500
+
+# Start cleanup thread after all variables are defined to prevent race conditions
 cleanup_thread = threading.Thread(target=cleanup_stale_games, daemon=True)
 cleanup_thread.start()
 

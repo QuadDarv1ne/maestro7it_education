@@ -26,6 +26,9 @@ class PerformanceTracker:
         self.call_counts = defaultdict(int)
         self.error_counts = defaultdict(int)
         self.active_operations = {}
+        self.total_operation_time = defaultdict(float)  # Track total time per operation
+        self.min_operation_time = defaultdict(lambda: float('inf'))  # Track min time per operation
+        self.max_operation_time = defaultdict(float)  # Track max time per operation
         
         # Performance optimization: Only log slow operations
         self.slow_operation_threshold = 0.5  # Reduced threshold to 0.5 seconds
@@ -34,11 +37,14 @@ class PerformanceTracker:
         self.sampling_rate = 0.1  # Only log 10% of operations to reduce overhead
         
         # Set up performance logger
-        perf_handler = logging.FileHandler(log_file, encoding='utf-8')
-        perf_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        perf_handler.setFormatter(perf_formatter)
-        perf_logger.addHandler(perf_handler)
-        perf_logger.setLevel(logging.INFO)
+        try:
+            perf_handler = logging.FileHandler(log_file, encoding='utf-8')
+            perf_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            perf_handler.setFormatter(perf_formatter)
+            perf_logger.addHandler(perf_handler)
+            perf_logger.setLevel(logging.INFO)
+        except Exception as e:
+            logger.warning(f"Failed to set up performance logger: {e}")
     
     def track_timing(self, operation_name):
         """
@@ -66,21 +72,27 @@ class PerformanceTracker:
                     end_time = time.time()
                     duration = end_time - start_time
                     
+                    # Update statistics
+                    self.metrics[operation_name].append(duration)
+                    self.call_counts[operation_name] += 1
+                    self.total_operation_time[operation_name] += duration
+                    self.min_operation_time[operation_name] = min(self.min_operation_time[operation_name], duration)
+                    self.max_operation_time[operation_name] = max(self.max_operation_time[operation_name], duration)
+                    
                     # Only log operations that meet the threshold or are particularly important
                     if duration > self.slow_operation_threshold or operation_name in [
                         'engine_initialization', 'ai_move_calculation'
                     ]:
                         # Log timing
-                        perf_logger.info(json.dumps({
-                            'operation': operation_name,
-                            'duration': duration,
-                            'timestamp': time.time(),
-                            'success': True
-                        }))
-                    
-                    # Store metric
-                    self.metrics[operation_name].append(duration)
-                    self.call_counts[operation_name] += 1
+                        try:
+                            perf_logger.info(json.dumps({
+                                'operation': operation_name,
+                                'duration': duration,
+                                'timestamp': time.time(),
+                                'success': True
+                            }))
+                        except Exception as log_error:
+                            logger.warning(f"Failed to log performance data: {log_error}")
                     
                     # Warn if operation takes too long
                     if duration > 1.0:  # 1 second threshold
@@ -93,14 +105,18 @@ class PerformanceTracker:
                     self.error_counts[operation_name] += 1
                     
                     # Always log errors
-                    perf_logger.error(json.dumps({
-                        'operation': operation_name,
-                        'duration': duration,
-                        'error': str(e),
-                        'error_type': type(e).__name__,
-                        'timestamp': time.time(),
-                        'success': False
-                    }))
+                    try:
+                        perf_logger.error(json.dumps({
+                            'operation': operation_name,
+                            'duration': duration,
+                            'error': str(e),
+                            'error_type': type(e).__name__,
+                            'timestamp': time.time(),
+                            'success': False
+                        }))
+                    except Exception as log_error:
+                        logger.warning(f"Failed to log performance error: {log_error}")
+                    
                     raise
                 finally:
                     # Clean up active operation tracking
@@ -121,19 +137,28 @@ class PerformanceTracker:
         """
         Get summary of all collected metrics.
         """
-        summary = {}
-        for operation, times in self.metrics.items():
-            if times:
-                summary[operation] = {
-                    'count': len(times),
-                    'call_count': self.call_counts.get(operation, 0),
-                    'error_count': self.error_counts.get(operation, 0),
-                    'average': sum(times) / len(times),
-                    'min': min(times),
-                    'max': max(times),
-                    'total_time': sum(times)
-                }
-        return summary
+        try:
+            summary = {}
+            for operation, times in self.metrics.items():
+                if times:
+                    avg_time = sum(times) / len(times)
+                    summary[operation] = {
+                        'count': len(times),
+                        'call_count': self.call_counts.get(operation, 0),
+                        'error_count': self.error_counts.get(operation, 0),
+                        'average': avg_time,
+                        'min': self.min_operation_time.get(operation, 0),
+                        'max': self.max_operation_time.get(operation, 0),
+                        'total_time': self.total_operation_time.get(operation, 0),
+                        'success_rate': (
+                            (self.call_counts.get(operation, 0) - self.error_counts.get(operation, 0)) / 
+                            max(self.call_counts.get(operation, 1), 1)
+                        )
+                    }
+            return summary
+        except Exception as e:
+            logger.warning(f"Error generating metrics summary: {e}")
+            return {'error': str(e)}
     
     def get_active_operations(self):
         """
@@ -149,6 +174,9 @@ class PerformanceTracker:
         self.call_counts.clear()
         self.error_counts.clear()
         self.active_operations.clear()
+        self.total_operation_time.clear()
+        self.min_operation_time.clear()
+        self.max_operation_time.clear()
 
 # Global performance tracker instance
 performance_tracker = PerformanceTracker()
