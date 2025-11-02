@@ -1051,6 +1051,30 @@ socket.on('invalid_move', (data) => {
     showNotification(errorMsg, 'error');
 });
 
+// Handle AI thinking indicator
+socket.on('ai_thinking', (data) => {
+    if (data.status === 'calculating') {
+        document.getElementById('status').innerText = '🤔 Компьютер думает...';
+        // Add visual indicator
+        const statusEl = document.getElementById('status');
+        statusEl.style.fontWeight = 'bold';
+        statusEl.style.color = '#4CAF50';
+    } else if (data.status === 'complete') {
+        const time = data.time ? ` (${data.time.toFixed(2)}с)` : '';
+        document.getElementById('status').innerText = `✓ Ход рассчитан${time}`;
+        setTimeout(() => {
+            const statusEl = document.getElementById('status');
+            statusEl.style.fontWeight = 'normal';
+            statusEl.style.color = '';
+        }, 1000);
+    } else if (data.status === 'error') {
+        document.getElementById('status').innerText = '⚠️ Ошибка расчета хода';
+        const statusEl = document.getElementById('status');
+        statusEl.style.fontWeight = 'normal';
+        statusEl.style.color = '';
+    }
+});
+
 socket.on('error', (data) => {
     console.log('Error:', data);
     

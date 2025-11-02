@@ -1,80 +1,90 @@
 """
-Data models for the Chess Stockfish Web application.
-This module defines the database schema and ORM models.
+Модели данных для веб-приложения Chess Stockfish Web.
+Этот модуль определяет схему базы данных и ORM модели.
 """
 
 from datetime import datetime
 import json
 from flask_sqlalchemy import SQLAlchemy
 
-# Initialize SQLAlchemy
+# Инициализация SQLAlchemy
 db = SQLAlchemy()
 
 class User(db.Model):
-    """User model for player accounts"""
+    """Модель пользователя для учетных записей игроков"""
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(120), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login = db.Column(db.DateTime)
-    games_played = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    last_login = db.Column(db.DateTime, index=True)
+    games_played = db.Column(db.Integer, default=0, index=True)
     games_won = db.Column(db.Integer, default=0)
-    rating = db.Column(db.Integer, default=1200)
+    rating = db.Column(db.Integer, default=1200, index=True)
     
-    # Relationship with games
-    games = db.relationship('Game', backref='user', lazy=True)
+    # Связь с играми
+    games = db.relationship('Game', backref='user', lazy='select', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<User {self.username}>'
 
 class Game(db.Model):
-    """Game model for storing game states"""
+    """Модель игры для хранения состояний игр"""
     __tablename__ = 'games'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    fen = db.Column(db.Text, nullable=False)
-    move_history = db.Column(db.Text)  # JSON string of moves
-    player_color = db.Column(db.String(10), nullable=False)
-    skill_level = db.Column(db.Integer, nullable=False)
-    result = db.Column(db.String(20))  # win, loss, draw, in_progress
-    start_time = db.Column(db.DateTime, default=datetime.utcnow)
-    end_time = db.Column(db.DateTime)
-    duration = db.Column(db.Integer)  # in seconds
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    fen = db.Column(db.Text, nullable=False, index=True)
+    move_history = db.Column(db.Text)  # JSON строка ходов
+    player_color = db.Column(db.String(10), nullable=False, index=True)
+    skill_level = db.Column(db.Integer, nullable=False, index=True)
+    result = db.Column(db.String(20), index=True)  # победа, поражение, ничья, в_процессе
+    start_time = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    end_time = db.Column(db.DateTime, index=True)
+    duration = db.Column(db.Integer)  # в секундах
+    
+    # Составной индекс для частых запросов
+    __table_args__ = (
+        db.Index('idx_user_result_time', 'user_id', 'result', 'start_time'),
+    )
     
     def __repr__(self):
         return f'<Game {self.id} - {self.result}>'
 
 class Puzzle(db.Model):
-    """Puzzle model for training exercises"""
+    """Модель головоломки для тренировочных упражнений"""
     __tablename__ = 'puzzles'
     
     id = db.Column(db.Integer, primary_key=True)
-    fen = db.Column(db.Text, nullable=False)
-    solution = db.Column(db.Text, nullable=False)  # JSON string of solution moves
-    difficulty = db.Column(db.Integer, nullable=False)  # 1-10 scale
-    category = db.Column(db.String(50))  # tactic, endgame, opening
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    times_solved = db.Column(db.Integer, default=0)
+    fen = db.Column(db.Text, nullable=False, index=True)
+    solution = db.Column(db.Text, nullable=False)  # JSON строка ходов решения
+    difficulty = db.Column(db.Integer, nullable=False, index=True)
+    category = db.Column(db.String(50), index=True)  # тактика, эндшпиль, дебют
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    times_solved = db.Column(db.Integer, default=0, index=True)
     times_failed = db.Column(db.Integer, default=0)
+    
+    # Составной индекс для частых запросов
+    __table_args__ = (
+        db.Index('idx_difficulty_category', 'difficulty', 'category'),
+    )
     
     def __repr__(self):
         return f'<Puzzle {self.id} - {self.category}>'
 
-# Database initialization function
+# Функция инициализации базы данных
 def init_db(app):
-    """Initialize the database with the Flask app"""
+    """Инициализация базы данных с Flask приложением"""
     db.init_app(app)
     with app.app_context():
         db.create_all()
     return db
 
-# Helper functions for database operations
+# Вспомогательные функции для операций с базой данных
 def create_user(username, email, password_hash):
-    """Create a new user"""
+    """Создание нового пользователя"""
     user = User(
         username=username,
         email=email,
@@ -85,7 +95,7 @@ def create_user(username, email, password_hash):
     return user
 
 def create_game(user_id, fen, player_color, skill_level):
-    """Create a new game"""
+    """Создание новой игры"""
     game = Game(
         user_id=user_id,
         fen=fen,
@@ -97,7 +107,7 @@ def create_game(user_id, fen, player_color, skill_level):
     return game
 
 def update_game_result(game_id, result, move_history=None):
-    """Update game result and end time"""
+    """Обновление результата игры и времени окончания"""
     game = Game.query.get(game_id)
     if game:
         game.result = result
@@ -110,7 +120,8 @@ def update_game_result(game_id, result, move_history=None):
     return game
 
 def get_user_stats(user_id):
-    """Get user statistics"""
+    """Получение статистики пользователя с оптимизированным запросом"""
+    # Использование get() для поиска по первичному ключу (наиболее эффективно)
     user = User.query.get(user_id)
     if user:
         total_games = user.games_played
@@ -124,3 +135,20 @@ def get_user_stats(user_id):
             'rating': user.rating
         }
     return None
+
+def get_recent_games_optimized(user_id, limit=10):
+    """Получение последних игр с оптимизированным запросом с использованием индекса"""
+    return Game.query.filter_by(
+        user_id=user_id
+    ).order_by(
+        Game.start_time.desc()
+    ).limit(limit).all()
+
+def get_games_by_result(user_id, result, limit=20):
+    """Получение игр по результату с оптимизированным запросом"""
+    return Game.query.filter(
+        Game.user_id == user_id,
+        Game.result == result
+    ).order_by(
+        Game.start_time.desc()
+    ).limit(limit).all()
