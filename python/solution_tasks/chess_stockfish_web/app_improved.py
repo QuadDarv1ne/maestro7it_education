@@ -20,6 +20,7 @@ import re
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 # Импорт моделей базы данных
 try:
@@ -195,41 +196,92 @@ except ImportError:
                     pass
         return engine_context_manager()
 
-# Настройка логирования с улучшенным форматированием
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('chess_app.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+# Настройка логирования с улучшенным форматированием и ротацией
+def setup_logging():
+    """Настройка системы логирования с ротацией файлов и расширенным форматированием"""
+    try:
+        from logging.handlers import RotatingFileHandler
+        import os
+        
+        # Создаем директорию для логов если её нет
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # Основной обработчик с ротацией (10 файлов по 10MB)
+        main_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'chess_app.log'),
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=10,
+            encoding='utf-8'
+        )
+        
+        # Обработчик для критических ошибок
+        error_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'chess_app_errors.log'),
+            maxBytes=5*1024*1024,  # 5MB
+            backupCount=5,
+            encoding='utf-8'
+        )
+        error_handler.setLevel(logging.ERROR)
+        
+        # Расширенное форматирование
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - [%(levelname)s] - %(process)d:%(thread)d - '
+            '%(filename)s:%(lineno)d - %(funcName)s - %(message)s'
+        )
+        
+        main_handler.setFormatter(formatter)
+        error_handler.setFormatter(formatter)
+        
+        # Настройка корневого логгера
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+        
+        # Очистка существующих обработчиков
+        root_logger.handlers.clear()
+        
+        # Добавление обработчиков
+        root_logger.addHandler(main_handler)
+        root_logger.addHandler(error_handler)
+        root_logger.addHandler(logging.StreamHandler(sys.stdout))
+        
+        # Отдельный логгер для отслеживания производительности
+        perf_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'performance.log'),
+            maxBytes=10*1024*1024,
+            backupCount=5,
+            encoding='utf-8'
+        )
+        perf_handler.setFormatter(formatter)
+        perf_logger = logging.getLogger('performance')
+        perf_logger.addHandler(perf_handler)
+        perf_logger.setLevel(logging.INFO)
+        
+        logging.info("Logging system initialized successfully")
+    except Exception as e:
+        print(f"Failed to initialize logging system: {e}")
+        # Fallback to basic logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+
+# Инициализация системы логирования
+setup_logging()
 logger = logging.getLogger(__name__)
 
-# Хранилище экземпляров игр по сессиям
-games = {}
-
-# Хранилище истории игр по сессиям
-game_histories = {}
-
-# Хранилище пользовательских настроек по сессиям
-user_preferences = {}
-
-# Глобальный экземпляр движка Stockfish для переиспользования
-stockfish_engine = None
+from utils.app_state import app_state
 
 # Максимальное количество одновременных игр для предотвращения перегрузки сервера
 MAX_CONCURRENT_GAMES = 20  # Увеличено с 10 до 20
 
-# Отслеживание количества активных игр
-active_game_count = 0
-
 # Пул потоков для фоновых задач (расчет ходов AI)
 # Используется небольшой пул, чтобы не перегружать систему
 AI_MOVE_THREAD_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai_move")
-
-# Временные метки сессий для очистки
-session_timestamps = {}
 
 # Интервал очистки в секундах
 CLEANUP_INTERVAL = 300  # 5 минут
@@ -240,32 +292,13 @@ GAME_TIMEOUT = 3600  # 1 час
 # Таймаут инициализации игры
 GAME_INIT_TIMEOUT = 30  # 30 секунд для инициализации игры
 
-# Отслеживание ресурсов
-resource_stats = {
-    'total_games_created': 0,
-    'total_games_cleaned': 0,
-    'peak_active_games': 0,
-    'total_sessions': 0,
-    'peak_sessions': 0
-}
-
 def cleanup_stale_games():
     """Периодическая очистка устаревших игровых сессий для предотвращения утечек памяти."""
-    global games, session_timestamps, active_game_count, resource_stats
     while True:
         try:
             time.sleep(CLEANUP_INTERVAL)
-            current_time = time.time()
-            
-            # Поиск устаревших сессий
-            try:
-                stale_sessions = [
-                    session_id for session_id, timestamp in session_timestamps.items()
-                    if current_time - timestamp > GAME_TIMEOUT
-                ]
-            except Exception as e:
-                logger.error(f"Error finding stale sessions: {e}")
-                stale_sessions = []
+            # Получение устаревших сессий через AppState
+            stale_sessions = app_state.get_stale_sessions(GAME_TIMEOUT)
             
             # Очистка устаревших сессий
             cleanup_count = 0
@@ -489,7 +522,7 @@ class ChessGame:
                 logger.warning(f"Error checking PATH for {exe_name}: {e}")
                 continue
         
-        # Return the first found path, or None if none found
+        # Возврат первого найденного пути или None, если ничего не найдено
         if found_paths:
             selected_path = found_paths[0]
             logger.info(f"Selected Stockfish executable: {selected_path}")
@@ -552,28 +585,20 @@ class ChessGame:
             # Инициализация нового движка с таймаутом
             logger.info(f"Initializing Stockfish engine from: {self.engine_path}")
             try:
-                # Добавление таймаута для предотвращения бесконечного ожидания
-                import signal
+                # Добавление таймаута для предотвращения бесконечного ожидания (кросс-платформенное решение)
+                from concurrent.futures import TimeoutError as FutureTimeoutError
                 
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("Stockfish engine initialization timed out")
-                
-                # Установка таймаута (10 секунд)
-                old_handler = None
-                if hasattr(signal, 'SIGALRM'):
-                    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-                    signal.alarm(10)
-                
-                try:
+                def init_engine_task():
+                    """Инициализация движка в отдельном потоке для контроля таймаута"""
                     logger.info(f"Creating Stockfish engine instance with skill level {self.skill_level}")
-                    self.engine = Stockfish(path=self.engine_path)
+                    engine = Stockfish(path=self.engine_path)
                     
                     # Настройка движка с оптимизированными параметрами на основе уровня сложности
                     engine_params = self._calculate_engine_parameters(self.skill_level)
                     logger.info(f"Configuring engine parameters: {engine_params}")
-                    self.engine.set_skill_level(self.skill_level)
-                    self.engine.set_depth(engine_params['Depth'])
-                    self.engine.update_engine_parameters({
+                    engine.set_skill_level(self.skill_level)
+                    engine.set_depth(engine_params['Depth'])
+                    engine.update_engine_parameters({
                         'Threads': engine_params['Threads'],
                         'Hash': engine_params['Hash'],
                         'Contempt': engine_params['Contempt'],
@@ -584,26 +609,30 @@ class ChessGame:
                     
                     # Тестирование движка простой операцией
                     logger.info("Testing engine functionality")
-                    test_fen = self.engine.get_fen_position()
+                    test_fen = engine.get_fen_position()
                     if test_fen is None:
                         raise EngineInitializationError("Engine test failed - returned None for FEN position")
                     logger.info(f"Engine test successful. Initial FEN: {test_fen}")
-                    
-                    # Сохранение движка для переиспользования
-                    stockfish_engine = self.engine
-                    self.initialized = True
-                    init_duration = time.time() - start_time
-                    logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {init_duration:.2f} seconds")
-                    return True
-                finally:
-                    # Отмена таймаута
-                    if hasattr(signal, 'SIGALRM') and old_handler:
-                        signal.alarm(0)
-                        signal.signal(signal.SIGALRM, old_handler)
-            except TimeoutError as e:
-                error_msg = "Stockfish engine initialization timed out"
-                logger.error(error_msg)
-                raise EngineInitializationError(error_msg) from e
+                    return engine
+                
+                # Использование ThreadPoolExecutor с таймаутом (работает на всех платформах)
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(init_engine_task)
+                    try:
+                        self.engine = future.result(timeout=15)  # Таймаут 15 секунд
+                    except FutureTimeoutError:
+                        error_msg = "Stockfish engine initialization timed out (15 seconds)"
+                        logger.error(error_msg)
+                        # Попытка отменить задачу (может не сработать, если уже выполняется)
+                        future.cancel()
+                        raise EngineInitializationError(error_msg)
+                
+                # Сохранение движка для переиспользования
+                stockfish_engine = self.engine
+                self.initialized = True
+                init_duration = time.time() - start_time
+                logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {init_duration:.2f} seconds")
+                return True
             except Exception as e:
                 error_msg = f"Stockfish engine initialization failed: {str(e)}"
                 logger.error(error_msg)
@@ -635,16 +664,32 @@ class ChessGame:
     def __del__(self):
         """Очистка движка при уничтожении экземпляра ChessGame"""
         try:
-            if self.initialized and self.engine:
-                if CONNECTION_POOLING_ENABLED and self._engine_context:
+            if hasattr(self, 'initialized') and hasattr(self, 'engine'):
+                if self.initialized and self.engine:
+                    if hasattr(self, '_engine_context') and self._engine_context:
+                        try:
+                            # Безопасное закрытие контекста движка
+                            self._engine_context.__exit__(None, None, None)
+                        except Exception as e:
+                            logger.warning(f"Error closing engine context: {e}")
                     try:
-                        self._engine_context.__exit__(None, None, None)
-                    except:
-                        pass
-                # Stockfish не имеет явных методов очистки
-                self.engine = None
+                        # Принудительное закрытие процесса Stockfish
+                        if hasattr(self.engine, 'process') and self.engine.process:
+                            self.engine.process.terminate()
+                            self.engine.process.wait(timeout=1)
+                    except Exception as e:
+                        logger.warning(f"Error terminating Stockfish process: {e}")
+                    finally:
+                        # Очистка ссылок
+                        self.engine = None
+                        self._engine_context = None
+                        self.initialized = False
         except Exception as e:
-            logger.warning(f"Error cleaning up engine: {e}")
+            logger.error(f"Critical error during engine cleanup: {e}")
+            # В случае критической ошибки пытаемся очистить все ссылки
+            self.engine = None
+            self._engine_context = None
+            self.initialized = False
     
     @cached('board_state')
     @track_fen_retrieval
@@ -873,7 +918,7 @@ def profile_page():
 
 @socketio.on('connect')
 @handle_chess_errors(context="websocket_connect")
-def handle_connect():
+def handle_connect(auth=None):
     try:
         # Создание ID сессии для Socket.IO соединения, если его нет
         logger.info("WebSocket connect event received")
@@ -907,43 +952,15 @@ def handle_disconnect():
         session_id = session.get('session_id')
         logger.info(f"WebSocket disconnect event received for session: {session_id}")
         if session_id:
-            # Очистка экземпляра игры при отключении пользователя
-            if session_id in games:
-                try:
-                    game = games[session_id]
-                    # Правильная очистка игрового движка
-                    if hasattr(game, 'engine') and game.engine:
-                        if CONNECTION_POOLING_ENABLED and hasattr(game, '_engine_context') and game._engine_context:
-                            try:
-                                game._engine_context.__exit__(None, None, None)
-                            except Exception as pool_error:
-                                logger.warning(f"Error returning engine to pool for session {session_id}: {pool_error}")
-                        else:
-                            # For non-pooled engines, just dereference
-                            game.engine = None
-                    
-                    del games[session_id]
-                    global active_game_count
-                    active_game_count = max(0, active_game_count - 1)
-                    logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
-                    logger.info(f"Active games count: {active_game_count}")
-                except Exception as e:
-                    logger.error(f"Error cleaning up game for session {session_id}: {e}")
-            
-            # Remove timestamp
-            if session_id in session_timestamps:
-                del session_timestamps[session_id]
-                logger.info(f"Removed timestamp for session: {session_id}")
-            
-            # Remove user preferences
-            if session_id in user_preferences:
-                del user_preferences[session_id]
-                logger.info(f"Removed user preferences for session: {session_id}")
-            
-            # Remove game history
-            if session_id in game_histories:
-                del game_histories[session_id]
-                logger.info(f"Removed game history for session: {session_id}")
+            # Удаление игры через AppState
+            if app_state.remove_game(session_id):
+                logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
+                
+                # Получение актуальной статистики
+                stats = app_state.get_stats()
+                logger.info(f"Active games count: {stats['active_games']}")
+            else:
+                logger.warning(f"No game found for session: {session_id}")
         
         # Отправка подтверждения отключения
         logger.info("Client disconnected successfully")
@@ -1177,27 +1194,27 @@ def user_profile():
 @app.route('/health')
 @handle_chess_errors(context="health_check")
 def health_check():
-    """Health check endpoint for monitoring"""
+    """Endpoint проверки здоровья для мониторинга"""
     try:
-        # Check if we can create a simple ChessGame instance
+        # Проверка, можем ли мы создать простой экземпляр ChessGame
         game = ChessGame()
         
-        # Get cache statistics if cache manager is enabled
+        # Получение статистики кэша, если менеджер кэша включен
         cache_stats = {}
         if CACHE_MANAGER_ENABLED and cache_manager:
             cache_stats = cache_manager.get_cache_stats()
         
-        # Get performance metrics if performance tracking is enabled
+        # Получение метрик производительности, если отслеживание производительности включено
         perf_metrics = {}
         if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
             perf_metrics = performance_tracker.get_metrics_summary()
         
-        # Get error statistics if error handler is enabled
+        # Получение статистики ошибок, если обработчик ошибок включен
         error_stats = {}
         if ERROR_HANDLER_ENABLED and error_handler:
             error_stats = error_handler.get_error_stats()
         
-        # Get connection pool statistics if connection pooling is enabled
+        # Получение статистики пула соединений, если пул соединений включен
         pool_stats = {}
         if CONNECTION_POOLING_ENABLED and stockfish_pool:
             pool_stats = stockfish_pool.get_stats()
@@ -1228,6 +1245,13 @@ def handle_init(data):
         logger.error("No session ID found")
         emit('error', {'message': 'Ошибка сессии. Попробуйте обновить страницу.'})
         return
+        
+    # Проверка лимита игр через AppState
+    stats = app_state.get_stats()
+    if stats['active_games'] >= MAX_CONCURRENT_GAMES:
+        logger.warning(f"Maximum concurrent games reached ({MAX_CONCURRENT_GAMES}). Rejecting new game request.")
+        emit('error', {'message': 'Сервер перегружен. Пожалуйста, попробуйте позже.'})
+        return
     
     try:
         player_color = data.get('color', 'white')
@@ -1235,7 +1259,7 @@ def handle_init(data):
         
         logger.info(f"Creating game with color: {player_color}, skill level: {skill_level}")
         
-        # Check if we've reached the maximum concurrent games
+        # Проверка, достигнуто ли максимальное количество одновременных игр
         global active_game_count
         if active_game_count >= MAX_CONCURRENT_GAMES:
             logger.warning(f"Maximum concurrent games reached ({MAX_CONCURRENT_GAMES}). Rejecting new game request.")
@@ -1244,7 +1268,7 @@ def handle_init(data):
             logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
             return
         
-        # Check if session already has an active game
+        # Проверка, есть ли у сессии уже активная игра
         if session_id in games:
             logger.info(f"Session {session_id} already has an active game. Cleaning up old game.")
             try:
@@ -1267,14 +1291,11 @@ def handle_init(data):
                 engine_init_time = time.time() - engine_init_start
                 logger.info(f"Engine initialization took {engine_init_time:.2f} seconds")
                 
-                games[session_id] = game
-                active_game_count += 1
-                
-                # Update session timestamp
-                if session_id not in session_timestamps:
-                    session_timestamps[session_id] = time.time()
-                else:
-                    session_timestamps[session_id] = time.time()
+                # Добавление игры через AppState
+                if not app_state.add_game(session_id, game):
+                    logger.error("Failed to add game to AppState")
+                    emit('error', {'message': 'Ошибка инициализации игры'})
+                    return
                 
                 # Get initial FEN with timeout handling
                 try:
@@ -1361,12 +1382,12 @@ def handle_move(data):
         session_id = session.get('session_id')
         logger.info(f"Session ID: {session_id}")
         
-        if not session_id or session_id not in games:
+        # Получение игры через AppState
+        game = app_state.get_game(session_id)
+        if not session_id or not game:
             logger.error("Game not initialized for this session")
             emit('error', {'message': 'Game not initialized'})
             return
-
-        game = games[session_id]
         uci_move = data.get('move')
         
         # Validate move exists
@@ -1501,7 +1522,7 @@ def handle_move(data):
                 ai_move_time = time.time() - ai_move_start
                 logger.info(f"AI move calculation took {ai_move_time:.2f} seconds")
                 
-                # Notify client that AI finished thinking
+                # Уведомление клиента, что AI закончил думать
                 emit('ai_thinking', {'status': 'complete', 'time': ai_move_time})
             except Exception as e:
                 logger.error(f"Error getting AI move: {e}")
@@ -1510,7 +1531,7 @@ def handle_move(data):
                 return
             
             if ai_move:
-                # Store AI move as the last move
+                # Сохранение хода AI как последнего хода
                 game.last_move = ai_move
                 
                 ai_move_execution_start = time.time()
@@ -1526,7 +1547,7 @@ def handle_move(data):
                     emit('error', {'message': 'Ошибка выполнения хода компьютера'})
                     return
                     
-                # Add AI move to history
+                # Добавление хода AI в историю
                 game.move_history.append(ai_move)
                     
                 try:
@@ -1540,7 +1561,7 @@ def handle_move(data):
                     emit('error', {'message': 'Ошибка получения позиции после хода компьютера'})
                     return
                 
-                # Check game status after AI move
+                # Проверка статуса игры после хода AI
                 game_status_start = time.time()
                 try:
                     game_status = game.get_game_status(fen)
@@ -1552,33 +1573,33 @@ def handle_move(data):
                     return
                 
                 if game_status['game_over']:
-                    # Update game result in database if user is logged in and database is enabled
+                    # Обновление результата игры в базе данных, если пользователь вошел и база данных включена
                     user_id = session.get('user_id')
                     if DATABASE_ENABLED and user_id and Game is not None and db is not None:
                         try:
-                            # Find the game in the database
+                            # Поиск игры в базе данных
                             db_game = Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first()
                             if db_game:
-                                # Update game result
+                                # Обновление результата игры
                                 db_game.result = game_status['result']
                                 db_game.end_time = datetime.utcnow()
                                 db_game.duration = int((db_game.end_time - db_game.start_time).total_seconds()) if db_game.start_time else 0
                                 db_game.move_history = json.dumps(game.move_history) if game.move_history else None
                                 
-                                # Update user stats
+                                # Обновление статистики пользователя
                                 user = User.query.get(user_id) if User is not None else None
                                 if user and User is not None:
-                                    # Use a transaction to ensure consistency
+                                    # Использование транзакции для обеспечения согласованности
                                     user.games_played = (user.games_played or 0) + 1
                                     if game_status.get('winner') == game.player_color:
                                         user.games_won = (user.games_won or 0) + 1
-                                        # Simple rating update - in a real app, you'd use a proper rating system
+                                        # Простое обновление рейтинга - в реальном приложении использовалась бы правильная система рейтинга
                                         user.rating = (user.rating or 1200) + 10
                                     elif game_status['result'] == 'stalemate':
-                                        # No rating change for stalemate
+                                        # Нет изменения рейтинга при пате
                                         pass
                                     else:
-                                        # Loss - decrease rating
+                                        # Поражение - уменьшение рейтинга
                                         user.rating = max(100, (user.rating or 1200) - 5)
                                 
                                 db.session.commit()
@@ -1636,7 +1657,7 @@ def handle_move(data):
 @socketio.on('takeback_move')
 @handle_chess_errors(context="move_takeback")
 def handle_takeback():
-    """Handle takeback move request"""
+    """Обработка запроса на отмену хода"""
     try:
         session_id = session.get('session_id')
         if not session_id or session_id not in games:
@@ -1688,7 +1709,7 @@ def handle_takeback():
 @socketio.on('analyze_position')
 @handle_chess_errors(context="position_analysis")
 def handle_analysis(data):
-    """Analyze the current position and return evaluation"""
+    """Анализ текущей позиции и возврат оценки"""
     try:
         session_id = session.get('session_id')
         if not session_id or session_id not in games:
@@ -1726,7 +1747,7 @@ def handle_analysis(data):
 @socketio.on('save_preferences')
 @handle_chess_errors(context="preferences_save")
 def handle_save_preferences(data):
-    """Save user preferences"""
+    """Сохранение пользовательских настроек"""
     try:
         session_id = session.get('session_id')
         if not session_id:
@@ -1747,7 +1768,7 @@ def handle_save_preferences(data):
 @socketio.on('load_preferences')
 @handle_chess_errors(context="preferences_load")
 def handle_load_preferences():
-    """Load user preferences"""
+    """Загрузка пользовательских настроек"""
     try:
         session_id = session.get('session_id')
         if not session_id:
@@ -1767,7 +1788,7 @@ def handle_load_preferences():
 @socketio.on('save_game')
 @handle_chess_errors(context="game_save")
 def handle_save_game(data):
-    """Save the current game state"""
+    """Сохранение текущего состояния игры"""
     try:
         session_id = session.get('session_id')
         if not session_id or session_id not in games:
@@ -1812,7 +1833,7 @@ def handle_save_game(data):
 @socketio.on('load_game')
 @handle_chess_errors(context="game_load")
 def handle_load_game(data):
-    """Load a saved game state"""
+    """Загрузка сохраненного состояния игры"""
     try:
         session_id = session.get('session_id')
         serialized_state = data.get('game_state')
@@ -1881,7 +1902,7 @@ def handle_load_game(data):
 
 @app.route('/pool-stats')
 def pool_stats():
-    """Endpoint to get connection pool statistics"""
+    """Endpoint для получения статистики пула соединений"""
     try:
         # Test connection pooling if enabled
         pool_stats = {}
@@ -1904,7 +1925,7 @@ def pool_stats():
 @app.route('/metrics')
 @handle_chess_errors(context="metrics")
 def metrics_endpoint():
-    """Endpoint to get performance metrics in Prometheus format"""
+    """Endpoint для получения метрик производительности в формате Prometheus"""
     try:
         metrics = []
         
@@ -1956,23 +1977,16 @@ def metrics_endpoint():
 def resource_stats_endpoint():
     """Endpoint to get resource usage statistics"""
     try:
-        global resource_stats, active_game_count, session_timestamps, games, user_preferences, game_histories
-        
-        # Update resource statistics
-        resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
-        resource_stats['peak_sessions'] = max(resource_stats['peak_sessions'], len(session_timestamps))
+        # Получение статистики через AppState
+        app_stats = app_state.get_stats()
         
         stats = {
             'status': 'success',
-            'resource_stats': resource_stats,
+            'resource_stats': app_stats['resource_stats'],
             'current_stats': {
-                'active_games': active_game_count,
-                'tracked_sessions': len(session_timestamps),
-                'games_in_memory': len(games),
-                'user_preferences_count': len(user_preferences),
-                'game_histories_count': len(game_histories)
-            },
-            'memory_usage': {}
+                'active_games': app_stats['active_games'],
+                'tracked_sessions': len(app_stats['game_stats']),
+                'memory_usage': {}
         }
         
         # Try to get memory usage if psutil is available

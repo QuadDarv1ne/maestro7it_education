@@ -25,6 +25,11 @@ let userPreferences = {
     defaultColor: 'white'
 };
 let moveList = []; // Track moves in algebraic notation
+let chess = null; // Chess.js instance for validation
+let playerTimer = 0; // Player timer in seconds
+let aiTimer = 0; // AI timer in seconds
+let timerInterval = null;
+let currentTurn = 'white'; // Track whose turn it is
 
 // Initialize audio
 function initAudio() {
@@ -221,146 +226,125 @@ socket.on('enable_start_button', () => {
     }
 });
 
-document.getElementById('start').addEventListener('click', () => {
-    playerColor = document.getElementById('color').value;
-    const level = document.getElementById('level').value;
-    
-    console.log('Starting game with color:', playerColor, 'level:', level);
-    
-    // Validate level input
-    if (level < 0 || level > 20) {
-        showNotification('Уровень должен быть от 0 до 20', 'error');
-        return;
-    }
-    
-    // Save user preferences
-    saveUserPreferences();
-    
-    // Disable start button and show loading state
-    const startBtn = document.getElementById('start');
-    startBtn.disabled = true;
-    startBtn.textContent = 'Загрузка...';
-    
-    // Update status to show we're initializing
-    document.getElementById('status').innerText = '⏳ Инициализация игры...';
-    
-    // Set a timeout to handle initialization errors
-    const initTimeout = setTimeout(() => {
-        document.getElementById('status').innerText = '⚠️ Превышено время ожидания инициализации. Попробуйте еще раз.';
-        startBtn.disabled = false;
-        startBtn.textContent = 'Начать игру';
-        showNotification('Превышено время ожидания инициализации. Попробуйте еще раз.', 'error');
-    }, 30000); // 30 seconds timeout
-    
-    // Store timeout ID to clear it later
-    window.initTimeout = initTimeout;
-    
-    // Emit init_game event
-    socket.emit('init_game', { color: playerColor, level: parseInt(level) });
-    console.log('Sent init_game event');
-});
+// Start game button handler
+const startBtn = document.getElementById('start');
+if (startBtn) {
+    startBtn.addEventListener('click', () => {
+        // Get color from active button
+        const activeColorBtn = document.querySelector('.color-btn.active');
+        playerColor = activeColorBtn ? activeColorBtn.dataset.color : 'white';
+        const level = document.getElementById('level').value;
+        
+        console.log('Starting game with color:', playerColor, 'level:', level);
+        
+        // Validate level input
+        if (level < 0 || level > 20) {
+            showNotification('Уровень должен быть от 0 до 20', 'error');
+            return;
+        }
+        
+        // Save user preferences
+        saveUserPreferences();
+        
+        // Disable start button and show loading state
+        const startBtn = document.getElementById('start');
+        startBtn.disabled = true;
+        const btnText = startBtn.querySelector('.btn-text');
+        if (btnText) {
+            btnText.textContent = 'Загрузка...';
+        } else {
+            startBtn.textContent = 'Загрузка...';
+        }
+        
+        // Update status to show we're initializing
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.innerText = '⏳ Инициализация игры...';
+        }
+        
+        // Set a timeout to handle initialization errors
+        const initTimeout = setTimeout(() => {
+            if (statusEl) {
+                statusEl.innerText = '⚠️ Превышено время ожидания инициализации. Попробуйте еще раз.';
+            }
+            startBtn.disabled = false;
+            if (btnText) {
+                btnText.textContent = 'Начать игру';
+            } else {
+                startBtn.textContent = 'Начать игру';
+            }
+            showNotification('Превышено время ожидания инициализации. Попробуйте еще раз.', 'error');
+        }, 30000); // 30 seconds timeout
+        
+        // Store timeout ID to clear it later
+        window.initTimeout = initTimeout;
+        
+        // Emit init_game event
+        socket.emit('init_game', { color: playerColor, level: parseInt(level) });
+        console.log('Sent init_game event');
+    });
+}
 
 // Add reset button functionality
 function addResetButton() {
-    // Remove existing reset button if it exists
-    const existingResetBtn = document.getElementById('reset');
-    if (existingResetBtn) {
-        existingResetBtn.remove();
-    }
-    
-    // Create button container
-    const buttonContainer = document.createElement('div');
-    buttonContainer.id = 'button-container';
-    buttonContainer.style.margin = '10px 0';
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'center';
-    buttonContainer.style.gap = '10px';
-    buttonContainer.style.flexWrap = 'wrap';
-    
-    // Create reset button
-    const resetBtn = document.createElement('button');
-    resetBtn.id = 'reset';
-    resetBtn.textContent = 'Новая игра';
-    resetBtn.addEventListener('click', () => {
+    // Reset button is already in HTML, just add event listener
+    const resetBtn = document.getElementById('reset');
+    if (resetBtn && !resetBtn.hasAttribute('data-listener')) {
+        resetBtn.setAttribute('data-listener', 'true');
+        resetBtn.addEventListener('click', () => {
         if (board) {
             board.destroy();
             board = null;
         }
-        document.getElementById('setup').style.display = 'block';
-        document.getElementById('board').style.display = 'none';
+        
+        // Reset game state
+        chess = null;
         gameActive = false;
         gameHistory = [];
         currentHistoryIndex = -1;
         moveList = [];
         savedGameState = null;
+        playerTimer = 0;
+        aiTimer = 0;
+        stopTimer();
         
-        // Remove navigation buttons
-        const navContainer = document.getElementById('navigation-container');
-        if (navContainer) {
-            navContainer.remove();
+        // Show setup and hide game section
+        document.querySelector('.setup-screen').style.display = 'flex';
+        document.getElementById('game-section').style.display = 'none';
+        
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.innerText = 'Готовы начать игру!';
         }
-        
-        // Remove analysis panel
-        const analysisPanel = document.getElementById('analysis-panel');
-        if (analysisPanel) {
-            analysisPanel.remove();
-        }
-        
-        // Remove save/load buttons
-        const saveLoadContainer = document.getElementById('save-load-container');
-        if (saveLoadContainer) {
-            saveLoadContainer.remove();
-        }
-        
-        // Remove preferences button
-        const preferencesBtn = document.getElementById('preferences-btn');
-        if (preferencesBtn) {
-            preferencesBtn.remove();
-        }
-        
-        // Remove move list
-        const moveListPanel = document.getElementById('move-list');
-        if (moveListPanel) {
-            moveListPanel.remove();
-        }
-        
-        // Remove button container
-        const buttonContainer = document.getElementById('button-container');
-        if (buttonContainer) {
-            buttonContainer.remove();
-        }
-        
-        document.getElementById('status').innerText = 'Готовы начать игру!';
+        updateMoveListDisplay();
+        showNotification('Игра сброшена', 'info');
     });
+    }
     
-    // Create takeback button
-    const takebackBtn = document.createElement('button');
-    takebackBtn.id = 'takeback';
-    takebackBtn.textContent = '↩️ Отменить ход';
-    takebackBtn.addEventListener('click', takebackMove);
+    // Takeback button
+    const takebackBtn = document.getElementById('takeback');
+    if (takebackBtn && !takebackBtn.hasAttribute('data-listener')) {
+        takebackBtn.setAttribute('data-listener', 'true');
+        takebackBtn.addEventListener('click', takebackMove);
+    }
     
-    // Create analyze button
-    const analyzeBtn = document.createElement('button');
-    analyzeBtn.id = 'analyze';
-    analyzeBtn.textContent = 'Анализ';
-    analyzeBtn.addEventListener('click', analyzePosition);
+    // Analyze button
+    const analyzeBtn = document.getElementById('analyze');
+    if (analyzeBtn && !analyzeBtn.hasAttribute('data-listener')) {
+        analyzeBtn.setAttribute('data-listener', 'true');
+        analyzeBtn.addEventListener('click', analyzePosition);
+    }
     
-    // Add buttons to container
-    buttonContainer.appendChild(resetBtn);
-    buttonContainer.appendChild(takebackBtn);
-    buttonContainer.appendChild(analyzeBtn);
-    
-    // Add container to page
-    document.querySelector('.container').insertBefore(buttonContainer, document.getElementById('status'));
-    
-    // Add save/load buttons
-    addSaveLoadButtons();
-    
-    // Add preferences button
-    addPreferencesButton();
-    
-    // Add navigation controls
-    addNavigationControls();
+    // Clear history button
+    const clearHistoryBtn = document.getElementById('clear-history');
+    if (clearHistoryBtn && !clearHistoryBtn.hasAttribute('data-listener')) {
+        clearHistoryBtn.setAttribute('data-listener', 'true');
+        clearHistoryBtn.addEventListener('click', () => {
+            moveList = [];
+            updateMoveListDisplay();
+            showNotification('История ходов очищена', 'info');
+        });
+    }
 }
 
 function takebackMove() {
@@ -607,103 +591,108 @@ function analyzePosition() {
 }
 
 function displayAnalysis(data) {
-    // Remove existing analysis panel if it exists
-    const existingPanel = document.getElementById('analysis-panel');
-    if (existingPanel) {
-        existingPanel.remove();
+    const analysisPanel = document.getElementById('analysis-panel');
+    const analysisContent = document.getElementById('analysis-content');
+    
+    if (!analysisPanel || !analysisContent) {
+        console.error('Analysis panel not found in HTML');
+        return;
     }
     
-    // Create analysis panel
-    const analysisPanel = document.createElement('div');
-    analysisPanel.id = 'analysis-panel';
-    analysisPanel.style.margin = '15px 0';
-    analysisPanel.style.padding = '15px';
-    analysisPanel.style.background = 'rgba(255, 255, 255, 0.1)';
-    analysisPanel.style.borderRadius = '10px';
-    analysisPanel.style.textAlign = 'left';
-    
-    // Add title
-    const title = document.createElement('h3');
-    title.textContent = 'Анализ позиции';
-    title.style.color = '#4FC3F7';
-    title.style.marginTop = '0';
-    analysisPanel.appendChild(title);
+    // Clear existing content
+    analysisContent.innerHTML = '';
     
     // Add evaluation
     if (data.evaluation) {
-        const evalDiv = document.createElement('div');
-        evalDiv.style.marginBottom = '10px';
+        const evalItem = document.createElement('div');
+        evalItem.className = 'analysis-item';
         
-        let evalText = 'Оценка: ';
+        const evalLabel = document.createElement('span');
+        evalLabel.className = 'analysis-label';
+        evalLabel.textContent = 'Оценка позиции:';
+        
+        const evalValue = document.createElement('span');
+        evalValue.className = 'analysis-value';
+        
+        let evalText = '';
         if (data.evaluation.type === 'mate') {
-            evalText += `Мат в ${Math.abs(data.evaluation.value)} ходов`;
+            evalText = `Мат в ${Math.abs(data.evaluation.value)} ходов`;
             evalText += data.evaluation.value > 0 ? ' (белые)' : ' (черные)';
         } else if (data.evaluation.type === 'cp') {
             const cp = data.evaluation.value / 100;
-            evalText += `${cp > 0 ? '+' : ''}${cp.toFixed(2)}`;
+            evalText = `${cp > 0 ? '+' : ''}${cp.toFixed(2)}`;
         } else {
-            evalText += 'Неопределено';
+            evalText = 'Неопределено';
         }
+        evalValue.textContent = evalText;
         
-        evalDiv.textContent = evalText;
-        analysisPanel.appendChild(evalDiv);
+        evalItem.appendChild(evalLabel);
+        evalItem.appendChild(evalValue);
+        analysisContent.appendChild(evalItem);
     }
     
     // Add best move
     if (data.best_move) {
-        const bestMoveDiv = document.createElement('div');
-        bestMoveDiv.style.marginBottom = '10px';
-        bestMoveDiv.textContent = `Лучший ход: ${data.best_move}`;
-        analysisPanel.appendChild(bestMoveDiv);
+        const bestMoveItem = document.createElement('div');
+        bestMoveItem.className = 'analysis-item';
+        
+        const bestMoveLabel = document.createElement('span');
+        bestMoveLabel.className = 'analysis-label';
+        bestMoveLabel.textContent = 'Лучший ход:';
+        
+        const bestMoveValue = document.createElement('span');
+        bestMoveValue.className = 'analysis-value';
+        bestMoveValue.textContent = data.best_move;
+        
+        bestMoveItem.appendChild(bestMoveLabel);
+        bestMoveItem.appendChild(bestMoveValue);
+        analysisContent.appendChild(bestMoveItem);
     }
     
     // Add top moves
     if (data.top_moves && data.top_moves.length > 0) {
-        const topMovesDiv = document.createElement('div');
-        topMovesDiv.style.marginBottom = '10px';
-        
         const topMovesTitle = document.createElement('div');
-        topMovesTitle.textContent = 'Лучшие ходы:';
-        topMovesTitle.style.fontWeight = 'bold';
-        topMovesDiv.appendChild(topMovesTitle);
+        topMovesTitle.className = 'analysis-item';
+        topMovesTitle.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+        topMovesTitle.style.paddingBottom = '0.5rem';
+        topMovesTitle.style.marginBottom = '0.5rem';
         
-        const movesList = document.createElement('ul');
-        movesList.style.paddingLeft = '20px';
-        movesList.style.margin = '5px 0';
+        const titleLabel = document.createElement('span');
+        titleLabel.className = 'analysis-label';
+        titleLabel.textContent = 'Лучшие ходы:';
+        titleLabel.style.fontWeight = 'bold';
         
-        data.top_moves.forEach(move => {
-            const moveItem = document.createElement('li');
-            let moveText = move.Move;
+        topMovesTitle.appendChild(titleLabel);
+        analysisContent.appendChild(topMovesTitle);
+        
+        data.top_moves.slice(0, 5).forEach((move, index) => {
+            const moveItem = document.createElement('div');
+            moveItem.className = 'analysis-item';
+            
+            const moveLabel = document.createElement('span');
+            moveLabel.className = 'analysis-label';
+            moveLabel.textContent = `${index + 1}. ${move.Move}`;
+            
+            const moveValue = document.createElement('span');
+            moveValue.className = 'analysis-value';
+            
+            let valueText = '';
             if (move.Centipawn !== undefined) {
                 const cp = move.Centipawn / 100;
-                moveText += ` (${cp > 0 ? '+' : ''}${cp.toFixed(2)})`;
+                valueText = `${cp > 0 ? '+' : ''}${cp.toFixed(2)}`;
             } else if (move.Mate !== undefined) {
-                moveText += ` (Мат в ${Math.abs(move.Mate)} ходов)`;
+                valueText = `Мат в ${Math.abs(move.Mate)}`;
             }
-            moveItem.textContent = moveText;
-            movesList.appendChild(moveItem);
+            moveValue.textContent = valueText;
+            
+            moveItem.appendChild(moveLabel);
+            moveItem.appendChild(moveValue);
+            analysisContent.appendChild(moveItem);
         });
-        
-        topMovesDiv.appendChild(movesList);
-        analysisPanel.appendChild(topMovesDiv);
     }
     
-    // Add close button
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = 'Закрыть';
-    closeBtn.style.cssText = 'padding: 5px 10px; font-size: 14px; margin-top: 10px;';
-    closeBtn.addEventListener('click', () => {
-        analysisPanel.remove();
-    });
-    analysisPanel.appendChild(closeBtn);
-    
-    // Insert after navigation container
-    const navContainer = document.getElementById('navigation-container');
-    if (navContainer) {
-        navContainer.parentNode.insertBefore(analysisPanel, navContainer.nextSibling);
-    } else {
-        document.querySelector('.container').insertBefore(analysisPanel, document.getElementById('status'));
-    }
+    // Show the panel
+    analysisPanel.style.display = 'block';
 }
 
 function addNavigationControls() {
@@ -813,8 +802,8 @@ function updateNavigationButtons() {
 
 socket.on('game_initialized', (data) => {
     console.log('Game initialized:', data);
-    document.getElementById('setup').style.display = 'none';
-    document.getElementById('board').style.display = 'block';
+    document.querySelector('.setup-screen').style.display = 'none';
+    document.getElementById('game-section').style.display = 'block';
     gameActive = true;
     
     // Clear initialization timeout
@@ -827,6 +816,15 @@ socket.on('game_initialized', (data) => {
     gameHistory = [];
     currentHistoryIndex = -1;
     moveList = [];
+    
+    // Initialize chess.js for validation
+    chess = new Chess(data.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    currentTurn = chess.turn();
+    
+    // Reset timers
+    playerTimer = 0;
+    aiTimer = 0;
+    startTimer();
 
     // Destroy existing board if it exists
     if (board) {
@@ -840,6 +838,7 @@ socket.on('game_initialized', (data) => {
         onDrop: onDrop,
         onMouseoutSquare: onMouseoutSquare,
         onMouseoverSquare: onMouseoverSquare,
+        onSnapEnd: onSnapEnd,
         orientation: data.player_color || playerColor,
         pieceTheme: 'https://unpkg.com/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
     });
@@ -850,15 +849,27 @@ socket.on('game_initialized', (data) => {
     
     // Re-enable start button
     const startBtn = document.getElementById('start');
-    startBtn.disabled = false;
-    startBtn.textContent = 'Начать игру';
+    if (startBtn) {
+        startBtn.disabled = false;
+        startBtn.textContent = 'Начать игру';
+    }
     
     // Add reset button
     addResetButton();
     
+    // Add flip board button handler
+    const flipBtn = document.getElementById('flip-board');
+    if (flipBtn) {
+        flipBtn.addEventListener('click', flipBoard);
+    }
+    
+    // Initialize move list display
+    updateMoveListDisplay();
+    
     // Update status
-    document.getElementById('status').innerText = playerColor === 'white' ? 
+    const statusText = playerColor === 'white' ? 
         'Ваш ход: белые' : 'Ход компьютера: черные';
+    document.getElementById('status').innerText = statusText;
     
     // Show success notification
     showNotification('Игра начата успешно!', 'success');
@@ -876,8 +887,20 @@ socket.on('preferences_loaded', (data) => {
 
 function applyUserPreferences() {
     // Apply default values to form
-    document.getElementById('color').value = userPreferences.defaultColor;
-    document.getElementById('level').value = userPreferences.defaultDifficulty;
+    const colorSelect = document.getElementById('color');
+    if (colorSelect) {
+        colorSelect.value = userPreferences.defaultColor;
+    }
+    // Update color button
+    const colorBtn = document.querySelector(`.color-btn[data-color="${userPreferences.defaultColor}"]`);
+    if (colorBtn) {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        colorBtn.classList.add('active');
+    }
+    const levelInput = document.getElementById('level');
+    if (levelInput) {
+        levelInput.value = userPreferences.defaultDifficulty;
+    }
     
     // Apply board flip if needed
     if (board && userPreferences.autoFlipBoard && !isFlipped) {
@@ -886,25 +909,62 @@ function applyUserPreferences() {
 }
 
 function saveUserPreferences() {
-    userPreferences.defaultColor = document.getElementById('color').value;
-    userPreferences.defaultDifficulty = parseInt(document.getElementById('level').value);
+    const activeColorBtn = document.querySelector('.color-btn.active');
+    userPreferences.defaultColor = activeColorBtn ? activeColorBtn.dataset.color : 'white';
+    const levelInput = document.getElementById('level');
+    userPreferences.defaultDifficulty = levelInput ? parseInt(levelInput.value) : 5;
     
     socket.emit('save_preferences', {
         preferences: userPreferences
     });
 }
 
-function onDragStart(source, piece) {
-    if (!gameActive) return false;
+function onDragStart(source, piece, position, orientation) {
+    if (!gameActive || !chess) return false;
+    
     // Разрешаем ход только своей фигурой
     const isWhite = piece.startsWith('w');
     const isPlayerWhite = (playerColor === 'white');
-    return isPlayerWhite === isWhite;
+    const isPlayerTurn = (chess.turn() === 'w') === isPlayerWhite;
+    
+    if (!isPlayerTurn || isPlayerWhite !== isWhite) {
+        return false;
+    }
+    
+    // Show possible moves for this piece
+    if (userPreferences.showPossibleMoves && chess) {
+        showPossibleMoves(source);
+    }
+    
+    return true;
 }
 
 function onDrop(source, target) {
-    const move = source + target; // UCI: e2e4
-    console.log('Making move:', move);
+    if (!chess) return 'snapback';
+    
+    const move = {
+        from: source,
+        to: target,
+        promotion: 'q' // Default to queen promotion
+    };
+    
+    // Check if this is a valid move using chess.js
+    const legalMove = chess.move(move);
+    
+    if (!legalMove) {
+        // Invalid move - snap back
+        console.log('Invalid move:', move);
+        showNotification('Недопустимый ход!', 'error');
+        return 'snapback';
+    }
+    
+    // Valid move - convert to UCI format for server
+    const uciMove = source + target;
+    if (legalMove.promotion) {
+        move.promotion = legalMove.promotion;
+    }
+    
+    console.log('Making move:', uciMove, legalMove);
     
     // Play move sound
     if (moveSound) moveSound();
@@ -915,31 +975,86 @@ function onDrop(source, target) {
     // Disable board interaction during move processing
     gameActive = false;
     
-    socket.emit('make_move', { move: move });
+    // Update turn
+    currentTurn = chess.turn();
+    
+    // Clear possible moves
     removeGreySquares();
+    
+    // Send move to server
+    socket.emit('make_move', { move: uciMove });
+    
+    // Update board position from chess.js
+    board.position(chess.fen());
+    
+    return null; // Allow the move
+}
+
+function onSnapEnd() {
+    // This is called after a piece is dropped
+    // We can use it to update the board position
+    if (chess) {
+        board.position(chess.fen());
+    }
 }
 
 function onMouseoverSquare(square, piece) {
-    if (piece && userPreferences.showPossibleMoves) greySquare(square);
+    if (piece && userPreferences.showPossibleMoves && chess && gameActive) {
+        const isWhite = piece.startsWith('w');
+        const isPlayerWhite = (playerColor === 'white');
+        const isPlayerTurn = (chess.turn() === 'w') === isPlayerWhite;
+        
+        if (isPlayerTurn && isPlayerWhite === isWhite) {
+            showPossibleMoves(square);
+        }
+    } else {
+        removeGreySquares();
+    }
 }
 
 function onMouseoutSquare(square, piece) {
-    if (userPreferences.showPossibleMoves) removeGreySquares();
+    if (userPreferences.showPossibleMoves) {
+        removeGreySquares();
+    }
 }
 
 let greySquares = [];
-function greySquare(square) {
-    const squareEl = document.querySelector(`#board .square-${square}`);
-    if (squareEl) {
-        squareEl.style.background = 'rgba(124, 252, 0, 0.5)';
+
+function showPossibleMoves(square) {
+    if (!chess || !gameActive) return;
+    
+    // Get all legal moves from this square
+    const moves = chess.moves({ square: square, verbose: true });
+    
+    // Highlight the source square
+    const sourceSquare = document.querySelector(`#board .square-${square}`);
+    if (sourceSquare) {
+        sourceSquare.style.background = 'rgba(99, 102, 241, 0.4)';
         greySquares.push(square);
     }
+    
+    // Highlight all possible destination squares
+    moves.forEach(move => {
+        const targetSquare = document.querySelector(`#board .square-${move.to}`);
+        if (targetSquare) {
+            // Check if it's a capture
+            const pieceOnSquare = board.position()[move.to];
+            if (pieceOnSquare) {
+                targetSquare.style.background = 'rgba(239, 68, 68, 0.6)'; // Red for captures
+            } else {
+                targetSquare.style.background = 'rgba(16, 185, 129, 0.5)'; // Green for regular moves
+            }
+            greySquares.push(move.to);
+        }
+    });
 }
 
 function removeGreySquares() {
     greySquares.forEach(square => {
         const squareEl = document.querySelector(`#board .square-${square}`);
-        if (squareEl) squareEl.style.background = '';
+        if (squareEl) {
+            squareEl.style.background = '';
+        }
     });
     greySquares = [];
 }
@@ -947,7 +1062,12 @@ function removeGreySquares() {
 // Обработка обновления позиции
 socket.on('position_update', (data) => {
     console.log('Position update:', data);
-    if (board) {
+    if (board && chess) {
+        // Update chess.js position
+        chess.load(data.fen);
+        currentTurn = chess.turn();
+        
+        // Update board display
         board.position(data.fen);
         gameHistory.push(data.fen);
         currentHistoryIndex = gameHistory.length - 1;
@@ -958,7 +1078,18 @@ socket.on('position_update', (data) => {
             const move = data.ai_move || data.last_move;
             highlightMove(move);
             if (!data.takeback) { // Only add to move list if not a takeback
-                addMoveToList(move);
+                const moveNotation = chess.history({verbose: true}).slice(-1)[0];
+                if (moveNotation) {
+                    addMoveToList(moveNotation.san || move);
+                } else {
+                    addMoveToList(move);
+                }
+                // Update move counter
+                const moveNumberEl = document.getElementById('move-number');
+                if (moveNumberEl && chess) {
+                    const history = chess.history();
+                    moveNumberEl.textContent = Math.ceil(history.length / 2) + 1;
+                }
             }
         }
         
@@ -972,6 +1103,9 @@ socket.on('position_update', (data) => {
         // Re-enable board interaction
         gameActive = true;
         
+        // Update timers
+        updateTimer(data.ai_move ? 'ai' : 'player');
+        
         // Show AI move if provided
         if (data.ai_move) {
             document.getElementById('status').innerText = `Компьютер сходил: ${data.ai_move}`;
@@ -979,16 +1113,28 @@ socket.on('position_update', (data) => {
         } else if (data.takeback) {
             document.getElementById('status').innerText = 'Ход отменен';
             showNotification('Ход отменен', 'info');
+            // Reload chess.js to previous position
+            if (gameHistory.length > 0) {
+                chess.load(gameHistory[currentHistoryIndex]);
+            }
         } else {
             document.getElementById('status').innerText = playerColor === 'white' ? 
                 'Ваш ход: белые' : 'Ваш ход: черные';
         }
         
         // Check for check in status
-        if (data.fen && data.fen.includes('+')) {
+        if (chess.in_check()) {
             if (checkSound) checkSound();
             document.getElementById('status').innerText += ' ⚠️ Шах!';
             showNotification('Шах!', 'warning');
+        }
+        
+        // Check for checkmate/stalemate
+        if (chess.is_checkmate()) {
+            const winner = chess.turn() === 'w' ? 'black' : 'white';
+            socket.emit('game_over', { result: 'checkmate', winner: winner });
+        } else if (chess.is_stalemate() || chess.is_draw()) {
+            socket.emit('game_over', { result: 'draw' });
         }
     }
 });
@@ -1188,78 +1334,128 @@ function addMoveToList(move) {
 }
 
 function updateMoveListDisplay() {
-    // Remove existing move list if it exists
-    const existingMoveList = document.getElementById('move-list');
-    if (existingMoveList) {
-        existingMoveList.remove();
+    const moveListEl = document.getElementById('move-list');
+    if (!moveListEl) return;
+    
+    // Clear existing content
+    moveListEl.innerHTML = '';
+    
+    if (moveList.length === 0) {
+        moveListEl.innerHTML = '<div class="move-list-empty">Ходов пока нет</div>';
+        return;
     }
     
-    // Create move list panel
-    const moveListPanel = document.createElement('div');
-    moveListPanel.id = 'move-list';
+    // Group moves by pair (white + black)
+    for (let i = 0; i < moveList.length; i += 2) {
+        const movePair = document.createElement('div');
+        movePair.className = 'move-item';
+        
+        const moveNumber = Math.floor(i / 2) + 1;
+        const whiteMove = moveList[i];
+        const blackMove = moveList[i + 1];
+        
+        movePair.innerHTML = `
+            <span class="move-number">${moveNumber}.</span>
+            <span class="move-white">${whiteMove}</span>
+            ${blackMove ? `<span class="move-black">${blackMove}</span>` : ''}
+        `;
+        
+        moveListEl.appendChild(movePair);
+    }
     
-    // Add title
-    const title = document.createElement('h3');
-    title.textContent = 'Ходы';
-    moveListPanel.appendChild(title);
+    // Scroll to bottom
+    moveListEl.scrollTop = moveListEl.scrollHeight;
+}
+
+// Timer functions
+function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
     
-    // Add move list
-    const moveListOl = document.createElement('ol');
-    moveList.forEach((move, index) => {
-        const moveItem = document.createElement('li');
-        moveItem.textContent = move;
-        moveListOl.appendChild(moveItem);
-    });
-    moveListPanel.appendChild(moveListOl);
+    timerInterval = setInterval(() => {
+        if (gameActive) {
+            // Determine whose turn it is
+            const isPlayerTurn = (chess && chess.turn() === 'w') === (playerColor === 'white');
+            
+            if (isPlayerTurn) {
+                playerTimer++;
+            } else {
+                aiTimer++;
+            }
+        }
+        
+        updateTimerDisplay();
+    }, 1000);
+}
+
+function updateTimer(turn) {
+    // This can be called when a move is made to switch timer
+    updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+    const playerTimerEl = document.getElementById('player-timer');
+    const aiTimerEl = document.getElementById('ai-timer');
     
-    // Insert after navigation container
-    const navContainer = document.getElementById('navigation-container');
-    if (navContainer) {
-        navContainer.parentNode.insertBefore(moveListPanel, navContainer.nextSibling);
-    } else {
-        document.querySelector('.container').insertBefore(moveListPanel, document.getElementById('status'));
+    if (playerTimerEl) {
+        playerTimerEl.textContent = formatTime(playerTimer);
+    }
+    
+    if (aiTimerEl) {
+        aiTimerEl.textContent = formatTime(aiTimer);
     }
 }
 
-// New function to show notifications
-function showNotification(message, type = 'info') {
-    // Remove existing notifications
-    const existingNotifications = document.querySelectorAll('.notification');
-    existingNotifications.forEach(notification => notification.remove());
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+// Flip board function
+function flipBoard() {
+    if (!board) return;
     
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    
-    // Set styles based on type
-    switch (type) {
-        case 'success':
-            notification.style.background = 'rgba(76, 175, 80, 0.9)';
-            break;
-        case 'error':
-            notification.style.background = 'rgba(244, 67, 54, 0.9)';
-            break;
-        case 'warning':
-            notification.style.background = 'rgba(255, 152, 0, 0.9)';
-            break;
-        case 'info':
-        default:
-            notification.style.background = 'rgba(33, 150, 243, 0.9)';
-            break;
+    isFlipped = !isFlipped;
+    board.orientation(isFlipped ? (playerColor === 'white' ? 'black' : 'white') : playerColor);
+}
+
+// Notification function (override if exists from HTML)
+window.showNotification = function(message, type = 'info') {
+    const container = document.getElementById('notification-container');
+    if (!container) {
+        // Fallback if container doesn't exist
+        console.log(`[${type}] ${message}`);
+        return;
     }
     
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
     notification.textContent = message;
     
-    // Add to document
-    document.body.appendChild(notification);
+    container.appendChild(notification);
     
-    // Auto-remove after 3 seconds
+    // Trigger animation
     setTimeout(() => {
-        if (notification.parentNode) {
-            notification.remove();
-        }
+        notification.classList.add('notification-show');
+    }, 10);
+    
+    // Remove after delay
+    setTimeout(() => {
+        notification.classList.remove('notification-show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
     }, 3000);
-}
+};
 
 // Add move highlighting functionality
 function highlightMove(move) {
