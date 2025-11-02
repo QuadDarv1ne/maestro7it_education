@@ -34,6 +34,7 @@ from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 # Импорт моделей базы данных
 try:
@@ -307,6 +308,7 @@ GAME_INIT_TIMEOUT = 30  # 30 секунд для инициализации иг
 
 def cleanup_stale_games():
     """Периодическая очистка устаревших игровых сессий для предотвращения утечек памяти."""
+    global active_game_count
     while True:
         try:
             time.sleep(CLEANUP_INTERVAL)
@@ -317,6 +319,12 @@ def cleanup_stale_games():
             cleanup_count = 0
             for session_id in stale_sessions:
                 try:
+                    # Always decrement active_game_count when cleaning up, regardless of whether session_id is in games
+                    # because app_state tracks all games
+                    active_game_count = max(0, active_game_count - 1)
+                    resource_stats['total_games_cleaned'] += 1
+                    cleanup_count += 1
+                    
                     if session_id in games:
                         # Очистка ресурсов игры
                         try:
@@ -333,9 +341,6 @@ def cleanup_stale_games():
                                     game.engine = None
                             
                             del games[session_id]
-                            active_game_count = max(0, active_game_count - 1)
-                            resource_stats['total_games_cleaned'] += 1
-                            cleanup_count += 1
                             logger.info(f"Cleaned up stale game for session: {session_id}")
                         except Exception as e:
                             logger.error(f"Error cleaning up stale game for session {session_id}: {e}")
@@ -604,6 +609,8 @@ class ChessGame:
                 def init_engine_task():
                     """Инициализация движка в отдельном потоке для контроля таймаута"""
                     logger.info(f"Creating Stockfish engine instance with skill level {self.skill_level}")
+                    if not self.engine_path:
+                        raise EngineInitializationError("Stockfish executable path not found")
                     engine = Stockfish(path=self.engine_path)
                     
                     # Настройка движка с оптимизированными параметрами на основе уровня сложности
@@ -686,12 +693,11 @@ class ChessGame:
                         except Exception as e:
                             logger.warning(f"Error closing engine context: {e}")
                     try:
-                        # Принудительное закрытие процесса Stockfish
-                        if hasattr(self.engine, 'process') and self.engine.process:
-                            self.engine.process.terminate()
-                            self.engine.process.wait(timeout=1)
+                        # Stockfish engines are managed by the connection pool or garbage collection
+                        # No explicit process termination needed
+                        pass
                     except Exception as e:
-                        logger.warning(f"Error terminating Stockfish process: {e}")
+                        logger.warning(f"Error during engine cleanup: {e}")
                     finally:
                         # Очистка ссылок
                         self.engine = None
@@ -968,6 +974,10 @@ def handle_disconnect():
             # Удаление игры через AppState
             if app_state.remove_game(session_id):
                 logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
+                
+                # Уменьшение счетчика активных игр
+                global active_game_count
+                active_game_count = max(0, active_game_count - 1)
                 
                 # Получение актуальной статистики
                 stats = app_state.get_stats()
@@ -1267,13 +1277,13 @@ def handle_init(data):
         return
     
     try:
+        global active_game_count
         player_color = data.get('color', 'white')
         skill_level = min(20, max(0, int(data.get('level', 5))))
         
         logger.info(f"Creating game with color: {player_color}, skill level: {skill_level}")
         
         # Проверка, достигнуто ли максимальное количество одновременных игр
-        global active_game_count
         if active_game_count >= MAX_CONCURRENT_GAMES:
             logger.warning(f"Maximum concurrent games reached ({MAX_CONCURRENT_GAMES}). Rejecting new game request.")
             emit('error', {'message': 'Сервер перегружен. Пожалуйста, попробуйте позже.'})
@@ -1309,6 +1319,9 @@ def handle_init(data):
                     logger.error("Failed to add game to AppState")
                     emit('error', {'message': 'Ошибка инициализации игры'})
                     return
+                
+                # Увеличение счетчика активных игр
+                active_game_count += 1
                 
                 # Get initial FEN with timeout handling
                 try:
@@ -1396,6 +1409,10 @@ def handle_move(data):
         logger.info(f"Session ID: {session_id}")
         
         # Получение игры через AppState
+        if not session_id:
+            logger.error("No session ID found")
+            emit('error', {'message': 'No session ID found'})
+            return
         game = app_state.get_game(session_id)
         if not session_id or not game:
             logger.error("Game not initialized for this session")
