@@ -12,6 +12,7 @@ from app.utils.analytics import (
 from app.utils.vacation_reminders import get_vacation_statistics
 from app import db
 from datetime import datetime, date, timedelta
+from functools import lru_cache
 
 bp = Blueprint('analytics', __name__)
 
@@ -98,7 +99,7 @@ def employee_statistics():
         })
     
     # Создаем графики
-    distribution_chart = create_employee_distribution_chart(department_stats)
+    distribution_chart = create_employee_distribution_chart(tuple(tuple(d.items()) for d in department_stats))
     status_chart = create_employee_status_chart(active_employees, dismissed_employees)
     
     return render_template('analytics/employee_statistics.html',
@@ -117,7 +118,7 @@ def hiring_trends():
     employees = Employee.query.all()
     
     # Создаем график тенденций найма
-    hiring_trend_chart = create_hiring_trend_chart(employees)
+    hiring_trend_chart = create_hiring_trend_chart(tuple(employees))
     
     # Подготавливаем данные для таблицы
     hiring_data = []
@@ -144,7 +145,7 @@ def vacation_analysis():
     vacations = Vacation.query.all()
     
     # Создаем график анализа отпусков
-    vacation_chart = create_vacation_analysis_chart(vacations)
+    vacation_chart = create_vacation_analysis_chart(tuple(vacations))
     
     # Подготавливаем данные для таблицы
     vacation_data = []
