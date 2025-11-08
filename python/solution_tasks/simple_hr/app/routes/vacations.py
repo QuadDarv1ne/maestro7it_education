@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Vacation, Employee
+from app.forms import VacationForm
 from app.utils.notifications import notify_vacation_created
 from app.utils.audit import log_vacation_create
 from app import db
@@ -17,72 +18,49 @@ def list_vacations():
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_vacation():
-    if request.method == 'POST':
-        employee_id = request.form['employee_id']
-        start_date = request.form['start_date']
-        end_date = request.form['end_date']
-        vacation_type = request.form['type']
-        
-        # Validate dates
-        start = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end = datetime.strptime(end_date, '%Y-%m-%d').date()
-        
-        if start >= end:
-            flash('Дата окончания должна быть позже даты начала')
-            return redirect(url_for('vacations.create_vacation'))
-        
+    form = VacationForm()
+    if form.validate_on_submit():
         # Create new vacation
         vacation = Vacation()
-        vacation.employee_id = employee_id
-        vacation.start_date = start
-        vacation.end_date = end
-        vacation.type = vacation_type
+        vacation.employee_id = form.employee_id.data
+        vacation.start_date = form.start_date.data
+        vacation.end_date = form.end_date.data
+        vacation.type = form.type.data
         
         try:
             db.session.add(vacation)
             db.session.commit()
             # Отправляем уведомление
-            employee = Employee.query.get(employee_id)
+            employee = Employee.query.get(form.employee_id.data)
             if employee:
                 vacation_type_name = {
                     'paid': 'оплачиваемый',
                     'unpaid': 'неоплачиваемый',
                     'sick': 'больничный'
-                }.get(vacation_type, 'отпуск')
-                notify_vacation_created(current_user.id, employee.full_name, vacation_type_name, start)
+                }.get(form.type.data, 'отпуск')
+                notify_vacation_created(current_user.id, employee.full_name, vacation_type_name, form.start_date.data)
                 # Логируем действие
-                log_vacation_create(vacation.id, employee.full_name, vacation_type, start.strftime('%d.%m.%Y'), current_user.id)
+                log_vacation_create(vacation.id, employee.full_name, form.type.data, form.start_date.data.strftime('%d.%m.%Y') if form.start_date.data else '', current_user.id)
             flash('Отпуск успешно добавлен')
             return redirect(url_for('vacations.list_vacations'))
         except Exception as e:
             db.session.rollback()
             flash('Ошибка при добавлении отпуска')
-            return redirect(url_for('vacations.create_vacation'))
+            return render_template('vacations/form.html', form=form)
     
-    employees = Employee.query.all()
-    return render_template('vacations/form.html', employees=employees)
+    return render_template('vacations/form.html', form=form)
 
 @bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_vacation(id):
     vacation = Vacation.query.get_or_404(id)
+    form = VacationForm(obj=vacation)
     
-    if request.method == 'POST':
-        vacation.employee_id = request.form['employee_id']
-        start_date = request.form['start_date']
-        end_date = request.form['end_date']
-        vacation.type = request.form['type']
-        
-        # Validate dates
-        start = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end = datetime.strptime(end_date, '%Y-%m-%d').date()
-        
-        if start >= end:
-            flash('Дата окончания должна быть позже даты начала')
-            return redirect(url_for('vacations.edit_vacation', id=id))
-        
-        vacation.start_date = start
-        vacation.end_date = end
+    if form.validate_on_submit():
+        vacation.employee_id = form.employee_id.data
+        vacation.start_date = form.start_date.data
+        vacation.end_date = form.end_date.data
+        vacation.type = form.type.data
         
         try:
             db.session.commit()
@@ -91,10 +69,9 @@ def edit_vacation(id):
         except Exception as e:
             db.session.rollback()
             flash('Ошибка при обновлении отпуска')
-            return redirect(url_for('vacations.edit_vacation', id=id))
+            return render_template('vacations/form.html', form=form, vacation=vacation)
     
-    employees = Employee.query.all()
-    return render_template('vacations/form.html', vacation=vacation, employees=employees)
+    return render_template('vacations/form.html', form=form, vacation=vacation)
 
 @bp.route('/delete/<int:id>', methods=['POST'])
 @login_required

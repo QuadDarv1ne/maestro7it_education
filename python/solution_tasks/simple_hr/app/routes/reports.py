@@ -204,6 +204,34 @@ def export_report():
             headers={'Content-Disposition': f'attachment; filename=hiring_report_{period_months}_months.csv'}
         )
     
+    elif report_type == 'departments':
+        # Generate department report data
+        departments = Department.query.all()
+        
+        # Create DataFrame
+        data = []
+        for dept in departments:
+            # Count active employees in each department
+            active_count = Employee.query.filter_by(department_id=dept.id, status='active').count()
+            data.append({
+                'Подразделение': dept.name,
+                'Количество сотрудников': active_count
+            })
+        
+        df = pd.DataFrame(data)
+        
+        # Create CSV
+        output = io.StringIO()
+        df.to_csv(output, index=False, encoding='utf-8')
+        csv_data = output.getvalue()
+        
+        # Return CSV response
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=department_report.csv'}
+        )
+    
     elif report_type == 'vacation_calendar':
         # Get year and month parameters
         year = request.args.get('year', type=int)

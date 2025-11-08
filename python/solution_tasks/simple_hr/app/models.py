@@ -10,7 +10,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), nullable=False)  # 'admin' or 'hr'
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False, name='is_active')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     
@@ -32,7 +32,7 @@ class User(UserMixin, db.Model):
     
     def verify_reset_token(self, token):
         """Проверка токена для восстановления пароля"""
-        if self.reset_token == token and self.reset_token_expires > datetime.utcnow():
+        if self.reset_token == token and self.reset_token_expires and self.reset_token_expires > datetime.utcnow():
             return True
         return False
     
@@ -93,6 +93,11 @@ class Order(db.Model):
     date_issued = db.Column(db.Date, nullable=False)
     new_department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=True)
     new_position_id = db.Column(db.Integer, db.ForeignKey('position.id'), nullable=True)
+    
+    # Relationships
+    employee = db.relationship('Employee', backref=db.backref('orders', lazy=True))
+    new_department = db.relationship('Department', foreign_keys=[new_department_id])
+    new_position = db.relationship('Position', foreign_keys=[new_position_id])
 
 class Vacation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -100,6 +105,9 @@ class Vacation(db.Model):
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     type = db.Column(db.String(20), nullable=False)  # paid, unpaid, sick
+    
+    # Relationship
+    employee = db.relationship('Employee', backref=db.backref('vacations', lazy=True))
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)

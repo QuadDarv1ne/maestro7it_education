@@ -102,8 +102,8 @@ class OrderForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.employee_id.choices = [(e.id, e.full_name) for e in Employee.query.all()]
-        self.new_department_id.choices = [('', 'Не выбрано')] + [(str(d.id), d.name) for d in Department.query.all()]
-        self.new_position_id.choices = [('', 'Не выбрано')] + [(str(p.id), p.title) for p in Position.query.all()]
+        self.new_department_id.choices = [('', 'Не выбрано')] + [(d.id, d.name) for d in Department.query.all()]
+        self.new_position_id.choices = [('', 'Не выбрано')] + [(p.id, p.title) for p in Position.query.all()]
 
 class LoginForm(FlaskForm):
     username = StringField('Имя пользователя', validators=[DataRequired()])
