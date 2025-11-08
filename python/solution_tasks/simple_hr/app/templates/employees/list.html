@@ -75,9 +75,9 @@
             <td>{{ employee.employee_id }}</td>
             <td>{{ employee.full_name }}</td>
             <td>{{ employee.email }}</td>
-            <td>{{ employee.department.name }}</td>
-            <td>{{ employee.position.title }}</td>
-            <td>{{ employee.hire_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ employee.department.name if employee.department else 'Не указано' }}</td>
+            <td>{{ employee.position.title if employee.position else 'Не указана' }}</td>
+            <td>{{ employee.hire_date.strftime('%d.%m.%Y') if employee.hire_date else 'Не указана' }}</td>
             <td>
                 {% if employee.status == 'active' %}
                     <span class="badge bg-success">Активен</span>

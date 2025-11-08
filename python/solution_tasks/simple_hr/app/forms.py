@@ -24,8 +24,8 @@ class EmployeeForm(FlaskForm):
     email = EmailField('Email', validators=[DataRequired(), Email(), Length(max=120)])
     employee_id = StringField('Табельный номер', validators=[DataRequired(), Length(max=50)])
     hire_date = DateField('Дата приема', validators=[DataRequired()])
-    department_id = SelectField('Подразделение', coerce=int, validators=[DataRequired()])
-    position_id = SelectField('Должность', coerce=int, validators=[DataRequired()])
+    department_id = SelectField('Подразделение', coerce=safe_int_coerce, validators=[DataRequired()])
+    position_id = SelectField('Должность', coerce=safe_int_coerce, validators=[DataRequired()])
     status = SelectField('Статус', choices=[('active', 'Активен'), ('dismissed', 'Уволен')], 
                         validators=[DataRequired()])
     submit = SubmitField('Сохранить')
@@ -188,7 +188,7 @@ class EmployeeForm(FlaskForm):
                 raise ValidationError('Нет доступных подразделений. Пожалуйста, добавьте подразделения.')
             
             # Check if a valid department was selected
-            if department_id.data is None or department_id.data == 0:
+            if department_id.data is None:
                 raise ValidationError('Подразделение обязательно для выбора.')
             
             # Check that department exists
@@ -209,7 +209,7 @@ class EmployeeForm(FlaskForm):
                 raise ValidationError('Нет доступных должностей. Пожалуйста, добавьте должности.')
             
             # Check if a valid position was selected
-            if position_id.data is None or position_id.data == 0:
+            if position_id.data is None:
                 raise ValidationError('Должность обязательна для выбора.')
             
             # Check that position exists
