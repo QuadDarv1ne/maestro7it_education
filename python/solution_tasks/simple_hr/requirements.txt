@@ -1,6 +1,9 @@
 # Веб-фреймворк
 Flask
 
+# Расширения Flask
+Flask-Bootstrap
+
 # Работа с базой данных
 Flask-SQLAlchemy
 SQLAlchemy
@@ -13,6 +16,7 @@ Werkzeug
 # Формы и валидация
 Flask-WTF
 WTForms
+email-validator
 
 # Импорт/экспорт CSV и отчёты
 pandas

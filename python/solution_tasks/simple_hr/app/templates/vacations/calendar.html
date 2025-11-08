@@ -48,6 +48,7 @@
             {% set day_counter = 1 %}
             
             {% for week in range(6) %}
+                {% if week == 0 or day_counter <= days_in_month %}
                 <tr>
                     {% for day in range(7) %}
                         {% if week == 0 and day < first_weekday %}
@@ -74,8 +75,6 @@
                         {% endif %}
                     {% endfor %}
                 </tr>
-                {% if day_counter > days_in_month %}
-                    {% break %}
                 {% endif %}
             {% endfor %}
         </tbody>
