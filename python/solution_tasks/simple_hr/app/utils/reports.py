@@ -159,8 +159,8 @@ def export_report_to_csv(report_data, filename):
     if not report_data:
         return False
     
+    # Try to use pandas if available
     try:
-        # Try to use pandas if available
         import pandas as pd
         # Создаем DataFrame из данных
         df = pd.DataFrame(report_data)
@@ -191,6 +191,8 @@ def export_report_to_excel(report_data, filename):
         return False
     
     try:
+        # Try to use pandas
+        import pandas as pd
         # Создаем DataFrame из данных
         df = pd.DataFrame(report_data)
         

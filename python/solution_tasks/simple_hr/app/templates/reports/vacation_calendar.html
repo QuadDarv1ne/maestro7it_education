@@ -76,22 +76,35 @@
                         </thead>
                         <tbody>
                             {% for day_data in calendar_data %}
-                                {% if day_data.vacations %}
-                                    {% for vacation in day_data.vacations %}
-                                    <tr>
-                                        <td>{{ day_data.date.strftime('%d.%m.%Y') }}</td>
-                                        <td>{{ vacation.employee_name }}</td>
-                                        <td>{{ vacation.department }}</td>
-                                        <td>{{ vacation.position }}</td>
-                                        <td>{{ vacation.type }}</td>
-                                    </tr>
-                                    {% endfor %}
+                                {% if day_data.is_weekend %}
+                                <tr class="table-secondary">
                                 {% else %}
                                 <tr>
-                                    <td>{{ day_data.date.strftime('%d.%m.%Y') }}</td>
-                                    <td colspan="4" class="text-muted">Нет отпусков</td>
-                                </tr>
                                 {% endif %}
+                                    <td>{{ day_data.date.strftime('%d.%m.%Y') }}
+                                        {% if day_data.weekday == 0 %}(Пн)
+                                        {% elif day_data.weekday == 1 %}(Вт)
+                                        {% elif day_data.weekday == 2 %}(Ср)
+                                        {% elif day_data.weekday == 3 %}(Чт)
+                                        {% elif day_data.weekday == 4 %}(Пт)
+                                        {% elif day_data.weekday == 5 %}(Сб)
+                                        {% elif day_data.weekday == 6 %}(Вс)
+                                        {% endif %}
+                                    </td>
+                                    {% if day_data.vacations %}
+                                        <td colspan="4">
+                                            {% for vacation in day_data.vacations %}
+                                            <div class="mb-1">
+                                                <strong>{{ vacation.employee_name }}</strong> - 
+                                                {{ vacation.department }} ({{ vacation.position }}) - 
+                                                <span class="badge bg-info">{{ vacation.type }}</span>
+                                            </div>
+                                            {% endfor %}
+                                        </td>
+                                    {% else %}
+                                        <td colspan="4" class="text-muted">Нет отпусков</td>
+                                    {% endif %}
+                                </tr>
                             {% endfor %}
                         </tbody>
                     </table>

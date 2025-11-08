@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
-from app.models import Employee, Department, Position, Vacation
+from app.models import Employee, Department, Position, Vacation, Order
 from app.utils.analytics import (
     create_employee_distribution_chart, 
     create_employee_status_chart,
@@ -11,7 +11,7 @@ from app.utils.analytics import (
 )
 from app.utils.vacation_reminders import get_vacation_statistics
 from app import db
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 bp = Blueprint('analytics', __name__)
 
@@ -24,12 +24,45 @@ def dashboard():
     departments = Department.query.all()
     positions = Position.query.all()
     vacations = Vacation.query.all()
+    orders = Order.query.all()
     
     # Создаем интерактивные данные для дашборда
     interactive_data = create_interactive_dashboard_data(employees, departments, positions, vacations)
     
     # Создаем интерактивные графики
     interactive_charts = create_interactive_charts(interactive_data)
+    
+    # Calculate additional metrics
+    from datetime import date, timedelta
+    
+    # Employees on vacation today
+    today = date.today()
+    employees_on_vacation = Vacation.query.filter(
+        Vacation.start_date <= today,
+        Vacation.end_date >= today
+    ).count()
+    
+    # Employees starting vacation today
+    employees_starting_vacation = Vacation.query.filter(
+        Vacation.start_date == today
+    ).count()
+    
+    # Employees ending vacation today
+    employees_ending_vacation = Vacation.query.filter(
+        Vacation.end_date == today
+    ).count()
+    
+    # Recent hires (last 30 days)
+    thirty_days_ago = today - timedelta(days=30)
+    recent_hires = Employee.query.filter(
+        Employee.hire_date >= thirty_days_ago
+    ).count()
+    
+    # Add to interactive_data
+    interactive_data['employees_on_vacation'] = employees_on_vacation
+    interactive_data['employees_starting_vacation'] = employees_starting_vacation
+    interactive_data['employees_ending_vacation'] = employees_ending_vacation
+    interactive_data['recent_hires'] = recent_hires
     
     return render_template('analytics/dashboard.html', 
                          interactive_data=interactive_data,
@@ -148,6 +181,31 @@ def export_report():
     """Экспорт аналитических отчетов"""
     report_type = request.args.get('type', 'summary')
     
-    # Здесь будет реализация экспорта отчетов
-    flash('Функция экспорта отчетов будет реализована в следующих версиях')
-    return redirect(url_for('analytics.dashboard'))
+    # Generate report data based on type
+    if report_type == 'summary':
+        # Get all employees for summary report
+        employees = Employee.query.all()
+        
+        # Create CSV data
+        import io
+        output = io.StringIO()
+        
+        # Write header
+        output.write('ФИО,Email,Табельный номер,Подразделение,Должность,Дата приема,Статус\n')
+        
+        # Write data rows
+        for emp in employees:
+            output.write(f'{emp.full_name},{emp.email},{emp.employee_id},{emp.department.name},{emp.position.title},{emp.hire_date.strftime("%d.%m.%Y")},{emp.status}\n')
+        
+        csv_data = output.getvalue()
+        
+        # Return CSV response
+        from flask import Response
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=employee_summary_report.csv'}
+        )
+    else:
+        flash('Неверный тип отчета')
+        return redirect(url_for('analytics.dashboard'))
