@@ -486,3 +486,85 @@ def generate_salary_report():
     except Exception as e:
         logger.error(f"Error generating salary report: {str(e)}")
         return []
+
+@lru_cache(maxsize=32)
+def generate_employee_birthday_report():
+    """Генерация отчета о днях рождения сотрудников в ближайшие 30 дней"""
+    try:
+        from datetime import date, timedelta
+        
+        # Получаем текущую дату
+        today = date.today()
+        # Определяем дату через 30 дней
+        next_month = today + timedelta(days=30)
+        
+        # Получаем всех активных сотрудников
+        employees = Employee.query.filter_by(status='active').all()
+        
+        report_data = []
+        for employee in employees:
+            try:
+                # Проверяем, есть ли у сотрудника день рождения в ближайшие 30 дней
+                # Для простоты предположим, что hire_date содержит дату рождения
+                # В реальной системе нужно добавить отдельное поле birth_date
+                if hasattr(employee, 'birth_date') and employee.birth_date:
+                    # Проверяем, попадает ли день рождения в диапазон
+                    birthday_this_year = employee.birth_date.replace(year=today.year)
+                    if today <= birthday_this_year <= next_month:
+                        report_data.append({
+                            'id': employee.id,
+                            'full_name': employee.full_name,
+                            'department': employee.department.name,
+                            'position': employee.position.title,
+                            'birth_date': employee.birth_date,
+                            'days_until_birthday': (birthday_this_year - today).days
+                        })
+            except Exception as e:
+                logger.error(f"Error processing employee {employee.id} for birthday report: {str(e)}")
+                continue
+        
+        # Сортируем по дате дня рождения
+        report_data.sort(key=lambda x: x.get('days_until_birthday', 0))
+        
+        return report_data
+    except Exception as e:
+        logger.error(f"Error generating birthday report: {str(e)}")
+        return []
+
+@lru_cache(maxsize=32)
+def generate_upcoming_vacations_report(days_ahead=30):
+    """Генерация отчета о предстоящих отпусках"""
+    try:
+        from datetime import date, timedelta
+        
+        # Получаем текущую дату
+        today = date.today()
+        # Определяем дату через указанное количество дней
+        future_date = today + timedelta(days=days_ahead)
+        
+        # Получаем отпуска, начинающиеся в ближайшие дни
+        upcoming_vacations = Vacation.query.filter(
+            Vacation.start_date >= today,
+            Vacation.start_date <= future_date
+        ).order_by(Vacation.start_date).all()
+        
+        report_data = []
+        for vacation in upcoming_vacations:
+            try:
+                report_data.append({
+                    'employee_name': vacation.employee.full_name,
+                    'department': vacation.employee.department.name,
+                    'position': vacation.employee.position.title,
+                    'start_date': vacation.start_date,
+                    'end_date': vacation.end_date,
+                    'duration': (vacation.end_date - vacation.start_date).days + 1,
+                    'type': vacation.type
+                })
+            except Exception as e:
+                logger.error(f"Error processing vacation {vacation.id} for upcoming vacations report: {str(e)}")
+                continue
+        
+        return report_data
+    except Exception as e:
+        logger.error(f"Error generating upcoming vacations report: {str(e)}")
+        return []

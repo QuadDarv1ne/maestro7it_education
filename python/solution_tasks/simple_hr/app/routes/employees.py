@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Employee, Department, Position
-from app.forms import EmployeeForm
+from app.forms import EmployeeForm, EmployeeSearchForm
 from app.utils.notifications import notify_employee_created, notify_employee_updated
 from app.utils.audit import log_employee_create, log_employee_update, log_employee_delete
 from app.utils.csv_import import import_employees_from_csv
@@ -56,6 +56,13 @@ def list_employees():
         departments = Department.query.all()
         positions = Position.query.all()
         
+        # Create search form
+        search_form = EmployeeSearchForm()
+        search_form.department_id.data = department_id
+        search_form.position_id.data = position_id
+        search_form.status.data = status
+        search_form.search.data = search
+        
         return render_template('employees/list.html', 
                              employees=employees,
                              departments=departments,
@@ -63,7 +70,8 @@ def list_employees():
                              current_department=department_id,
                              current_position=position_id,
                              current_status=status,
-                             current_search=search)
+                             current_search=search,
+                             search_form=search_form)
     except Exception as e:
         logger.error(f"Error in list_employees: {str(e)}")
         flash('Ошибка при загрузке списка сотрудников', 'error')
@@ -73,42 +81,47 @@ def list_employees():
 @login_required
 def create_employee():
     form = EmployeeForm()
-    if form.validate_on_submit():
-        try:
-            # Check if employee already exists
-            existing_employee = Employee.query.filter_by(email=form.email.data).first()
-            if existing_employee:
-                flash('Сотрудник с таким email уже существует', 'error')
+    try:
+        if form.validate_on_submit():
+            try:
+                # Check if employee already exists
+                existing_employee = Employee.query.filter_by(email=form.email.data).first()
+                if existing_employee:
+                    flash('Сотрудник с таким email уже существует', 'error')
+                    return render_template('employees/form.html', form=form)
+                
+                # Create new employee
+                employee = Employee()
+                employee.full_name = form.full_name.data.strip() if form.full_name.data is not None else ""
+                employee.email = form.email.data.strip().lower() if form.email.data is not None else ""
+                employee.employee_id = form.employee_id.data.strip() if form.employee_id.data is not None else ""
+                employee.hire_date = form.hire_date.data
+                employee.department_id = form.department_id.data
+                employee.position_id = form.position_id.data
+                employee.status = form.status.data
+                
+                db.session.add(employee)
+                db.session.commit()
+                # Отправляем уведомление
+                notify_employee_created(current_user.id, employee.full_name)
+                # Логируем действие
+                log_employee_create(employee.id, employee.full_name, current_user.id)
+                flash('Сотрудник успешно добавлен', 'success')
+                return redirect(url_for('employees.list_employees'))
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error creating employee: {str(e)}")
+                flash(f'Ошибка при добавлении сотрудника: {str(e)}', 'error')
                 return render_template('employees/form.html', form=form)
-            
-            # Create new employee
-            employee = Employee()
-            employee.full_name = form.full_name.data.strip() if form.full_name.data is not None else ""
-            employee.email = form.email.data.strip().lower() if form.email.data is not None else ""
-            employee.employee_id = form.employee_id.data.strip() if form.employee_id.data is not None else ""
-            employee.hire_date = form.hire_date.data
-            employee.department_id = form.department_id.data
-            employee.position_id = form.position_id.data
-            employee.status = form.status.data
-            
-            db.session.add(employee)
-            db.session.commit()
-            # Отправляем уведомление
-            notify_employee_created(current_user.id, employee.full_name)
-            # Логируем действие
-            log_employee_create(employee.id, employee.full_name, current_user.id)
-            flash('Сотрудник успешно добавлен', 'success')
-            return redirect(url_for('employees.list_employees'))
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error creating employee: {str(e)}")
-            flash(f'Ошибка при добавлении сотрудника: {str(e)}', 'error')
-            return render_template('employees/form.html', form=form)
-    elif request.method == 'POST':
-        # Form validation failed
-        flash('Пожалуйста, исправьте ошибки в форме', 'error')
-    
-    return render_template('employees/form.html', form=form)
+        elif request.method == 'POST':
+            # Form validation failed
+            flash('Пожалуйста, исправьте ошибки в форме', 'error')
+        
+        return render_template('employees/form.html', form=form)
+    except Exception as e:
+        logger.error(f"Error in create_employee route: {str(e)}")
+        flash('Ошибка при создании сотрудника', 'error')
+        return render_template('employees/form.html', form=form)
 
 @bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -226,13 +239,14 @@ def import_employees():
     
     return render_template('employees/import.html')
 
-@bp.route('/import_progress')
+@bp.route('/details/<int:id>')
 @login_required
-def import_progress():
-    """Endpoint to check import progress - for AJAX calls"""
-    # This would typically check a background task or session variable
-    # For now, we'll return a mock response
-    return jsonify({
-        'progress': 0,
-        'status': 'waiting'
-    })
+def employee_details(id):
+    """Просмотр деталей сотрудника"""
+    try:
+        employee = Employee.query.get_or_404(id)
+        return render_template('employees/details.html', employee=employee)
+    except Exception as e:
+        logger.error(f"Error in employee_details {id}: {str(e)}")
+        flash('Ошибка при загрузке информации о сотруднике', 'error')
+        return redirect(url_for('employees.list_employees'))

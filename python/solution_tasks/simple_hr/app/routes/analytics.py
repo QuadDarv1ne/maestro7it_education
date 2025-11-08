@@ -6,6 +6,10 @@ from app.utils.analytics import (
     create_employee_status_chart,
     create_hiring_trend_chart,
     create_vacation_analysis_chart,
+    create_department_comparison_chart,
+    create_turnover_chart,
+    create_vacation_duration_chart,
+    create_employee_performance_chart,
     create_interactive_dashboard_data,
     create_interactive_charts
 )
@@ -63,6 +67,7 @@ def get_cached_interactive_charts(dashboard_data_hash, departments_hash, employe
     """Cache interactive charts with hash-based invalidation"""
     employees = get_cached_employees()
     departments = get_cached_departments()
+    positions = get_cached_positions()
     vacations = get_cached_vacations()
     
     # Recreate dashboard data for charts
@@ -186,6 +191,8 @@ def employee_statistics():
         # Создаем графики
         distribution_chart = create_employee_distribution_chart(tuple(tuple(d.items()) for d in department_stats))
         status_chart = create_employee_status_chart(active_employees, dismissed_employees)
+        department_comparison_chart = create_department_comparison_chart(departments, employees)
+        turnover_chart = create_turnover_chart(employees)
         
         return render_template('analytics/employee_statistics.html',
                              total_employees=total_employees,
@@ -194,7 +201,9 @@ def employee_statistics():
                              department_stats=department_stats,
                              position_stats=position_stats,
                              distribution_chart=distribution_chart,
-                             status_chart=status_chart)
+                             status_chart=status_chart,
+                             department_comparison_chart=department_comparison_chart,
+                             turnover_chart=turnover_chart)
     except Exception as e:
         logger.error(f"Error in employee statistics: {str(e)}")
         flash('Ошибка при загрузке статистики по сотрудникам', 'error')
@@ -244,8 +253,10 @@ def vacation_analysis():
         # Create employee lookup dictionary for performance
         employee_dict = {emp.id: emp for emp in employees}
         
-        # Создаем график анализа отпусков
+        # Создаем графики анализа отпусков
         vacation_chart = create_vacation_analysis_chart(vacations)
+        vacation_duration_chart = create_vacation_duration_chart(vacations)
+        employee_performance_chart = create_employee_performance_chart(employees, vacations)
         
         # Подготавливаем данные для таблицы
         vacation_data = []
@@ -277,6 +288,8 @@ def vacation_analysis():
         
         return render_template('analytics/vacation_analysis.html',
                              vacation_chart=vacation_chart,
+                             vacation_duration_chart=vacation_duration_chart,
+                             employee_performance_chart=employee_performance_chart,
                              vacation_data=vacation_data)
     except Exception as e:
         logger.error(f"Error in vacation analysis: {str(e)}")
@@ -292,8 +305,8 @@ def export_report():
         
         # Generate report data based on type
         if report_type == 'summary':
-            # Get cached employees
-            employees = get_cached_employees()
+            # Get all employees for summary report
+            employees = Employee.query.all()
             
             # Create CSV data
             import io

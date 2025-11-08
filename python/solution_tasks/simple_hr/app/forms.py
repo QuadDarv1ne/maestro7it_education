@@ -180,10 +180,16 @@ class VacationForm(FlaskForm):
         super(VacationForm, self).__init__(*args, **kwargs)
         self.vacation_id = vacation_id
         try:
-            self.employee_id.choices = [(e.id, e.full_name) for e in Employee.query.all()]
+            # Load active employees only and sort by full name
+            employees = Employee.query.filter_by(status='active').order_by(Employee.full_name).all()
+            self.employee_id.choices = [(e.id, e.full_name) for e in employees]
+            
+            # If no employees found, provide a default option
+            if not self.employee_id.choices:
+                self.employee_id.choices = [("", "Нет доступных сотрудников")]
         except Exception as e:
             logger.error(f"Error loading employee choices: {str(e)}")
-            self.employee_id.choices = []
+            self.employee_id.choices = [("", "Ошибка загрузки сотрудников")]
     
     def validate_start_date(self, start_date):
         """Validate start date"""
@@ -194,6 +200,11 @@ class VacationForm(FlaskForm):
             from datetime import date
             if start_date.data > date(2100, 1, 1):
                 raise ValidationError('Дата начала не может быть такой далекой в будущем.')
+                
+            # Check that start date is not in the past (optional validation)
+            # Uncomment the following lines if you want to prevent past dates
+            # if start_date.data < date.today():
+            #     raise ValidationError('Дата начала не может быть в прошлом.')
         except ValidationError:
             raise
         except Exception as e:
@@ -403,6 +414,11 @@ class RegistrationForm(FlaskForm):
             # Check for password strength (at least one letter and one digit)
             if not re.search(r"[a-zA-Z]", password.data) or not re.search(r"[0-9]", password.data):
                 raise ValidationError('Пароль должен содержать хотя бы одну букву и одну цифру.')
+                
+            # Check for common weak passwords
+            weak_passwords = ['password', '123456', 'qwerty', 'admin', 'user']
+            if password.data.lower() in weak_passwords:
+                raise ValidationError('Пожалуйста, выберите более сложный пароль.')
         except ValidationError:
             raise
         except Exception as e:
@@ -451,6 +467,11 @@ class ResetPasswordForm(FlaskForm):
             # Check for password strength (at least one letter and one digit)
             if not re.search(r"[a-zA-Z]", password.data) or not re.search(r"[0-9]", password.data):
                 raise ValidationError('Пароль должен содержать хотя бы одну букву и одну цифру.')
+                
+            # Check for common weak passwords
+            weak_passwords = ['password', '123456', 'qwerty', 'admin', 'user']
+            if password.data.lower() in weak_passwords:
+                raise ValidationError('Пожалуйста, выберите более сложный пароль.')
         except ValidationError:
             raise
         except Exception as e:
@@ -529,6 +550,11 @@ class UserForm(FlaskForm):
                 # Check for password strength (at least one letter and one digit)
                 if not re.search(r"[a-zA-Z]", password.data) or not re.search(r"[0-9]", password.data):
                     raise ValidationError('Пароль должен содержать хотя бы одну букву и одну цифру.')
+                    
+                # Check for common weak passwords
+                weak_passwords = ['password', '123456', 'qwerty', 'admin', 'user']
+                if password.data.lower() in weak_passwords:
+                    raise ValidationError('Пожалуйста, выберите более сложный пароль.')
         except ValidationError:
             raise
         except Exception as e:
@@ -554,4 +580,70 @@ class UserForm(FlaskForm):
         except Exception as e:
             logger.error(f"Error validating user form: {str(e)}")
             self.username.errors = list(self.username.errors) + ['Ошибка при проверке формы']
+            return False
+
+# New form for searching employees
+class EmployeeSearchForm(FlaskForm):
+    search = StringField('Поиск', validators=[Optional()])
+    department_id = SelectField('Подразделение', coerce=int, validators=[Optional()])
+    position_id = SelectField('Должность', coerce=int, validators=[Optional()])
+    status = SelectField('Статус', choices=[('', 'Все'), ('active', 'Активен'), ('dismissed', 'Уволен')], 
+                        validators=[Optional()])
+    submit = SubmitField('Найти')
+    
+    def __init__(self, *args, **kwargs):
+        super(EmployeeSearchForm, self).__init__(*args, **kwargs)
+        try:
+            # Add empty option for department and position
+            self.department_id.choices = [("", "Все подразделения")]
+            for d in Department.query.all():
+                self.department_id.choices.append((d.id, d.name))
+                
+            self.position_id.choices = [("", "Все должности")]
+            for p in Position.query.all():
+                self.position_id.choices.append((p.id, p.title))
+        except Exception as e:
+            logger.error(f"Error loading search form choices: {str(e)}")
+            self.department_id.choices = [("", "Все подразделения")]
+            self.position_id.choices = [("", "Все должности")]
+
+# New form for filtering reports
+class ReportFilterForm(FlaskForm):
+    start_date = DateField('Начальная дата', validators=[Optional()])
+    end_date = DateField('Конечная дата', validators=[Optional()])
+    department_id = SelectField('Подразделение', coerce=int, validators=[Optional()])
+    employee_id = SelectField('Сотрудник', coerce=int, validators=[Optional()])
+    submit = SubmitField('Фильтровать')
+    
+    def __init__(self, *args, **kwargs):
+        super(ReportFilterForm, self).__init__(*args, **kwargs)
+        try:
+            # Add empty option for department
+            self.department_id.choices = [("", "Все подразделения")]
+            for d in Department.query.all():
+                self.department_id.choices.append((d.id, d.name))
+                
+            # Add empty option for employee
+            self.employee_id.choices = [("", "Все сотрудники")]
+            for e in Employee.query.all():
+                self.employee_id.choices.append((e.id, e.full_name))
+        except Exception as e:
+            logger.error(f"Error loading report filter form choices: {str(e)}")
+            self.department_id.choices = [("", "Все подразделения")]
+            self.employee_id.choices = [("", "Все сотрудники")]
+    
+    def validate(self, extra_validators=None):
+        try:
+            if not super(ReportFilterForm, self).validate(extra_validators=extra_validators):
+                return False
+            
+            # Validate date range
+            if self.start_date.data and self.end_date.data:
+                if self.start_date.data > self.end_date.data:
+                    self.end_date.errors = list(self.end_date.errors) + ['Конечная дата должна быть позже начальной']
+                    return False
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error validating report filter form: {str(e)}")
             return False

@@ -345,6 +345,76 @@ def create_vacation_duration_chart(vacations):
         logger.error(f"Error creating vacation duration chart: {str(e)}")
         return None
 
+@lru_cache(maxsize=32)
+def create_employee_performance_chart(employees, vacations):
+    """Создание графика производительности сотрудников по отпускам"""
+    if not MATPLOTLIB_AVAILABLE:
+        return None
+    
+    try:
+        # Вычисляем количество отпусков на сотрудника
+        employee_vacation_counts = {}
+        for vacation in vacations:
+            emp_id = vacation.employee_id
+            if emp_id in employee_vacation_counts:
+                employee_vacation_counts[emp_id] += 1
+            else:
+                employee_vacation_counts[emp_id] = 1
+        
+        # Создаем график
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Получаем имена сотрудников и количество отпусков
+        employee_names = []
+        vacation_counts = []
+        
+        # Берем только первые 20 сотрудников для читаемости графика
+        sorted_employees = sorted(employee_vacation_counts.items(), key=lambda x: x[1], reverse=True)[:20]
+        
+        for emp_id, count in sorted_employees:
+            # Находим сотрудника по ID
+            employee = next((e for e in employees if e.id == emp_id), None)
+            if employee:
+                employee_names.append(employee.full_name)
+                vacation_counts.append(count)
+        
+        if not employee_names:
+            return None
+        
+        bars = ax.bar(range(len(employee_names)), vacation_counts, color='cornflowerblue')
+        ax.set_xlabel('Сотрудники')
+        ax.set_ylabel('Количество отпусков')
+        ax.set_title('Топ-20 сотрудников по количеству отпусков')
+        ax.set_xticks(range(len(employee_names)))
+        ax.set_xticklabels(employee_names, rotation=45, ha='right')
+        
+        # Добавляем значения на столбцы
+        for i, bar in enumerate(bars):
+            height = bar.get_height()
+            ax.annotate(f'{int(height)}',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom')
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except Exception as e:
+        logger.error(f"Error creating employee performance chart: {str(e)}")
+        return None
+
 def create_interactive_dashboard_data(employees, departments, positions, vacations):
     """Создание данных для интерактивной панели мониторинга"""
     try:
@@ -391,6 +461,13 @@ def create_interactive_dashboard_data(employees, departments, positions, vacatio
                 logger.error(f"Error processing hiring trends: {str(e)}")
                 monthly_hires = []
         
+        # Средняя продолжительность отпусков
+        if vacations:
+            total_vacation_days = sum([(v.end_date - v.start_date).days + 1 for v in vacations])
+            avg_vacation_duration = total_vacation_days / len(vacations)
+        else:
+            avg_vacation_duration = 0
+        
         return {
             'total_employees': total_employees,
             'active_employees': active_employees,
@@ -398,7 +475,8 @@ def create_interactive_dashboard_data(employees, departments, positions, vacatio
             'department_stats': dept_data,
             'position_stats': position_data,
             'vacation_stats': vacation_stats,
-            'monthly_hires': monthly_hires
+            'monthly_hires': monthly_hires,
+            'avg_vacation_duration': round(avg_vacation_duration, 2)
         }
     except Exception as e:
         logger.error(f"Error creating interactive dashboard data: {str(e)}")
@@ -409,7 +487,8 @@ def create_interactive_dashboard_data(employees, departments, positions, vacatio
             'department_stats': [],
             'position_stats': [],
             'vacation_stats': {},
-            'monthly_hires': []
+            'monthly_hires': [],
+            'avg_vacation_duration': 0
         }
 
 def create_interactive_charts(interactive_data, departments=None, employees=None, vacations=None):
@@ -506,6 +585,21 @@ def create_interactive_charts(interactive_data, departments=None, employees=None
                                  xaxis_title='Длительность (дни)',
                                  yaxis_title='Количество отпусков')
                 charts['vacation_duration_chart'] = fig7.to_html(include_plotlyjs=False, div_id='vacation_duration_chart')
+        
+        # Average vacation duration indicator
+        fig8 = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=interactive_data.get('avg_vacation_duration', 0),
+            title={'text': "Средняя длительность отпуска (дни)"},
+            gauge={'axis': {'range': [None, 30]},
+                   'bar': {'color': "lightseagreen"},
+                   'steps': [{'range': [0, 10], 'color': "lightcyan"},
+                            {'range': [10, 20], 'color': "cyan"},
+                            {'range': [20, 30], 'color': "royalblue"}],
+                   'threshold': {'line': {'color': "red", 'width': 4},
+                               'thickness': 0.75,
+                               'value': 14}}))
+        charts['avg_vacation_duration_chart'] = fig8.to_html(include_plotlyjs=False, div_id='avg_vacation_duration_chart')
         
         return charts
     except Exception as e:
