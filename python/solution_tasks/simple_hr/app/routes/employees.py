@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app.models import Employee, Department, Position
 from app.forms import EmployeeForm
@@ -225,3 +225,14 @@ def import_employees():
             return redirect(url_for('employees.import_employees'))
     
     return render_template('employees/import.html')
+
+@bp.route('/import_progress')
+@login_required
+def import_progress():
+    """Endpoint to check import progress - for AJAX calls"""
+    # This would typically check a background task or session variable
+    # For now, we'll return a mock response
+    return jsonify({
+        'progress': 0,
+        'status': 'waiting'
+    })
