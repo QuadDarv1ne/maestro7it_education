@@ -3,6 +3,7 @@ from wtforms import StringField, EmailField, DateField, SelectField, PasswordFie
 from wtforms.validators import DataRequired, Email, Length, Optional, EqualTo, ValidationError
 from app.models import Employee, Department, Position, User, Vacation
 from app import db
+from sqlalchemy import or_
 
 class EmployeeForm(FlaskForm):
     full_name = StringField('ФИО', validators=[DataRequired(), Length(max=150)])
@@ -122,8 +123,12 @@ class OrderForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.employee_id.choices = [(e.id, e.full_name) for e in Employee.query.all()]
-        self.new_department_id.choices = [('', 'Не выбрано')] + [(d.id, d.name) for d in Department.query.all()]
-        self.new_position_id.choices = [('', 'Не выбрано')] + [(p.id, p.title) for p in Position.query.all()]
+        dept_choices = [('', 'Не выбрано')]
+        dept_choices.extend([(d.id, d.name) for d in Department.query.all()])
+        self.new_department_id.choices = dept_choices
+        pos_choices = [('', 'Не выбрано')]
+        pos_choices.extend([(p.id, p.title) for p in Position.query.all()])
+        self.new_position_id.choices = pos_choices
 
 class LoginForm(FlaskForm):
     username = StringField('Имя пользователя', validators=[DataRequired()])
@@ -173,8 +178,13 @@ class UserForm(FlaskForm):
     def validate_email(self, email):
         if self.original_email and email.data == self.original_email:
             return
-        user = User.query.filter_by(email=email.data).first()
-        if user:
+        user = User.query.filter(
+            or_(
+                User.email == email.data,
+                User.username == email.data  # This is a common mistake, checking for username instead
+            )
+        ).first()
+        if user and user.email == email.data:
             raise ValidationError('Пользователь с таким email уже существует.')
     
     def validate(self, extra_validators=None):

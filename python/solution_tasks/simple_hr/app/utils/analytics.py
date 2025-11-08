@@ -2,6 +2,7 @@ import base64
 from io import BytesIO
 from datetime import datetime, date
 from app.models import Employee, Department, Position, Vacation
+from functools import lru_cache
 
 # Try to import optional packages
 try:
@@ -30,6 +31,7 @@ except ImportError:
 # Настройка стиля для matplotlib
 # (Настройки стиля отключены из-за проблем с импортом)
 
+@lru_cache(maxsize=32)
 def create_employee_distribution_chart(department_stats):
     """Создание графика распределения сотрудников по подразделениям"""
     if not MATPLOTLIB_AVAILABLE:
@@ -74,6 +76,7 @@ def create_employee_distribution_chart(department_stats):
     except:
         return None
 
+@lru_cache(maxsize=32)
 def create_employee_status_chart(active_count, dismissed_count):
     """Создание круговой диаграммы статусов сотрудников"""
     if not MATPLOTLIB_AVAILABLE:
@@ -106,6 +109,7 @@ def create_employee_status_chart(active_count, dismissed_count):
     except:
         return None
 
+@lru_cache(maxsize=32)
 def create_hiring_trend_chart(employees):
     """Создание графика тенденций найма по месяцам"""
     if not MATPLOTLIB_AVAILABLE or not PANDAS_AVAILABLE:
@@ -146,6 +150,7 @@ def create_hiring_trend_chart(employees):
     except:
         return None
 
+@lru_cache(maxsize=32)
 def create_vacation_analysis_chart(vacations):
     """Создание анализа отпусков по типам"""
     if not MATPLOTLIB_AVAILABLE:

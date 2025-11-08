@@ -7,6 +7,7 @@ from app.utils.audit import log_employee_create, log_employee_update, log_employ
 from app.utils.csv_import import import_employees_from_csv
 from app import db
 import os
+from sqlalchemy import or_
 
 bp = Blueprint('employees', __name__)
 
@@ -36,7 +37,7 @@ def list_employees():
     if search:
         search_filter = f"%{search}%"
         query = query.filter(
-            db.or_(
+            or_(
                 Employee.full_name.like(search_filter),
                 Employee.email.like(search_filter),
                 Employee.employee_id.like(search_filter)
@@ -91,7 +92,7 @@ def create_employee():
             return redirect(url_for('employees.list_employees'))
         except Exception as e:
             db.session.rollback()
-            flash('Ошибка при добавлении сотрудника')
+            flash('Ошибка при добавлении сотрудника: ' + str(e))
             return render_template('employees/form.html', form=form)
     
     return render_template('employees/form.html', form=form)
@@ -101,6 +102,10 @@ def create_employee():
 def edit_employee(id):
     employee = Employee.query.get_or_404(id)
     form = EmployeeForm(obj=employee)
+    
+    # Set original values for validation
+    form.original_email = employee.email
+    form.original_employee_id = employee.employee_id
     
     if form.validate_on_submit():
         # Update employee data
@@ -122,7 +127,7 @@ def edit_employee(id):
             return redirect(url_for('employees.list_employees'))
         except Exception as e:
             db.session.rollback()
-            flash('Ошибка при обновлении сотрудника')
+            flash('Ошибка при обновлении сотрудника: ' + str(e))
             return render_template('employees/form.html', form=form, employee=employee)
     
     return render_template('employees/form.html', form=form, employee=employee)
@@ -143,7 +148,7 @@ def delete_employee(id):
         flash('Сотрудник успешно удален')
     except Exception as e:
         db.session.rollback()
-        flash('Ошибка при удалении сотрудника')
+        flash('Ошибка при удалении сотрудника: ' + str(e))
     
     return redirect(url_for('employees.list_employees'))
 
