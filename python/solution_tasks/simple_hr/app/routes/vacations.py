@@ -72,6 +72,9 @@ def vacation_calendar():
 def create_vacation():
     form = VacationForm()
     try:
+        # Log form initialization
+        logger.debug(f"Vacation form initialized with {len(form.employee_id.choices)} employee choices")
+        
         if form.validate_on_submit():
             # Create new vacation
             vacation = Vacation()
@@ -101,6 +104,10 @@ def create_vacation():
                 logger.error(f"Error saving vacation: {str(e)}")
                 flash('Ошибка при добавлении отпуска', 'error')
                 return render_template('vacations/form.html', form=form)
+        
+        # Log form choices for debugging
+        logger.debug(f"Employee choices in form: {form.employee_id.choices}")
+        logger.debug(f"Number of employee choices: {len(form.employee_id.choices)}")
         
         # If form is not submitted or validation failed, render the form
         return render_template('vacations/form.html', form=form)

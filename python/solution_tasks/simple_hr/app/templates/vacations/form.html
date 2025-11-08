@@ -11,6 +11,9 @@
     <div class="mb-3">
         {{ form.employee_id.label(class="form-label") }}
         {{ form.employee_id(class="form-select") }}
+        {% if form.employee_id.choices|length == 0 %}
+            <div class="text-warning">Нет доступных сотрудников. Пожалуйста, добавьте сотрудников в систему.</div>
+        {% endif %}
         {% for error in form.employee_id.errors %}
             <div class="text-danger">{{ error }}</div>
         {% endfor %}
@@ -45,4 +48,20 @@
         <a href="{{ url_for('vacations.list_vacations') }}" class="btn btn-secondary">Отмена</a>
     </div>
 </form>
+
+<!-- Debug information for developers -->
+{% if config.DEBUG %}
+<div class="mt-4 p-3 bg-light border">
+    <h5>Debug Information</h5>
+    <p>Employee choices count: {{ form.employee_id.choices|length }}</p>
+    {% if form.employee_id.choices|length > 0 %}
+    <p>First few employee choices:</p>
+    <ul>
+        {% for choice in form.employee_id.choices[:5] %}
+        <li>{{ choice }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

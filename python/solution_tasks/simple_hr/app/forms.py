@@ -26,12 +26,23 @@ class EmployeeForm(FlaskForm):
         self.original_email = original_email
         self.original_employee_id = original_employee_id
         try:
-            self.department_id.choices = [(d.id, d.name) for d in Department.query.all()]
-            self.position_id.choices = [(p.id, p.title) for p in Position.query.all()]
+            # Load departments and positions
+            departments = Department.query.all()
+            positions = Position.query.all()
+            
+            # Set choices with empty option first
+            self.department_id.choices = [("", "Выберите подразделение")]
+            self.position_id.choices = [("", "Выберите должность")]
+            
+            # Add actual departments and positions
+            for d in departments:
+                self.department_id.choices.append((d.id, d.name))
+            for p in positions:
+                self.position_id.choices.append((p.id, p.title))
         except Exception as e:
             logger.error(f"Error loading form choices: {str(e)}")
-            self.department_id.choices = []
-            self.position_id.choices = []
+            self.department_id.choices = [("", "Ошибка загрузки подразделений")]
+            self.position_id.choices = [("", "Ошибка загрузки должностей")]
     
     def validate_full_name(self, full_name):
         """Validate full name format"""
@@ -204,13 +215,17 @@ class VacationForm(FlaskForm):
         super(VacationForm, self).__init__(*args, **kwargs)
         self.vacation_id = vacation_id
         try:
-            # Load active employees only and sort by full name
+            # Load active employees only and sort by full_name
             employees = Employee.query.filter_by(status='active').order_by(Employee.full_name).all()
-            self.employee_id.choices = [(e.id, e.full_name) for e in employees]
+            self.employee_id.choices = [(e.id, f"{e.full_name} ({e.employee_id})") for e in employees]
+            
+            # Log the number of employees loaded
+            logger.debug(f"Loaded {len(self.employee_id.choices)} active employees for vacation form")
             
             # If no employees found, provide a default option
             if not self.employee_id.choices:
                 self.employee_id.choices = [("", "Нет доступных сотрудников")]
+                logger.warning("No active employees found for vacation form")
         except Exception as e:
             logger.error(f"Error loading employee choices: {str(e)}")
             self.employee_id.choices = [("", "Ошибка загрузки сотрудников")]
