@@ -159,17 +159,9 @@ def export_report_to_csv(report_data, filename):
     if not report_data:
         return False
     
-    if not PANDAS_AVAILABLE:
-        # Manual CSV export
-        import csv
-        with open(filename, 'w', newline='', encoding='utf-8-sig') as f:
-            if report_data:
-                writer = csv.DictWriter(f, fieldnames=report_data[0].keys())
-                writer.writeheader()
-                writer.writerows(report_data)
-        return True
-    
     try:
+        # Try to use pandas if available
+        import pandas as pd
         # Создаем DataFrame из данных
         df = pd.DataFrame(report_data)
         
@@ -177,7 +169,17 @@ def export_report_to_csv(report_data, filename):
         df.to_csv(filename, index=False, encoding='utf-8-sig')
         return True
     except:
-        return False
+        # Manual CSV export as fallback
+        import csv
+        try:
+            with open(filename, 'w', newline='', encoding='utf-8-sig') as f:
+                if report_data:
+                    writer = csv.DictWriter(f, fieldnames=report_data[0].keys())
+                    writer.writeheader()
+                    writer.writerows(report_data)
+            return True
+        except:
+            return False
 
 def export_report_to_excel(report_data, filename):
     """Экспорт отчета в Excel файл"""
@@ -300,7 +302,9 @@ def generate_vacation_calendar(year, month):
         
         calendar_data.append({
             'date': current_date,
-            'vacations': day_vacations
+            'vacations': day_vacations,
+            'weekday': current_date.weekday(),  # Добавляем день недели для улучшенного отображения
+            'is_weekend': current_date.weekday() >= 5  # Выходные дни
         })
         
         current_date += timedelta(days=1)
