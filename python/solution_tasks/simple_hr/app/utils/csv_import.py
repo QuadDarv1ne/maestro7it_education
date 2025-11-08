@@ -9,13 +9,22 @@ from app import db
 from datetime import datetime
 import chardet
 import csv
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 def detect_encoding(filepath):
     """Detect the encoding of a CSV file"""
-    with open(filepath, 'rb') as f:
-        raw_data = f.read()
-        result = chardet.detect(raw_data)
-        return result['encoding']
+    try:
+        with open(filepath, 'rb') as f:
+            raw_data = f.read()
+            result = chardet.detect(raw_data)
+            return result['encoding']
+    except Exception as e:
+        logger.error(f"Error detecting encoding: {str(e)}")
+        # Fallback to utf-8
+        return 'utf-8'
 
 def import_employees_from_csv_fallback(filepath):
     """Import employees from CSV file using standard CSV module"""
@@ -29,6 +38,7 @@ def import_employees_from_csv_fallback(filepath):
     try:
         # Detect encoding
         encoding = detect_encoding(filepath)
+        logger.info(f"Detected encoding: {encoding}")
         
         # Read CSV file
         with open(filepath, 'r', encoding=encoding) as f:
@@ -114,6 +124,7 @@ def import_employees_from_csv_fallback(filepath):
                     error_msg = f"Строка {index+1}: Ошибка при импорте сотрудника {row.get('full_name', 'Unknown')}: {str(e)}"
                     report['errors'].append(error_msg)
                     report['details'].append(error_msg)
+                    logger.error(error_msg)
                     continue
             
             # Process remaining batch
@@ -121,11 +132,14 @@ def import_employees_from_csv_fallback(filepath):
                 db.session.add_all(batch)
         
         db.session.commit()
+        logger.info(f"CSV import completed: {report['imported']} imported, {report['skipped']} skipped, {len(report['errors'])} errors")
         return report
         
     except Exception as e:
         db.session.rollback()
-        raise Exception(f"Ошибка при импорте из CSV: {str(e)}")
+        error_msg = f"Ошибка при импорте из CSV: {str(e)}"
+        logger.error(error_msg)
+        raise Exception(error_msg)
 
 def import_employees_from_csv(filepath):
     """Import employees from CSV file with error handling"""
@@ -138,12 +152,14 @@ def import_employees_from_csv(filepath):
     
     if not PANDAS_AVAILABLE:
         # Fallback to standard CSV module
+        logger.info("Pandas not available, using fallback CSV import")
         return import_employees_from_csv_fallback(filepath)
     
     try:
         import pandas as pd
         # Detect encoding
         encoding = detect_encoding(filepath)
+        logger.info(f"Detected encoding: {encoding}")
         
         # Read CSV file
         df = pd.read_csv(filepath, encoding=encoding)
@@ -227,6 +243,7 @@ def import_employees_from_csv(filepath):
                 error_msg = f"Строка {index+1}: Ошибка при импорте сотрудника {row.get('full_name', 'Unknown')}: {str(e)}"
                 report['errors'].append(error_msg)
                 report['details'].append(error_msg)
+                logger.error(error_msg)
                 continue
         
         # Process remaining batch
@@ -234,8 +251,11 @@ def import_employees_from_csv(filepath):
             db.session.add_all(batch)
         
         db.session.commit()
+        logger.info(f"CSV import completed: {report['imported']} imported, {report['skipped']} skipped, {len(report['errors'])} errors")
         return report
         
     except Exception as e:
         db.session.rollback()
-        raise Exception(f"Ошибка при импорте из CSV: {str(e)}")
+        error_msg = f"Ошибка при импорте из CSV: {str(e)}"
+        logger.error(error_msg)
+        raise Exception(error_msg)
