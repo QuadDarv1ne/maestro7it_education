@@ -95,5 +95,27 @@
             </div>
         </div>
     </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-alt fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Календарь отпусков</h5>
+                <p class="card-text">Календарь отпусков на месяц с детализацией по сотрудникам.</p>
+                <a href="{{ url_for('reports.generate_report', type='vacation_calendar') }}" class="btn btn-info">Сформировать</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-exchange-alt fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Оборот кадров</h5>
+                <p class="card-text">Отчет по принятию и увольнению сотрудников за период.</p>
+                <a href="{{ url_for('reports.generate_report', type='turnover_report') }}" class="btn btn-warning">Сформировать</a>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required
 from app.models import Employee, Department, Position, Vacation, Order
-from app.utils.reports import generate_employee_report, generate_department_report, generate_vacation_report, generate_hiring_report, export_report_to_csv, export_report_to_excel, get_employee_statistics, get_vacation_statistics
+from app.utils.reports import generate_employee_report, generate_department_report, generate_vacation_report, generate_hiring_report, export_report_to_csv, export_report_to_excel, get_employee_statistics, get_vacation_statistics, generate_vacation_calendar, generate_turnover_report
 from app.utils.decorators import reports_access_required
 from app import db
 from datetime import datetime, date
@@ -82,6 +82,41 @@ def generate_report():
         report_data = generate_department_report()
         return render_template('reports/department_report.html', report_data=report_data)
     
+    elif report_type == 'vacation_calendar':
+        # Generate vacation calendar for a month
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        
+        # If no year/month specified, use current month
+        if not year or not month:
+            from datetime import date
+            today = date.today()
+            year = today.year
+            month = today.month
+        
+        calendar_data = generate_vacation_calendar(year, month)
+        
+        # Get month name in Russian
+        month_names = {
+            1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель',
+            5: 'Май', 6: 'Июнь', 7: 'Июль', 8: 'Август',
+            9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'
+        }
+        
+        return render_template('reports/vacation_calendar.html', 
+                             calendar_data=calendar_data,
+                             year=year,
+                             month=month,
+                             month_name=month_names.get(month, ''))
+    
+    elif report_type == 'turnover_report':
+        # Generate turnover report
+        period_days = request.args.get('period_days', 365, type=int)
+        turnover_data = generate_turnover_report(period_days)
+        return render_template('reports/turnover.html', 
+                             turnover_data=turnover_data,
+                             period_days=period_days)
+    
     else:
         flash('Неверный тип отчета')
         return redirect(url_for('reports.generate_report'))
@@ -134,6 +169,142 @@ def export_report():
             csv_data,
             mimetype='text/csv',
             headers={'Content-Disposition': 'attachment; filename=employees_report.csv'}
+        )
+    
+    elif report_type == 'hiring_report':
+        # Get period parameter
+        period_months = request.args.get('period_months', 12, type=int)
+        
+        # Generate hiring report data
+        hiring_data = generate_hiring_report(period_months)
+        
+        # Create DataFrame
+        data = []
+        for month_data in hiring_data:
+            for emp in month_data['employees']:
+                data.append({
+                    'Месяц': month_data['month'],
+                    'ФИО': emp['name'],
+                    'Подразделение': emp['department'],
+                    'Должность': emp['position'],
+                    'Дата приема': emp['hire_date'].strftime('%d.%m.%Y')
+                })
+        
+        df = pd.DataFrame(data)
+        
+        # Create CSV
+        output = io.StringIO()
+        df.to_csv(output, index=False, encoding='utf-8')
+        csv_data = output.getvalue()
+        
+        # Return CSV response
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=hiring_report_{period_months}_months.csv'}
+        )
+    
+    elif report_type == 'vacation_calendar':
+        # Get year and month parameters
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        
+        # If no year/month specified, use current month
+        if not year or not month:
+            from datetime import date
+            today = date.today()
+            year = today.year
+            month = today.month
+        
+        # Generate vacation calendar data
+        calendar_data = generate_vacation_calendar(year, month)
+        
+        # Create DataFrame
+        data = []
+        for day_data in calendar_data:
+            if day_data['vacations']:
+                for vacation in day_data['vacations']:
+                    data.append({
+                        'Дата': day_data['date'].strftime('%d.%m.%Y'),
+                        'Сотрудник': vacation['employee_name'],
+                        'Подразделение': vacation['department'],
+                        'Должность': vacation['position'],
+                        'Тип отпуска': vacation['type']
+                    })
+            else:
+                data.append({
+                    'Дата': day_data['date'].strftime('%d.%m.%Y'),
+                    'Сотрудник': '',
+                    'Подразделение': '',
+                    'Должность': '',
+                    'Тип отпуска': 'Нет отпусков'
+                })
+        
+        df = pd.DataFrame(data)
+        
+        # Create CSV
+        output = io.StringIO()
+        df.to_csv(output, index=False, encoding='utf-8')
+        csv_data = output.getvalue()
+        
+        # Return CSV response
+        from calendar import month_name
+        month_names_ru = {
+            1: 'Январь', 2: 'Февраль', 3: 'Март', 4: 'Апрель',
+            5: 'Май', 6: 'Июнь', 7: 'Июль', 8: 'Август',
+            9: 'Сентябрь', 10: 'Октябрь', 11: 'Ноябрь', 12: 'Декабрь'
+        }
+        
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=vacation_calendar_{year}_{month}_{month_names_ru.get(month, month)}.csv'}
+        )
+    
+    elif report_type == 'turnover_report':
+        # Get period parameter
+        period_days = request.args.get('period_days', 365, type=int)
+        
+        # Generate turnover report data
+        turnover_data = generate_turnover_report(period_days)
+        
+        # Create DataFrame
+        data = []
+        for month_data in turnover_data:
+            # Add hired employees
+            for emp in month_data['hired_employees']:
+                data.append({
+                    'Месяц': month_data['month'],
+                    'Тип': 'Принят',
+                    'Сотрудник': emp['name'],
+                    'Подразделение': emp['department'],
+                    'Должность': emp['position'],
+                    'Дата': emp['hire_date'].strftime('%d.%m.%Y')
+                })
+            
+            # Add dismissed employees
+            for emp in month_data['dismissed_employees']:
+                data.append({
+                    'Месяц': month_data['month'],
+                    'Тип': 'Уволен',
+                    'Сотрудник': emp['employee_name'],
+                    'Подразделение': emp['department'],
+                    'Должность': emp['position'],
+                    'Дата': emp['dismissal_date'].strftime('%d.%m.%Y')
+                })
+        
+        df = pd.DataFrame(data)
+        
+        # Create CSV
+        output = io.StringIO()
+        df.to_csv(output, index=False, encoding='utf-8')
+        csv_data = output.getvalue()
+        
+        # Return CSV response
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=turnover_report_{period_days}_days.csv'}
         )
     
     else:

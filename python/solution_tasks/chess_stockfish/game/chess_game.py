@@ -214,7 +214,6 @@ class ChessGame:
         self.board_state_cache_duration = 0.2  # Длительность кэша состояния доски (200ms)
 
         # Инициализация статистики игры
-        # Инициализация статистики игры
         self.game_stats = {
             'start_time': time.time(),
             'player_moves': 0,
@@ -1721,21 +1720,21 @@ class ChessGame:
             'player_moves_list': [],  # Список ходов игрока
             'ai_moves_list': [],  # Список ходов ИИ
             'duration': 0,
-            'difficulty_level': self.skill_level,  # Fixed variable name
-            'player_color': self.player_color
+            'difficulty_level': engine_level,
+            'player_color': player_color
         }
-
-    def get_move_statistics(self):
-        """
-        Получить статистику ходов в игре.
-        
-        Возвращает:
-            dict: Словарь со статистикой ходов
-        """
-        try:
-            stats = {
-                'total_moves': len(self.move_history),
-                'player_moves': self.game_stats['player_moves'],
+        # Reset game stats
+        self.game_stats = {
+            'start_time': time.time(),
+            'player_moves': 0,
+            'ai_moves': 0,
+            'player_capture_count': 0,
+            'ai_capture_count': 0,
+            'check_count': 0,
+            'move_times': [],
+            'evaluations': [],
+            'advantage_changes': 0
+        }
                 'ai_moves': self.game_stats['ai_moves'],
                 'capture_moves': self.game_stats['player_capture_count'] + self.game_stats['ai_capture_count'],
                 'check_moves': self.game_stats['check_count'],

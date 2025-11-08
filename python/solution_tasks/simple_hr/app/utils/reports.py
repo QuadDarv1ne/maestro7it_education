@@ -233,3 +233,122 @@ def get_vacation_statistics():
         'sick_vacations': sick_vacations,
         'average_duration': round(avg_duration, 2)
     }
+
+def generate_vacation_calendar(year, month):
+    """Генерация календаря отпусков на месяц"""
+    from calendar import monthrange
+    
+    # Получаем первый и последний день месяца
+    start_date = date(year, month, 1)
+    end_date = date(year, month, monthrange(year, month)[1])
+    
+    # Получаем отпуска, которые пересекаются с этим месяцем
+    vacations = Vacation.query.filter(
+        Vacation.start_date <= end_date,
+        Vacation.end_date >= start_date
+    ).all()
+    
+    # Создаем календарь
+    calendar_data = []
+    
+    # Для каждого дня месяца
+    current_date = start_date
+    while current_date <= end_date:
+        # Находим отпуска, действующие в этот день
+        day_vacations = []
+        for vacation in vacations:
+            if vacation.start_date <= current_date <= vacation.end_date:
+                # Определяем тип отпуска на русском
+                vacation_type_names = {
+                    'paid': 'Оплачиваемый',
+                    'unpaid': 'Неоплачиваемый',
+                    'sick': 'Больничный'
+                }
+                
+                day_vacations.append({
+                    'employee_name': vacation.employee.full_name,
+                    'department': vacation.employee.department.name,
+                    'position': vacation.employee.position.title,
+                    'type': vacation_type_names.get(vacation.type, vacation.type)
+                })
+        
+        calendar_data.append({
+            'date': current_date,
+            'vacations': day_vacations
+        })
+        
+        current_date += timedelta(days=1)
+    
+    return calendar_data
+
+def generate_turnover_report(period_days=365):
+    """Генерация отчета по обороту кадров (принято/уволено за период)"""
+    # Определяем дату начала периода
+    end_date = date.today()
+    start_date = end_date - timedelta(days=period_days)
+    
+    # Получаем сотрудников, принятых за период
+    hired_employees = Employee.query.filter(
+        Employee.hire_date >= start_date,
+        Employee.hire_date <= end_date
+    ).all()
+    
+    # Получаем сотрудников, уволенных за период
+    # Для этого ищем приказы об увольнении
+    dismissal_orders = Order.query.filter(
+        Order.type == 'dismissal',
+        Order.date_issued >= start_date,
+        Order.date_issued <= end_date
+    ).all()
+    
+    # Получаем информацию об уволенных сотрудниках
+    dismissed_employees = []
+    for order in dismissal_orders:
+        employee = Employee.query.get(order.employee_id)
+        if employee:
+            dismissed_employees.append({
+                'employee_name': employee.full_name,
+                'department': employee.department.name if employee.department else '',
+                'position': employee.position.title if employee.position else '',
+                'dismissal_date': order.date_issued
+            })
+    
+    # Группируем по месяцам
+    monthly_hiring = {}
+    for employee in hired_employees:
+        month_key = employee.hire_date.strftime('%Y-%m')
+        if month_key not in monthly_hiring:
+            monthly_hiring[month_key] = {
+                'month': month_key,
+                'hired': 0,
+                'dismissed': 0,
+                'hired_employees': [],
+                'dismissed_employees': []
+            }
+        monthly_hiring[month_key]['hired'] += 1
+        monthly_hiring[month_key]['hired_employees'].append({
+            'name': employee.full_name,
+            'department': employee.department.name if employee.department else '',
+            'position': employee.position.title if employee.position else '',
+            'hire_date': employee.hire_date
+        })
+    
+    # Добавляем уволенных сотрудников
+    for emp_data in dismissed_employees:
+        month_key = emp_data['dismissal_date'].strftime('%Y-%m')
+        if month_key not in monthly_hiring:
+            monthly_hiring[month_key] = {
+                'month': month_key,
+                'hired': 0,
+                'dismissed': 0,
+                'hired_employees': [],
+                'dismissed_employees': []
+            }
+        monthly_hiring[month_key]['dismissed'] += 1
+        monthly_hiring[month_key]['dismissed_employees'].append(emp_data)
+    
+    # Преобразуем в список и сортируем по месяцам
+    report_data = list(monthly_hiring.values())
+    report_data.sort(key=lambda x: x['month'])
+    
+    return report_data

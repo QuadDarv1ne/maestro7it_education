@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Календарь отпусков{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Календарь отпусков - {{ month_name }} {{ year }}</h2>
+    <div>
+        <a href="{{ url_for('reports.export_report', type='vacation_calendar', year=year, month=month) }}" class="btn btn-success me-2">
+            <i class="fas fa-file-export"></i> Экспорт в CSV
+        </a>
+        <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Параметры отчета</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <input type="hidden" name="type" value="vacation_calendar">
+                    <div class="col-md-4">
+                        <label for="year" class="form-label">Год</label>
+                        <select class="form-select" id="year" name="year">
+                            {% for y in range(year-2, year+3) %}
+                                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="month" class="form-label">Месяц</label>
+                        <select class="form-select" id="month" name="month">
+                            <option value="1" {% if month == 1 %}selected{% endif %}>Январь</option>
+                            <option value="2" {% if month == 2 %}selected{% endif %}>Февраль</option>
+                            <option value="3" {% if month == 3 %}selected{% endif %}>Март</option>
+                            <option value="4" {% if month == 4 %}selected{% endif %}>Апрель</option>
+                            <option value="5" {% if month == 5 %}selected{% endif %}>Май</option>
+                            <option value="6" {% if month == 6 %}selected{% endif %}>Июнь</option>
+                            <option value="7" {% if month == 7 %}selected{% endif %}>Июль</option>
+                            <option value="8" {% if month == 8 %}selected{% endif %}>Август</option>
+                            <option value="9" {% if month == 9 %}selected{% endif %}>Сентябрь</option>
+                            <option value="10" {% if month == 10 %}selected{% endif %}>Октябрь</option>
+                            <option value="11" {% if month == 11 %}selected{% endif %}>Ноябрь</option>
+                            <option value="12" {% if month == 12 %}selected{% endif %}>Декабрь</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Сформировать отчет</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Календарь отпусков</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Сотрудник</th>
+                                <th>Подразделение</th>
+                                <th>Должность</th>
+                                <th>Тип отпуска</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day_data in calendar_data %}
+                                {% if day_data.vacations %}
+                                    {% for vacation in day_data.vacations %}
+                                    <tr>
+                                        <td>{{ day_data.date.strftime('%d.%m.%Y') }}</td>
+                                        <td>{{ vacation.employee_name }}</td>
+                                        <td>{{ vacation.department }}</td>
+                                        <td>{{ vacation.position }}</td>
+                                        <td>{{ vacation.type }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td>{{ day_data.date.strftime('%d.%m.%Y') }}</td>
+                                    <td colspan="4" class="text-muted">Нет отпусков</td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

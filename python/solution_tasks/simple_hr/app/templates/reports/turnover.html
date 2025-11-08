@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Отчет по обороту кадров{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Отчет по обороту кадров</h2>
+    <div>
+        <a href="{{ url_for('reports.export_report', type='turnover_report', period_days=period_days) }}" class="btn btn-success me-2">
+            <i class="fas fa-file-export"></i> Экспорт в CSV
+        </a>
+        <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Параметры отчета</h5>
+            </div>
+            <div class="card-body bg-light">
+                <p class="mb-0"><strong>Период:</strong> {{ period_days }} дней</p>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <input type="hidden" name="type" value="turnover_report">
+                    <div class="col-md-6">
+                        <label for="period_days" class="form-label">Период (дней)</label>
+                        <select class="form-select" id="period_days" name="period_days">
+                            <option value="30" {% if period_days == 30 %}selected{% endif %}>30 дней</option>
+                            <option value="90" {% if period_days == 90 %}selected{% endif %}>90 дней</option>
+                            <option value="180" {% if period_days == 180 %}selected{% endif %}>180 дней</option>
+                            <option value="365" {% if period_days == 365 %}selected{% endif %}>365 дней</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Сформировать отчет</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if turnover_data %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Оборот кадров по месяцам</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Месяц</th>
+                                <th>Принято</th>
+                                <th>Уволено</th>
+                                <th>Сотрудники</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for month_data in turnover_data %}
+                            <tr>
+                                <td>{{ month_data.month }}</td>
+                                <td>{{ month_data.hired }}</td>
+                                <td>{{ month_data.dismissed }}</td>
+                                <td>
+                                    {% if month_data.hired_employees or month_data.dismissed_employees %}
+                                    <ul class="mb-0">
+                                        {% for emp in month_data.hired_employees %}
+                                        <li class="text-success">
+                                            <i class="fas fa-plus-circle"></i> 
+                                            {{ emp.name }} - {{ emp.department }} ({{ emp.position }}), 
+                                            {{ emp.hire_date.strftime('%d.%m.%Y') }}
+                                        </li>
+                                        {% endfor %}
+                                        {% for emp in month_data.dismissed_employees %}
+                                        <li class="text-danger">
+                                            <i class="fas fa-minus-circle"></i> 
+                                            {{ emp.employee_name }} - {{ emp.department }} ({{ emp.position }}), 
+                                            {{ emp.dismissal_date.strftime('%d.%m.%Y') }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    Нет данных
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-12 text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                <h4>Нет данных для отчета</h4>
+                <p class="text-muted">Выберите период и сформируйте отчет.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
