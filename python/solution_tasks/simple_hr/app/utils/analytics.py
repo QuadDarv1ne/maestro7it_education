@@ -714,3 +714,284 @@ def create_monthly_vacation_trend(vacations):
     except Exception as e:
         logger.error(f"Error creating monthly vacation trend: {str(e)}")
         return None
+
+# Additional new analytics functions
+
+@lru_cache(maxsize=32)
+def create_employee_performance_dashboard(employees, vacations):
+    """Создание панели производительности сотрудников"""
+    if not PLOTLY_AVAILABLE:
+        return None
+    
+    try:
+        # Вычисляем количество отпусков на сотрудника
+        employee_vacation_counts = {}
+        for vacation in vacations:
+            emp_id = vacation.employee_id
+            if emp_id in employee_vacation_counts:
+                employee_vacation_counts[emp_id] += 1
+            else:
+                employee_vacation_counts[emp_id] = 1
+        
+        # Получаем имена сотрудников и количество отпусков
+        employee_names = []
+        vacation_counts = []
+        
+        # Берем только первые 15 сотрудников для читаемости графика
+        sorted_employees = sorted(employee_vacation_counts.items(), key=lambda x: x[1], reverse=True)[:15]
+        
+        for emp_id, count in sorted_employees:
+            # Находим сотрудника по ID
+            employee = next((e for e in employees if e.id == emp_id), None)
+            if employee:
+                employee_names.append(employee.full_name)
+                vacation_counts.append(count)
+        
+        if not employee_names:
+            return None
+        
+        # Создаем горизонтальную гистограмму
+        fig = go.Figure(data=go.Bar(
+            x=vacation_counts,
+            y=employee_names,
+            orientation='h',
+            marker_color='lightcoral'
+        ))
+        
+        fig.update_layout(
+            title='Топ-15 сотрудников по количеству отпусков',
+            xaxis_title='Количество отпусков',
+            yaxis_title='Сотрудники',
+            height=600
+        )
+        
+        return fig.to_html(include_plotlyjs=False, div_id='employee_performance_chart')
+    except Exception as e:
+        logger.error(f"Error creating employee performance dashboard: {str(e)}")
+        return None
+
+@lru_cache(maxsize=32)
+def create_vacation_type_analysis(vacations):
+    """Создание анализа типов отпусков"""
+    if not PLOTLY_AVAILABLE:
+        return None
+    
+    try:
+        # Подсчитываем количество отпусков по типам
+        vacation_types = {
+            'paid': 0,
+            'unpaid': 0,
+            'sick': 0
+        }
+        
+        for vacation in vacations:
+            if vacation.type in vacation_types:
+                vacation_types[vacation.type] += 1
+        
+        # Создаем круговую диаграмму
+        labels = ['Оплачиваемый', 'Неоплачиваемый', 'Больничный']
+        values = [vacation_types['paid'], vacation_types['unpaid'], vacation_types['sick']]
+        colors = ['gold', 'lightcoral', 'lightskyblue']
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            marker_colors=colors,
+            hole=0.3  # Создаем кольцевую диаграмму
+        )])
+        
+        fig.update_layout(
+            title='Анализ типов отпусков',
+            annotations=[dict(
+                text='Типы отпусков',
+                x=0.5,
+                y=0.5,
+                font_size=16,
+                showarrow=False
+            )]
+        )
+        
+        return fig.to_html(include_plotlyjs=False, div_id='vacation_type_analysis')
+    except Exception as e:
+        logger.error(f"Error creating vacation type analysis: {str(e)}")
+        return None
+
+@lru_cache(maxsize=32)
+def create_department_efficiency_analysis(departments, employees, vacations):
+    """Создание анализа эффективности подразделений"""
+    if not PLOTLY_AVAILABLE:
+        return None
+    
+    try:
+        # Подсчитываем метрики для каждого подразделения
+        dept_metrics = {}
+        for dept in departments:
+            # Количество сотрудников
+            dept_employees = [e for e in employees if e.department_id == dept.id]
+            employee_count = len(dept_employees)
+            
+            # Количество отпусков
+            dept_vacations = 0
+            for emp in dept_employees:
+                emp_vacations = [v for v in vacations if v.employee_id == emp.id]
+                dept_vacations += len(emp_vacations)
+            
+            # Среднее количество отпусков на сотрудника
+            avg_vacations_per_employee = dept_vacations / employee_count if employee_count > 0 else 0
+            
+            dept_metrics[dept.name] = {
+                'employee_count': employee_count,
+                'vacation_count': dept_vacations,
+                'avg_vacations_per_employee': round(avg_vacations_per_employee, 2)
+            }
+        
+        # Создаем составной график
+        dept_names = list(dept_metrics.keys())
+        employee_counts = [dept_metrics[name]['employee_count'] for name in dept_names]
+        avg_vacations = [dept_metrics[name]['avg_vacations_per_employee'] for name in dept_names]
+        
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # Гистограмма количества сотрудников
+        fig.add_trace(
+            go.Bar(x=dept_names, y=employee_counts, name='Количество сотрудников', marker_color='lightblue'),
+            secondary_y=False,
+        )
+        
+        # Линия среднего количества отпусков
+        fig.add_trace(
+            go.Scatter(x=dept_names, y=avg_vacations, mode='lines+markers', name='Средние отпуска/сотрудник', line=dict(color='red')),
+            secondary_y=True,
+        )
+        
+        fig.update_layout(
+            title='Анализ эффективности подразделений',
+            xaxis_title='Подразделения'
+        )
+        
+        fig.update_yaxes(title_text="Количество сотрудников", secondary_y=False)
+        fig.update_yaxes(title_text="Средние отпуска на сотрудника", secondary_y=True)
+        
+        return fig.to_html(include_plotlyjs=False, div_id='department_efficiency_chart')
+    except Exception as e:
+        logger.error(f"Error creating department efficiency analysis: {str(e)}")
+        return None
+
+@lru_cache(maxsize=32)
+def create_time_series_analysis(employees, vacations):
+    """Создание временного анализа найма и отпусков"""
+    if not PLOTLY_AVAILABLE or not PANDAS_AVAILABLE:
+        return None
+    
+    try:
+        # Создаем DataFrame для найма
+        hire_dates = [emp.hire_date for emp in employees]
+        hire_df = pd.DataFrame({'date': hire_dates, 'type': 'hire'})
+        
+        # Создаем DataFrame для отпусков
+        vacation_dates = [vac.start_date for vac in vacations]
+        vacation_df = pd.DataFrame({'date': vacation_dates, 'type': 'vacation'})
+        
+        # Объединяем данные
+        df = pd.concat([hire_df, vacation_df])
+        df['month_year'] = df['date'].apply(lambda x: x.strftime('%Y-%m'))
+        
+        # Группируем по месяцам и типу
+        monthly_data = df.groupby(['month_year', 'type']).size().reset_index(name='count')
+        
+        # Разделяем данные
+        hire_data = monthly_data[monthly_data['type'] == 'hire']
+        vacation_data = monthly_data[monthly_data['type'] == 'vacation']
+        
+        # Создаем график
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(
+            x=hire_data['month_year'],
+            y=hire_data['count'],
+            mode='lines+markers',
+            name='Найм сотрудников',
+            line=dict(color='green', width=2)
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=vacation_data['month_year'],
+            y=vacation_data['count'],
+            mode='lines+markers',
+            name='Начало отпусков',
+            line=dict(color='blue', width=2)
+        ))
+        
+        fig.update_layout(
+            title='Временной анализ найма и отпусков',
+            xaxis_title='Месяц',
+            yaxis_title='Количество событий'
+        )
+        
+        return fig.to_html(include_plotlyjs=False, div_id='time_series_chart')
+    except Exception as e:
+        logger.error(f"Error creating time series analysis: {str(e)}")
+        return None
+
+def generate_comprehensive_analytics_report(employees, departments, positions, vacations):
+    """Генерация комплексного аналитического отчета"""
+    try:
+        # Статистика по сотрудникам
+        total_employees = len(employees)
+        active_employees = len([e for e in employees if e.status == 'active'])
+        dismissed_employees = len([e for e in employees if e.status == 'dismissed'])
+        
+        # Статистика по подразделениям
+        dept_stats = []
+        for dept in departments:
+            dept_employees = [e for e in employees if e.department_id == dept.id]
+            dept_active = len([e for e in dept_employees if e.status == 'active'])
+            dept_stats.append({
+                'name': dept.name,
+                'total': len(dept_employees),
+                'active': dept_active
+            })
+        
+        # Статистика по отпускам
+        total_vacations = len(vacations)
+        paid_vacations = len([v for v in vacations if v.type == 'paid'])
+        unpaid_vacations = len([v for v in vacations if v.type == 'unpaid'])
+        sick_vacations = len([v for v in vacations if v.type == 'sick'])
+        
+        # Средняя продолжительность отпуска
+        if vacations:
+            total_days = sum([(v.end_date - v.start_date).days + 1 for v in vacations])
+            avg_duration = total_days / len(vacations)
+        else:
+            avg_duration = 0
+        
+        # Анализ стажа
+        today = date.today()
+        avg_tenure = 0
+        if employees:
+            total_tenure = sum([(today - emp.hire_date).days for emp in employees if emp.hire_date])
+            avg_tenure = total_tenure / len(employees) / 365.25  # В годах
+        
+        return {
+            'employee_stats': {
+                'total': total_employees,
+                'active': active_employees,
+                'dismissed': dismissed_employees,
+                'avg_tenure_years': round(avg_tenure, 2)
+            },
+            'department_stats': dept_stats,
+            'vacation_stats': {
+                'total': total_vacations,
+                'paid': paid_vacations,
+                'unpaid': unpaid_vacations,
+                'sick': sick_vacations,
+                'avg_duration_days': round(avg_duration, 2)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error generating comprehensive analytics report: {str(e)}")
+        return {
+            'employee_stats': {},
+            'department_stats': [],
+            'vacation_stats': {}
+        }
