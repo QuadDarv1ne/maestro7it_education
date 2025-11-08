@@ -10,13 +10,22 @@ import re
 # Set up logging
 logger = logging.getLogger(__name__)
 
+def safe_int_coerce(value):
+    """Safely convert value to int, returning None for empty values"""
+    if value is None or value == '' or (isinstance(value, str) and value.strip() == ''):
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
 class EmployeeForm(FlaskForm):
     full_name = StringField('ФИО', validators=[DataRequired(), Length(max=150)])
     email = EmailField('Email', validators=[DataRequired(), Email(), Length(max=120)])
     employee_id = StringField('Табельный номер', validators=[DataRequired(), Length(max=50)])
     hire_date = DateField('Дата приема', validators=[DataRequired()])
-    department_id = SelectField('Подразделение', coerce=int, validators=[DataRequired()])
-    position_id = SelectField('Должность', coerce=int, validators=[DataRequired()])
+    department_id = SelectField('Подразделение', coerce=safe_int_coerce, validators=[DataRequired()])
+    position_id = SelectField('Должность', coerce=safe_int_coerce, validators=[DataRequired()])
     status = SelectField('Статус', choices=[('active', 'Активен'), ('dismissed', 'Уволен')], 
                         validators=[DataRequired()])
     submit = SubmitField('Сохранить')
