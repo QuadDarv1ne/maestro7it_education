@@ -96,8 +96,8 @@ def create_employee():
                 employee.email = form.email.data.strip().lower() if form.email.data is not None else ""
                 employee.employee_id = form.employee_id.data.strip() if form.employee_id.data is not None else ""
                 employee.hire_date = form.hire_date.data
-                employee.department_id = form.department_id.data
-                employee.position_id = form.position_id.data
+                employee.department_id = form.department_id.data if form.department_id.data is not None else None
+                employee.position_id = form.position_id.data if form.position_id.data is not None else None
                 employee.status = form.status.data
                 
                 db.session.add(employee)
@@ -114,7 +114,8 @@ def create_employee():
                 flash(f'Ошибка при добавлении сотрудника: {str(e)}', 'error')
                 return render_template('employees/form.html', form=form)
         elif request.method == 'POST':
-            # Form validation failed
+            # Form validation failed - let's check what data was submitted
+            logger.info(f"Form validation failed. Form data: {request.form}")
             flash('Пожалуйста, исправьте ошибки в форме', 'error')
         
         return render_template('employees/form.html', form=form)
@@ -141,8 +142,8 @@ def edit_employee(id):
                 employee.email = form.email.data.strip().lower() if form.email.data is not None else employee.email
                 employee.employee_id = form.employee_id.data.strip() if form.employee_id.data is not None else employee.employee_id
                 employee.hire_date = form.hire_date.data
-                employee.department_id = form.department_id.data
-                employee.position_id = form.position_id.data
+                employee.department_id = form.department_id.data if form.department_id.data is not None else employee.department_id
+                employee.position_id = form.position_id.data if form.position_id.data is not None else employee.position_id
                 employee.status = form.status.data
                 
                 db.session.commit()

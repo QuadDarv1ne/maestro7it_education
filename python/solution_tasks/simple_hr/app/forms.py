@@ -173,7 +173,8 @@ class EmployeeForm(FlaskForm):
     def validate_department_id(self, department_id):
         """Validate department selection"""
         try:
-            if not department_id.data:
+            # Check if a department was selected
+            if department_id.data is None or department_id.data == '':
                 raise ValidationError('Подразделение обязательно для выбора.')
             
             # Check that department exists
@@ -189,6 +190,7 @@ class EmployeeForm(FlaskForm):
     def validate_position_id(self, position_id):
         """Validate position selection"""
         try:
+            # Check if a position was selected
             if not position_id.data:
                 raise ValidationError('Должность обязательна для выбора.')
             
