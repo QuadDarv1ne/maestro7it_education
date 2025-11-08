@@ -168,14 +168,12 @@ def create_vacation_analysis_chart(vacations):
         vacation_types = {}
         for vacation in vacations:
             v_type = vacation.type
-            if v_type == 'paid':
-                type_name = 'Оплачиваемый'
-            elif v_type == 'unpaid':
-                type_name = 'Неоплачиваемый'
-            elif v_type == 'sick':
-                type_name = 'Больничный'
-            else:
-                type_name = 'Другое'
+            vacation_type_names = {
+                'paid': 'Оплачиваемый',
+                'unpaid': 'Неоплачиваемый',
+                'sick': 'Больничный'
+            }
+            type_name = vacation_type_names.get(v_type, 'Другое')
                 
             if type_name in vacation_types:
                 vacation_types[type_name] += 1
@@ -210,6 +208,143 @@ def create_vacation_analysis_chart(vacations):
         logger.error(f"Error creating vacation analysis chart: {str(e)}")
         return None
 
+@lru_cache(maxsize=32)
+def create_department_comparison_chart(departments, employees):
+    """Создание сравнения подразделений по численности"""
+    if not MATPLOTLIB_AVAILABLE:
+        return None
+    
+    try:
+        # Подсчитываем количество сотрудников в каждом подразделении
+        dept_counts = {}
+        for dept in departments:
+            dept_counts[dept.name] = len([e for e in employees if e.department_id == dept.id])
+        
+        # Создаем график
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        dept_names = list(dept_counts.keys())
+        counts = list(dept_counts.values())
+        
+        bars = ax.bar(dept_names, counts, color='lightseagreen')
+        ax.set_xlabel('Подразделения')
+        ax.set_ylabel('Количество сотрудников')
+        ax.set_title('Сравнение численности подразделений')
+        ax.tick_params(axis='x', rotation=45)
+        
+        # Добавляем значения на столбцы
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(f'{int(height)}',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom')
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except Exception as e:
+        logger.error(f"Error creating department comparison chart: {str(e)}")
+        return None
+
+@lru_cache(maxsize=32)
+def create_turnover_chart(employees):
+    """Создание графика текучести кадров"""
+    if not MATPLOTLIB_AVAILABLE or not PANDAS_AVAILABLE:
+        return None
+    
+    try:
+        # Фильтруем уволенных сотрудников
+        dismissed_employees = [emp for emp in employees if emp.status == 'dismissed']
+        if not dismissed_employees:
+            return None
+            
+        # Создаем DataFrame с датами увольнения
+        dismissal_dates = [emp.hire_date for emp in dismissed_employees]
+        df = pd.DataFrame({'dismissal_date': dismissal_dates})
+        df['month_year'] = df['dismissal_date'].apply(lambda x: x.strftime('%Y-%m'))
+        
+        # Группируем по месяцам
+        monthly_dismissals = df.groupby('month_year').size().reset_index(name='count')
+        
+        # Создаем график
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.bar(monthly_dismissals['month_year'], monthly_dismissals['count'], color='indianred')
+        ax.set_xlabel('Месяц')
+        ax.set_ylabel('Количество уволенных сотрудников')
+        ax.set_title('Текучесть кадров по месяцам')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except Exception as e:
+        logger.error(f"Error creating turnover chart: {str(e)}")
+        return None
+
+@lru_cache(maxsize=32)
+def create_vacation_duration_chart(vacations):
+    """Создание гистограммы длительности отпусков"""
+    if not MATPLOTLIB_AVAILABLE:
+        return None
+    
+    try:
+        # Вычисляем длительность отпусков
+        durations = [(v.end_date - v.start_date).days + 1 for v in vacations]
+        
+        if not durations:
+            return None
+            
+        # Создаем гистограмму
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.hist(durations, bins=20, color='mediumpurple', alpha=0.7, edgecolor='black')
+        ax.set_xlabel('Длительность (дни)')
+        ax.set_ylabel('Количество отпусков')
+        ax.set_title('Распределение отпусков по длительности')
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except Exception as e:
+        logger.error(f"Error creating vacation duration chart: {str(e)}")
+        return None
+
 def create_interactive_dashboard_data(employees, departments, positions, vacations):
     """Создание данных для интерактивной панели мониторинга"""
     try:
@@ -221,17 +356,19 @@ def create_interactive_dashboard_data(employees, departments, positions, vacatio
         # Статистика по подразделениям
         dept_data = []
         for dept in departments:
+            dept_count = len([e for e in employees if e.department_id == dept.id])
             dept_data.append({
                 'name': dept.name,
-                'employee_count': len(dept.employees)
+                'employee_count': dept_count
             })
         
         # Статистика по должностям
         position_data = []
         for pos in positions:
+            pos_count = len([e for e in employees if e.position_id == pos.id])
             position_data.append({
                 'title': pos.title,
-                'employee_count': len(pos.employees)
+                'employee_count': pos_count
             })
         
         # Статистика по отпускам
@@ -327,7 +464,7 @@ def create_interactive_charts(interactive_data, departments=None, employees=None
         if departments and employees:
             # Department comparison chart
             dept_names = [dept.name for dept in departments]
-            employee_counts = [len(dept.employees) for dept in departments]
+            employee_counts = [len([e for e in employees if e.department_id == dept.id]) for dept in departments]
             
             fig5 = go.Figure(data=go.Bar(x=dept_names, y=employee_counts, marker_color='lightseagreen'))
             fig5.update_layout(title='Сравнение численности подразделений',

@@ -32,13 +32,18 @@ def import_employees_from_csv_fallback(filepath):
         'imported': 0,
         'skipped': 0,
         'errors': [],
-        'details': []
+        'details': [],
+        'progress': 0  # Add progress tracking
     }
     
     try:
         # Detect encoding
         encoding = detect_encoding(filepath)
         logger.info(f"Detected encoding: {encoding}")
+        
+        # Read CSV file to get total rows for progress tracking
+        with open(filepath, 'r', encoding=encoding) as f:
+            total_rows = sum(1 for line in f) - 1  # Subtract 1 for header
         
         # Read CSV file
         with open(filepath, 'r', encoding=encoding) as f:
@@ -55,9 +60,14 @@ def import_employees_from_csv_fallback(filepath):
             # Batch processing for better performance
             batch_size = 100
             batch = []
+            processed_rows = 0
             
             for index, row in enumerate(reader):
                 try:
+                    processed_rows += 1
+                    # Update progress
+                    report['progress'] = int((processed_rows / total_rows) * 100) if total_rows > 0 else 0
+                    
                     # Check if employee already exists by email or employee_id
                     existing_emp = Employee.query.filter(
                         db.or_(
@@ -132,6 +142,7 @@ def import_employees_from_csv_fallback(filepath):
                 db.session.add_all(batch)
         
         db.session.commit()
+        report['progress'] = 100  # Complete
         logger.info(f"CSV import completed: {report['imported']} imported, {report['skipped']} skipped, {len(report['errors'])} errors")
         return report
         
@@ -139,6 +150,7 @@ def import_employees_from_csv_fallback(filepath):
         db.session.rollback()
         error_msg = f"Ошибка при импорте из CSV: {str(e)}"
         logger.error(error_msg)
+        report['progress'] = -1  # Error state
         raise Exception(error_msg)
 
 def import_employees_from_csv(filepath):
@@ -147,7 +159,8 @@ def import_employees_from_csv(filepath):
         'imported': 0,
         'skipped': 0,
         'errors': [],
-        'details': []
+        'details': [],
+        'progress': 0  # Add progress tracking
     }
     
     if not PANDAS_AVAILABLE:
@@ -174,9 +187,13 @@ def import_employees_from_csv(filepath):
         # Batch processing for better performance
         batch_size = 100
         batch = []
+        total_rows = len(df)
         
         for index, row in df.iterrows():
             try:
+                # Update progress
+                report['progress'] = int(((index + 1) / total_rows) * 100)
+                
                 # Check if employee already exists by email or employee_id
                 existing_emp = Employee.query.filter(
                     db.or_(
@@ -251,6 +268,7 @@ def import_employees_from_csv(filepath):
             db.session.add_all(batch)
         
         db.session.commit()
+        report['progress'] = 100  # Complete
         logger.info(f"CSV import completed: {report['imported']} imported, {report['skipped']} skipped, {len(report['errors'])} errors")
         return report
         
@@ -258,4 +276,5 @@ def import_employees_from_csv(filepath):
         db.session.rollback()
         error_msg = f"Ошибка при импорте из CSV: {str(e)}"
         logger.error(error_msg)
+        report['progress'] = -1  # Error state
         raise Exception(error_msg)

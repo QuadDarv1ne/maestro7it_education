@@ -3,9 +3,65 @@ from app import db
 from flask import request
 from flask_login import current_user
 from datetime import datetime
+import hashlib
+import re
 
-def log_action(action, entity_type, entity_id=None, description=None, user_id=None):
-    """Логирование действия пользователя"""
+def sanitize_input(text):
+    """Sanitize user input to prevent XSS and other attacks"""
+    if not text:
+        return text
+    
+    # Remove potentially dangerous characters
+    # Allow only safe characters: letters, numbers, spaces, and common punctuation
+    sanitized = re.sub(r'[<>"\']', '', str(text))
+    return sanitized.strip()
+
+def get_client_ip():
+    """Get real client IP address considering proxies"""
+    if request:
+        # Check for forwarded IP (from proxy/load balancer)
+        forwarded = request.headers.get('X-Forwarded-For')
+        if forwarded:
+            # Get the first IP in the list (client IP)
+            ip = forwarded.split(',')[0].strip()
+            if is_valid_ip(ip):
+                return ip
+        
+        # Check for real IP header
+        real_ip = request.headers.get('X-Real-IP')
+        if real_ip and is_valid_ip(real_ip):
+            return real_ip
+        
+        # Fallback to remote_addr
+        return request.remote_addr
+    return None
+
+def is_valid_ip(ip):
+    """Validate IP address format"""
+    if not ip:
+        return False
+    
+    # IPv4 validation
+    ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+    if re.match(ipv4_pattern, ip):
+        parts = ip.split('.')
+        return all(0 <= int(part) <= 255 for part in parts)
+    
+    # IPv6 validation (simplified)
+    ipv6_pattern = r'^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$'
+    if re.match(ipv6_pattern, ip):
+        return True
+    
+    return False
+
+def hash_sensitive_data(data):
+    """Hash sensitive data for secure logging"""
+    if not data:
+        return None
+    return hashlib.sha256(str(data).encode('utf-8')).hexdigest()
+
+def log_action(action, entity_type, entity_id=None, description=None, user_id=None, sensitive_data=None):
+    """Логирование действия пользователя с дополнительными мерами безопасности"""
     # Если пользователь не указан, используем текущего пользователя
     if user_id is None and hasattr(current_user, 'id'):
         user_id = current_user.id
@@ -14,9 +70,26 @@ def log_action(action, entity_type, entity_id=None, description=None, user_id=No
     if user_id is None:
         return
     
-    # Получаем IP адрес и user agent
-    ip_address = request.remote_addr if request else None
+    # Санитизация входных данных
+    action = sanitize_input(action)
+    entity_type = sanitize_input(entity_type)
+    description = sanitize_input(description) if description else None
+    
+    # Хэширование чувствительных данных
+    if sensitive_data:
+        hashed_data = hash_sensitive_data(sensitive_data)
+        if description:
+            description += f" [Хэш: {hashed_data}]"
+        else:
+            description = f"[Хэш: {hashed_data}]"
+    
+    # Получаем реальный IP адрес клиента
+    ip_address = get_client_ip()
+    
+    # Ограничиваем длину user agent
     user_agent = request.headers.get('User-Agent') if request else None
+    if user_agent and len(user_agent) > 500:
+        user_agent = user_agent[:500]
     
     # Создаем запись аудита
     audit_log = AuditLog()
@@ -42,7 +115,7 @@ def log_employee_create(employee_id, employee_name, user_id=None):
         action='create',
         entity_type='employee',
         entity_id=employee_id,
-        description=f'Создан сотрудник: {employee_name}',
+        description=f'Создан сотрудник: {sanitize_input(employee_name)}',
         user_id=user_id
     )
 
@@ -52,7 +125,7 @@ def log_employee_update(employee_id, employee_name, user_id=None):
         action='update',
         entity_type='employee',
         entity_id=employee_id,
-        description=f'Обновлен сотрудник: {employee_name}',
+        description=f'Обновлен сотрудник: {sanitize_input(employee_name)}',
         user_id=user_id
     )
 
@@ -62,7 +135,7 @@ def log_employee_delete(employee_id, employee_name, user_id=None):
         action='delete',
         entity_type='employee',
         entity_id=employee_id,
-        description=f'Удален сотрудник: {employee_name}',
+        description=f'Удален сотрудник: {sanitize_input(employee_name)}',
         user_id=user_id
     )
 
@@ -72,7 +145,7 @@ def log_department_create(department_id, department_name, user_id=None):
         action='create',
         entity_type='department',
         entity_id=department_id,
-        description=f'Создано подразделение: {department_name}',
+        description=f'Создано подразделение: {sanitize_input(department_name)}',
         user_id=user_id
     )
 
@@ -82,7 +155,7 @@ def log_department_update(department_id, department_name, user_id=None):
         action='update',
         entity_type='department',
         entity_id=department_id,
-        description=f'Обновлено подразделение: {department_name}',
+        description=f'Обновлено подразделение: {sanitize_input(department_name)}',
         user_id=user_id
     )
 
@@ -92,7 +165,7 @@ def log_department_delete(department_id, department_name, user_id=None):
         action='delete',
         entity_type='department',
         entity_id=department_id,
-        description=f'Удалено подразделение: {department_name}',
+        description=f'Удалено подразделение: {sanitize_input(department_name)}',
         user_id=user_id
     )
 
@@ -108,7 +181,7 @@ def log_vacation_create(vacation_id, employee_name, vacation_type, start_date, u
         action='create',
         entity_type='vacation',
         entity_id=vacation_id,
-        description=f'Создан {vacation_type_name} отпуск для сотрудника {employee_name}, начиная с {start_date}',
+        description=f'Создан {vacation_type_name} отпуск для сотрудника {sanitize_input(employee_name)}, начиная с {start_date}',
         user_id=user_id
     )
 
@@ -118,7 +191,7 @@ def log_user_login(user_id, username):
         action='login',
         entity_type='user',
         entity_id=user_id,
-        description=f'Пользователь {username} вошел в систему',
+        description=f'Пользователь {sanitize_input(username)} вошел в систему',
         user_id=user_id
     )
 
@@ -128,7 +201,7 @@ def log_user_logout(user_id, username):
         action='logout',
         entity_type='user',
         entity_id=user_id,
-        description=f'Пользователь {username} вышел из системы',
+        description=f'Пользователь {sanitize_input(username)} вышел из системы',
         user_id=user_id
     )
 
