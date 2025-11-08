@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Импорт сотрудников{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Импорт сотрудников из CSV</h2>
+    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">Назад к списку</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Загрузка файла CSV</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="file" class="form-label">Выберите CSV файл</label>
+                <input class="form-control" type="file" id="file" name="file" accept=".csv" required>
+                <div class="form-text">
+                    Файл должен содержать следующие столбцы: full_name, email, employee_id, hire_date, department, position
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Импортировать</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5>Формат файла CSV</h5>
+    </div>
+    <div class="card-body">
+        <p>Пример содержимого файла CSV:</p>
+        <pre><code>full_name,email,employee_id,hire_date,department,position
+Иванов Иван Иванович,ivanov@example.com,EMP001,2023-01-15,Отдел разработки,Программист
+Петрова Мария Сергеевна,petrova@example.com,EMP002,2023-02-01,Отдел маркетинга,Маркетолог</code></pre>
+        <p class="mt-3"><strong>Важно:</strong></p>
+        <ul>
+            <li>Дата приема должна быть в формате YYYY-MM-DD</li>
+            <li>Поля full_name, email, employee_id обязательны для заполнения</li>
+            <li>Если подразделение или должность не существуют, они будут созданы автоматически</li>
+            <li>Сотрудники с уже существующим email или табельным номером будут пропущены</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

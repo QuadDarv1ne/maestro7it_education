@@ -5,8 +5,14 @@ from app.utils.reports import generate_employee_report, generate_department_repo
 from app.utils.decorators import reports_access_required
 from app import db
 from datetime import datetime, date
-import pandas as pd
 import io
+
+# Try to import pandas
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 bp = Blueprint('reports', __name__)
 
@@ -67,10 +73,12 @@ def generate_report():
         return render_template('reports/vacation_statistics.html', **stats)
     
     elif report_type == 'hiring_report':
-        # Generate hiring report
-        period_months = request.args.get('period_months', 12, type=int)
-        hiring_data = generate_hiring_report(period_months)
-        return render_template('reports/hiring.html', hiring_data=hiring_data, period_months=period_months)
+        # Generate hiring report only if period is specified
+        period_months = request.args.get('period_months', type=int)
+        hiring_data = None
+        if period_months:
+            hiring_data = generate_hiring_report(period_months)
+        return render_template('reports/hiring.html', hiring_data=hiring_data, period_months=period_months or 12)
     
     elif report_type == 'detailed_employee_report':
         # Generate detailed employee report
@@ -157,11 +165,26 @@ def export_report():
                 'Статус': emp.status
             })
         
-        df = pd.DataFrame(data)
-        
         # Create CSV
         output = io.StringIO()
-        df.to_csv(output, index=False, encoding='utf-8')
+        
+        # Try to use pandas if available, otherwise use manual CSV creation
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            df.to_csv(output, index=False, encoding='utf-8')
+        except ImportError:
+            # Manual CSV creation
+            if data:
+                # Write header
+                headers = list(data[0].keys())
+                output.write(','.join(['"{}"'.format(h) for h in headers]) + '\n')
+                
+                # Write data rows
+                for row in data:
+                    values = [str(row[h]) for h in headers]
+                    output.write(','.join(['"{}"'.format(v) for v in values]) + '\n')
+        
         csv_data = output.getvalue()
         
         # Return CSV response
@@ -190,11 +213,26 @@ def export_report():
                     'Дата приема': emp['hire_date'].strftime('%d.%m.%Y')
                 })
         
-        df = pd.DataFrame(data)
-        
         # Create CSV
         output = io.StringIO()
-        df.to_csv(output, index=False, encoding='utf-8')
+        
+        # Try to use pandas if available, otherwise use manual CSV creation
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            df.to_csv(output, index=False, encoding='utf-8')
+        except ImportError:
+            # Manual CSV creation
+            if data:
+                # Write header
+                headers = list(data[0].keys())
+                output.write(','.join(['"{}"'.format(h) for h in headers]) + '\n')
+                
+                # Write data rows
+                for row in data:
+                    values = [str(row[h]) for h in headers]
+                    output.write(','.join(['"{}"'.format(v) for v in values]) + '\n')
+        
         csv_data = output.getvalue()
         
         # Return CSV response
@@ -218,11 +256,26 @@ def export_report():
                 'Количество сотрудников': active_count
             })
         
-        df = pd.DataFrame(data)
-        
         # Create CSV
         output = io.StringIO()
-        df.to_csv(output, index=False, encoding='utf-8')
+        
+        # Try to use pandas if available, otherwise use manual CSV creation
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            df.to_csv(output, index=False, encoding='utf-8')
+        except ImportError:
+            # Manual CSV creation
+            if data:
+                # Write header
+                headers = list(data[0].keys())
+                output.write(','.join(['"{}"'.format(h) for h in headers]) + '\n')
+                
+                # Write data rows
+                for row in data:
+                    values = [str(row[h]) for h in headers]
+                    output.write(','.join(['"{}"'.format(v) for v in values]) + '\n')
+        
         csv_data = output.getvalue()
         
         # Return CSV response
@@ -268,11 +321,26 @@ def export_report():
                     'Тип отпуска': 'Нет отпусков'
                 })
         
-        df = pd.DataFrame(data)
-        
         # Create CSV
         output = io.StringIO()
-        df.to_csv(output, index=False, encoding='utf-8')
+        
+        # Try to use pandas if available, otherwise use manual CSV creation
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            df.to_csv(output, index=False, encoding='utf-8')
+        except ImportError:
+            # Manual CSV creation
+            if data:
+                # Write header
+                headers = list(data[0].keys())
+                output.write(','.join(['"{}"'.format(h) for h in headers]) + '\n')
+                
+                # Write data rows
+                for row in data:
+                    values = [str(row[h]) for h in headers]
+                    output.write(','.join(['"{}"'.format(v) for v in values]) + '\n')
+        
         csv_data = output.getvalue()
         
         # Return CSV response
@@ -321,11 +389,26 @@ def export_report():
                     'Дата': emp['dismissal_date'].strftime('%d.%m.%Y')
                 })
         
-        df = pd.DataFrame(data)
-        
         # Create CSV
         output = io.StringIO()
-        df.to_csv(output, index=False, encoding='utf-8')
+        
+        # Try to use pandas if available, otherwise use manual CSV creation
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            df.to_csv(output, index=False, encoding='utf-8')
+        except ImportError:
+            # Manual CSV creation
+            if data:
+                # Write header
+                headers = list(data[0].keys())
+                output.write(','.join(['"{}"'.format(h) for h in headers]) + '\n')
+                
+                # Write data rows
+                for row in data:
+                    values = [str(row[h]) for h in headers]
+                    output.write(','.join(['"{}"'.format(v) for v in values]) + '\n')
+        
         csv_data = output.getvalue()
         
         # Return CSV response

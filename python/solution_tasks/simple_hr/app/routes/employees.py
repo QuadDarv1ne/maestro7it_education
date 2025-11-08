@@ -4,7 +4,9 @@ from app.models import Employee, Department, Position
 from app.forms import EmployeeForm
 from app.utils.notifications import notify_employee_created, notify_employee_updated
 from app.utils.audit import log_employee_create, log_employee_update, log_employee_delete
+from app.utils.csv_import import import_employees_from_csv
 from app import db
+import os
 
 bp = Blueprint('employees', __name__)
 
@@ -144,3 +146,48 @@ def delete_employee(id):
         flash('Ошибка при удалении сотрудника')
     
     return redirect(url_for('employees.list_employees'))
+
+@bp.route('/import', methods=['GET', 'POST'])
+@login_required
+def import_employees():
+    if request.method == 'POST':
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            flash('Файл не выбран')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        
+        # Check if file was selected
+        if file.filename == '':
+            flash('Файл не выбран')
+            return redirect(request.url)
+        
+        # Check if file is CSV
+        if not file.filename or not file.filename.endswith('.csv'):
+            flash('Пожалуйста, загрузите файл в формате CSV')
+            return redirect(request.url)
+        
+        # Save file temporarily
+        filepath = os.path.join('temp_import.csv')
+        file.save(filepath)
+        
+        try:
+            # Import employees
+            report = import_employees_from_csv(filepath)
+            
+            # Remove temporary file
+            os.remove(filepath)
+            
+            # Show import results
+            flash(f'Импорт завершен: {report["imported"]} импортировано, {report["skipped"]} пропущено, {len(report["errors"])} ошибок')
+            return render_template('employees/import_results.html', report=report)
+            
+        except Exception as e:
+            # Remove temporary file if exists
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            flash(f'Ошибка при импорте: {str(e)}')
+            return redirect(url_for('employees.import_employees'))
+    
+    return render_template('employees/import.html')

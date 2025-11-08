@@ -1,7 +1,13 @@
 from app.models import Employee, Department, Position, Vacation, Order
 from app import db
 from datetime import datetime, date, timedelta
-import pandas as pd
+
+# Try to import pandas
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 def generate_employee_report():
     """Генерация отчета по сотрудникам"""
@@ -153,24 +159,44 @@ def export_report_to_csv(report_data, filename):
     if not report_data:
         return False
     
-    # Создаем DataFrame из данных
-    df = pd.DataFrame(report_data)
+    if not PANDAS_AVAILABLE:
+        # Manual CSV export
+        import csv
+        with open(filename, 'w', newline='', encoding='utf-8-sig') as f:
+            if report_data:
+                writer = csv.DictWriter(f, fieldnames=report_data[0].keys())
+                writer.writeheader()
+                writer.writerows(report_data)
+        return True
     
-    # Сохраняем в CSV
-    df.to_csv(filename, index=False, encoding='utf-8-sig')
-    return True
+    try:
+        # Создаем DataFrame из данных
+        df = pd.DataFrame(report_data)
+        
+        # Сохраняем в CSV
+        df.to_csv(filename, index=False, encoding='utf-8-sig')
+        return True
+    except:
+        return False
 
 def export_report_to_excel(report_data, filename):
     """Экспорт отчета в Excel файл"""
     if not report_data:
         return False
     
-    # Создаем DataFrame из данных
-    df = pd.DataFrame(report_data)
+    if not PANDAS_AVAILABLE:
+        # Excel export not available without pandas
+        return False
     
-    # Сохраняем в Excel
-    df.to_excel(filename, index=False)
-    return True
+    try:
+        # Создаем DataFrame из данных
+        df = pd.DataFrame(report_data)
+        
+        # Сохраняем в Excel
+        df.to_excel(filename, index=False)
+        return True
+    except:
+        return False
 
 def get_employee_statistics():
     """Получение статистики по сотрудникам"""
