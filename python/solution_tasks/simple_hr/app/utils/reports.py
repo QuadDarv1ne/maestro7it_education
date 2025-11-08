@@ -3,6 +3,7 @@ from app import db
 from datetime import datetime, date, timedelta
 from functools import lru_cache
 import logging
+import time
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -568,3 +569,107 @@ def generate_upcoming_vacations_report(days_ahead=30):
     except Exception as e:
         logger.error(f"Error generating upcoming vacations report: {str(e)}")
         return []
+
+# Enhanced caching functions with manual timeout tracking
+
+# Global cache storage with timestamps
+_cache_storage = {}
+
+def _get_cache_key(func_name, *args, **kwargs):
+    """Generate a cache key for a function call"""
+    return f"{func_name}_{hash(str(args) + str(sorted(kwargs.items())))}"
+
+def _is_cache_valid(cache_key, timeout):
+    """Check if cache is still valid"""
+    if cache_key not in _cache_storage:
+        return False
+    timestamp, _ = _cache_storage[cache_key]
+    return (time.time() - timestamp) < timeout
+
+def _set_cache(cache_key, data, timeout=300):
+    """Set cache data with timeout"""
+    _cache_storage[cache_key] = (time.time(), data)
+
+def get_cached_employee_data(timeout=600):
+    """Получение кэшированных данных о сотрудниках с таймаутом"""
+    cache_key = _get_cache_key("get_cached_employee_data")
+    if _is_cache_valid(cache_key, timeout):
+        return _cache_storage[cache_key][1]
+    
+    try:
+        employees = Employee.query.all()
+        departments = Department.query.all()
+        positions = Position.query.all()
+        
+        data = {
+            'employees': employees,
+            'departments': departments,
+            'positions': positions
+        }
+        _set_cache(cache_key, data, timeout)
+        return data
+    except Exception as e:
+        logger.error(f"Error getting cached employee data: {str(e)}")
+        return {
+            'employees': [],
+            'departments': [],
+            'positions': []
+        }
+
+def get_cached_vacation_data(timeout=600):
+    """Получение кэшированных данных об отпусках с таймаутом"""
+    cache_key = _get_cache_key("get_cached_vacation_data")
+    if _is_cache_valid(cache_key, timeout):
+        return _cache_storage[cache_key][1]
+    
+    try:
+        vacations = Vacation.query.all()
+        _set_cache(cache_key, vacations, timeout)
+        return vacations
+    except Exception as e:
+        logger.error(f"Error getting cached vacation data: {str(e)}")
+        return []
+
+def get_cached_statistics(timeout=300):
+    """Получение кэшированной статистики с таймаутом"""
+    cache_key = _get_cache_key("get_cached_statistics")
+    if _is_cache_valid(cache_key, timeout):
+        return _cache_storage[cache_key][1]
+    
+    try:
+        employee_stats = get_employee_statistics()
+        vacation_stats = get_vacation_statistics()
+        
+        data = {
+            'employee_stats': employee_stats,
+            'vacation_stats': vacation_stats
+        }
+        _set_cache(cache_key, data, timeout)
+        return data
+    except Exception as e:
+        logger.error(f"Error getting cached statistics: {str(e)}")
+        return {
+            'employee_stats': {},
+            'vacation_stats': {}
+        }
+
+def invalidate_reports_cache():
+    """Инвалидация кэша отчетов"""
+    global _cache_storage
+    _cache_storage.clear()
+    # Clear lru_cache as well
+    generate_employee_report.cache_clear()
+    generate_department_report.cache_clear()
+    generate_vacation_report.cache_clear()
+    generate_hiring_report.cache_clear()
+    get_employee_statistics.cache_clear()
+    get_vacation_statistics.cache_clear()
+    generate_vacation_calendar.cache_clear()
+    generate_turnover_report.cache_clear()
+    generate_performance_report.cache_clear()
+    generate_salary_report.cache_clear()
+    generate_employee_birthday_report.cache_clear()
+    generate_upcoming_vacations_report.cache_clear()
+    
+    logger.info("Reports cache invalidated successfully")
+    return True

@@ -605,3 +605,112 @@ def create_interactive_charts(interactive_data, departments=None, employees=None
     except Exception as e:
         logger.error(f"Error creating interactive charts: {str(e)}")
         return charts
+
+# New functions for additional analytics
+
+@lru_cache(maxsize=32)
+def create_department_vacation_analysis(departments, employees, vacations):
+    """Создание анализа отпусков по подразделениям"""
+    if not PLOTLY_AVAILABLE:
+        return None
+    
+    try:
+        # Подсчитываем количество отпусков по подразделениям
+        dept_vacation_data = {}
+        for vacation in vacations:
+            employee = next((e for e in employees if e.id == vacation.employee_id), None)
+            if employee:
+                dept_name = employee.department.name
+                if dept_name in dept_vacation_data:
+                    dept_vacation_data[dept_name] += 1
+                else:
+                    dept_vacation_data[dept_name] = 1
+        
+        # Создаем график
+        dept_names = list(dept_vacation_data.keys())
+        vacation_counts = list(dept_vacation_data.values())
+        
+        fig = go.Figure(data=go.Bar(x=dept_names, y=vacation_counts, marker_color='orange'))
+        fig.update_layout(title='Анализ отпусков по подразделениям',
+                         xaxis_title='Подразделения',
+                         yaxis_title='Количество отпусков')
+        
+        return fig.to_html(include_plotlyjs=False, div_id='dept_vacation_chart')
+    except Exception as e:
+        logger.error(f"Error creating department vacation analysis: {str(e)}")
+        return None
+
+@lru_cache(maxsize=32)
+def create_employee_tenure_analysis(employees):
+    """Создание анализа стажа сотрудников"""
+    if not MATPLOTLIB_AVAILABLE or not PANDAS_AVAILABLE:
+        return None
+    
+    try:
+        # Вычисляем стаж сотрудников в годах
+        today = date.today()
+        tenures = []
+        for emp in employees:
+            if emp.hire_date:
+                tenure_days = (today - emp.hire_date).days
+                tenure_years = tenure_days / 365.25  # Учитываем високосные года
+                tenures.append(tenure_years)
+        
+        if not tenures:
+            return None
+            
+        # Создаем гистограмму
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.hist(tenures, bins=20, color='lightblue', alpha=0.7, edgecolor='black')
+        ax.set_xlabel('Стаж (годы)')
+        ax.set_ylabel('Количество сотрудников')
+        ax.set_title('Распределение сотрудников по стажу')
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except Exception as e:
+        logger.error(f"Error creating employee tenure analysis: {str(e)}")
+        return None
+
+@lru_cache(maxsize=32)
+def create_monthly_vacation_trend(vacations):
+    """Создание графика тенденций отпусков по месяцам"""
+    if not PLOTLY_AVAILABLE or not PANDAS_AVAILABLE:
+        return None
+    
+    try:
+        # Создаем DataFrame с датами отпусков
+        start_dates = [vacation.start_date for vacation in vacations]
+        df = pd.DataFrame({'start_date': start_dates})
+        df['month_year'] = df['start_date'].apply(lambda x: x.strftime('%Y-%m'))
+        
+        # Группируем по месяцам
+        monthly_vacations = df.groupby('month_year').size().reset_index(name='count')
+        
+        # Создаем график
+        fig = go.Figure(data=go.Scatter(x=monthly_vacations['month_year'], 
+                                       y=monthly_vacations['count'], 
+                                       mode='lines+markers',
+                                       line=dict(color='green', width=2),
+                                       marker=dict(size=6)))
+        fig.update_layout(title='Динамика отпусков по месяцам',
+                         xaxis_title='Месяц',
+                         yaxis_title='Количество отпусков')
+        
+        return fig.to_html(include_plotlyjs=False, div_id='monthly_vacation_trend')
+    except Exception as e:
+        logger.error(f"Error creating monthly vacation trend: {str(e)}")
+        return None
