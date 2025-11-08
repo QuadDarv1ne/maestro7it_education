@@ -1,162 +1,201 @@
 import base64
 from io import BytesIO
-import matplotlib
-matplotlib.use('Agg')  # Установка backend для работы в многопоточной среде
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 from datetime import datetime, date
 from app.models import Employee, Department, Position, Vacation
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
+
+# Try to import optional packages
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Установка backend для работы в многопоточной среде
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
+try:
+    import plotly.graph_objects as go
+    import plotly.express as px
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
 
 # Настройка стиля для matplotlib
-plt.style.use('seaborn-v0_8')
-sns.set_palette("husl")
+# (Настройки стиля отключены из-за проблем с импортом)
 
 def create_employee_distribution_chart(department_stats):
     """Создание графика распределения сотрудников по подразделениям"""
-    # Создаем график matplotlib
-    fig, ax = plt.subplots(figsize=(10, 6))
+    if not MATPLOTLIB_AVAILABLE:
+        return None
     
-    departments = [stat['name'] for stat in department_stats]
-    counts = [stat['count'] for stat in department_stats]
-    
-    bars = ax.bar(departments, counts, color='skyblue')
-    ax.set_xlabel('Подразделения')
-    ax.set_ylabel('Количество сотрудников')
-    ax.set_title('Распределение сотрудников по подразделениям')
-    ax.tick_params(axis='x', rotation=45)
-    
-    # Добавляем значения на столбцы
-    for bar in bars:
-        height = bar.get_height()
-        ax.annotate(f'{int(height)}',
-                    xy=(bar.get_x() + bar.get_width() / 2, height),
-                    xytext=(0, 3),
-                    textcoords="offset points",
-                    ha='center', va='bottom')
-    
-    plt.tight_layout()
-    
-    # Конвертируем в base64 для отображения в HTML
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    image_png = buffer.getvalue()
-    buffer.close()
-    
-    graphic = base64.b64encode(image_png)
-    graphic = graphic.decode('utf-8')
-    plt.close(fig)
-    
-    return graphic
+    try:
+        # Создаем график matplotlib
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        departments = [stat['name'] for stat in department_stats]
+        counts = [stat['count'] for stat in department_stats]
+        
+        bars = ax.bar(departments, counts, color='skyblue')
+        ax.set_xlabel('Подразделения')
+        ax.set_ylabel('Количество сотрудников')
+        ax.set_title('Распределение сотрудников по подразделениям')
+        ax.tick_params(axis='x', rotation=45)
+        
+        # Добавляем значения на столбцы
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(f'{int(height)}',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom')
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except:
+        return None
 
 def create_employee_status_chart(active_count, dismissed_count):
     """Создание круговой диаграммы статусов сотрудников"""
-    fig, ax = plt.subplots(figsize=(8, 8))
+    if not MATPLOTLIB_AVAILABLE:
+        return None
     
-    labels = ['Активные', 'Уволенные']
-    sizes = [active_count, dismissed_count]
-    colors = ['lightgreen', 'lightcoral']
-    
-    ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-    ax.set_title('Распределение сотрудников по статусам')
-    
-    plt.tight_layout()
-    
-    # Конвертируем в base64 для отображения в HTML
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    image_png = buffer.getvalue()
-    buffer.close()
-    
-    graphic = base64.b64encode(image_png)
-    graphic = graphic.decode('utf-8')
-    plt.close(fig)
-    
-    return graphic
+    try:
+        fig, ax = plt.subplots(figsize=(8, 8))
+        
+        labels = ['Активные', 'Уволенные']
+        sizes = [active_count, dismissed_count]
+        colors = ['lightgreen', 'lightcoral']
+        
+        ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+        ax.set_title('Распределение сотрудников по статусам')
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except:
+        return None
 
 def create_hiring_trend_chart(employees):
     """Создание графика тенденций найма по месяцам"""
-    # Создаем DataFrame с датами приема на работу
-    hire_dates = [emp.hire_date for emp in employees]
-    df = pd.DataFrame({'hire_date': hire_dates})
-    df['month_year'] = df['hire_date'].apply(lambda x: x.strftime('%Y-%m'))
+    if not MATPLOTLIB_AVAILABLE or not PANDAS_AVAILABLE:
+        return None
     
-    # Группируем по месяцам
-    monthly_hires = df.groupby('month_year').size().reset_index(name='count')
-    
-    # Создаем график
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(monthly_hires['month_year'], monthly_hires['count'], marker='o', linewidth=2, markersize=6)
-    ax.set_xlabel('Месяц')
-    ax.set_ylabel('Количество нанятых сотрудников')
-    ax.set_title('Динамика найма сотрудников по месяцам')
-    ax.tick_params(axis='x', rotation=45)
-    ax.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    
-    # Конвертируем в base64 для отображения в HTML
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    image_png = buffer.getvalue()
-    buffer.close()
-    
-    graphic = base64.b64encode(image_png)
-    graphic = graphic.decode('utf-8')
-    plt.close(fig)
-    
-    return graphic
+    try:
+        # Создаем DataFrame с датами приема на работу
+        hire_dates = [emp.hire_date for emp in employees]
+        df = pd.DataFrame({'hire_date': hire_dates})
+        df['month_year'] = df['hire_date'].apply(lambda x: x.strftime('%Y-%m'))
+        
+        # Группируем по месяцам
+        monthly_hires = df.groupby('month_year').size().reset_index(name='count')
+        
+        # Создаем график
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(monthly_hires['month_year'], monthly_hires['count'], marker='o', linewidth=2, markersize=6)
+        ax.set_xlabel('Месяц')
+        ax.set_ylabel('Количество нанятых сотрудников')
+        ax.set_title('Динамика найма сотрудников по месяцам')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except:
+        return None
 
 def create_vacation_analysis_chart(vacations):
     """Создание анализа отпусков по типам"""
-    # Подсчитываем количество отпусков по типам
-    vacation_types = {}
-    for vacation in vacations:
-        v_type = vacation.type
-        if v_type == 'paid':
-            type_name = 'Оплачиваемый'
-        elif v_type == 'unpaid':
-            type_name = 'Неоплачиваемый'
-        elif v_type == 'sick':
-            type_name = 'Больничный'
-        else:
-            type_name = 'Другое'
-            
-        if type_name in vacation_types:
-            vacation_types[type_name] += 1
-        else:
-            vacation_types[type_name] = 1
+    if not MATPLOTLIB_AVAILABLE:
+        return None
     
-    # Создаем круговую диаграмму
-    fig, ax = plt.subplots(figsize=(8, 8))
-    
-    labels = list(vacation_types.keys())
-    sizes = list(vacation_types.values())
-    colors = ['gold', 'lightcoral', 'lightskyblue', 'lightgreen']
-    
-    ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-    ax.set_title('Распределение отпусков по типам')
-    
-    plt.tight_layout()
-    
-    # Конвертируем в base64 для отображения в HTML
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    image_png = buffer.getvalue()
-    buffer.close()
-    
-    graphic = base64.b64encode(image_png)
-    graphic = graphic.decode('utf-8')
-    plt.close(fig)
-    
-    return graphic
+    try:
+        # Подсчитываем количество отпусков по типам
+        vacation_types = {}
+        for vacation in vacations:
+            v_type = vacation.type
+            if v_type == 'paid':
+                type_name = 'Оплачиваемый'
+            elif v_type == 'unpaid':
+                type_name = 'Неоплачиваемый'
+            elif v_type == 'sick':
+                type_name = 'Больничный'
+            else:
+                type_name = 'Другое'
+                
+            if type_name in vacation_types:
+                vacation_types[type_name] += 1
+            else:
+                vacation_types[type_name] = 1
+        
+        # Создаем круговую диаграмму
+        fig, ax = plt.subplots(figsize=(8, 8))
+        
+        labels = list(vacation_types.keys())
+        sizes = list(vacation_types.values())
+        colors = ['gold', 'lightcoral', 'lightskyblue', 'lightgreen']
+        
+        ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+        ax.set_title('Распределение отпусков по типам')
+        
+        plt.tight_layout()
+        
+        # Конвертируем в base64 для отображения в HTML
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        image_png = buffer.getvalue()
+        buffer.close()
+        
+        graphic = base64.b64encode(image_png)
+        graphic = graphic.decode('utf-8')
+        plt.close(fig)
+        
+        return graphic
+    except:
+        return None
 
 def create_interactive_dashboard_data(employees, departments, positions, vacations):
     """Создание данных для интерактивной панели мониторинга"""
@@ -189,10 +228,16 @@ def create_interactive_dashboard_data(employees, departments, positions, vacatio
     }
     
     # Тренды найма
-    hire_dates = [emp.hire_date for emp in employees]
-    df = pd.DataFrame({'hire_date': hire_dates})
-    df['month_year'] = df['hire_date'].apply(lambda x: x.strftime('%Y-%m'))
-    monthly_hires = df.groupby('month_year').size().reset_index(name='count')
+    monthly_hires = []
+    if PANDAS_AVAILABLE:
+        try:
+            hire_dates = [emp.hire_date for emp in employees]
+            df = pd.DataFrame({'hire_date': hire_dates})
+            df['month_year'] = df['hire_date'].apply(lambda x: x.strftime('%Y-%m'))
+            monthly_hires_df = df.groupby('month_year').size().reset_index(name='count')
+            monthly_hires = monthly_hires_df.to_dict('records')
+        except:
+            monthly_hires = []
     
     return {
         'total_employees': total_employees,
@@ -201,7 +246,7 @@ def create_interactive_dashboard_data(employees, departments, positions, vacatio
         'department_stats': dept_data,
         'position_stats': position_data,
         'vacation_stats': vacation_stats,
-        'monthly_hires': monthly_hires.to_dict('records')
+        'monthly_hires': monthly_hires
     }
 
 def create_interactive_charts(interactive_data):
