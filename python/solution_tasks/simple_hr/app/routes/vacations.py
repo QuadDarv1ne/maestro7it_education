@@ -5,7 +5,8 @@ from app.forms import VacationForm
 from app.utils.notifications import notify_vacation_created
 from app.utils.audit import log_vacation_create
 from app import db
-from datetime import datetime
+from datetime import datetime, date
+from calendar import monthrange
 
 bp = Blueprint('vacations', __name__)
 
@@ -14,6 +15,42 @@ bp = Blueprint('vacations', __name__)
 def list_vacations():
     vacations = Vacation.query.all()
     return render_template('vacations/list.html', vacations=vacations)
+
+@bp.route('/calendar')
+@login_required
+def vacation_calendar():
+    # Get month and year from query parameters, default to current month
+    today = date.today()
+    year = request.args.get('year', type=int, default=today.year)
+    month = request.args.get('month', type=int, default=today.month)
+    
+    # Get all vacations for the selected month
+    start_date = date(year, month, 1)
+    end_date = date(year, month, monthrange(year, month)[1])
+    
+    vacations = Vacation.query.filter(
+        Vacation.start_date <= end_date,
+        Vacation.end_date >= start_date
+    ).all()
+    
+    # Create a dictionary to store vacations by date
+    vacation_calendar = {}
+    for vacation in vacations:
+        current_date = max(vacation.start_date, start_date)
+        end_range = min(vacation.end_date, end_date)
+        
+        while current_date <= end_range:
+            if current_date not in vacation_calendar:
+                vacation_calendar[current_date] = []
+            vacation_calendar[current_date].append(vacation)
+            current_date = date.fromordinal(current_date.toordinal() + 1)
+    
+    return render_template('vacations/calendar.html', 
+                         vacation_calendar=vacation_calendar,
+                         year=year, 
+                         month=month,
+                         start_date=start_date,
+                         end_date=end_date)
 
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -54,7 +91,7 @@ def create_vacation():
 @login_required
 def edit_vacation(id):
     vacation = Vacation.query.get_or_404(id)
-    form = VacationForm(obj=vacation)
+    form = VacationForm(vacation_id=id, obj=vacation)
     
     if form.validate_on_submit():
         vacation.employee_id = form.employee_id.data

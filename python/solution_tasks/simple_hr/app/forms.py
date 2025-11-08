@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, EmailField, DateField, SelectField, PasswordField, TextAreaField, SubmitField
 from wtforms.validators import DataRequired, Email, Length, Optional, EqualTo, ValidationError
-from app.models import Employee, Department, Position, User
+from app.models import Employee, Department, Position, User, Vacation
 from app import db
 
 class EmployeeForm(FlaskForm):
@@ -75,8 +75,9 @@ class VacationForm(FlaskForm):
                       validators=[DataRequired()])
     submit = SubmitField('Сохранить')
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, vacation_id=None, *args, **kwargs):
         super(VacationForm, self).__init__(*args, **kwargs)
+        self.vacation_id = vacation_id
         self.employee_id.choices = [(e.id, e.full_name) for e in Employee.query.all()]
     
     def validate(self, extra_validators=None):
@@ -86,6 +87,25 @@ class VacationForm(FlaskForm):
         if self.start_date.data and self.end_date.data and self.start_date.data >= self.end_date.data:
             self.end_date.errors = list(self.end_date.errors) + ['Дата окончания должна быть позже даты начала']
             return False
+        
+        # Check for overlapping vacations for the same employee
+        if self.employee_id.data and self.start_date.data and self.end_date.data:
+            # Query for overlapping vacations
+            overlapping_query = Vacation.query.filter(
+                Vacation.employee_id == self.employee_id.data,
+                Vacation.start_date <= self.end_date.data,
+                Vacation.end_date >= self.start_date.data
+            )
+            
+            # Exclude the current vacation being edited
+            if self.vacation_id:
+                overlapping_query = overlapping_query.filter(Vacation.id != self.vacation_id)
+            
+            overlapping_vacations = overlapping_query.all()
+            
+            if overlapping_vacations:
+                self.employee_id.errors = list(self.employee_id.errors) + ['У сотрудника уже есть отпуск в выбранный период']
+                return False
         
         return True
 
