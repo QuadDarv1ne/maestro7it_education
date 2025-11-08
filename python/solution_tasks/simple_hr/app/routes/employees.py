@@ -83,9 +83,9 @@ def create_employee():
             
             # Create new employee
             employee = Employee()
-            employee.full_name = form.full_name.data.strip() if form.full_name.data else ""
-            employee.email = form.email.data.strip().lower() if form.email.data else ""
-            employee.employee_id = form.employee_id.data.strip() if form.employee_id.data else ""
+            employee.full_name = form.full_name.data.strip() if form.full_name.data is not None else ""
+            employee.email = form.email.data.strip().lower() if form.email.data is not None else ""
+            employee.employee_id = form.employee_id.data.strip() if form.employee_id.data is not None else ""
             employee.hire_date = form.hire_date.data
             employee.department_id = form.department_id.data
             employee.position_id = form.position_id.data
@@ -124,9 +124,9 @@ def edit_employee(id):
         if form.validate_on_submit():
             try:
                 # Update employee data
-                employee.full_name = form.full_name.data.strip() if form.full_name.data else employee.full_name
-                employee.email = form.email.data.strip().lower() if form.email.data else employee.email
-                employee.employee_id = form.employee_id.data.strip() if form.employee_id.data else employee.employee_id
+                employee.full_name = form.full_name.data.strip() if form.full_name.data is not None else employee.full_name
+                employee.email = form.email.data.strip().lower() if form.email.data is not None else employee.email
+                employee.employee_id = form.employee_id.data.strip() if form.employee_id.data is not None else employee.employee_id
                 employee.hire_date = form.hire_date.data
                 employee.department_id = form.department_id.data
                 employee.position_id = form.position_id.data
