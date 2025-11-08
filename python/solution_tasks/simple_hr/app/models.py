@@ -20,7 +20,7 @@ class User(UserMixin, db.Model):
     
     # Index for faster queries
     __table_args__ = (
-        db.Index('idx_user_role_active', 'role', 'active'),
+        db.Index('idx_user_role_active', 'role', 'is_active'),
     )
 
     def set_password(self, password):
@@ -36,7 +36,7 @@ class User(UserMixin, db.Model):
         return self.reset_token
     
     def verify_reset_token(self, token):
-        """Проверка тока для восстановления пароля"""
+        """Проверка токена для восстановления пароля"""
         if self.reset_token == token and self.reset_token_expires and self.reset_token_expires > datetime.utcnow():
             return True
         return False

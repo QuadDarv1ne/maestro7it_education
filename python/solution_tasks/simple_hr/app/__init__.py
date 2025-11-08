@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 db = SQLAlchemy()
 login_manager = LoginManager()
 
-def create_app():
+def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
-    app.config.from_object(Config)
+    app.config.from_object(config_class)
     
     # Настройка логирования
     if not app.debug and not app.testing:
