@@ -129,11 +129,21 @@ def import_employees_from_csv_string(csv_string):
         
         for index, row in df.iterrows():
             try:
-                # Check if employee already exists
-                existing_emp = Employee.query.filter_by(email=row['email']).first()
+                # Check if employee already exists by email or employee_id
+                existing_emp = Employee.query.filter(
+                    db.or_(
+                        Employee.email == row['email'],
+                        Employee.employee_id == row['employee_id']
+                    )
+                ).first()
+                
                 if existing_emp:
-                    report['skipped'] += 1
-                    report['details'].append(f"Строка {index+1}: Сотрудник с email {row['email']} уже существует, пропущен")
+                    if existing_emp.email == row['email']:
+                        report['skipped'] += 1
+                        report['details'].append(f"Строка {index+1}: Сотрудник с email {row['email']} уже существует, пропущен")
+                    else:
+                        report['skipped'] += 1
+                        report['details'].append(f"Строка {index+1}: Сотрудник с табельным номером {row['employee_id']} уже существует, пропущен")
                     continue
                 
                 # Validate required fields
