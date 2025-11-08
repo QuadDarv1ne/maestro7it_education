@@ -313,6 +313,85 @@ def generate_vacation_calendar(year, month):
     
     return calendar_data
 
+def generate_performance_report():
+    """Генерация отчета по производительности сотрудников"""
+    # Получаем всех сотрудников с их подразделениями и должностями
+    employees = db.session.query(
+        Employee, Department, Position
+    ).join(
+        Department, Employee.department_id == Department.id
+    ).join(
+        Position, Employee.position_id == Position.id
+    ).all()
+    
+    report_data = []
+    for employee, department, position in employees:
+        # Получаем информацию об отпусках
+        vacations = Vacation.query.filter_by(employee_id=employee.id).all()
+        total_vacation_days = sum([(v.end_date - v.start_date).days + 1 for v in vacations])
+        
+        # Получаем последний приказ
+        last_order = Order.query.filter_by(employee_id=employee.id).order_by(Order.date_issued.desc()).first()
+        
+        # Рассчитываем стаж в днях
+        tenure_days = (date.today() - employee.hire_date).days
+        
+        # Рассчитываем коэффициент использования отпусков (дни отпуска / стаж)
+        vacation_ratio = total_vacation_days / tenure_days if tenure_days > 0 else 0
+        
+        report_data.append({
+            'id': employee.id,
+            'full_name': employee.full_name,
+            'email': employee.email,
+            'employee_id': employee.employee_id,
+            'hire_date': employee.hire_date,
+            'tenure_days': tenure_days,
+            'department': department.name,
+            'position': position.title,
+            'status': employee.status,
+            'total_vacation_days': total_vacation_days,
+            'vacation_ratio': round(vacation_ratio, 4),
+            'last_order_type': last_order.type if last_order else None,
+            'last_order_date': last_order.date_issued if last_order else None
+        })
+    
+    return report_data
+
+def generate_salary_report():
+    """Генерация отчета по заработной плате (имитация)"""
+    # Получаем всех сотрудников с их подразделениями и должностями
+    employees = db.session.query(
+        Employee, Department, Position
+    ).join(
+        Department, Employee.department_id == Department.id
+    ).join(
+        Position, Employee.position_id == Position.id
+    ).all()
+    
+    # Имитация данных по зарплатам (в реальной системе это будет из другой таблицы)
+    import random
+    
+    report_data = []
+    for employee, department, position in employees:
+        # Генерируем имитационные данные по зарплате
+        base_salary = random.randint(30000, 150000)  # Базовая зарплата
+        bonus = random.randint(0, 30000)  # Бонус
+        total_salary = base_salary + bonus
+        
+        report_data.append({
+            'id': employee.id,
+            'full_name': employee.full_name,
+            'employee_id': employee.employee_id,
+            'department': department.name,
+            'position': position.title,
+            'base_salary': base_salary,
+            'bonus': bonus,
+            'total_salary': total_salary,
+            'status': employee.status
+        })
+    
+    return report_data
+
 def generate_turnover_report(period_days=365):
     """Генерация отчета по обороту кадров (принято/уволено за период)"""
     # Определяем дату начала периода

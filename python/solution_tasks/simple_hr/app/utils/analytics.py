@@ -249,7 +249,7 @@ def create_interactive_dashboard_data(employees, departments, positions, vacatio
         'monthly_hires': monthly_hires
     }
 
-def create_interactive_charts(interactive_data):
+def create_interactive_charts(interactive_data, departments=None, employees=None, vacations=None):
     """Создание интерактивных графиков с помощью Plotly"""
     charts = {}
     
@@ -296,6 +296,53 @@ def create_interactive_charts(interactive_data):
                           xaxis_title='Месяц',
                           yaxis_title='Количество нанятых сотрудников')
         charts['hiring_trend_chart'] = fig4.to_html(include_plotlyjs=False, div_id='hiring_trend_chart')
+        
+        # Add new charts if additional data is provided
+        if departments and employees:
+            # Department comparison chart
+            dept_names = [dept.name for dept in departments]
+            employee_counts = [len(dept.employees) for dept in departments]
+            
+            fig5 = go.Figure(data=go.Bar(x=dept_names, y=employee_counts, marker_color='lightseagreen'))
+            fig5.update_layout(title='Сравнение численности подразделений',
+                              xaxis_title='Подразделения',
+                              yaxis_title='Количество сотрудников')
+            charts['department_comparison_chart'] = fig5.to_html(include_plotlyjs=False, div_id='department_comparison_chart')
+        
+        if employees:
+            # Filter dismissed employees
+            dismissed_employees = [emp for emp in employees if emp.status == 'dismissed']
+            if dismissed_employees:
+                # Create DataFrame with dismissal dates
+                dismissal_dates = [emp.hire_date for emp in dismissed_employees]
+                df = pd.DataFrame({'dismissal_date': dismissal_dates})
+                df['month_year'] = df['dismissal_date'].apply(lambda x: x.strftime('%Y-%m'))
+                
+                # Group by month
+                monthly_dismissals = df.groupby('month_year').size().reset_index(name='count')
+                
+                # Create chart
+                fig6 = go.Figure(data=go.Bar(x=monthly_dismissals['month_year'], 
+                                           y=monthly_dismissals['count'],
+                                           marker_color='indianred'))
+                fig6.update_layout(title='Текучесть кадров по месяцам',
+                                 xaxis_title='Месяц',
+                                 yaxis_title='Количество уволенных сотрудников')
+                charts['turnover_chart'] = fig6.to_html(include_plotlyjs=False, div_id='turnover_chart')
+        
+        if vacations:
+            # Calculate vacation durations
+            durations = [(v.end_date - v.start_date).days + 1 for v in vacations]
+            
+            if durations:
+                # Create histogram
+                fig7 = go.Figure(data=go.Histogram(x=durations, 
+                                                 marker_color='mediumpurple',
+                                                 xbins=dict(size=1)))
+                fig7.update_layout(title='Распределение отпусков по длительности',
+                                 xaxis_title='Длительность (дни)',
+                                 yaxis_title='Количество отпусков')
+                charts['vacation_duration_chart'] = fig7.to_html(include_plotlyjs=False, div_id='vacation_duration_chart')
         
         return charts
     except:

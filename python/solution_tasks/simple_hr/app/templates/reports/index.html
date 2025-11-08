@@ -74,7 +74,7 @@
         </div>
     </div>
     
-    <div class="col-md-6 mb-4">
+    <div class="col-md-4 mb-4">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i class="fas fa-user-friends fa-3x text-dark mb-3"></i>
@@ -85,7 +85,7 @@
         </div>
     </div>
     
-    <div class="col-md-6 mb-4">
+    <div class="col-md-4 mb-4">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i class="fas fa-sitemap fa-3x text-purple mb-3"></i>
@@ -96,7 +96,7 @@
         </div>
     </div>
     
-    <div class="col-md-6 mb-4">
+    <div class="col-md-4 mb-4">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i class="fas fa-calendar-alt fa-3x text-info mb-3"></i>
@@ -107,13 +107,35 @@
         </div>
     </div>
     
-    <div class="col-md-6 mb-4">
+    <div class="col-md-4 mb-4">
         <div class="card h-100">
             <div class="card-body text-center">
                 <i class="fas fa-exchange-alt fa-3x text-warning mb-3"></i>
                 <h5 class="card-title">Оборот кадров</h5>
                 <p class="card-text">Отчет по принятию и увольнению сотрудников за период.</p>
                 <a href="{{ url_for('reports.generate_report', type='turnover_report') }}" class="btn btn-warning">Сформировать</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-tachometer-alt fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Отчет по производительности</h5>
+                <p class="card-text">Анализ производительности сотрудников по стажу и отпускам.</p>
+                <a href="{{ url_for('reports.generate_report', type='performance_report') }}" class="btn btn-success">Сформировать</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-money-bill-wave fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Отчет по заработной плате</h5>
+                <p class="card-text">Анализ заработной платы сотрудников с бонусами.</p>
+                <a href="{{ url_for('reports.generate_report', type='salary_report') }}" class="btn btn-primary">Сформировать</a>
             </div>
         </div>
     </div>

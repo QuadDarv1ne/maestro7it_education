@@ -142,6 +142,55 @@
     </div>
 </div>
 
+<!-- Новые интерактивные графики -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Сравнение численности подразделений</h5>
+            </div>
+            <div class="card-body">
+                {% if interactive_charts.department_comparison_chart %}
+                <div id="department_comparison_chart">{{ interactive_charts.department_comparison_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Текучесть кадров по месяцам</h5>
+            </div>
+            <div class="card-body">
+                {% if interactive_charts.turnover_chart %}
+                <div id="turnover_chart">{{ interactive_charts.turnover_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly, matplotlib и pandas для отображения графиков.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение отпусков по длительности</h5>
+            </div>
+            <div class="card-body">
+                {% if interactive_charts.vacation_duration_chart %}
+                <div id="vacation_duration_chart">{{ interactive_charts.vacation_duration_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Навигация по разделам аналитики -->
 <div class="row">
     <div class="col-12">

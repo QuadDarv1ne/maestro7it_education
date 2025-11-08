@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required
 from app.models import Employee, Department, Position, Vacation, Order
-from app.utils.reports import generate_employee_report, generate_department_report, generate_vacation_report, generate_hiring_report, export_report_to_csv, export_report_to_excel, get_employee_statistics, get_vacation_statistics, generate_vacation_calendar, generate_turnover_report
+from app.utils.reports import generate_employee_report, generate_department_report, generate_vacation_report, generate_hiring_report, export_report_to_csv, export_report_to_excel, get_employee_statistics, get_vacation_statistics, generate_vacation_calendar, generate_turnover_report, generate_performance_report, generate_salary_report
 from app.utils.decorators import reports_access_required
 from app import db
 from datetime import datetime, date
@@ -26,6 +26,7 @@ def generate_report():
     # If no specific report type requested, show report index
     if report_type == 'index':
         return render_template('reports/index.html')
+    
     department_id = request.args.get('department_id', type=int)
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
@@ -124,6 +125,16 @@ def generate_report():
         return render_template('reports/turnover.html', 
                              turnover_data=turnover_data,
                              period_days=period_days)
+    
+    elif report_type == 'performance_report':
+        # Generate performance report
+        report_data = generate_performance_report()
+        return render_template('reports/performance.html', report_data=report_data)
+    
+    elif report_type == 'salary_report':
+        # Generate salary report
+        report_data = generate_salary_report()
+        return render_template('reports/salary.html', report_data=report_data)
     
     else:
         flash('Неверный тип отчета')
@@ -416,6 +427,102 @@ def export_report():
             csv_data,
             mimetype='text/csv',
             headers={'Content-Disposition': f'attachment; filename=turnover_report_{period_days}_days.csv'}
+        )
+    
+    elif report_type == 'performance_report':
+        # Generate performance report data
+        report_data = generate_performance_report()
+        
+        # Create DataFrame
+        data = []
+        for emp in report_data:
+            data.append({
+                'Табельный номер': emp['employee_id'],
+                'ФИО': emp['full_name'],
+                'Email': emp['email'],
+                'Подразделение': emp['department'],
+                'Должность': emp['position'],
+                'Дата приема': emp['hire_date'].strftime('%d.%m.%Y'),
+                'Стаж (дней)': emp['tenure_days'],
+                'Статус': emp['status'],
+                'Дни отпуска': emp['total_vacation_days'],
+                'Коэффициент отпусков': emp['vacation_ratio']
+            })
+        
+        # Create CSV
+        output = io.StringIO()
+        
+        # Try to use pandas if available, otherwise use manual CSV creation
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            df.to_csv(output, index=False, encoding='utf-8')
+        except ImportError:
+            # Manual CSV creation
+            if data:
+                # Write header
+                headers = list(data[0].keys())
+                output.write(','.join(['"{}"'.format(h) for h in headers]) + '\n')
+                
+                # Write data rows
+                for row in data:
+                    values = [str(row[h]) for h in headers]
+                    output.write(','.join(['"{}"'.format(v) for v in values]) + '\n')
+        
+        csv_data = output.getvalue()
+        
+        # Return CSV response
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=performance_report.csv'}
+        )
+    
+    elif report_type == 'salary_report':
+        # Generate salary report data
+        report_data = generate_salary_report()
+        
+        # Create DataFrame
+        data = []
+        for emp in report_data:
+            data.append({
+                'Табельный номер': emp['employee_id'],
+                'ФИО': emp['full_name'],
+                'Подразделение': emp['department'],
+                'Должность': emp['position'],
+                'Базовая зарплата': emp['base_salary'],
+                'Бонус': emp['bonus'],
+                'Итого': emp['total_salary'],
+                'Статус': emp['status']
+            })
+        
+        # Create CSV
+        output = io.StringIO()
+        
+        # Try to use pandas if available, otherwise use manual CSV creation
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            df.to_csv(output, index=False, encoding='utf-8')
+        except ImportError:
+            # Manual CSV creation
+            if data:
+                # Write header
+                headers = list(data[0].keys())
+                output.write(','.join(['"{}"'.format(h) for h in headers]) + '\n')
+                
+                # Write data rows
+                for row in data:
+                    values = [str(row[h]) for h in headers]
+                    output.write(','.join(['"{}"'.format(v) for v in values]) + '\n')
+        
+        csv_data = output.getvalue()
+        
+        # Return CSV response
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=salary_report.csv'}
         )
     
     else:

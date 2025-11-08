@@ -29,8 +29,8 @@ def dashboard():
     # Создаем интерактивные данные для дашборда
     interactive_data = create_interactive_dashboard_data(employees, departments, positions, vacations)
     
-    # Создаем интерактивные графики
-    interactive_charts = create_interactive_charts(interactive_data)
+    # Создаем интерактивные графики с дополнительными данными
+    interactive_charts = create_interactive_charts(interactive_data, departments, employees, vacations)
     
     # Calculate additional metrics
     from datetime import date, timedelta
