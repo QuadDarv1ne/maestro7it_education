@@ -24,8 +24,8 @@ class EmployeeForm(FlaskForm):
     email = EmailField('Email', validators=[DataRequired(), Email(), Length(max=120)])
     employee_id = StringField('Табельный номер', validators=[DataRequired(), Length(max=50)])
     hire_date = DateField('Дата приема', validators=[DataRequired()])
-    department_id = SelectField('Подразделение', coerce=safe_int_coerce, validators=[DataRequired()])
-    position_id = SelectField('Должность', coerce=safe_int_coerce, validators=[DataRequired()])
+    department_id = SelectField('Подразделение', coerce=int, validators=[DataRequired()])
+    position_id = SelectField('Должность', coerce=int, validators=[DataRequired()])
     status = SelectField('Статус', choices=[('active', 'Активен'), ('dismissed', 'Уволен')], 
                         validators=[DataRequired()])
     submit = SubmitField('Сохранить')
@@ -39,19 +39,20 @@ class EmployeeForm(FlaskForm):
             departments = Department.query.all()
             positions = Position.query.all()
             
-            # Set choices with empty option first
-            self.department_id.choices = [("", "Выберите подразделение")]
-            self.position_id.choices = [("", "Выберите должность")]
+            # Set choices without empty option - first actual department/position will be default
+            if departments:
+                self.department_id.choices = [(d.id, d.name) for d in departments]
+            else:
+                self.department_id.choices = [(0, "Нет подразделений")]
             
-            # Add actual departments and positions
-            for d in departments:
-                self.department_id.choices.append((d.id, d.name))
-            for p in positions:
-                self.position_id.choices.append((p.id, p.title))
+            if positions:
+                self.position_id.choices = [(p.id, p.title) for p in positions]
+            else:
+                self.position_id.choices = [(0, "Нет должностей")]
         except Exception as e:
             logger.error(f"Error loading form choices: {str(e)}")
-            self.department_id.choices = [("", "Ошибка загрузки подразделений")]
-            self.position_id.choices = [("", "Ошибка загрузки должностей")]
+            self.department_id.choices = [(0, "Ошибка загрузки подразделений")]
+            self.position_id.choices = [(0, "Ошибка загрузки должностей")]
     
     def validate_full_name(self, full_name):
         """Validate full name format"""
@@ -182,8 +183,12 @@ class EmployeeForm(FlaskForm):
     def validate_department_id(self, department_id):
         """Validate department selection"""
         try:
-            # Check if a department was selected
-            if department_id.data is None or department_id.data == '':
+            # Check if there are any departments
+            if not Department.query.first():
+                raise ValidationError('Нет доступных подразделений. Пожалуйста, добавьте подразделения.')
+            
+            # Check if a valid department was selected
+            if department_id.data is None or department_id.data == 0:
                 raise ValidationError('Подразделение обязательно для выбора.')
             
             # Check that department exists
@@ -199,8 +204,12 @@ class EmployeeForm(FlaskForm):
     def validate_position_id(self, position_id):
         """Validate position selection"""
         try:
-            # Check if a position was selected
-            if not position_id.data:
+            # Check if there are any positions
+            if not Position.query.first():
+                raise ValidationError('Нет доступных должностей. Пожалуйста, добавьте должности.')
+            
+            # Check if a valid position was selected
+            if position_id.data is None or position_id.data == 0:
                 raise ValidationError('Должность обязательна для выбора.')
             
             # Check that position exists

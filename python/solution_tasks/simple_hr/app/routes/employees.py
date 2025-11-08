@@ -96,8 +96,8 @@ def create_employee():
                 employee.email = form.email.data.strip().lower() if form.email.data is not None else ""
                 employee.employee_id = form.employee_id.data.strip() if form.employee_id.data is not None else ""
                 employee.hire_date = form.hire_date.data
-                employee.department_id = form.department_id.data if form.department_id.data is not None else None
-                employee.position_id = form.position_id.data if form.position_id.data is not None else None
+                employee.department_id = form.department_id.data if form.department_id.data is not None else 0
+                employee.position_id = form.position_id.data if form.position_id.data is not None else 0
                 employee.status = form.status.data
                 
                 db.session.add(employee)
