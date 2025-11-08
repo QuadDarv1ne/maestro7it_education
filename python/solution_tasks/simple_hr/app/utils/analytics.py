@@ -3,6 +3,10 @@ from io import BytesIO
 from datetime import datetime, date
 from app.models import Employee, Department, Position, Vacation
 from functools import lru_cache
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # Try to import optional packages
 try:
@@ -63,7 +67,7 @@ def create_employee_distribution_chart(department_stats):
         
         # Конвертируем в base64 для отображения в HTML
         buffer = BytesIO()
-        plt.savefig(buffer, format='png')
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
         buffer.seek(0)
         image_png = buffer.getvalue()
         buffer.close()
@@ -73,7 +77,8 @@ def create_employee_distribution_chart(department_stats):
         plt.close(fig)
         
         return graphic
-    except:
+    except Exception as e:
+        logger.error(f"Error creating employee distribution chart: {str(e)}")
         return None
 
 @lru_cache(maxsize=32)
@@ -96,7 +101,7 @@ def create_employee_status_chart(active_count, dismissed_count):
         
         # Конвертируем в base64 для отображения в HTML
         buffer = BytesIO()
-        plt.savefig(buffer, format='png')
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
         buffer.seek(0)
         image_png = buffer.getvalue()
         buffer.close()
@@ -106,7 +111,8 @@ def create_employee_status_chart(active_count, dismissed_count):
         plt.close(fig)
         
         return graphic
-    except:
+    except Exception as e:
+        logger.error(f"Error creating employee status chart: {str(e)}")
         return None
 
 @lru_cache(maxsize=32)
@@ -126,7 +132,7 @@ def create_hiring_trend_chart(employees):
         
         # Создаем график
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(monthly_hires['month_year'], monthly_hires['count'], marker='o', linewidth=2, markersize=6)
+        ax.plot(monthly_hires['month_year'], monthly_hires['count'], marker='o', linewidth=2, markersize=6, color='#1f77b4')
         ax.set_xlabel('Месяц')
         ax.set_ylabel('Количество нанятых сотрудников')
         ax.set_title('Динамика найма сотрудников по месяцам')
@@ -137,7 +143,7 @@ def create_hiring_trend_chart(employees):
         
         # Конвертируем в base64 для отображения в HTML
         buffer = BytesIO()
-        plt.savefig(buffer, format='png')
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
         buffer.seek(0)
         image_png = buffer.getvalue()
         buffer.close()
@@ -147,7 +153,8 @@ def create_hiring_trend_chart(employees):
         plt.close(fig)
         
         return graphic
-    except:
+    except Exception as e:
+        logger.error(f"Error creating hiring trend chart: {str(e)}")
         return None
 
 @lru_cache(maxsize=32)
@@ -189,7 +196,7 @@ def create_vacation_analysis_chart(vacations):
         
         # Конвертируем в base64 для отображения в HTML
         buffer = BytesIO()
-        plt.savefig(buffer, format='png')
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
         buffer.seek(0)
         image_png = buffer.getvalue()
         buffer.close()
@@ -199,60 +206,74 @@ def create_vacation_analysis_chart(vacations):
         plt.close(fig)
         
         return graphic
-    except:
+    except Exception as e:
+        logger.error(f"Error creating vacation analysis chart: {str(e)}")
         return None
 
 def create_interactive_dashboard_data(employees, departments, positions, vacations):
     """Создание данных для интерактивной панели мониторинга"""
-    # Статистика по сотрудникам
-    total_employees = len(employees)
-    active_employees = len([e for e in employees if e.status == 'active'])
-    dismissed_employees = len([e for e in employees if e.status == 'dismissed'])
-    
-    # Статистика по подразделениям
-    dept_data = []
-    for dept in departments:
-        dept_data.append({
-            'name': dept.name,
-            'employee_count': len(dept.employees)
-        })
-    
-    # Статистика по должностям
-    position_data = []
-    for pos in positions:
-        position_data.append({
-            'title': pos.title,
-            'employee_count': len(pos.employees)
-        })
-    
-    # Статистика по отпускам
-    vacation_stats = {
-        'paid': len([v for v in vacations if v.type == 'paid']),
-        'unpaid': len([v for v in vacations if v.type == 'unpaid']),
-        'sick': len([v for v in vacations if v.type == 'sick'])
-    }
-    
-    # Тренды найма
-    monthly_hires = []
-    if PANDAS_AVAILABLE:
-        try:
-            hire_dates = [emp.hire_date for emp in employees]
-            df = pd.DataFrame({'hire_date': hire_dates})
-            df['month_year'] = df['hire_date'].apply(lambda x: x.strftime('%Y-%m'))
-            monthly_hires_df = df.groupby('month_year').size().reset_index(name='count')
-            monthly_hires = monthly_hires_df.to_dict('records')
-        except:
-            monthly_hires = []
-    
-    return {
-        'total_employees': total_employees,
-        'active_employees': active_employees,
-        'dismissed_employees': dismissed_employees,
-        'department_stats': dept_data,
-        'position_stats': position_data,
-        'vacation_stats': vacation_stats,
-        'monthly_hires': monthly_hires
-    }
+    try:
+        # Статистика по сотрудникам
+        total_employees = len(employees)
+        active_employees = len([e for e in employees if e.status == 'active'])
+        dismissed_employees = len([e for e in employees if e.status == 'dismissed'])
+        
+        # Статистика по подразделениям
+        dept_data = []
+        for dept in departments:
+            dept_data.append({
+                'name': dept.name,
+                'employee_count': len(dept.employees)
+            })
+        
+        # Статистика по должностям
+        position_data = []
+        for pos in positions:
+            position_data.append({
+                'title': pos.title,
+                'employee_count': len(pos.employees)
+            })
+        
+        # Статистика по отпускам
+        vacation_stats = {
+            'paid': len([v for v in vacations if v.type == 'paid']),
+            'unpaid': len([v for v in vacations if v.type == 'unpaid']),
+            'sick': len([v for v in vacations if v.type == 'sick'])
+        }
+        
+        # Тренды найма
+        monthly_hires = []
+        if PANDAS_AVAILABLE:
+            try:
+                hire_dates = [emp.hire_date for emp in employees]
+                df = pd.DataFrame({'hire_date': hire_dates})
+                df['month_year'] = df['hire_date'].apply(lambda x: x.strftime('%Y-%m'))
+                monthly_hires_df = df.groupby('month_year').size().reset_index(name='count')
+                monthly_hires = monthly_hires_df.to_dict('records')
+            except Exception as e:
+                logger.error(f"Error processing hiring trends: {str(e)}")
+                monthly_hires = []
+        
+        return {
+            'total_employees': total_employees,
+            'active_employees': active_employees,
+            'dismissed_employees': dismissed_employees,
+            'department_stats': dept_data,
+            'position_stats': position_data,
+            'vacation_stats': vacation_stats,
+            'monthly_hires': monthly_hires
+        }
+    except Exception as e:
+        logger.error(f"Error creating interactive dashboard data: {str(e)}")
+        return {
+            'total_employees': 0,
+            'active_employees': 0,
+            'dismissed_employees': 0,
+            'department_stats': [],
+            'position_stats': [],
+            'vacation_stats': {},
+            'monthly_hires': []
+        }
 
 def create_interactive_charts(interactive_data, departments=None, employees=None, vacations=None):
     """Создание интерактивных графиков с помощью Plotly"""
@@ -350,5 +371,6 @@ def create_interactive_charts(interactive_data, departments=None, employees=None
                 charts['vacation_duration_chart'] = fig7.to_html(include_plotlyjs=False, div_id='vacation_duration_chart')
         
         return charts
-    except:
+    except Exception as e:
+        logger.error(f"Error creating interactive charts: {str(e)}")
         return charts

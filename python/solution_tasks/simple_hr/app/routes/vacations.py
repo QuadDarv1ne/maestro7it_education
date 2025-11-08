@@ -50,7 +50,8 @@ def vacation_calendar():
                          year=year, 
                          month=month,
                          start_date=start_date,
-                         end_date=end_date)
+                         end_date=end_date,
+                         date=date)  # Pass the date function to the template
 
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
