@@ -79,11 +79,11 @@ def create_vacation():
                 notify_vacation_created(current_user.id, employee.full_name, vacation_type_name, form.start_date.data)
                 # Логируем действие
                 log_vacation_create(vacation.id, employee.full_name, form.type.data, form.start_date.data.strftime('%d.%m.%Y') if form.start_date.data else '', current_user.id)
-            flash('Отпуск успешно добавлен')
+            flash('Отпуск успешно добавлен', 'success')
             return redirect(url_for('vacations.list_vacations'))
         except Exception as e:
             db.session.rollback()
-            flash('Ошибка при добавлении отпуска')
+            flash('Ошибка при добавлении отпуска', 'error')
             return render_template('vacations/form.html', form=form)
     
     return render_template('vacations/form.html', form=form)
@@ -102,11 +102,11 @@ def edit_vacation(id):
         
         try:
             db.session.commit()
-            flash('Отпуск успешно обновлен')
+            flash('Отпуск успешно обновлен', 'success')
             return redirect(url_for('vacations.list_vacations'))
         except Exception as e:
             db.session.rollback()
-            flash('Ошибка при обновлении отпуска')
+            flash('Ошибка при обновлении отпуска', 'error')
             return render_template('vacations/form.html', form=form, vacation=vacation)
     
     return render_template('vacations/form.html', form=form, vacation=vacation)
@@ -119,9 +119,9 @@ def delete_vacation(id):
     try:
         db.session.delete(vacation)
         db.session.commit()
-        flash('Отпуск успешно удален')
+        flash('Отпуск успешно удален', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('Ошибка при удалении отпуска')
+        flash('Ошибка при удалении отпуска', 'error')
     
     return redirect(url_for('vacations.list_vacations'))
