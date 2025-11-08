@@ -16,7 +16,11 @@
                 <h5>Динамика найма сотрудников по месяцам</h5>
             </div>
             <div class="card-body">
+                {% if hiring_trend_chart %}
                 <img src="data:image/png;base64,{{ hiring_trend_chart }}" class="img-fluid" alt="Тенденции найма">
+                {% else %}
+                <div class="alert alert-warning">Графики недоступны. Установите matplotlib и pandas для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>

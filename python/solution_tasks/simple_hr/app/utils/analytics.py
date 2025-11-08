@@ -253,44 +253,50 @@ def create_interactive_charts(interactive_data):
     """Создание интерактивных графиков с помощью Plotly"""
     charts = {}
     
-    # Круговая диаграмма статусов сотрудников
-    fig1 = go.Figure(data=[go.Pie(labels=['Активные', 'Уволенные'], 
-                                 values=[interactive_data['active_employees'], 
-                                        interactive_data['dismissed_employees']],
-                                 marker_colors=['lightgreen', 'lightcoral'])])
-    fig1.update_layout(title='Распределение сотрудников по статусам')
-    charts['status_chart'] = fig1.to_html(include_plotlyjs=False, div_id='status_chart')
+    if not PLOTLY_AVAILABLE:
+        return charts
     
-    # Гистограмма по подразделениям
-    dept_names = [d['name'] for d in interactive_data['department_stats']]
-    dept_counts = [d['employee_count'] for d in interactive_data['department_stats']]
-    
-    fig2 = go.Figure(data=[go.Bar(x=dept_names, y=dept_counts, marker_color='skyblue')])
-    fig2.update_layout(title='Распределение сотрудников по подразделениям',
-                      xaxis_title='Подразделения',
-                      yaxis_title='Количество сотрудников')
-    charts['department_chart'] = fig2.to_html(include_plotlyjs=False, div_id='department_chart')
-    
-    # Круговая диаграмма типов отпусков
-    vacation_labels = list(interactive_data['vacation_stats'].keys())
-    vacation_values = list(interactive_data['vacation_stats'].values())
-    vacation_names = ['Оплачиваемый', 'Неоплачиваемый', 'Больничный']
-    
-    fig3 = go.Figure(data=[go.Pie(labels=vacation_names, values=vacation_values,
-                                 marker_colors=['gold', 'lightcoral', 'lightskyblue'])])
-    fig3.update_layout(title='Распределение отпусков по типам')
-    charts['vacation_chart'] = fig3.to_html(include_plotlyjs=False, div_id='vacation_chart')
-    
-    # Линейный график тенденций найма
-    months = [h['month_year'] for h in interactive_data['monthly_hires']]
-    hire_counts = [h['count'] for h in interactive_data['monthly_hires']]
-    
-    fig4 = go.Figure(data=go.Scatter(x=months, y=hire_counts, mode='lines+markers',
-                                    line=dict(color='blue', width=2),
-                                    marker=dict(size=6)))
-    fig4.update_layout(title='Динамика найма сотрудников по месяцам',
-                      xaxis_title='Месяц',
-                      yaxis_title='Количество нанятых сотрудников')
-    charts['hiring_trend_chart'] = fig4.to_html(include_plotlyjs=False, div_id='hiring_trend_chart')
-    
-    return charts
+    try:
+        # Круговая диаграмма статусов сотрудников
+        fig1 = go.Figure(data=[go.Pie(labels=['Активные', 'Уволенные'], 
+                                     values=[interactive_data['active_employees'], 
+                                            interactive_data['dismissed_employees']],
+                                     marker_colors=['lightgreen', 'lightcoral'])])
+        fig1.update_layout(title='Распределение сотрудников по статусам')
+        charts['status_chart'] = fig1.to_html(include_plotlyjs=False, div_id='status_chart')
+        
+        # Гистограмма по подразделениям
+        dept_names = [d['name'] for d in interactive_data['department_stats']]
+        dept_counts = [d['employee_count'] for d in interactive_data['department_stats']]
+        
+        fig2 = go.Figure(data=[go.Bar(x=dept_names, y=dept_counts, marker_color='skyblue')])
+        fig2.update_layout(title='Распределение сотрудников по подразделениям',
+                          xaxis_title='Подразделения',
+                          yaxis_title='Количество сотрудников')
+        charts['department_chart'] = fig2.to_html(include_plotlyjs=False, div_id='department_chart')
+        
+        # Круговая диаграмма типов отпусков
+        vacation_labels = list(interactive_data['vacation_stats'].keys())
+        vacation_values = list(interactive_data['vacation_stats'].values())
+        vacation_names = ['Оплачиваемый', 'Неоплачиваемый', 'Больничный']
+        
+        fig3 = go.Figure(data=[go.Pie(labels=vacation_names, values=vacation_values,
+                                     marker_colors=['gold', 'lightcoral', 'lightskyblue'])])
+        fig3.update_layout(title='Распределение отпусков по типам')
+        charts['vacation_chart'] = fig3.to_html(include_plotlyjs=False, div_id='vacation_chart')
+        
+        # Линейный график тенденций найма
+        months = [h['month_year'] for h in interactive_data['monthly_hires']]
+        hire_counts = [h['count'] for h in interactive_data['monthly_hires']]
+        
+        fig4 = go.Figure(data=go.Scatter(x=months, y=hire_counts, mode='lines+markers',
+                                        line=dict(color='blue', width=2),
+                                        marker=dict(size=6)))
+        fig4.update_layout(title='Динамика найма сотрудников по месяцам',
+                          xaxis_title='Месяц',
+                          yaxis_title='Количество нанятых сотрудников')
+        charts['hiring_trend_chart'] = fig4.to_html(include_plotlyjs=False, div_id='hiring_trend_chart')
+        
+        return charts
+    except:
+        return charts

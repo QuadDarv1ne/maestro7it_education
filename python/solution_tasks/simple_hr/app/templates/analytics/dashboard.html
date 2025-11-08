@@ -87,7 +87,11 @@
                 <h5>Распределение сотрудников по статусам</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.status_chart %}
                 <div id="status_chart">{{ interactive_charts.status_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -97,7 +101,11 @@
                 <h5>Распределение сотрудников по подразделениям</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.department_chart %}
                 <div id="department_chart">{{ interactive_charts.department_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -110,7 +118,11 @@
                 <h5>Распределение отпусков по типам</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.vacation_chart %}
                 <div id="vacation_chart">{{ interactive_charts.vacation_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -120,7 +132,11 @@
                 <h5>Динамика найма сотрудников</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.hiring_trend_chart %}
                 <div id="hiring_trend_chart">{{ interactive_charts.hiring_trend_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly, matplotlib и pandas для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>

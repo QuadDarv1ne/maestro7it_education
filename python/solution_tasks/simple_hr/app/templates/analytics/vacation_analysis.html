@@ -16,7 +16,11 @@
                 <h5>Распределение отпусков по типам</h5>
             </div>
             <div class="card-body">
+                {% if vacation_chart %}
                 <img src="data:image/png;base64,{{ vacation_chart }}" class="img-fluid" alt="Анализ отпусков">
+                {% else %}
+                <div class="alert alert-warning">Графики недоступны. Установите matplotlib для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
