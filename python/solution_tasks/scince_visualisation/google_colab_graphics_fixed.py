@@ -263,47 +263,56 @@ class AcademicVisualizer:
         Returns:
             Dict[str, Dict[str, Any]]: Цветовая схема
         """
-        # Палитра, безопасная для дальтоников (из ColorBrewer)
+        # Улучшенная палитра, безопасная для дальтоников с более насыщенными цветами
+        # Вдохновлена палитрами из test.py с более яркими и насыщенными оттенками
         colorblind_safe = {
-            'blue': '#1E88E5',      # Blue
-            'orange': '#FFC107',    # Amber
-            'green': '#004D40',     # Teal (Dark)
-            'red': '#D81B60',       # Pink
-            'purple': '#5E35B1',    # Deep Purple
-            'brown': '#6D4C41',     # Brown
-            'cyan': '#00ACC1',      # Cyan
-            'teal': '#00897B',      # Teal
-            'gray': '#757575',      # Gray
-            'black': '#212121'      # Black
+            'blue': '#2196F3',      # Ярко-синий (presentation)
+            'orange': '#FF9800',    # Оранжевый (highlight)
+            'green': '#4CAF50',     # Зеленый (university)
+            'red': '#F44336',       # Ярко-красный (disruptive)
+            'purple': '#9C27B0',    # Фиолетовый (school)
+            'pink': '#E91E63',      # Vivid Pink
+            'cyan': '#00BCD4',      # Бирюзовый
+            'lime': '#CDDC39',      # Лайм
+            'teal': '#009688',      # Бирюзово-зеленый
+            'amber': '#FFC107',     # Золотой (highlight)
+            'indigo': '#3F51B5',    # Индиго
+            'magenta': '#E91E63',   # Vivid Magenta
+            'violet': '#673AB7',    # Фиолетовый
+            'gold': '#FFEB3B',      # Золотой
+            'coral': '#FF5722',     # Коралловый
+            'turquoise': '#00E5FF', # Vivid Turquoise
+            'gray': '#9E9E9E',      # Средний серый (grid)
+            'black': '#212121'      # Черный
         }
         
         # Культурно-специфические цвета с семантическим значением
         cultural_colors = {
             # Русская традиция: синий (духовность, глубина)
             'russian': colorblind_safe['blue'],
-            # Китайская традиция: коричневый (земля, мудрость)
-            'chinese': colorblind_safe['brown'],
+            # Китайская традиция: красный (удача, энергия)
+            'chinese': colorblind_safe['red'],
             # Японская традиция: зеленый (естественность, гармония)
             'japanese': colorblind_safe['green'],
             # Европейская традиция: пурпурный (индивидуальность, критика)
             'european': colorblind_safe['purple'],
             # ИИ-генерации: голубой (технология, потенциал)
-            'ai': colorblind_safe['cyan'],
+            'ai': colorblind_safe['turquoise'],
             # Человеческое творчество: оранжевый (теплота, намерение)
-            'human': colorblind_safe['orange']
+            'human': colorblind_safe['amber']
         }
         
-        # Философские концепты
+        # Философские концепты (улучшенные цвета для лучшей визуализации)
         philosophical_colors = {
-            'intentionality': {'color': colorblind_safe['purple'], 'alpha': 0.15},
-            'spontaneity': {'color': colorblind_safe['green'], 'alpha': 0.15},
-            'flatness': {'color': colorblind_safe['gray'], 'alpha': 0.12},
-            'neutral': {'color': colorblind_safe['black'], 'alpha': 0.8},
-            'significance': {'color': colorblind_safe['red'], 'alpha': 0.8},
-            'confidence': {'color': colorblind_safe['blue'], 'alpha': 0.3},
+            'intentionality': {'color': colorblind_safe['indigo'], 'alpha': 0.25},
+            'spontaneity': {'color': colorblind_safe['lime'], 'alpha': 0.25},
+            'flatness': {'color': colorblind_safe['coral'], 'alpha': 0.22},
+            'neutral': {'color': colorblind_safe['black'], 'alpha': 0.85},
+            'significance': {'color': colorblind_safe['magenta'], 'alpha': 0.9},
+            'confidence': {'color': colorblind_safe['teal'], 'alpha': 0.45},
             'background': {'color': '#FFFFFF'},
             'text': {'color': colorblind_safe['black']},
-            'highlight': {'color': colorblind_safe['orange'], 'alpha': 0.3}
+            'highlight': {'color': colorblind_safe['gold'], 'alpha': 0.45}
         }
         
         # Комбинируем все цвета
@@ -324,21 +333,21 @@ class AcademicVisualizer:
                     'edgewidth': 1.0 if is_human else 0.5
                 }
         
-        # Сравнительные категории
+        # Сравнительные категории (используем более яркие цвета)
         color_scheme.update({
             'human': {
-                'color': cultural_colors['human'],
+                'color': '#FFAB00',  # Vivid Amber
                 'linewidth': self.config.line_width * 1.2,
                 'linestyle': '-',
-                'alpha': 0.85,
+                'alpha': 0.9,
                 'marker': 'o',
                 'zorder': 6
             },
             'ai': {
-                'color': cultural_colors['ai'],
+                'color': '#00E5FF',  # Vivid Turquoise
                 'linewidth': self.config.line_width * 1.2,
                 'linestyle': '--',
-                'alpha': 0.85,
+                'alpha': 0.9,
                 'marker': '^',
                 'zorder': 5
             }
@@ -520,6 +529,45 @@ class AcademicVisualizer:
         
         return grayscale_params
     
+    def _adjust_text_position(self, ax: Axes, xy: Tuple[float, float], 
+                             x_span: float, y_span: float, text: str) -> Tuple[float, float]:
+        """
+        Корректирует позицию текста с учетом предотвращения наложений
+        
+        Args:
+            ax: ось matplotlib
+            xy: координаты точки аннотации
+            x_span, y_span: диапазоны осей
+            text: текст аннотации
+            
+        Returns:
+            xytext: скорректированные координаты текста
+        """
+        x_range = ax.get_xlim()
+        y_range = ax.get_ylim()
+        
+        # Оценка ширины текста (приблизительная)
+        approx_text_width = len(text) * 0.02 * x_span
+        approx_text_height = 0.05 * y_span
+        
+        # Определяем позицию с учетом размера текста и предотвращения наложений
+        if xy[0] < x_range[0] + 0.3 * x_span:
+            x_text = xy[0] + max(0.25 * x_span, approx_text_width)
+        elif xy[0] > x_range[0] + 0.7 * x_span:
+            x_text = xy[0] - max(0.35 * x_span, approx_text_width)
+        else:
+            # Для центральных точек выбираем позицию с максимальным отступом
+            x_text = xy[0] + max(0.3 * x_span, approx_text_width)
+        
+        if xy[1] < y_range[0] + 0.3 * y_span:
+            y_text = xy[1] + max(0.25 * y_span, approx_text_height)
+        elif xy[1] > y_range[0] + 0.7 * y_span:
+            y_text = xy[1] - max(0.25 * y_span, approx_text_height)
+        else:
+            y_text = xy[1] + max(0.25 * y_span, approx_text_height)
+        
+        return (x_text, y_text)
+    
     def add_philosophical_annotation(self, ax: Axes, text: str, xy: Tuple[float, float],
                                     xytext: Optional[Tuple[float, float]] = None,
                                     arrow: bool = True, culture: str = 'neutral') -> None:
@@ -534,12 +582,12 @@ class AcademicVisualizer:
             arrow: добавлять ли стрелку
             culture: культурный контекст
         """
-        # Цвета для разных культур
+        # Цвета для разных культур (используем более яркие цвета для аннотаций)
         culture_colors = {
-            'russian': self.color_scheme['russian_human']['color'],
-            'chinese': self.color_scheme['chinese_human']['color'],
-            'japanese': self.color_scheme['japanese_human']['color'],
-            'european': self.color_scheme['european_human']['color'],
+            'russian': '#2196F3',      # Ярко-синий
+            'chinese': '#F44336',      # Ярко-красный
+            'japanese': '#4CAF50',     # Зеленый
+            'european': '#9C27B0',     # Фиолетовый
             'neutral': self.color_scheme['text']['color']
         }
         
@@ -557,54 +605,47 @@ class AcademicVisualizer:
         color = culture_colors.get(culture, self.color_scheme['text']['color'])
         formatted_text = f"[{symbol}] {text}"
         
-        # Автоматическое определение позиции текста
+        # Автоматическое определение позиции текста с учетом предотвращения наложений
         if xytext is None:
             x_range = ax.get_xlim()
             y_range = ax.get_ylim()
             x_span = x_range[1] - x_range[0]
             y_span = y_range[1] - y_range[0]
             
-            # Эвристика для позиционирования
-            if xy[0] < x_range[0] + 0.4 * x_span:
-                x_text = xy[0] + 0.15 * x_span
-            else:
-                x_text = xy[0] - 0.25 * x_span
-            
-            if xy[1] < y_range[0] + 0.4 * y_span:
-                y_text = xy[1] + 0.15 * y_span
-            else:
-                y_text = xy[1] - 0.15 * y_span
-            
-            xytext = (x_text, y_text)
+            # Используем улучшенный алгоритм позиционирования
+            xytext = self._adjust_text_position(ax, xy, x_span, y_span, formatted_text)
         
-        # Параметры аннотации
+        # Параметры аннотации с улучшенным отступом
         bbox_props = dict(
-            boxstyle="round,pad=0.6",
+            boxstyle="round,pad=0.9",  # Увеличен отступ вокруг текста
             fc="white",
             ec=color,
-            lw=1.2,
-            alpha=0.9
+            lw=2.0,  # Увеличена толщина рамки
+            alpha=0.98  # Увеличена непрозрачность
         )
         
         arrow_props = dict(
             arrowstyle="->",
             color=color,
-            lw=1.2,
-            alpha=0.8
+            lw=2.0,  # Увеличена толщина стрелки
+            alpha=0.95,  # Увеличена непрозрачность
+            shrinkA=6,  # Отступ от аннотируемой точки
+            shrinkB=10   # Отступ от текстового блока
         ) if arrow else None
         
-        # Добавляем аннотацию
+        # Добавляем аннотацию с улучшенным позиционированием
         ax.annotate(
             formatted_text,
             xy=xy,
             xytext=xytext,
-            fontsize=self.config.font_size - 0.5,
+            fontsize=self.config.font_size,
             color=color,
-            fontweight='medium',
+            fontweight='bold',
             bbox=bbox_props,
             arrowprops=arrow_props,
             va='center',
-            ha='center'
+            ha='center',
+            zorder=25  # Увеличен zorder для отображения поверх графических элементов
         )
     
     def calculate_statistical_significance(self, group1: np.ndarray, group2: np.ndarray,
@@ -739,19 +780,19 @@ class AcademicVisualizer:
             else:
                 significance = "ns"
             
-            # Рисуем линию соединения
+            # Рисуем линию соединения (используем более яркий цвет)
             ax.plot([x_positions[i], x_positions[i], x_positions[j], x_positions[j]], 
                    [y_pos-0.5*y_step, y_pos, y_pos, y_pos-0.5*y_step], 
-                   color=self.color_scheme['significance']['color'], 
-                   linewidth=0.8,
+                   color='#E91E63',  # Vivid Pink
+                   linewidth=1.5,
                    linestyle='-')
             
-            # Добавляем текст значимости
+            # Добавляем текст значимости (используем более яркий цвет)
             ax.text((x_positions[i] + x_positions[j])/2, y_pos, significance, 
                    ha='center', va='bottom', 
-                   fontsize=self.config.font_size - 1,
+                   fontsize=self.config.font_size,
                    fontweight='bold' if significance != 'ns' else 'normal',
-                   color=self.color_scheme['significance']['color'])
+                   color='#E91E63')  # Vivid Pink
     
     def generate_caption(self, fig_num: int, title: str, key_insight: str, 
                         data_source: str = "авторский расчёт") -> str:
@@ -1101,31 +1142,37 @@ class AcademicVisualizer:
             # Получаем параметры для построения линии
             params = self.get_line_plot_params(f'{culture}_{source}')
             
-            # Строим линию
+            # Строим линию (увеличиваем толщину линии для лучшей видимости)
             line = ax.plot(angles, values,
                           label=f'{culture.capitalize()} ({source})',
+                          linewidth=params.get('linewidth', self.config.line_width) * 1.5,  # Увеличена толщина линии
                           **params)
             
-            # Заполняем область
-            fill_alpha = 0.1 if source == 'human' else 0.05
+            # Заполняем область (используем более насыщенные цвета)
+            fill_alpha = 0.3 if source == 'human' else 0.2
             ax.fill(angles, values, color=params['color'], alpha=fill_alpha)
             
-            # Добавляем элементы для легенды
+            # Добавляем элементы для легенды (увеличиваем толщину линий в легенде)
             line_params = self.get_line_plot_params(f'{culture}_{source}')
             legend_elements.append(Line2D([0], [0], color=line_params['color'], 
                                         linestyle=line_params['linestyle'],
+                                        linewidth=line_params.get('linewidth', self.config.line_width) * 1.8,  # Увеличена толщина линии в легенде
                                         marker=line_params.get('marker', 'o'),
                                         label=f'{culture.capitalize()} ({source})'))
         
-        # Философские зоны
+        # Философские зоны (улучшенные цвета)
         self.add_philosophical_annotation(ax, "Зона интенциональности\n(русская традиция)",
                                          (np.pi/4, 0.9), culture='russian')
         self.add_philosophical_annotation(ax, "Зона спонтанности\n(японская традиция)",
                                          (5*np.pi/4, 0.9), culture='japanese')
         
-        # Легенда
+        # Легенда (улучшаем видимость)
         ax.legend(handles=legend_elements, loc='upper right', 
-                 bbox_to_anchor=(1.3, 1.0), fontsize=self.config.font_size - 1)
+                 bbox_to_anchor=(1.3, 1.0), fontsize=self.config.font_size - 1,
+                 frameon=True,  # Добавляем рамку
+                 fancybox=True,  # Добавляем скругленные углы
+                 shadow=True,  # Добавляем тень
+                 framealpha=0.95)  # Увеличиваем непрозрачность
     
     def plot_tsne_space(self, ax: Axes, points: List[TSNEPoint]) -> None:
         """
@@ -1155,18 +1202,19 @@ class AcademicVisualizer:
                 'alpha': params['alpha'],
                 'marker': params['marker'],
                 'edgecolors': 'black' if source == 'human' else params['color'],
-                'linewidths': 0.5 if source == 'human' else 0.2,
-                's': 60,
+                'linewidths': 0.8 if source == 'human' else 0.4,
+                's': 80,
                 'zorder': params.get('zorder', 3)
             }
             
             scatter = ax.scatter(coords['x'], coords['y'], **scatter_params)
             
-            # Добавляем элементы для легенды
+            # Добавляем элементы для легенды (увеличиваем размер маркеров в легенде)
             legend_elements.append(Line2D([0], [0], marker=params['marker'], 
                                         color='w', markerfacecolor=params['color'],
                                         markeredgecolor='black' if source == 'human' else params['color'],
-                                        markersize=self.config.marker_size,
+                                        markersize=self.config.marker_size * 1.5,  # Увеличен размер маркеров в легенде
+                                        markeredgewidth=2.5,  # Увеличена толщина рамки маркера
                                         label=f'{culture.capitalize()} ({source})'))
         
         # Добавляем доверительные эллипсы для человеческих данных
@@ -1189,16 +1237,16 @@ class AcademicVisualizer:
                              angle=angle,
                              edgecolor=self.get_plot_params(f'{culture}_human')['color'],
                              fc='none',
-                             lw=2.0,
-                             alpha=0.4,
-                             linestyle='--',
+                             lw=4.0,  # Увеличена толщина линии
+                             alpha=0.7,  # Увеличена непрозрачность
+                             linestyle='-',
                              zorder=2)
                 ax.add_patch(ell)
         
-        # Философская зона "эстетический флат"
+        # Философская зона "эстетический флат" (используем более яркий цвет)
         flat_zone = Polygon([[-1, -1], [1, -1], [1, 1], [-1, 1]],
-                           color=self.color_scheme['flatness']['color'],
-                           alpha=self.color_scheme['flatness']['alpha'],
+                           color='#FFC107',  # Золотой (более яркий)
+                           alpha=0.25,
                            zorder=0)
         ax.add_patch(flat_zone)
         
@@ -1208,12 +1256,16 @@ class AcademicVisualizer:
         # Настройки осей
         ax.set_xlabel('t-SNE Dimension 1', fontsize=self.config.font_size + 1)
         ax.set_ylabel('t-SNE Dimension 2', fontsize=self.config.font_size + 1)
-        ax.grid(True, alpha=0.3, linestyle='--')
+        ax.grid(True, alpha=0.4, linestyle='--')
         
-        # Легенда
+        # Легенда (улучшаем видимость)
         ax.legend(handles=legend_elements, loc='upper left', 
                  fontsize=self.config.font_size - 1, title="Культура и источник", 
-                 title_fontsize=self.config.font_size)
+                 title_fontsize=self.config.font_size,
+                 frameon=True,  # Добавляем рамку
+                 fancybox=True,  # Добавляем скругленные углы
+                 shadow=True,  # Добавляем тень
+                 framealpha=0.95)  # Увеличиваем непрозрачность
     
     def plot_perceptual_vs_computational(self, ax: Axes, ratings: List[PerceptualRating]) -> None:
         """
@@ -1231,11 +1283,11 @@ class AcademicVisualizer:
         # Строим точки для каждой группы
         unique_groups = ['Композиторы', 'Философы', 'Инженеры', 'Музыковеды', 'Студенты']
         group_colors = {
-            'Композиторы': self.color_scheme['russian_human']['color'],
-            'Философы': self.color_scheme['european_human']['color'],
-            'Инженеры': self.color_scheme['ai']['color'],
-            'Музыковеды': self.color_scheme['chinese_human']['color'],
-            'Студенты': self.color_scheme['japanese_human']['color']
+            'Композиторы': '#2196F3',  # Ярко-синий
+            'Философы': '#9C27B0',     # Фиолетовый
+            'Инженеры': '#00BCD4',     # Бирюзовый
+            'Музыковеды': '#F44336',   # Ярко-красный
+            'Студенты': '#4CAF50'      # Зеленый
         }
         
         legend_elements = []
@@ -1246,14 +1298,15 @@ class AcademicVisualizer:
                 sc = ax.scatter(computational[mask], perceptual[mask],
                           label=f'{group} (n={np.sum(mask)})',
                           color=color,
-                          alpha=0.8,
+                          alpha=0.85,
                           edgecolors='black',
-                          linewidths=0.5,
-                          s=60)
+                          linewidths=0.8,
+                          s=70)
                 
                 legend_elements.append(Line2D([0], [0], marker='o', color='w', 
                                             markerfacecolor=color, markeredgecolor='black',
-                                            markersize=self.config.marker_size/2,
+                                            markersize=self.config.marker_size/2 * 1.8,  # Увеличен размер маркеров в легенде
+                                            markeredgewidth=2.5,  # Увеличена толщина рамки маркера
                                             label=f'{group} (n={np.sum(mask)})'))
         
         # Строим регрессии для ключевых групп
@@ -1277,23 +1330,21 @@ class AcademicVisualizer:
                 
                 # Строим линию
                 color = group_colors.get(group, 'gray')
-                ax.plot(xp, yp, color=color, lw=2.5, linestyle='--')
+                ax.plot(xp, yp, color=color, lw=3.0, linestyle='-')
                 
                 # Аннотируем статистику
                 if group == 'Композиторы':
                     ax.annotate(f"r = {r_value:.2f} {significance}\np = {p_value:.3f}",
                                xy=(0.15, 5.5), fontsize=self.config.font_size - 1, color=color,
-                               bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=color, alpha=0.9))
+                               bbox=dict(boxstyle="round,pad=0.4", fc="white", ec=color, alpha=0.95, linewidth=1.5))
                 else:
                     ax.annotate(f"r = {r_value:.2f} {significance}\np = {p_value:.3f}",
                                xy=(0.6, 2.5), fontsize=self.config.font_size - 1, color=color,
-                               bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=color, alpha=0.9))
+                               bbox=dict(boxstyle="round,pad=0.4", fc="white", ec=color, alpha=0.95, linewidth=1.5))
         
-        # Философские зоны
-        ax.axvspan(0.0, 0.4, color=self.color_scheme['intentionality']['color'],
-                  alpha=self.color_scheme['intentionality']['alpha'])
-        ax.axvspan(0.6, 1.0, color=self.color_scheme['spontaneity']['color'],
-                  alpha=self.color_scheme['spontaneity']['alpha'])
+        # Философские зоны (используем более яркие цвета)
+        ax.axvspan(0.0, 0.4, color='#3F51B5', alpha=0.3)  # Индиго
+        ax.axvspan(0.6, 1.0, color='#CDDC39', alpha=0.3)  # Лайм
         
         self.add_philosophical_annotation(ax, "Зона интенциональности:\nтрадиция как намерение",
                                          (0.2, 6.5), culture='russian')
@@ -1305,11 +1356,15 @@ class AcademicVisualizer:
         ax.set_ylabel('Перцептивная оценка новизны (1-7)', fontsize=self.config.font_size + 1)
         ax.set_xlim(0, 1.0)
         ax.set_ylim(1, 7.2)
-        ax.grid(True, alpha=0.3, linestyle='--')
+        ax.grid(True, alpha=0.4, linestyle='--')
         
-        # Легенда
+        # Легенда (улучшаем видимость)
         ax.legend(handles=legend_elements, loc='upper right', 
-                 fontsize=self.config.font_size - 2)
+                 fontsize=self.config.font_size - 2,
+                 frameon=True,  # Добавляем рамку
+                 fancybox=True,  # Добавляем скругленные углы
+                 shadow=True,  # Добавляем тень
+                 framealpha=0.95)  # Увеличиваем непрозрачность
     
     def plot_philosophical_concepts_map(self, ax: Axes) -> None:
         """
@@ -1357,72 +1412,74 @@ class AcademicVisualizer:
             else:
                 color = self.color_scheme['neutral']['color']
             
-            # Линия
+            # Линия (используем более насыщенные цвета)
             ax.plot([x1, x2], [y1, y2],
                     color=color,
-                    alpha=weight*0.7,
-                    linewidth=weight*2.5,
+                    alpha=weight*0.9,  # Увеличена непрозрачность
+                    linewidth=weight*4.0,  # Увеличена толщина линии
                     linestyle='--' if weight < 0.7 else '-')
             
-            # Стрелка
+            # Стрелка (используем более насыщенные цвета)
             arrow = FancyArrowPatch(posA=(x1, y1), posB=(x2, y2),
-                                   arrowstyle='-|>', mutation_scale=15,
-                                   color=color, alpha=weight*0.8,
-                                   linewidth=weight*1.5)
+                                   arrowstyle='-|>', mutation_scale=22,  # Увеличен размер стрелки
+                                   color=color, alpha=weight*0.98,  # Увеличена непрозрачность
+                                   linewidth=weight*2.5)  # Увеличена толщина линии
             ax.add_patch(arrow)
         
         # Рисуем узлы
         for name, x, y, culture, tooltip in concepts:
             # Цвет узла
             color_map = {
-                'russian': self.color_scheme['russian_human']['color'],
-                'chinese': self.color_scheme['chinese_human']['color'],
-                'japanese': self.color_scheme['japanese_human']['color'],
-                'european': self.color_scheme['european_human']['color'],
-                'neutral': self.color_scheme['neutral']['color']
+                'russian': '#2196F3',      # Ярко-синий
+                'chinese': '#F44336',      # Ярко-красный
+                'japanese': '#4CAF50',     # Зеленый
+                'european': '#9C27B0',     # Фиолетовый
+                'neutral': '#9E9E9E'       # Серый
             }
             color = color_map.get(culture, self.color_scheme['neutral']['color'])
             
-            # Круг узла
-            circle = Circle((x, y), 0.04,
+            # Круг узла (используем более насыщенные цвета)
+            circle = Circle((x, y), 0.05,
                            color=color,
-                           alpha=0.85,
+                           alpha=0.98,  # Увеличена непрозрачность
                            edgecolor='black',
-                           linewidth=1.5,
+                           linewidth=2.5,  # Увеличена толщина рамки
                            zorder=10)
             ax.add_patch(circle)
             
-            # Текст узла
+            # Текст узла (улучшаем видимость)
             text_color = 'white' if culture in ['russian', 'european', 'chinese'] else 'black'
             ax.text(x, y, name,
                    ha='center', va='center',
-                   fontweight='bold', fontsize=self.config.font_size - 1,
+                   fontweight='bold', fontsize=self.config.font_size,
                    color=text_color,
-                   zorder=11)
+                   zorder=11,
+                   bbox=dict(facecolor='none', edgecolor='none', pad=3))  # Добавляем отступ
             
             # Философская аннотация для ключевых узлов
             if name in ['Непреднамеренность', 'Эстетический флат']:
-                self.add_philosophical_annotation(ax, tooltip, (x, y+0.06), culture=culture)
+                self.add_philosophical_annotation(ax, tooltip, (x, y+0.08), culture=culture)
         
-        # Зона "непреднамеренной новизны"
+        # Зона "непреднамеренной новизны" (используем более яркий цвет)
         zone = Polygon([[0.3, 0.3], [0.7, 0.3], [0.6, 0.6], [0.4, 0.6]],
-                      color=self.color_scheme['spontaneity']['color'],
-                      alpha=self.color_scheme['spontaneity']['alpha']*1.5,
+                      color='#CDDC39',  # Лайм
+                      alpha=0.35,
                       zorder=1)
         ax.add_patch(zone)
         
         ax.text(0.5, 0.45, "Зона непреднамеренной новизны",
-               ha='center', va='center', fontsize=self.config.font_size - 1,
-               color=self.color_scheme['japanese_human']['color'],
+               ha='center', va='center', fontsize=self.config.font_size,
+               color='#4CAF50',  # Зеленый
                fontstyle='italic',
-               bbox=dict(facecolor='white', alpha=0.8, edgecolor='none', pad=2),
+               fontweight='bold',  # Увеличен вес шрифта
+               bbox=dict(facecolor='white', alpha=0.95, edgecolor='none', pad=4),  # Увеличена непрозрачность и отступ
                zorder=2)
         
         # Настройки осей
         ax.set_xlim(0.1, 0.9)
         ax.set_ylim(0.1, 0.95)
         ax.set_title("Онтологическая карта философских концептов\nнепреднамеренной эстетической новизны",
-                    fontsize=self.config.font_size + 2, fontweight='bold', pad=20)
+                    fontsize=self.config.font_size + 3, fontweight='bold', pad=25)
         ax.axis('off')
     
     def generate_main_visualizations(self) -> None:
@@ -1556,6 +1613,7 @@ class AcademicVisualizer:
                     # Строим линию
                     ax5.plot(time_points, values, 
                             label=f'{culture.capitalize()} ({source})',
+                            linewidth=params.get('linewidth', self.config.line_width) * 1.5,
                             **params)
             
             ax5.set_xlabel('Время (условные единицы)', fontsize=self.config.font_size + 1)
@@ -1563,10 +1621,11 @@ class AcademicVisualizer:
             ax5.set_title(
                 "График 5: Динамика эстетической новизны во времени\n"
                 "Сравнение человеческого и ИИ-генерированного творчества",
-                pad=20, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
             )
-            ax5.grid(True, alpha=0.3, linestyle='--')
-            ax5.legend(fontsize=self.config.font_size - 1, loc='upper right')
+            ax5.grid(True, alpha=0.4, linestyle='--')
+            ax5.legend(fontsize=self.config.font_size, loc='upper right',
+                      frameon=True, fancybox=True, shadow=True, framealpha=0.95)  # Улучшаем видимость
             self.add_watermark(fig5)
             caption5 = self.generate_caption(5,
                 "Динамика эстетической новизны во времени",
@@ -1606,36 +1665,37 @@ class AcademicVisualizer:
             # Строим столбчатую диаграмму
             bars1 = ax6.bar(x_pos - width/2, human_data, width, 
                            label='Человек', 
-                           color=self.color_scheme['human']['color'],
-                           alpha=0.8,
+                           color='#FF9800',  # Оранжевый
+                           alpha=0.85,
                            edgecolor='black',
-                           linewidth=0.5)
+                           linewidth=1.0)
             bars2 = ax6.bar(x_pos + width/2, ai_data, width, 
                            label='ИИ', 
-                           color=self.color_scheme['ai']['color'],
-                           alpha=0.8,
+                           color='#00BCD4',  # Бирюзовый
+                           alpha=0.85,
                            edgecolor='black',
-                           linewidth=0.5)
+                           linewidth=1.0)
             
             # Добавляем значения на столбцы
             for bar, value in zip(bars1, human_data):
-                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01, 
-                        f'{value:.2f}', ha='center', va='bottom', fontsize=self.config.font_size - 2)
+                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02, 
+                        f'{value:.2f}', ha='center', va='bottom', fontsize=self.config.font_size, fontweight='bold')
             for bar, value in zip(bars2, ai_data):
-                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01, 
-                        f'{value:.2f}', ha='center', va='bottom', fontsize=self.config.font_size - 2)
+                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02, 
+                        f'{value:.2f}', ha='center', va='bottom', fontsize=self.config.font_size, fontweight='bold')
             
             ax6.set_xlabel('Музыкальные жанры', fontsize=self.config.font_size + 1)
             ax6.set_ylabel('Средняя эстетическая новизна', fontsize=self.config.font_size + 1)
             ax6.set_title(
                 "График 6: Сравнение эстетической новизны по музыкальным жанрам\n"
                 "Человеческое vs ИИ-генерированное творчество",
-                pad=20, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
             )
             ax6.set_xticks(x_pos)
             ax6.set_xticklabels(genres, fontsize=self.config.font_size)
-            ax6.legend(fontsize=self.config.font_size - 1)
-            ax6.grid(True, alpha=0.3, linestyle='--', axis='y')
+            ax6.legend(fontsize=self.config.font_size,
+                      frameon=True, fancybox=True, shadow=True, framealpha=0.95)  # Улучшаем видимость
+            ax6.grid(True, alpha=0.4, linestyle='--', axis='y')
             self.add_watermark(fig6)
             caption6 = self.generate_caption(6,
                 "Сравнение эстетической новизны по музыкальным жанрам",
@@ -1659,7 +1719,7 @@ class AcademicVisualizer:
             corr_matrix = (corr_matrix + corr_matrix.T) / 2  # Симметричная матрица
             np.fill_diagonal(corr_matrix, 1.0)  # Диагональ = 1
             
-            # Визуализируем тепловую карту
+            # Визуализируем тепловую карту с более яркой цветовой схемой
             im = ax7.imshow(corr_matrix, cmap='RdYlBu_r', vmin=-1, vmax=1)
             
             # Добавляем текстовые значения
@@ -1667,23 +1727,23 @@ class AcademicVisualizer:
                 for j in range(n_metrics):
                     text = ax7.text(j, i, f'{corr_matrix[i, j]:.2f}',
                                    ha="center", va="center", 
-                                   color="black" if abs(corr_matrix[i, j]) < 0.5 else "white",
-                                   fontsize=self.config.font_size - 1)
+                                   color="white" if abs(corr_matrix[i, j]) > 0.5 else "black",
+                                   fontsize=self.config.font_size, fontweight='bold')
             
             ax7.set_xticks(np.arange(n_metrics))
             ax7.set_yticks(np.arange(n_metrics))
-            ax7.set_xticklabels(metrics, fontsize=self.config.font_size - 1, rotation=45, ha='right')
-            ax7.set_yticklabels(metrics, fontsize=self.config.font_size - 1)
+            ax7.set_xticklabels(metrics, fontsize=self.config.font_size, rotation=45, ha='right')
+            ax7.set_yticklabels(metrics, fontsize=self.config.font_size)
             
             ax7.set_title(
                 "График 7: Корреляционный анализ метрик эстетической новизны\n"
                 "Матрица корреляций между вычислительными метриками",
-                pad=20, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
             )
             
             # Добавляем цветовую шкалу
             cbar = plt.colorbar(im, ax=ax7)
-            cbar.set_label('Коэффициент корреляции', fontsize=self.config.font_size)
+            cbar.set_label('Коэффициент корреляции', fontsize=self.config.font_size + 1)
             
             self.add_watermark(fig7)
             caption7 = self.generate_caption(7,
@@ -1724,35 +1784,46 @@ class AcademicVisualizer:
                 
                 # Строим столбчатую диаграмму с доверительными интервалами
                 params = self.get_plot_params(f'{culture}_{source}')
-                # Для bar() мы можем использовать только параметры, подходящие для прямоугольников
-                bar_params = params.copy()
-                bar_params.pop('edgecolor', None)
-                bar_params.pop('marker', None)  # marker не подходит для bar()
-                bar_params.pop('edgewidth', None)  # edgewidth не подходит для bar()
+                # Используем более яркие цвета для лучшей визуализации
+                vibrant_colors = {
+                    'russian_human': '#2196F3',    # Ярко-синий
+                    'russian_ai': '#82B1FF',       # Светло-синий
+                    'chinese_human': '#F44336',    # Ярко-красный
+                    'chinese_ai': '#FF8A80',       # Светло-красный
+                    'japanese_human': '#4CAF50',   # Зеленый
+                    'japanese_ai': '#69F0AE',      # Светло-зеленый
+                    'european_human': '#9C27B0',   # Фиолетовый
+                    'european_ai': '#B388FF'       # Светло-фиолетовый
+                }
+                color_key = f'{culture}_{source}'
+                bar_color = vibrant_colors.get(color_key, params['color'])
+                
                 bars = ax8.bar(x_pos + i * width/len(cultures), means, width/len(cultures),
                               label=f'{culture.capitalize()} ({source})',
-                              **bar_params)
+                              color=bar_color,
+                              alpha=0.85)
                 
                 # Добавляем доверительные интервалы
                 for j, (mean, lower, upper) in enumerate(zip(means, lower_bounds, upper_bounds)):
                     ax8.plot([x_pos[j] + i * width/len(cultures), x_pos[j] + i * width/len(cultures)], 
-                            [lower, upper], color=params['color'], linewidth=2)
+                            [lower, upper], color=bar_color, linewidth=3.0)
                     ax8.scatter(x_pos[j] + i * width/len(cultures), lower, 
-                               marker='_', color=params['color'], s=50)
+                               marker='_', color=bar_color, s=80)
                     ax8.scatter(x_pos[j] + i * width/len(cultures), upper, 
-                               marker='_', color=params['color'], s=50)
+                               marker='_', color=bar_color, s=80)
             
             ax8.set_xlabel('Категории эстетической новизны', fontsize=self.config.font_size + 1)
             ax8.set_ylabel('Уровень новизны (0-1)', fontsize=self.config.font_size + 1)
             ax8.set_title(
                 "График 8: Доверительные интервалы для категорий эстетической новизны\n"
                 "Сравнение человеческого и ИИ-генерированного творчества с 95% ДИ",
-                pad=20, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
             )
             ax8.set_xticks(x_pos)
-            ax8.set_xticklabels(categories, fontsize=self.config.font_size - 1, rotation=45, ha='right')
-            ax8.legend(fontsize=self.config.font_size - 2, ncol=2)
-            ax8.grid(True, alpha=0.3, linestyle='--', axis='y')
+            ax8.set_xticklabels(categories, fontsize=self.config.font_size, rotation=45, ha='right')
+            ax8.legend(fontsize=self.config.font_size - 1, ncol=2,
+                      frameon=True, fancybox=True, shadow=True, framealpha=0.95)  # Улучшаем видимость
+            ax8.grid(True, alpha=0.4, linestyle='--', axis='y')
             ax8.set_ylim(0, 1)
             self.add_watermark(fig8)
             caption8 = self.generate_caption(8,

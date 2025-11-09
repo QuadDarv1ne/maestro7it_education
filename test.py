@@ -226,11 +226,12 @@ class ScientificVisualizer:
         ax.plot([x1, x1, x2, x2], [y-line_height, y, y, y-line_height], 
                 color=color, linewidth=1.5, alpha=0.9)
         
-        # Текст
-        ax.text((x1+x2)/2, y+0.02, text, ha='center', va='bottom', 
+        # Текст с улучшенным позиционированием и отступами
+        ax.text((x1+x2)/2, y+0.05, text, ha='center', va='bottom', 
                 fontweight='bold', fontsize=9, color=color,
-                bbox=dict(facecolor='white', alpha=0.85, edgecolor=color,
-                         boxstyle='round,pad=0.3', linewidth=0.8))
+                bbox=dict(facecolor='white', alpha=0.9, edgecolor=color,
+                         boxstyle='round,pad=0.4', linewidth=1.0),
+                zorder=10)  # Увеличен zorder для отображения поверх графических элементов
     
     def save_figure(self, fig, filename_base: str, transparent: bool = False):
         """Сохранение фигуры в нескольких форматах для научной публикации"""
@@ -458,8 +459,8 @@ def plot_christensen_classification(viz: ScientificVisualizer):
     # Добавление подписей к точкам с адаптивным позиционированием
     for i, row in df.iterrows():
         # Определение позиции подписи в зависимости от квадранта
-        offset_x = 3 if row['integration'] < 50 else -3
-        offset_y = 2 if row['disruption'] < 50 else -2
+        offset_x = 5 if row['integration'] < 50 else -5  # Увеличен отступ
+        offset_y = 4 if row['disruption'] < 50 else -4  # Увеличен отступ
         ha = 'left' if row['integration'] < 50 else 'right'
         va = 'bottom' if row['disruption'] < 50 else 'top'
         
@@ -476,18 +477,21 @@ def plot_christensen_classification(viz: ScientificVisualizer):
             fontweight='bold',
             fontsize=9.5,
             bbox=dict(
-                boxstyle="round,pad=0.4", 
+                boxstyle="round,pad=0.6",  # Увеличен отступ вокруг текста
                 fc="white", 
                 ec=edge_color, 
-                alpha=0.9,
-                linewidth=1.5
+                alpha=0.95,  # Увеличена непрозрачность
+                linewidth=1.8  # Увеличена толщина рамки
             ),
             arrowprops=dict(
                 arrowstyle="->", 
                 color=edge_color, 
-                linewidth=1.0, 
-                alpha=0.8
-            )
+                linewidth=1.2,  # Увеличена толщина стрелки
+                alpha=0.9,
+                shrinkA=6,  # Отступ от аннотируемой точки
+                shrinkB=10  # Отступ от текстового блока
+            ),
+            zorder=20  # Увеличен zorder для отображения поверх графических элементов
         )
     
     # === Добавление разделительных линий и областей ===
@@ -517,12 +521,13 @@ def plot_christensen_classification(viz: ScientificVisualizer):
             fontsize=11, fontweight='bold',
             color='white',
             bbox=dict(
-                boxstyle="round,pad=0.6", 
+                boxstyle="round,pad=0.8",  # Увеличен отступ вокруг текста
                 fc=color, 
-                alpha=0.9,
+                alpha=0.95,  # Увеличена непрозрачность
                 edgecolor='black', 
-                linewidth=1.2
-            )
+                linewidth=1.5  # Увеличена толщина рамки
+            ),
+            zorder=15  # Увеличен zorder для отображения поверх графических элементов
         )
     
     # === Настройка осей ===
@@ -757,10 +762,12 @@ def plot_effectiveness_comparison(viz: ScientificVisualizer):
         "* Статистическая значимость: p < 0.05"
     )
     
-    fig.text(0.5, 0.01, methodology_text, ha='center', fontsize=9, alpha=0.8, 
+    fig.text(0.5, 0.01, methodology_text, ha='center', fontsize=9, alpha=0.9, 
             fontstyle='italic', linespacing=1.3,
-            bbox=dict(facecolor=viz.color_scheme['background'], alpha=0.9,
-                     edgecolor=viz.color_scheme['grid'], boxstyle='round,pad=0.5'))
+            bbox=dict(facecolor=viz.color_scheme['background'], alpha=0.95,  # Увеличена непрозрачность
+                     edgecolor=viz.color_scheme['grid'], boxstyle='round,pad=0.8',  # Увеличен отступ
+                     linewidth=1.0),
+            zorder=25)  # Увеличен zorder для отображения поверх графических элементов
     
     # === Источники данных ===
     viz.add_data_source_annotation(ax, [
@@ -937,12 +944,13 @@ def plot_adoption_forecast(viz: ScientificVisualizer):
     for event in events:
         ax.annotate(event['text'],
                    xy=(event['year'], event['y_pos']),
-                   xytext=(event['year'] + 0.5, event['y_pos'] + 5),
+                   xytext=(event['year'] + 1.2, event['y_pos'] + 8),  # Увеличен отступ
                    arrowprops=event['arrowprops'],
                    fontsize=10, fontweight='bold', ha='left',
-                   bbox=dict(boxstyle="round,pad=0.6", fc="white", ec=viz.color_scheme['highlight'], 
-                            alpha=0.9, linewidth=1.5),
-                   linespacing=1.3)
+                   bbox=dict(boxstyle="round,pad=0.8", fc="white", ec=viz.color_scheme['highlight'], 
+                            alpha=0.95, linewidth=2.0),  # Увеличена непрозрачность и толщина рамки
+                   linespacing=1.3,
+                   zorder=25)  # Увеличен zorder для отображения поверх графических элементов
     
     # === Настройка осей ===
     ax.set_xlim(2018.5, 2030.5)
@@ -1116,10 +1124,12 @@ def plot_innovation_implementation_gap(viz: ScientificVisualizer):
         "• Инвестиции в инфраструктуру и поддержку цифровых практик"
     )
     
-    fig.text(0.5, 0.02, insights_text, ha='center', fontsize=10, alpha=0.9, 
+    fig.text(0.5, 0.02, insights_text, ha='center', fontsize=10, alpha=0.95,  # Увеличена непрозрачность
             fontstyle='normal', linespacing=1.4,
-            bbox=dict(facecolor=viz.color_scheme['background'], alpha=0.95,
-                     edgecolor=viz.color_scheme['grid'], boxstyle='round,pad=0.8'))
+            bbox=dict(facecolor=viz.color_scheme['background'], alpha=0.98,  # Увеличена непрозрачность
+                     edgecolor=viz.color_scheme['grid'], boxstyle='round,pad=1.0',  # Увеличен отступ
+                     linewidth=1.2),  # Увеличена толщина рамки
+            zorder=30)  # Увеличен zorder для отображения поверх графических элементов
     
     # === Источники данных ===
     viz.add_data_source_annotation(ax, [
@@ -1279,10 +1289,11 @@ def plot_cost_benefit_analysis(viz: ScientificVisualizer):
     
     # Добавление значений ROI
     for i, (year, val) in enumerate(zip(years, roi)):
-        ax3.text(float(year), val + 5, f'{val:.1f}%', ha='center', va='bottom', 
+        ax3.text(float(year), val + 8, f'{val:.1f}%', ha='center', va='bottom',  # Увеличен отступ
                 fontweight='bold', fontsize=10, color=viz.color_scheme['highlight'],
-                bbox=dict(facecolor='white', alpha=0.8, edgecolor=viz.color_scheme['highlight'],
-                         boxstyle='round,pad=0.3', linewidth=0.8))
+                bbox=dict(facecolor='white', alpha=0.9, edgecolor=viz.color_scheme['highlight'],
+                         boxstyle='round,pad=0.4', linewidth=1.0),  # Увеличен отступ и толщина рамки
+                zorder=15)  # Увеличен zorder для отображения поверх графических элементов
     
     # === Средняя правая панель: Break-even анализ ===
     ax4 = fig.add_subplot(gs[1, 1])
