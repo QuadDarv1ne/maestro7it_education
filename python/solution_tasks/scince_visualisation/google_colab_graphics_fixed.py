@@ -398,9 +398,7 @@ class AcademicVisualizer:
             'font.sans-serif': [primary_font, 'DejaVu Sans', 'Arial', 'Liberation Sans', 'sans-serif'],
             'font.size': self.config.font_size,
             'axes.titlesize': self.config.font_size + 3,
-            'axes.titleweight': 'bold',
             'axes.labelsize': self.config.font_size + 1,
-            'axes.labelweight': 'medium',
             'xtick.labelsize': self.config.font_size - 1,
             'ytick.labelsize': self.config.font_size - 1,
             'legend.fontsize': self.config.font_size - 1,
@@ -640,7 +638,6 @@ class AcademicVisualizer:
             xytext=xytext,
             fontsize=self.config.font_size,
             color=color,
-            fontweight='bold',
             bbox=bbox_props,
             arrowprops=arrow_props,
             va='center',
@@ -791,7 +788,6 @@ class AcademicVisualizer:
             ax.text((x_positions[i] + x_positions[j])/2, y_pos, significance, 
                    ha='center', va='bottom', 
                    fontsize=self.config.font_size,
-                   fontweight='bold' if significance != 'ns' else 'normal',
                    color='#E91E63')  # Vivid Pink
     
     def generate_caption(self, fig_num: int, title: str, key_insight: str, 
@@ -822,10 +818,9 @@ class AcademicVisualizer:
                 ha='right',
                 va='bottom',
                 alpha=0.6,
-                fontweight='bold',
                 transform=fig.transFigure)
     
-    def save_academic_figure(self, fig: Figure, base_filename: str, caption: str) -> None:
+    def save_academic_figure(self, fig: Figure, base_filename: str, caption: str, show_inline: bool = False) -> None:
         """
         Сохраняет фигуру в форматах для академических публикаций
         
@@ -833,6 +828,7 @@ class AcademicVisualizer:
             fig: фигура matplotlib
             base_filename: базовое имя файла
             caption: подпись к фигуре
+            show_inline: отображать ли изображение в выводе
         """
         # Форматы для сохранения
         formats = {
@@ -862,6 +858,15 @@ class AcademicVisualizer:
         with open(caption_path, 'w', encoding='utf-8') as f:
             f.write(caption)
         logging.info(f"📄 Подпись сохранена: {caption_path}")
+        
+        # Отображаем изображение в выводе, если требуется
+        if show_inline:
+            try:
+                from IPython.display import display
+                display(fig)
+            except ImportError:
+                # Если IPython не доступен, просто показываем фигуру
+                plt.show()
     
     def save_reproducibility_package(self) -> None:
         """Сохраняет полный пакет для воспроизводимости"""
@@ -1124,13 +1129,16 @@ class AcademicVisualizer:
         ax.set_xticks(angles[:-1])
         ax.set_xticklabels(categories, fontsize=self.config.font_size)
         
-        # Радиальные метки
+        # Радиальные метки (упрощенные для лучшей читаемости)
         try:
             ax.set_rlabel_position(30)
         except AttributeError:
             pass  # Не все оси поддерживают этот метод
         ax.set_yticks([0.2, 0.4, 0.6, 0.8])
         ax.set_yticklabels(["0.2", "0.4", "0.6", "0.8"], color="grey", size=self.config.font_size - 2)
+        
+        # Упрощаем сетку для лучшей читаемости
+        ax.grid(True, alpha=0.3, linestyle='--')
         
         # Строим профили
         legend_elements = []
@@ -1142,22 +1150,47 @@ class AcademicVisualizer:
             # Получаем параметры для построения линии
             params = self.get_line_plot_params(f'{culture}_{source}')
             
-            # Строим линию (увеличиваем толщину линии для лучшей видимости)
+            # Строим линию (увеличиваем толщина линии для лучшей видимости)
+            # Удаляем linewidth из params, чтобы избежать дублирования аргументов
+            plot_params = params.copy()
+            plot_params.pop('linewidth', None)
             line = ax.plot(angles, values,
                           label=f'{culture.capitalize()} ({source})',
-                          linewidth=params.get('linewidth', self.config.line_width) * 1.5,  # Увеличена толщина линии
-                          **params)
+                          linewidth=params.get('linewidth', self.config.line_width) * 2.0,  # Увеличена толщина линии
+                          **plot_params)
             
             # Заполняем область (используем более насыщенные цвета)
-            fill_alpha = 0.3 if source == 'human' else 0.2
+            fill_alpha = 0.4 if source == 'human' else 0.25
             ax.fill(angles, values, color=params['color'], alpha=fill_alpha)
+            
+            # Добавляем значения на точки для лучшей читаемости
+            for i, (angle, value) in enumerate(zip(angles[:-1], profile['values'])):
+                # Позиционируем значения с учетом угла для лучшей читаемости
+                ha = 'center'
+                if 0 <= angle < np.pi/4 or 7*np.pi/4 <= angle < 2*np.pi:
+                    ha = 'left'
+                elif np.pi/4 <= angle < 3*np.pi/4:
+                    ha = 'center'
+                elif 3*np.pi/4 <= angle < 5*np.pi/4:
+                    ha = 'right'
+                else:
+                    ha = 'center'
+                
+                # Добавляем значения только для человеческого творчества для уменьшения загромождения
+                if source == 'human' and i % 2 == 0:  # Показываем каждое второе значение
+                    ax.text(angle, value + 0.05, f'{value:.2f}', 
+                           ha=ha, va='center', 
+                           fontsize=self.config.font_size - 2,
+                           color=params['color'],
+                           bbox=dict(boxstyle="round,pad=0.2", facecolor='white', alpha=0.7, edgecolor='none'))
             
             # Добавляем элементы для легенды (увеличиваем толщину линий в легенде)
             line_params = self.get_line_plot_params(f'{culture}_{source}')
             legend_elements.append(Line2D([0], [0], color=line_params['color'], 
                                         linestyle=line_params['linestyle'],
-                                        linewidth=line_params.get('linewidth', self.config.line_width) * 1.8,  # Увеличена толщина линии в легенде
+                                        linewidth=line_params.get('linewidth', self.config.line_width) * 2.0,  # Увеличена толщина линии в легенде
                                         marker=line_params.get('marker', 'o'),
+                                        markersize=self.config.marker_size * 1.2,
                                         label=f'{culture.capitalize()} ({source})'))
         
         # Философские зоны (улучшенные цвета)
@@ -1202,20 +1235,28 @@ class AcademicVisualizer:
                 'alpha': params['alpha'],
                 'marker': params['marker'],
                 'edgecolors': 'black' if source == 'human' else params['color'],
-                'linewidths': 0.8 if source == 'human' else 0.4,
-                's': 80,
+                'linewidths': 1.2 if source == 'human' else 0.6,
+                's': 100 if source == 'human' else 85,  # Увеличен размер точек
                 'zorder': params.get('zorder', 3)
             }
             
             scatter = ax.scatter(coords['x'], coords['y'], **scatter_params)
             
+            # Добавляем подписи количества точек в каждой группе
+            x_mean, y_mean = np.mean(coords['x']), np.mean(coords['y'])
+            ax.text(x_mean, y_mean, f'n={len(coords["x"])}', 
+                   ha='center', va='center', 
+                   fontsize=self.config.font_size - 2,
+                   color='white' if source == 'human' else 'black',
+                   bbox=dict(boxstyle="round,pad=0.3", facecolor=params['color'], alpha=0.8, edgecolor='none'))
+            
             # Добавляем элементы для легенды (увеличиваем размер маркеров в легенде)
             legend_elements.append(Line2D([0], [0], marker=params['marker'], 
                                         color='w', markerfacecolor=params['color'],
                                         markeredgecolor='black' if source == 'human' else params['color'],
-                                        markersize=self.config.marker_size * 1.5,  # Увеличен размер маркеров в легенде
-                                        markeredgewidth=2.5,  # Увеличена толщина рамки маркера
-                                        label=f'{culture.capitalize()} ({source})'))
+                                        markersize=self.config.marker_size * 1.8,  # Увеличен размер маркеров в легенде
+                                        markeredgewidth=3.0,  # Увеличена толщина рамки маркера
+                                        label=f'{culture.capitalize()} ({source}) n={len(coords["x"])}'))
         
         # Добавляем доверительные эллипсы для человеческих данных
         for culture in ['russian', 'chinese', 'japanese', 'european']:
@@ -1237,11 +1278,19 @@ class AcademicVisualizer:
                              angle=angle,
                              edgecolor=self.get_plot_params(f'{culture}_human')['color'],
                              fc='none',
-                             lw=4.0,  # Увеличена толщина линии
-                             alpha=0.7,  # Увеличена непрозрачность
+                             lw=5.0,  # Увеличена толщина линии
+                             alpha=0.8,  # Увеличена непрозрачность
                              linestyle='-',
                              zorder=2)
                 ax.add_patch(ell)
+                
+                # Добавляем подпись к эллипсу
+                ax.text(float(np.mean(x)), float(np.mean(y)) + height/2 + 0.3, 
+                       f'{culture.capitalize()} 95% ДИ', 
+                       ha='center', va='bottom', 
+                       fontsize=self.config.font_size - 1,
+                       color=self.get_plot_params(f'{culture}_human')['color'],
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8, edgecolor='none'))
         
         # Философская зона "эстетический флат" (используем более яркий цвет)
         flat_zone = Polygon([[-1, -1], [1, -1], [1, 1], [-1, 1]],
@@ -1256,6 +1305,8 @@ class AcademicVisualizer:
         # Настройки осей
         ax.set_xlabel('t-SNE Dimension 1', fontsize=self.config.font_size + 1)
         ax.set_ylabel('t-SNE Dimension 2', fontsize=self.config.font_size + 1)
+        # Упрощаем tick параметры для лучшей читаемости
+        ax.tick_params(axis='both', which='both', length=0, pad=5)
         ax.grid(True, alpha=0.4, linestyle='--')
         
         # Легенда (улучшаем видимость)
@@ -1311,6 +1362,7 @@ class AcademicVisualizer:
         
         # Строим регрессии для ключевых групп
         key_groups = ['Композиторы', 'Инженеры']
+        regression_stats = []
         for group in key_groups:
             mask = groups == group
             if np.sum(mask) > 10:
@@ -1328,19 +1380,42 @@ class AcademicVisualizer:
                     p_val = 1.0
                 significance = "***" if p_val < 0.001 else "**" if p_val < 0.01 else "*" if p_val < 0.05 else "ns"
                 
-                # Строим линию
-                color = group_colors.get(group, 'gray')
-                ax.plot(xp, yp, color=color, lw=3.0, linestyle='-')
+                # Сохраняем статистику для отображения
+                regression_stats.append({
+                    'group': group,
+                    'slope': slope,
+                    'intercept': intercept,
+                    'r_value': r_value,
+                    'p_value': p_value,
+                    'significance': significance
+                })
                 
-                # Аннотируем статистику
+                # Строим линию с улучшенным стилем
+                color = group_colors.get(group, 'gray')
+                ax.plot(xp, yp, color=color, lw=4.0, linestyle='-', alpha=0.9)
+                
+                # Добавляем доверительную область
+                # Упрощенная оценка доверительного интервала
+                y_err = std_err * 1.96  # 95% доверительный интервал
+                ax.fill_between(xp, yp - y_err, yp + y_err, color=color, alpha=0.2)
+                
+                # Аннотируем статистику с улучшенным оформлением
                 if group == 'Композиторы':
-                    ax.annotate(f"r = {r_value:.2f} {significance}\np = {p_value:.3f}",
-                               xy=(0.15, 5.5), fontsize=self.config.font_size - 1, color=color,
-                               bbox=dict(boxstyle="round,pad=0.4", fc="white", ec=color, alpha=0.95, linewidth=1.5))
+                    ax.annotate(f"{group}\nr = {r_value:.2f} {significance}\np = {p_value:.3f}\ny = {slope:.2f}x + {intercept:.2f}",
+                               xy=(0.15, 5.8), fontsize=self.config.font_size - 1, color=color,
+                               bbox=dict(boxstyle="round,pad=0.5", fc="white", ec=color, alpha=0.95, linewidth=2.0))
                 else:
-                    ax.annotate(f"r = {r_value:.2f} {significance}\np = {p_value:.3f}",
-                               xy=(0.6, 2.5), fontsize=self.config.font_size - 1, color=color,
-                               bbox=dict(boxstyle="round,pad=0.4", fc="white", ec=color, alpha=0.95, linewidth=1.5))
+                    ax.annotate(f"{group}\nr = {r_value:.2f} {significance}\np = {p_value:.3f}\ny = {slope:.2f}x + {intercept:.2f}",
+                               xy=(0.6, 2.8), fontsize=self.config.font_size - 1, color=color,
+                               bbox=dict(boxstyle="round,pad=0.5", fc="white", ec=color, alpha=0.95, linewidth=2.0))
+        
+        # Добавляем общую статистику в заголовок
+        total_r, total_p = pearsonr(computational, perceptual)
+        total_significance = "***" if total_p < 0.001 else "**" if total_p < 0.01 else "*" if total_p < 0.05 else "ns"
+        ax.set_title(f"График 3: Зависимость перцептивной оценки от вычислительной новизны\n"
+                    f"Общая корреляция: r = {total_r:.2f} {total_significance} (p = {total_p:.3f})\n"
+                    "в разных профессиональных группах",
+                    pad=25, fontsize=self.config.font_size + 3, loc='left')
         
         # Философские зоны (используем более яркие цвета)
         ax.axvspan(0.0, 0.4, color='#3F51B5', alpha=0.3)  # Индиго
@@ -1451,7 +1526,7 @@ class AcademicVisualizer:
             text_color = 'white' if culture in ['russian', 'european', 'chinese'] else 'black'
             ax.text(x, y, name,
                    ha='center', va='center',
-                   fontweight='bold', fontsize=self.config.font_size,
+                   fontsize=self.config.font_size,
                    color=text_color,
                    zorder=11,
                    bbox=dict(facecolor='none', edgecolor='none', pad=3))  # Добавляем отступ
@@ -1471,7 +1546,6 @@ class AcademicVisualizer:
                ha='center', va='center', fontsize=self.config.font_size,
                color='#4CAF50',  # Зеленый
                fontstyle='italic',
-               fontweight='bold',  # Увеличен вес шрифта
                bbox=dict(facecolor='white', alpha=0.95, edgecolor='none', pad=4),  # Увеличена непрозрачность и отступ
                zorder=2)
         
@@ -1479,7 +1553,7 @@ class AcademicVisualizer:
         ax.set_xlim(0.1, 0.9)
         ax.set_ylim(0.1, 0.95)
         ax.set_title("Онтологическая карта философских концептов\nнепреднамеренной эстетической новизны",
-                    fontsize=self.config.font_size + 3, fontweight='bold', pad=25)
+                    fontsize=self.config.font_size + 3, pad=25)
         ax.axis('off')
     
     def generate_main_visualizations(self) -> None:
@@ -1501,7 +1575,7 @@ class AcademicVisualizer:
                 ax1.set_title(
                     "График 1: Культурные профили эстетической новизны\n"
                     "Сравнение человеческого и ИИ-генерированного творчества",
-                    pad=30, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                    pad=30, fontsize=self.config.font_size + 3, loc='left'
                 )
                 self.add_watermark(fig1)
                 caption1 = self.generate_caption(1,
@@ -1509,7 +1583,7 @@ class AcademicVisualizer:
                     "ИИ-генерации демонстрируют «сглаживание» культурных экстремумов: усиление ритмической нестабильности в восточных традициях "
                     "и ослабление голосовой автономии в русской музыке. Данные основаны на анализе 120 музыкальных фрагментов с использованием "
                     "вычислительных метрик (tonal tension, rhythm entropy) и экспертной оценки.")
-                self.save_academic_figure(fig1, 'fig1_cultural_profiles', caption1)
+                self.save_academic_figure(fig1, 'fig1_cultural_profiles', caption1, show_inline=True)
             
             # === ГРАФИК 2: t-SNE пространство ===
             print("\n📊 Генерация Графика 2: t-SNE пространство распределения...")
@@ -1520,7 +1594,7 @@ class AcademicVisualizer:
                 ax2.set_title(
                     "График 2: Распределение человеческой и ИИ-генерированной музыки\n"
                     "в латентном пространстве (t-SNE визуализация)",
-                    pad=20, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                    pad=20, fontsize=self.config.font_size + 3, loc='left'
                 )
                 self.add_watermark(fig2)
                 caption2 = self.generate_caption(2,
@@ -1529,7 +1603,7 @@ class AcademicVisualizer:
                     "Это указывает на «эстетический флат» — потерю культурно-специфической новизны. "
                     "Доверительные эллипсы отражают 95% доверительные интервалы для человеческих произведений. "
                     "Центральная зона представляет собой пространство, где культурные различия стираются.")
-                self.save_academic_figure(fig2, 'fig2_tsne_space', caption2)
+                self.save_academic_figure(fig2, 'fig2_tsne_space', caption2, show_inline=True)
             
             # === ГРАФИК 3: Перцептивная vs вычислительная новизна ===
             print("\n📊 Генерация Графика 3: Перцептивная vs вычислительная новизна...")
@@ -1540,7 +1614,7 @@ class AcademicVisualizer:
                 ax3.set_title(
                     "График 3: Зависимость перцептивной оценки от вычислительной новизны\n"
                     "в разных профессиональных группах",
-                    pad=20, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                    pad=20, fontsize=self.config.font_size + 3, loc='left'
                 )
                 self.add_watermark(fig3)
                 caption3 = self.generate_caption(3,
@@ -1550,7 +1624,7 @@ class AcademicVisualizer:
                     "положительная корреляция (r=0.68***, p<0.001): "
                     "высокая вычислительная новизна воспринимается как ценная."
             )
-            self.save_academic_figure(fig3, 'fig3_perceptual_vs_computational', caption3)
+            self.save_academic_figure(fig3, 'fig3_perceptual_vs_computational', caption3, show_inline=True)
             
             # === ГРАФИК 4: Философская концептуальная карта ===
             print("\n📊 Генерация Графика 4: Философская концептуальная карта...")
@@ -1564,7 +1638,7 @@ class AcademicVisualizer:
                     "Центральная зона 'непреднамеренной новизны' связывает концепты из разных культурных традиций. "
                     "Стрелки показывают направления влияния и переходы между концептами."
                 )
-                self.save_academic_figure(fig4, 'fig4_philosophical_concepts', caption4)
+                self.save_academic_figure(fig4, 'fig4_philosophical_concepts', caption4, show_inline=True)
             
             print("\n✅ Все визуализации успешно сгенерированы")
             print(f"📁 Результаты сохранены в: {os.path.abspath(self.output_dir)}")
@@ -1610,19 +1684,24 @@ class AcademicVisualizer:
                     # Получаем параметры для построения линии
                     params = self.get_line_plot_params(f'{culture}_{source}')
                     
-                    # Строим линию
-                    ax5.plot(time_points, values, 
-                            label=f'{culture.capitalize()} ({source})',
-                            linewidth=params.get('linewidth', self.config.line_width) * 1.5,
-                            **params)
+                    # Строим линию (увеличиваем толщину линии для лучшей видимости)
+                    # Удаляем linewidth из params, чтобы избежать дублирования аргументов
+                    plot_params = params.copy()
+                    plot_params.pop('linewidth', None)
+                    line = ax5.plot(time_points, values,
+                                  label=f'{culture.capitalize()} ({source})',
+                                  linewidth=params.get('linewidth', self.config.line_width) * 1.5,  # Увеличена толщина линии
+                                  **plot_params)
             
             ax5.set_xlabel('Время (условные единицы)', fontsize=self.config.font_size + 1)
             ax5.set_ylabel('Уровень эстетической новизны', fontsize=self.config.font_size + 1)
             ax5.set_title(
                 "График 5: Динамика эстетической новизны во времени\n"
                 "Сравнение человеческого и ИИ-генерированного творчества",
-                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, loc='left'
             )
+            # Упрощаем tick параметры для лучшей читаемости
+            ax5.tick_params(axis='both', which='both', length=0, pad=5)
             ax5.grid(True, alpha=0.4, linestyle='--')
             ax5.legend(fontsize=self.config.font_size, loc='upper right',
                       frameon=True, fancybox=True, shadow=True, framealpha=0.95)  # Улучшаем видимость
@@ -1632,7 +1711,7 @@ class AcademicVisualizer:
                 "Человеческое творчество демонстрирует большую вариативность во времени, в то время как ИИ-генерации "
                 "показывают более стабильную динамику с меньшими колебаниями. Это связано с алгоритмической природой ИИ."
             )
-            self.save_academic_figure(fig5, 'fig5_novelty_dynamics', caption5)
+            self.save_academic_figure(fig5, 'fig5_novelty_dynamics', caption5, show_inline=True)
         
         # === ГРАФИК 6: Сравнение по жанрам ===
         print("\n📊 Генерация Графика 6: Сравнение по жанрам...")
@@ -1662,37 +1741,61 @@ class AcademicVisualizer:
                 human_data.append(np.mean(human_values))
                 ai_data.append(np.mean(ai_values))
             
-            # Строим столбчатую диаграмму
+            # Строим столбчатую диаграмму с улучшенным дизайном
             bars1 = ax6.bar(x_pos - width/2, human_data, width, 
                            label='Человек', 
                            color='#FF9800',  # Оранжевый
-                           alpha=0.85,
+                           alpha=0.9,
                            edgecolor='black',
-                           linewidth=1.0)
+                           linewidth=1.5)
             bars2 = ax6.bar(x_pos + width/2, ai_data, width, 
                            label='ИИ', 
                            color='#00BCD4',  # Бирюзовый
-                           alpha=0.85,
+                           alpha=0.9,
                            edgecolor='black',
-                           linewidth=1.0)
+                           linewidth=1.5)
             
-            # Добавляем значения на столбцы
+            # Добавляем значения на столбцы с улучшенным оформлением
             for bar, value in zip(bars1, human_data):
-                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02, 
-                        f'{value:.2f}', ha='center', va='bottom', fontsize=self.config.font_size, fontweight='bold')
+                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.03, 
+                        f'{value:.2f}', ha='center', va='bottom', 
+                        fontsize=self.config.font_size + 1,
+                        color='black',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8, edgecolor='#FF9800', linewidth=1.5))
             for bar, value in zip(bars2, ai_data):
-                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02, 
-                        f'{value:.2f}', ha='center', va='bottom', fontsize=self.config.font_size, fontweight='bold')
+                ax6.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.03, 
+                        f'{value:.2f}', ha='center', va='bottom', 
+                        fontsize=self.config.font_size + 1,
+                        color='black',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8, edgecolor='#00BCD4', linewidth=1.5))
+            
+            # Добавляем линии сравнения между парами столбцов
+            for i in range(len(genres)):
+                human_height = human_data[i]
+                ai_height = ai_data[i]
+                # Рассчитываем разницу
+                diff = human_height - ai_height
+                # Рисуем линию сравнения
+                ax6.plot([x_pos[i] - width/2, x_pos[i] + width/2], 
+                        [max(human_height, ai_height) + 0.08, max(human_height, ai_height) + 0.08], 
+                        color='gray', linewidth=1.0, linestyle='--')
+                # Добавляем значение разницы
+                ax6.text(x_pos[i], max(human_height, ai_height) + 0.1, 
+                        f'Δ{diff:.2f}', ha='center', va='bottom', 
+                        fontsize=self.config.font_size - 1,
+                        color='red' if diff > 0.1 else 'green' if diff < -0.1 else 'gray')
             
             ax6.set_xlabel('Музыкальные жанры', fontsize=self.config.font_size + 1)
             ax6.set_ylabel('Средняя эстетическая новизна', fontsize=self.config.font_size + 1)
             ax6.set_title(
                 "График 6: Сравнение эстетической новизны по музыкальным жанрам\n"
                 "Человеческое vs ИИ-генерированное творчество",
-                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, loc='left'
             )
             ax6.set_xticks(x_pos)
             ax6.set_xticklabels(genres, fontsize=self.config.font_size)
+            # Упрощаем tick параметры для лучшей читаемости
+            ax6.tick_params(axis='x', which='both', length=0, pad=5)
             ax6.legend(fontsize=self.config.font_size,
                       frameon=True, fancybox=True, shadow=True, framealpha=0.95)  # Улучшаем видимость
             ax6.grid(True, alpha=0.4, linestyle='--', axis='y')
@@ -1703,7 +1806,7 @@ class AcademicVisualizer:
                 "что указывает на консервативность алгоритмов. Экспериментальная музыка демонстрирует "
                 "наибольшую разницу между человеческим и ИИ-творчеством."
             )
-            self.save_academic_figure(fig6, 'fig6_genre_comparison', caption6)
+            self.save_academic_figure(fig6, 'fig6_genre_comparison', caption6, show_inline=True)
         
         # === ГРАФИК 7: Анализ корреляций между метриками ===
         print("\n📊 Генерация Графика 7: Анализ корреляций между метриками...")
@@ -1722,23 +1825,49 @@ class AcademicVisualizer:
             # Визуализируем тепловую карту с более яркой цветовой схемой
             im = ax7.imshow(corr_matrix, cmap='RdYlBu_r', vmin=-1, vmax=1)
             
-            # Добавляем текстовые значения
+            # Добавляем текстовые значения с улучшенной видимостью
             for i in range(n_metrics):
                 for j in range(n_metrics):
-                    text = ax7.text(j, i, f'{corr_matrix[i, j]:.2f}',
+                    corr_value = corr_matrix[i, j]
+                    # Выбираем цвет текста в зависимости от значения корреляции
+                    if abs(corr_value) > 0.7:
+                        text_color = "white"
+                    elif abs(corr_value) > 0.5:
+                        text_color = "white"
+                    else:
+                        text_color = "black"
+                    
+                    # Добавляем значение корреляции
+                    text = ax7.text(j, i, f'{corr_value:.2f}',
                                    ha="center", va="center", 
-                                   color="white" if abs(corr_matrix[i, j]) > 0.5 else "black",
-                                   fontsize=self.config.font_size, fontweight='bold')
+                                   color=text_color,
+                                   fontsize=self.config.font_size, 
+
+                                   bbox=dict(boxstyle="round,pad=0.2", facecolor='none', edgecolor='none' if abs(corr_value) < 0.3 else 'white', alpha=0.3))
+                    
+                    # Для сильных корреляций добавляем дополнительную аннотацию
+                    if abs(corr_value) > 0.7:
+                        significance = "***" if abs(corr_value) > 0.8 else "**" if abs(corr_value) > 0.7 else ""
+                        if significance:
+                            ax7.text(j, i + 0.25, significance,
+                                   ha="center", va="center", 
+                                   color="gold" if corr_value > 0 else "red",
+                                   fontsize=self.config.font_size - 2, 
+)
             
             ax7.set_xticks(np.arange(n_metrics))
             ax7.set_yticks(np.arange(n_metrics))
             ax7.set_xticklabels(metrics, fontsize=self.config.font_size, rotation=45, ha='right')
             ax7.set_yticklabels(metrics, fontsize=self.config.font_size)
             
+            # Упрощаем tick параметры для лучшей читаемости
+            ax7.tick_params(axis='x', which='both', length=0, pad=5)
+            ax7.tick_params(axis='y', which='both', length=0, pad=5)
+            
             ax7.set_title(
                 "График 7: Корреляционный анализ метрик эстетической новизны\n"
                 "Матрица корреляций между вычислительными метриками",
-                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, loc='left'
             )
             
             # Добавляем цветовую шкалу
@@ -1752,7 +1881,7 @@ class AcademicVisualizer:
                 "(r=0.82), умеренная отрицательная корреляция между паузной структурой и ритмической энтропией "
                 "(r=-0.45). Голосовая автономия слабо коррелирует с другими метриками."
             )
-            self.save_academic_figure(fig7, 'fig7_correlation_analysis', caption7)
+            self.save_academic_figure(fig7, 'fig7_correlation_analysis', caption7, show_inline=True)
         
         # === ГРАФИК 8: Визуализации доверительных интервалов ===
         print("\n📊 Генерация Графика 8: Визуализации доверительных интервалов...")
@@ -1803,24 +1932,39 @@ class AcademicVisualizer:
                               color=bar_color,
                               alpha=0.85)
                 
-                # Добавляем доверительные интервалы
+                # Добавляем доверительные интервалы с улучшенным оформлением
                 for j, (mean, lower, upper) in enumerate(zip(means, lower_bounds, upper_bounds)):
+                    # Рисуем вертикальную линию доверительного интервала
                     ax8.plot([x_pos[j] + i * width/len(cultures), x_pos[j] + i * width/len(cultures)], 
-                            [lower, upper], color=bar_color, linewidth=3.0)
-                    ax8.scatter(x_pos[j] + i * width/len(cultures), lower, 
-                               marker='_', color=bar_color, s=80)
-                    ax8.scatter(x_pos[j] + i * width/len(cultures), upper, 
-                               marker='_', color=bar_color, s=80)
+                            [lower, upper], color=bar_color, linewidth=4.0, alpha=0.8)
+                    # Добавляем горизонтальные линии на концах
+                    ax8.plot([x_pos[j] + i * width/len(cultures) - 0.05, x_pos[j] + i * width/len(cultures) + 0.05], 
+                            [lower, lower], color=bar_color, linewidth=2.0, alpha=0.8)
+                    ax8.plot([x_pos[j] + i * width/len(cultures) - 0.05, x_pos[j] + i * width/len(cultures) + 0.05], 
+                            [upper, upper], color=bar_color, linewidth=2.0, alpha=0.8)
+                    # Добавляем среднее значение
+                    ax8.scatter(x_pos[j] + i * width/len(cultures), mean, 
+                               marker='o', color=bar_color, s=60, edgecolors='black', linewidth=1.0, zorder=5)
+                    
+                    # Добавляем значения на график
+                    if i % 2 == 0:  # Показываем значения только для каждой второй группы для уменьшения загромождения
+                        ax8.text(x_pos[j] + i * width/len(cultures), upper + 0.03, 
+                                f'{mean:.2f}', ha='center', va='bottom', 
+                                fontsize=self.config.font_size - 2,
+                                color=bar_color,
+                                bbox=dict(boxstyle="round,pad=0.2", facecolor='white', alpha=0.7, edgecolor='none'))
             
             ax8.set_xlabel('Категории эстетической новизны', fontsize=self.config.font_size + 1)
             ax8.set_ylabel('Уровень новизны (0-1)', fontsize=self.config.font_size + 1)
             ax8.set_title(
                 "График 8: Доверительные интервалы для категорий эстетической новизны\n"
                 "Сравнение человеческого и ИИ-генерированного творчества с 95% ДИ",
-                pad=25, fontsize=self.config.font_size + 3, fontweight='bold', loc='left'
+                pad=25, fontsize=self.config.font_size + 3, loc='left'
             )
             ax8.set_xticks(x_pos)
             ax8.set_xticklabels(categories, fontsize=self.config.font_size, rotation=45, ha='right')
+            # Убираем линии делений (tick lines) и позиционируем числа немного ниже
+            ax8.tick_params(axis='x', which='both', length=0, pad=-10)  # Убираем линии делений и уменьшаем отступ для позиционирования ниже
             ax8.legend(fontsize=self.config.font_size - 1, ncol=2,
                       frameon=True, fancybox=True, shadow=True, framealpha=0.95)  # Улучшаем видимость
             ax8.grid(True, alpha=0.4, linestyle='--', axis='y')
@@ -1832,7 +1976,7 @@ class AcademicVisualizer:
                 "меньшую вариативность. Человеческое творчество показывает более широкие интервалы, "
                 "особенно в категориях 'Ритмическая нестабильность' и 'Голосовая автономия'."
             )
-            self.save_academic_figure(fig8, 'fig8_confidence_intervals', caption8)
+            self.save_academic_figure(fig8, 'fig8_confidence_intervals', caption8, show_inline=True)
         
         print("\n✅ Все расширенные визуализации успешно сгенерированы!")
         print(f"📁 Результаты сохранены в: {os.path.abspath(self.output_dir)}")
