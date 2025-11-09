@@ -40,5 +40,4 @@ class Solution {
 6. YouTube канал: https://www.youtube.com/@it-coders
 7. ВК группа: https://vk.com/science_geeks
 8. Ник в телеграм: @quadd4rv1n7
-9. Ник в ВК: https://vk.com/dupley_maxim_1999
 */

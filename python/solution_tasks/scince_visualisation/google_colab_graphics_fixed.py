@@ -439,7 +439,11 @@ class AcademicVisualizer:
             'interactive': False,
             # LaTeX
             'text.usetex': False,
-            'mathtext.fontset': 'dejavusans'
+            'mathtext.fontset': 'dejavusans',
+            # Оптимизация памяти
+            'path.simplify': True,
+            'path.simplify_threshold': 0.1,
+            'agg.path.chunksize': 10000
         })
         
         logging.info(f"Настроен matplotlib с шрифтом: {primary_font}")
@@ -867,6 +871,9 @@ class AcademicVisualizer:
             except ImportError:
                 # Если IPython не доступен, просто показываем фигуру
                 plt.show()
+        # Очищаем фигуру для освобождения памяти
+        plt.clf()
+        plt.close(fig)
     
     def save_reproducibility_package(self) -> None:
         """Сохраняет полный пакет для воспроизводимости"""
