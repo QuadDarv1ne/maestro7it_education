@@ -1,3 +1,0 @@
-id,username,email,role,is_active
-1,admin,admin@example.com,admin,True
-2,hr,hr@example.com,hr,True

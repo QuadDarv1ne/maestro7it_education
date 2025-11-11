@@ -5,7 +5,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Отчет по найму</h2>
-    <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+    <div>
+        <a href="{{ url_for('reports.export_report', type='hiring_report', period_months=period_months) }}" class="btn btn-success me-2">
+            <i class="fas fa-file-export"></i> Экспорт в CSV
+        </a>
+        <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">Назад к отчетам</a>
+    </div>
 </div>
 
 <div class="row mb-4">
@@ -13,6 +18,9 @@
         <div class="card">
             <div class="card-header">
                 <h5>Параметры отчета</h5>
+            </div>
+            <div class="card-body bg-light">
+                <p class="mb-0"><strong>Период:</strong> {{ period_months }} месяцев</p>
             </div>
             <div class="card-body">
                 <form method="GET" class="row g-3">
@@ -35,7 +43,7 @@
     </div>
 </div>
 
-{% if hiring_data %}
+{% if hiring_data is not none %}
 <div class="row">
     <div class="col-12">
         <div class="card">

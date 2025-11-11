@@ -1,0 +1,17 @@
+{
+  "version": "4.0.0",
+  "creation_date": "2025-11-08T13:50:47.370560",
+  "author": "Дуплей М.И.",
+  "orcid": "0009-0007-7605-539X",
+  "dependencies": {
+    "numpy": "2.3.3",
+    "matplotlib": "3.10.7",
+    "scipy": "1.16.2",
+    "scikit-learn": "not installed",
+    "seaborn": "0.13.2",
+    "pandas": "2.3.3",
+    "networkx": "3.5",
+    "python": "3.13.9",
+    "platform": "Windows-11-10.0.26200-SP0"
+  }
+}

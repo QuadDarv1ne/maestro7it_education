@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты импорта{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Результаты импорта сотрудников</h2>
+    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">Назад к списку</a>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Сводка</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="alert alert-success">
+                            <h6>Импортировано</h6>
+                            <h3>{{ report.imported }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-warning">
+                            <h6>Пропущено</h6>
+                            <h3>{{ report.skipped }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-danger">
+                            <h6>Ошибок</h6>
+                            <h3>{{ report.errors|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if report.details %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Детали импорта</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Сообщение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detail in report.details %}
+                            <tr>
+                                <td>{{ detail }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if report.errors %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Ошибки</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Ошибка</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for error in report.errors %}
+                            <tr>
+                                <td class="text-danger">{{ error }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{{ url_for('employees.import_employees') }}" class="btn btn-primary">Импортировать еще</a>
+    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-secondary">Посмотреть список сотрудников</a>
+</div>
+{% endblock %}

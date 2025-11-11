@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Календарь отпусков{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Календарь отпусков</h2>
+    <div>
+        <a href="{{ url_for('vacations.create_vacation') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Добавить отпуск
+        </a>
+    </div>
+</div>
+
+<!-- Month navigation -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    {% set prev_year = year - 1 if month == 1 else year %}
+    {% set prev_month = 12 if month == 1 else month - 1 %}
+    {% set next_year = year + 1 if month == 12 else year %}
+    {% set next_month = 1 if month == 12 else month + 1 %}
+    
+    <a href="{{ url_for('vacations.vacation_calendar', year=prev_year, month=prev_month) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-chevron-left"></i> Предыдущий месяц
+    </a>
+    <h3>{{ start_date.strftime('%B %Y') }}</h3>
+    <a href="{{ url_for('vacations.vacation_calendar', year=next_year, month=next_month) }}" class="btn btn-outline-secondary">
+        Следующий месяц <i class="fas fa-chevron-right"></i>
+    </a>
+</div>
+
+<!-- Calendar -->
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Пн</th>
+                <th>Вт</th>
+                <th>Ср</th>
+                <th>Чт</th>
+                <th>Пт</th>
+                <th>Сб</th>
+                <th>Вс</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set first_weekday = start_date.weekday() %}
+            {% set days_in_month = end_date.day %}
+            {% set day_counter = 1 %}
+            
+            {% for week in range(6) %}
+                {% if week == 0 or day_counter <= days_in_month %}
+                <tr>
+                    {% for day in range(7) %}
+                        {% if week == 0 and day < first_weekday %}
+                            <td class="bg-light"></td>
+                        {% elif day_counter > days_in_month %}
+                            <td class="bg-light"></td>
+                        {% else %}
+                            {% set current_date = date(year, month, day_counter) %}
+                            <td class="{{ 'table-info' if current_date in vacation_calendar else '' }}">
+                                <div class="fw-bold">{{ day_counter }}</div>
+                                {% if current_date in vacation_calendar %}
+                                    {% for vacation in vacation_calendar[current_date] %}
+                                        <small class="d-block text-truncate" 
+                                               title="{{ vacation.employee.full_name }} - {{ 
+                                                      'Оплачиваемый' if vacation.type == 'paid' 
+                                                      else 'Неоплачиваемый' if vacation.type == 'unpaid' 
+                                                      else 'Больничный' }}">
+                                            {{ vacation.employee.full_name }}
+                                        </small>
+                                    {% endfor %}
+                                {% endif %}
+                            </td>
+                            {% set day_counter = day_counter + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Legend -->
+<div class="mt-4">
+    <h5>Легенда</h5>
+    <div class="d-flex gap-3">
+        <div class="d-flex align-items-center">
+            <div class="me-2" style="width: 20px; height: 20px; background-color: #cff4fc; border: 1px solid #b6effb;"></div>
+            <span>Дни с отпусками</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

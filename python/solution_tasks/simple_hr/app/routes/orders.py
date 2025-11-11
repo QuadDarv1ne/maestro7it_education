@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from app.models import Order, Employee, Department, Position
+from app.forms import OrderForm
 from app import db
 from datetime import datetime
 
@@ -15,20 +16,15 @@ def list_orders():
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_order():
-    if request.method == 'POST':
-        employee_id = request.form['employee_id']
-        order_type = request.form['type']
-        date_issued = request.form['date_issued']
-        new_department_id = request.form.get('new_department_id')
-        new_position_id = request.form.get('new_position_id')
-        
+    form = OrderForm()
+    if form.validate_on_submit():
         # Create new order
         order = Order(
-            employee_id=employee_id,
-            type=order_type,
-            date_issued=datetime.strptime(date_issued, '%Y-%m-%d').date(),
-            new_department_id=new_department_id if new_department_id else None,
-            new_position_id=new_position_id if new_position_id else None
+            employee_id=form.employee_id.data,
+            type=form.type.data,
+            date_issued=form.date_issued.data,
+            new_department_id=form.new_department_id.data if form.new_department_id.data else None,
+            new_position_id=form.new_position_id.data if form.new_position_id.data else None
         )
         
         try:
@@ -39,24 +35,22 @@ def create_order():
         except Exception as e:
             db.session.rollback()
             flash('Ошибка при создании приказа')
-            return redirect(url_for('orders.create_order'))
+            return render_template('orders/form.html', form=form)
     
-    employees = Employee.query.all()
-    departments = Department.query.all()
-    positions = Position.query.all()
-    return render_template('orders/form.html', employees=employees, departments=departments, positions=positions)
+    return render_template('orders/form.html', form=form)
 
 @bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_order(id):
     order = Order.query.get_or_404(id)
+    form = OrderForm(obj=order)
     
-    if request.method == 'POST':
-        order.employee_id = request.form['employee_id']
-        order.type = request.form['type']
-        order.date_issued = datetime.strptime(request.form['date_issued'], '%Y-%m-%d').date()
-        order.new_department_id = request.form.get('new_department_id')
-        order.new_position_id = request.form.get('new_position_id')
+    if form.validate_on_submit():
+        order.employee_id = form.employee_id.data
+        order.type = form.type.data
+        order.date_issued = form.date_issued.data
+        order.new_department_id = form.new_department_id.data if form.new_department_id.data else None
+        order.new_position_id = form.new_position_id.data if form.new_position_id.data else None
         
         try:
             db.session.commit()
@@ -65,12 +59,9 @@ def edit_order(id):
         except Exception as e:
             db.session.rollback()
             flash('Ошибка при обновлении приказа')
-            return redirect(url_for('orders.edit_order', id=id))
+            return render_template('orders/form.html', form=form, order=order)
     
-    employees = Employee.query.all()
-    departments = Department.query.all()
-    positions = Position.query.all()
-    return render_template('orders/form.html', order=order, employees=employees, departments=departments, positions=positions)
+    return render_template('orders/form.html', form=form, order=order)
 
 @bp.route('/delete/<int:id>', methods=['POST'])
 @login_required

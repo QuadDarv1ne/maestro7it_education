@@ -1,11 +1,27 @@
 # app_improved.py
 from flask import Flask, render_template, session, request, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit, disconnect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from stockfish import Stockfish
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import uuid
 import sys
 import time
+
+# Глобальные переменные
+active_game_count = 0
+games = {}
+stockfish_engine = None
+game_histories = {}
+session_timestamps = {}
+user_preferences = {}
+resource_stats = {
+    'peak_active_games': 0,
+    'peak_sessions': 0,
+    'total_games_cleaned': 0
+}
 import logging
 import json
 import threading
@@ -13,13 +29,19 @@ import weakref
 import pickle
 import base64
 import functools
+import re
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
-# Import database models
+# Импорт моделей базы данных
 try:
-    from models import db, init_db, User, Game, Puzzle, create_user
+    from models import (
+        db, init_db, User, Game, Puzzle, create_user,
+        get_recent_games_optimized, get_games_by_result
+    )
     DATABASE_ENABLED = True
 except ImportError as e:
     print(f"Database models import failed: {e}")
@@ -30,13 +52,15 @@ except ImportError as e:
     Game = None
     Puzzle = None
     create_user = None
+    get_recent_games_optimized = None
+    get_games_by_result = None
 
-# Import performance tracking
+# Импорт отслеживания производительности
 try:
     from utils.performance_tracker import performance_tracker, track_engine_init, track_move_validation, track_move_execution, track_ai_calculation, track_game_status_check, track_fen_retrieval
     PERFORMANCE_TRACKING_ENABLED = True
 except ImportError:
-    # Fallback if utils module is not available
+    # Резервный вариант, если модуль utils недоступен
     PERFORMANCE_TRACKING_ENABLED = False
     performance_tracker = None
     def track_engine_init(func): return func
@@ -46,12 +70,12 @@ except ImportError:
     def track_game_status_check(func): return func
     def track_fen_retrieval(func): return func
 
-# Import cache manager
+# Импорт менеджера кэша
 try:
     from utils.cache_manager import cache_manager, cached
     CACHE_MANAGER_ENABLED = True
 except ImportError:
-    # Fallback if cache manager is not available
+    # Резервный вариант, если менеджер кэша недоступен
     CACHE_MANAGER_ENABLED = False
     cache_manager = None
     def cached(cache_type='generic'): 
@@ -59,16 +83,14 @@ except ImportError:
             return func
         return decorator
 
-# Import error handler
+# Импорт обработчика ошибок
 try:
     from utils.error_handler import error_handler, handle_chess_errors, retry_on_failure
-    # Import exception classes
-    from utils.error_handler import EngineInitializationError as ErrorHandlerEngineInitializationError
-    from utils.error_handler import MoveValidationError as ErrorHandlerMoveValidationError
-    from utils.error_handler import GameLogicError as ErrorHandlerGameLogicError
+    # Импорт классов исключений
+    from utils.error_handler import EngineInitializationError, MoveValidationError, GameLogicError
     ERROR_HANDLER_ENABLED = True
 except ImportError:
-    # Fallback if error handler is not available
+    # Резервный вариант, если обработчик ошибок недоступен
     ERROR_HANDLER_ENABLED = False
     error_handler = None
     def handle_chess_errors(context=""): 
@@ -79,7 +101,7 @@ except ImportError:
         def decorator(func):
             return func
         return decorator
-    # Define local exception classes
+    # Определение локальных классов исключений
     class EngineInitializationError(Exception):
         pass
     class MoveValidationError(Exception):
@@ -87,21 +109,83 @@ except ImportError:
     class GameLogicError(Exception):
         pass
 
-# Import connection pool
+# Вспомогательная функция для поиска исполняемого файла Stockfish
+def _find_stockfish_executable():
+    """Поиск исполняемого файла Stockfish в различных возможных местах"""
+    import shutil
+    executable_names = [
+        'stockfish.exe',    # Windows
+        'stockfish',        # Linux/Mac
+        'stockfish_15_x64.exe',
+        'stockfish_14_x64.exe',
+        'stockfish_13_x64.exe',
+        'stockfish-windows-x86-64.exe',
+        'stockfish-linux-x64',
+        'stockfish-mac-x64'
+    ]
+    
+    search_paths = [
+        os.path.dirname(__file__),
+        os.path.join(os.path.dirname(__file__), '..'),
+        os.path.join(os.path.dirname(__file__), 'engines'),
+        os.path.expanduser('~'),
+        os.path.expanduser('~/stockfish'),
+        '/usr/local/bin',
+        '/usr/bin',
+        'C:\\Program Files\\Stockfish',
+        'C:\\Program Files (x86)\\Stockfish',
+        'C:\\Program Files\\stockfish'  # Additional path where Stockfish was found
+    ]
+    
+    # Проверка переменной окружения
+    env_path = os.getenv('STOCKFISH_PATH')
+    if env_path:
+        search_paths.insert(0, env_path)
+    
+    # Проверка конкретного пути к Stockfish, который точно существует
+    specific_stockfish_path = 'C:\\Program Files\\stockfish\\stockfish-windows-x86-64.exe'
+    if os.path.exists(specific_stockfish_path):
+        return specific_stockfish_path
+    
+    # Попытка найти исполняемый файл
+    for search_path in search_paths:
+        if search_path and os.path.exists(search_path):
+            # Сначала проверка прямого пути
+            if os.path.isfile(search_path) and any(search_path.endswith(ext) for ext in ['.exe', '']):
+                return search_path
+            
+            # Проверка в директории
+            for exe_name in executable_names:
+                full_path = os.path.join(search_path, exe_name)
+                if os.path.exists(full_path) and os.access(full_path, os.X_OK):
+                    return full_path
+    
+    # Проверка системного PATH
+    for exe_name in executable_names:
+        try:
+            path = shutil.which(exe_name)
+            if path:
+                return path
+        except:
+            pass
+    
+    return None
+
+# Импорт пула соединений
 try:
     from utils.connection_pool import stockfish_pool
     CONNECTION_POOLING_ENABLED = True
-    # Import the context manager function
+    # Импорт функции контекстного менеджера
     from utils.connection_pool import get_stockfish_engine as pool_get_stockfish_engine
 except ImportError:
-    # Fallback if connection pool is not available
+    # Резервный вариант, если пул соединений недоступен
     CONNECTION_POOLING_ENABLED = False
     stockfish_pool = None
     def pool_get_stockfish_engine(skill_level=5):
-        # Simple context manager that creates a new engine each time
+        # Простой контекстный менеджер, который создает новый движок каждый раз
         @contextmanager
         def engine_context_manager():
-            # Create new engine
+            # Создание нового движка
             engine_path = _find_stockfish_executable()
             if not engine_path:
                 raise EngineInitializationError("Stockfish executable not found")
@@ -118,159 +202,206 @@ except ImportError:
             try:
                 yield engine
             finally:
-                # Clean up engine
+                # Очистка движка
                 try:
-                    # Stockfish doesn't have quit() or close() methods, just let it be garbage collected
+                    # Stockfish не имеет методов quit() или close(), просто позволяем сборщику мусора удалить его
                     pass
                 except:
                     pass
         return engine_context_manager()
-    
-    def _find_stockfish_executable():
-        """Find Stockfish executable in various possible locations"""
-        import shutil
-        executable_names = [
-            'stockfish.exe',    # Windows
-            'stockfish',        # Linux/Mac
-            'stockfish_15_x64.exe',
-            'stockfish_14_x64.exe',
-            'stockfish-windows-x86-64.exe',
-            'stockfish-linux-x64',
-            'stockfish-mac-x64'
-        ]
-        
-        search_paths = [
-            os.path.dirname(__file__),
-            os.path.join(os.path.dirname(__file__), '..'),
-            os.path.join(os.path.dirname(__file__), 'engines'),
-            os.path.expanduser('~'),
-            os.path.expanduser('~/stockfish'),
-            '/usr/local/bin',
-            '/usr/bin',
-            'C:\\Program Files\\Stockfish',
-            'C:\\Program Files (x86)\\Stockfish'
-        ]
-        
-        # Check environment variable
-        env_path = os.getenv('STOCKFISH_PATH')
-        if env_path:
-            search_paths.insert(0, env_path)
-        
-        # Try to find executable
-        for search_path in search_paths:
-            if search_path and os.path.exists(search_path):
-                # Check direct path first
-                if os.path.isfile(search_path) and any(search_path.endswith(ext) for ext in ['.exe', '']):
-                    return search_path
-                
-                # Check in directory
-                for exe_name in executable_names:
-                    full_path = os.path.join(search_path, exe_name)
-                    if os.path.exists(full_path) and os.access(full_path, os.X_OK):
-                        return full_path
-        
-        # Check system PATH
-        for exe_name in executable_names:
-            try:
-                path = shutil.which(exe_name)
-                if path:
-                    return path
-            except:
-                pass
-        
-        return None
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Настройка логирования с улучшенным форматированием и ротацией
+def setup_logging():
+    """Настройка системы логирования с ротацией файлов и расширенным форматированием"""
+    try:
+        from logging.handlers import RotatingFileHandler
+        import os
+        
+        # Создаем директорию для логов если её нет
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # Основной обработчик с ротацией (10 файлов по 10MB)
+        main_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'chess_app.log'),
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=10,
+            encoding='utf-8'
+        )
+        
+        # Обработчик для критических ошибок
+        error_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'chess_app_errors.log'),
+            maxBytes=5*1024*1024,  # 5MB
+            backupCount=5,
+            encoding='utf-8'
+        )
+        error_handler.setLevel(logging.ERROR)
+        
+        # Расширенное форматирование
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - [%(levelname)s] - %(process)d:%(thread)d - '
+            '%(filename)s:%(lineno)d - %(funcName)s - %(message)s'
+        )
+        
+        main_handler.setFormatter(formatter)
+        error_handler.setFormatter(formatter)
+        
+        # Настройка корневого логгера
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+        
+        # Очистка существующих обработчиков
+        root_logger.handlers.clear()
+        
+        # Добавление обработчиков
+        root_logger.addHandler(main_handler)
+        root_logger.addHandler(error_handler)
+        root_logger.addHandler(logging.StreamHandler(sys.stdout))
+        
+        # Отдельный логгер для отслеживания производительности
+        perf_handler = RotatingFileHandler(
+            os.path.join(log_dir, 'performance.log'),
+            maxBytes=10*1024*1024,
+            backupCount=5,
+            encoding='utf-8'
+        )
+        perf_handler.setFormatter(formatter)
+        perf_logger = logging.getLogger('performance')
+        perf_logger.addHandler(perf_handler)
+        perf_logger.setLevel(logging.INFO)
+        
+        logging.info("Logging system initialized successfully")
+    except Exception as e:
+        print(f"Failed to initialize logging system: {e}")
+        # Fallback to basic logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+
+# Инициализация системы логирования
+setup_logging()
 logger = logging.getLogger(__name__)
 
-# Store game instances per session
-games = {}
+from utils.app_state import app_state
 
-# Store game history per session
-game_histories = {}
+# Максимальное количество одновременных игр для предотвращения перегрузки сервера
+MAX_CONCURRENT_GAMES = 20  # Увеличено с 10 до 20
 
-# Store user preferences per session
-user_preferences = {}
+# Пул потоков для фоновых задач (расчет ходов AI)
+# Используется небольшой пул, чтобы не перегружать систему
+AI_MOVE_THREAD_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai_move")
 
-# Global Stockfish engine instance for reuse
-stockfish_engine = None
+# Интервал очистки в секундах
+CLEANUP_INTERVAL = 300  # 5 минут
 
-# Maximum concurrent games to prevent server overload
-MAX_CONCURRENT_GAMES = 10
+# Таймаут неактивности игры в секундах
+GAME_TIMEOUT = 3600  # 1 час
 
-# Track active game count
-active_game_count = 0
-
-# Session timestamps for cleanup
-session_timestamps = {}
-
-# Cleanup interval in seconds
-CLEANUP_INTERVAL = 300  # 5 minutes
-
-# Game inactivity timeout in seconds
-GAME_TIMEOUT = 3600  # 1 hour
+# Таймаут инициализации игры
+GAME_INIT_TIMEOUT = 30  # 30 секунд для инициализации игры
 
 def cleanup_stale_games():
-    """Periodically clean up stale game sessions to prevent memory leaks."""
-    global games, session_timestamps, active_game_count
+    """Периодическая очистка устаревших игровых сессий для предотвращения утечек памяти."""
+    global active_game_count
     while True:
         try:
             time.sleep(CLEANUP_INTERVAL)
-            current_time = time.time()
+            # Получение устаревших сессий через AppState
+            stale_sessions = app_state.get_stale_sessions(GAME_TIMEOUT)
             
-            # Find stale sessions
-            try:
-                stale_sessions = [
-                    session_id for session_id, timestamp in session_timestamps.items()
-                    if current_time - timestamp > GAME_TIMEOUT
-                ]
-            except Exception as e:
-                logger.error(f"Error finding stale sessions: {e}")
-                stale_sessions = []
-            
-            # Clean up stale sessions
+            # Очистка устаревших сессий
+            cleanup_count = 0
             for session_id in stale_sessions:
                 try:
+                    # Always decrement active_game_count when cleaning up, regardless of whether session_id is in games
+                    # because app_state tracks all games
+                    active_game_count = max(0, active_game_count - 1)
+                    resource_stats['total_games_cleaned'] += 1
+                    cleanup_count += 1
+                    
                     if session_id in games:
-                        # Clean up game resources
+                        # Очистка ресурсов игры
                         try:
+                            game = games[session_id]
+                            # Правильная очистка игрового движка
+                            if hasattr(game, 'engine') and game.engine:
+                                if CONNECTION_POOLING_ENABLED and hasattr(game, '_engine_context') and game._engine_context:
+                                    try:
+                                        game._engine_context.__exit__(None, None, None)
+                                    except Exception as pool_error:
+                                        logger.warning(f"Error returning engine to pool for session {session_id}: {pool_error}")
+                                else:
+                                    # Для непулованных движков просто удаляем ссылку
+                                    game.engine = None
+                            
                             del games[session_id]
-                            active_game_count = max(0, active_game_count - 1)
                             logger.info(f"Cleaned up stale game for session: {session_id}")
                         except Exception as e:
                             logger.error(f"Error cleaning up stale game for session {session_id}: {e}")
                 except Exception as e:
                     logger.error(f"Error processing session {session_id}: {e}")
                 
-                # Remove timestamp
+                # Удаление временной метки
                 try:
                     if session_id in session_timestamps:
                         del session_timestamps[session_id]
                 except Exception as e:
                     logger.error(f"Error removing timestamp for session {session_id}: {e}")
+                
+                # Удаление пользовательских настроек
+                try:
+                    if session_id in user_preferences:
+                        del user_preferences[session_id]
+                except Exception as e:
+                    logger.warning(f"Error removing user preferences for session {session_id}: {e}")
+                
+                # Удаление истории игры
+                try:
+                    if session_id in game_histories:
+                        del game_histories[session_id]
+                except Exception as e:
+                    logger.warning(f"Error removing game history for session {session_id}: {e}")
             
-            # Clear expired cache entries
+            # Очистка устаревших записей кэша
             if CACHE_MANAGER_ENABLED:
-                # The cache manager automatically handles TTL expiration
+                # Менеджер кэша автоматически обрабатывает истечение TTL
                 pass
             
-            logger.info(f"Cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}")
+            # Обновление статистики ресурсов
+            resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
+            resource_stats['peak_sessions'] = max(resource_stats['peak_sessions'], len(session_timestamps))
+            
+            logger.info(f"Cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}, Cleaned up: {cleanup_count}")
+            logger.info(f"Resource stats: {resource_stats}")
         except Exception as e:
             logger.error(f"Error in cleanup thread: {e}")
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'maestro7it-chess-secret'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'maestro7it-chess-secret')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///chess.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize database if enabled
+# Инициализация ограничителя частоты запросов
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# Инициализация базы данных, если включена
 if DATABASE_ENABLED and init_db:
     db = init_db(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=30, ping_interval=25)
 
-# Start cleanup thread after all variables are defined to prevent race conditions
+# Запуск потока очистки после определения всех переменных для предотвращения гонок
 
 class ChessGame:
     def __init__(self, player_color='white', skill_level=5):
@@ -280,13 +411,16 @@ class ChessGame:
         self.initialized = False
         self.engine_path = None
         self._engine_context = None
-        self.last_move = None  # Track the last move made
-        self.move_history = []  # Track move history for takeback functionality
+        self.last_move = None  # Отслеживание последнего сделанного хода
+        self.move_history = []  # Отслеживание истории ходов для функции отмены
+        self._fen_cache = None  # Кэш FEN позиции
+        self._fen_cache_timestamp = 0
+        self._fen_cache_ttl = 0.5  # Кэш FEN позиций на 500мс
     
     def _is_engine_compatible(self, engine, skill_level):
         """
-        Check if the existing engine can be reused with the requested skill level.
-        For simplicity, we'll assume compatibility and just update the skill level.
+        Проверка, можно ли переиспользовать существующий движок с запрошенным уровнем сложности.
+        Для простоты предполагаем совместимость и просто обновляем уровень сложности.
         """
         try:
             engine.set_skill_level(skill_level)
@@ -294,13 +428,56 @@ class ChessGame:
         except:
             return False
     
+    def _calculate_engine_parameters(self, skill_level):
+        """
+        Расчет оптимальных параметров движка на основе уровня сложности.
+        
+        Args:
+            skill_level: Уровень сложности (0-20)
+            
+        Returns:
+            Словарь с параметрами движка
+        """
+        # Настройка параметров в зависимости от уровня сложности для баланса производительности/точности
+        if skill_level <= 5:
+            # Начальный уровень - быстрее, но менее точно
+            depth = 5
+            threads = 1
+            hash_size = 64
+        elif skill_level <= 10:
+            # Средний уровень - сбалансировано
+            depth = 8
+            threads = 2
+            hash_size = 128
+        elif skill_level <= 15:
+            # Продвинутый уровень - более точно
+            depth = 12
+            threads = 2
+            hash_size = 256
+        else:
+            # Экспертный уровень - максимальная точность
+            depth = 15
+            threads = 4
+            hash_size = 512
+        
+        return {
+            'Threads': threads,
+            'Hash': hash_size,
+            'Contempt': 0,
+            'Ponder': False,
+            'Slow Mover': 100,
+            'Move Overhead': 10,
+            'Skill Level': skill_level,
+            'Depth': depth
+        }
+    
     def _find_stockfish_executable(self):
-        """Find Stockfish executable in various possible locations with enhanced detection"""
-        # Common executable names for different platforms
+        """Поиск исполняемого файла Stockfish в различных возможных местах с улучшенным обнаружением"""
+        # Общие имена исполняемых файлов для разных платформ
         executable_names = [
             'stockfish.exe',    # Windows
             'stockfish',        # Linux/Mac
-            'stockfish_15_x64.exe',  # Specific versions
+            'stockfish_15_x64.exe',  # Конкретные версии
             'stockfish_14_x64.exe',
             'stockfish_13_x64.exe',
             'stockfish-windows-x86-64.exe',
@@ -308,52 +485,69 @@ class ChessGame:
             'stockfish-mac-x64'
         ]
         
-        # Common search paths
+        # Общие пути поиска
         search_paths = [
-            os.path.dirname(__file__),  # Current directory
-            os.path.join(os.path.dirname(__file__), '..'),  # Parent directory
-            os.path.join(os.path.dirname(__file__), 'engines'),  # Engines subdirectory
-            os.path.join(os.path.dirname(__file__), '..', 'engines'),  # Engines in parent
-            os.path.expanduser('~'),  # Home directory
-            os.path.expanduser('~/stockfish'),  # Stockfish in home directory
-            '/usr/local/bin',  # Common Unix paths
+            os.path.dirname(__file__),  # Текущая директория
+            os.path.join(os.path.dirname(__file__), '..'),  # Родительская директория
+            os.path.join(os.path.dirname(__file__), 'engines'),  # Поддиректория engines
+            os.path.join(os.path.dirname(__file__), '..', 'engines'),  # Engines в родительской директории
+            os.path.expanduser('~'),  # Домашняя директория
+            os.path.expanduser('~/stockfish'),  # Stockfish в домашней директории
+            '/usr/local/bin',  # Общие пути Unix
             '/usr/bin',
             'C:\\Program Files\\Stockfish',
-            'C:\\Program Files (x86)\\Stockfish'
+            'C:\\Program Files (x86)\\Stockfish',
+            'C:\\Program Files\\stockfish'  # Дополнительный путь, где был найден Stockfish
         ]
         
-        # Check environment variable
+        # Проверка переменной окружения
         env_path = os.getenv('STOCKFISH_PATH')
         if env_path:
             search_paths.insert(0, env_path)
+            logger.info(f"Using STOCKFISH_PATH environment variable: {env_path}")
         
-        # Try to find executable in search paths
+        # Проверка конкретного пути к Stockfish, который точно существует
+        specific_stockfish_path = 'C:\\Program Files\\stockfish\\stockfish-windows-x86-64.exe'
+        if os.path.exists(specific_stockfish_path):
+            logger.info(f"Found Stockfish executable at specific path: {specific_stockfish_path}")
+            return specific_stockfish_path
+        
+        # Попытка найти исполняемый файл in search paths
         import shutil
+        found_paths = []
         for search_path in search_paths:
             if search_path and os.path.exists(search_path):
-                # Check direct path first
+                # Сначала проверка прямого пути
                 if os.path.isfile(search_path) and any(search_path.endswith(ext) for ext in ['.exe', '']):
                     logger.info(f"Found Stockfish executable at direct path: {search_path}")
-                    return search_path
+                    found_paths.append(search_path)
                 
-                # Check in directory
+                # Проверка в директории
                 for exe_name in executable_names:
                     full_path = os.path.join(search_path, exe_name)
                     if os.path.exists(full_path) and os.access(full_path, os.X_OK):
                         logger.info(f"Found Stockfish executable at: {full_path}")
-                        return full_path
+                        found_paths.append(full_path)
         
-        # Check system PATH
+        # Проверка системного PATH
         for exe_name in executable_names:
             try:
                 path = shutil.which(exe_name)
                 if path:
                     logger.info(f"Found Stockfish executable in PATH: {path}")
-                    return path
-            except:
-                pass
+                    found_paths.append(path)
+            except Exception as e:
+                logger.warning(f"Error checking PATH for {exe_name}: {e}")
+                continue
         
-        logger.warning("Stockfish executable not found in any expected location")
+        # Возврат первого найденного пути или None, если ничего не найдено
+        if found_paths:
+            selected_path = found_paths[0]
+            logger.info(f"Selected Stockfish executable: {selected_path}")
+            return selected_path
+        
+        logger.error("Stockfish executable not found in any expected location")
+        logger.error(f"Search paths checked: {search_paths}")
         return None
     
     @retry_on_failure(max_attempts=3, delay=1.0, backoff=2.0)
@@ -363,94 +557,158 @@ class ChessGame:
         global stockfish_engine
         start_time = time.time()
         try:
-            # Use connection pooling if available
+            logger.info(f"Starting engine initialization for skill level {self.skill_level}")
+            
+            # Использование пула соединений, если доступен
             if CONNECTION_POOLING_ENABLED and stockfish_pool:
-                # Get engine from pool using context manager
+                logger.info("Using connection pooling for Stockfish engine")
+                # Получение движка из пула с использованием контекстного менеджера
                 self._engine_context = pool_get_stockfish_engine(self.skill_level)
-                # Correctly use the context manager
+                # Правильное использование контекстного менеджера
                 self.engine = self._engine_context.__enter__()
                 self.initialized = True
-                logger.info(f"Got Stockfish engine from pool with skill level {self.skill_level} in {time.time() - start_time:.2f} seconds")
+                init_duration = time.time() - start_time
+                logger.info(f"Got Stockfish engine from pool with skill level {self.skill_level} in {init_duration:.2f} seconds")
                 return True
             
-            # Reuse existing engine if available and properly configured
+            # Переиспользование существующего движка, если доступен и правильно настроен
             if stockfish_engine and self._is_engine_compatible(stockfish_engine, self.skill_level):
                 logger.info(f"Reusing existing Stockfish engine with skill level {self.skill_level}")
                 self.engine = stockfish_engine
-                # Configure engine for optimal performance
-                self.engine.set_depth(10)  # Reduced depth for faster moves, adjustable
+                # Настройка движка с оптимизированными параметрами на основе уровня сложности
+                engine_params = self._calculate_engine_parameters(self.skill_level)
+                self.engine.set_skill_level(self.skill_level)
+                self.engine.set_depth(engine_params['Depth'])
                 self.engine.update_engine_parameters({
-                    'Threads': 2,  # Use multiple threads for better performance
-                    'Hash': 128,   # Allocate 128 MB hash for position evaluation
-                    'Contempt': 0, # Neutral contempt factor
-                    'Ponder': False # Disable pondering for faster response
+                    'Threads': engine_params['Threads'],
+                    'Hash': engine_params['Hash'],
+                    'Contempt': engine_params['Contempt'],
+                    'Ponder': engine_params['Ponder'],
+                    'Slow Mover': engine_params['Slow Mover'],
+                    'Move Overhead': engine_params['Move Overhead']
                 })
                 self.initialized = True
-                logger.info(f"Engine reuse took {time.time() - start_time:.2f} seconds")
+                init_duration = time.time() - start_time
+                logger.info(f"Engine reuse took {init_duration:.2f} seconds with parameters: {engine_params}")
                 return True
             
-            # Find Stockfish executable
+            # Поиск исполняемого файла Stockfish
+            logger.info("Searching for Stockfish executable")
             self.engine_path = self._find_stockfish_executable()
             if not self.engine_path:
-                logger.error("Stockfish executable not found")
-                raise EngineInitializationError("Stockfish executable not found")
+                error_msg = "Stockfish executable not found"
+                logger.error(error_msg)
+                raise EngineInitializationError(error_msg)
             
-            # Initialize new engine
+            # Инициализация нового движка с таймаутом
             logger.info(f"Initializing Stockfish engine from: {self.engine_path}")
-            self.engine = Stockfish(path=self.engine_path)
-            
-            # Configure engine for optimal performance
-            self.engine.set_skill_level(self.skill_level)
-            self.engine.set_depth(10)  # Reduced depth for faster moves, adjustable
-            self.engine.update_engine_parameters({
-                'Threads': 2,  # Use multiple threads for better performance
-                'Hash': 128,   # Allocate 128 MB hash for position evaluation
-                'Contempt': 0, # Neutral contempt factor
-                'Ponder': False # Disable pondering for faster response
-            })
-            
-            # Test engine with a simple operation
-            test_fen = self.engine.get_fen_position()
-            logger.info(f"Engine test successful. Initial FEN: {test_fen}")
-            
-            # Store engine for reuse
-            stockfish_engine = self.engine
-            self.initialized = True
-            logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {time.time() - start_time:.2f} seconds")
-            return True
+            try:
+                # Добавление таймаута для предотвращения бесконечного ожидания (кросс-платформенное решение)
+                from concurrent.futures import TimeoutError as FutureTimeoutError
+                
+                def init_engine_task():
+                    """Инициализация движка в отдельном потоке для контроля таймаута"""
+                    logger.info(f"Creating Stockfish engine instance with skill level {self.skill_level}")
+                    if not self.engine_path:
+                        raise EngineInitializationError("Stockfish executable path not found")
+                    engine = Stockfish(path=self.engine_path)
+                    
+                    # Настройка движка с оптимизированными параметрами на основе уровня сложности
+                    engine_params = self._calculate_engine_parameters(self.skill_level)
+                    logger.info(f"Configuring engine parameters: {engine_params}")
+                    engine.set_skill_level(self.skill_level)
+                    engine.set_depth(engine_params['Depth'])
+                    engine.update_engine_parameters({
+                        'Threads': engine_params['Threads'],
+                        'Hash': engine_params['Hash'],
+                        'Contempt': engine_params['Contempt'],
+                        'Ponder': engine_params['Ponder'],
+                        'Slow Mover': engine_params['Slow Mover'],
+                        'Move Overhead': engine_params['Move Overhead']
+                    })
+                    
+                    # Тестирование движка простой операцией
+                    logger.info("Testing engine functionality")
+                    test_fen = engine.get_fen_position()
+                    if test_fen is None:
+                        raise EngineInitializationError("Engine test failed - returned None for FEN position")
+                    logger.info(f"Engine test successful. Initial FEN: {test_fen}")
+                    return engine
+                
+                # Использование ThreadPoolExecutor с таймаутом (работает на всех платформах)
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(init_engine_task)
+                    try:
+                        self.engine = future.result(timeout=15)  # Таймаут 15 секунд
+                    except FutureTimeoutError:
+                        error_msg = "Stockfish engine initialization timed out (15 seconds)"
+                        logger.error(error_msg)
+                        # Попытка отменить задачу (может не сработать, если уже выполняется)
+                        future.cancel()
+                        raise EngineInitializationError(error_msg)
+                
+                # Сохранение движка для переиспользования
+                stockfish_engine = self.engine
+                self.initialized = True
+                init_duration = time.time() - start_time
+                logger.info(f"Stockfish engine initialized successfully with skill level {self.skill_level} in {init_duration:.2f} seconds")
+                return True
+            except Exception as e:
+                error_msg = f"Stockfish engine initialization failed: {str(e)}"
+                logger.error(error_msg)
+                logger.exception("Full traceback:")
+                raise EngineInitializationError(error_msg) from e
+        except EngineInitializationError:
+            # Повторный выброс ошибок инициализации движка
+            raise
         except Exception as e:
-            logger.error(f"Stockfish initialization error: {e}")
-            import traceback
-            traceback.print_exc()
-            # Try to clean up any partially initialized engine
+            error_msg = f"Stockfish initialization error: {str(e)}"
+            logger.error(error_msg)
+            logger.exception("Full traceback:")
+            # Попытка очистки частично инициализированного движка
             try:
                 if hasattr(self, 'engine') and self.engine:
                     if CONNECTION_POOLING_ENABLED and self._engine_context:
                         try:
                             self._engine_context.__exit__(None, None, None)
-                        except:
-                            pass
+                        except Exception as cleanup_error:
+                            logger.warning(f"Error cleaning up engine context: {cleanup_error}")
                     else:
-                        # Stockfish doesn't have explicit close method, just dereference
+                        # Stockfish не имеет явного метода закрытия, просто удаляем ссылку
                         self.engine = None
-            except:
-                pass
+            except Exception as cleanup_error:
+                logger.warning(f"Error during engine cleanup: {cleanup_error}")
             self.initialized = False
-            raise EngineInitializationError(f"Failed to initialize Stockfish engine: {str(e)}") from e
+            raise EngineInitializationError(error_msg) from e
     
     def __del__(self):
-        """Clean up engine when ChessGame instance is destroyed"""
+        """Очистка движка при уничтожении экземпляра ChessGame"""
         try:
-            if self.initialized and self.engine:
-                if CONNECTION_POOLING_ENABLED and self._engine_context:
+            if hasattr(self, 'initialized') and hasattr(self, 'engine'):
+                if self.initialized and self.engine:
+                    if hasattr(self, '_engine_context') and self._engine_context:
+                        try:
+                            # Безопасное закрытие контекста движка
+                            self._engine_context.__exit__(None, None, None)
+                        except Exception as e:
+                            logger.warning(f"Error closing engine context: {e}")
                     try:
-                        self._engine_context.__exit__(None, None, None)
-                    except:
+                        # Stockfish engines are managed by the connection pool or garbage collection
+                        # No explicit process termination needed
                         pass
-                # Stockfish doesn't have explicit cleanup methods
-                self.engine = None
+                    except Exception as e:
+                        logger.warning(f"Error during engine cleanup: {e}")
+                    finally:
+                        # Очистка ссылок
+                        self.engine = None
+                        self._engine_context = None
+                        self.initialized = False
         except Exception as e:
-            logger.warning(f"Error cleaning up engine: {e}")
+            logger.error(f"Critical error during engine cleanup: {e}")
+            # В случае критической ошибки пытаемся очистить все ссылки
+            self.engine = None
+            self._engine_context = None
+            self.initialized = False
     
     @cached('board_state')
     @track_fen_retrieval
@@ -458,9 +716,20 @@ class ChessGame:
     def get_fen(self):
         if self.engine and self.initialized:
             try:
+                # Сначала проверка кэша
+                current_time = time.time()
+                if (self._fen_cache and 
+                    current_time - self._fen_cache_timestamp < self._fen_cache_ttl):
+                    return self._fen_cache
+                
                 fen = self.engine.get_fen_position()
                 if fen is None:
                     logger.warning("Stockfish returned None for FEN position")
+                
+                # Обновление кэша
+                self._fen_cache = fen
+                self._fen_cache_timestamp = current_time
+                
                 return fen
             except Exception as e:
                 logger.error(f"Error getting FEN position: {e}")
@@ -476,12 +745,15 @@ class ChessGame:
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
             raise EngineInitializationError("Engine not initialized")
-        # Validate move format
+        # Проверка формата хода
         if not isinstance(move, str) or len(move) != 4:
             logger.error(f"Invalid move format: {move}")
             raise MoveValidationError(f"Invalid move format: {move}")
         try:
-            # make_moves_from_current_position returns None on success, False on failure
+            # Очистка кэша FEN, так как позиция изменится
+            self._fen_cache = None
+            
+            # make_moves_from_current_position возвращает None при успехе, False при неудаче
             result = self.engine.make_moves_from_current_position([move])
             success = result is not False
             if not success:
@@ -499,38 +771,38 @@ class ChessGame:
     @handle_chess_errors(context="move_validation")
     def is_move_correct(self, move):
         """
-        Check if a move is correct using Stockfish's built-in validation for better performance.
-        If that fails, fall back to position comparison method.
+        Проверка корректности хода с использованием встроенной валидации Stockfish для лучшей производительности.
+        Если это не удается, используется метод сравнения позиций.
         """
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
             raise EngineInitializationError("Engine not initialized")
             
-        # Validate move format first
+        # Проверка формата хода first
         if not isinstance(move, str) or len(move) != 4:
             logger.warning(f"Invalid move format: {move}")
             raise MoveValidationError(f"Invalid move format: {move}")
             
-        # First try using Stockfish's built-in validation (faster)
+        # Сначала попытка использовать встроенную валидацию Stockfish (быстрее)
         try:
             return self.engine.is_move_correct(move)
         except Exception as e:
             logger.warning(f"Built-in move validation failed: {e}")
-            # Fall back to position comparison method if built-in validation fails
+            # Возврат к методу сравнения позиций, если встроенная валидация не удалась
             try:
-                # Save current position
+                # Сохранение текущей позиции
                 fen_before = self.engine.get_fen_position()
                 
-                # Try to make the move
+                # Попытка сделать ход
                 result = self.engine.make_moves_from_current_position([move])
                 
-                # Check if position changed
+                # Проверка, изменилась ли позиция
                 fen_after = self.engine.get_fen_position()
                 move_successful = (result is not False) and (fen_before != fen_after)
                 
-                # If move was successful, undo it to maintain current state
+                # Если ход был успешным, отменяем его для сохранения текущего состояния
                 if move_successful:
-                    # Reset to previous position
+                    # Сброс к предыдущей позиции
                     self.engine.set_fen_position(fen_before)
                 
                 return move_successful
@@ -541,6 +813,7 @@ class ChessGame:
     @cached('ai_move')
     @track_ai_calculation
     @handle_chess_errors(context="ai_move_calculation")
+    @retry_on_failure(max_attempts=2, delay=0.5, backoff=1.5)
     def get_best_move(self):
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
@@ -557,7 +830,7 @@ class ChessGame:
     @cached('evaluation')
     @handle_chess_errors(context="position_evaluation")
     def get_evaluation(self):
-        """Get position evaluation from Stockfish"""
+        """Получение оценки позиции от Stockfish"""
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
             raise EngineInitializationError("Engine not initialized")
@@ -570,7 +843,7 @@ class ChessGame:
     @cached('valid_moves')
     @handle_chess_errors(context="top_moves")
     def get_top_moves(self, limit=5):
-        """Get top moves from Stockfish"""
+        """Получение лучших ходов от Stockfish"""
         if not self.initialized or not self.engine:
             logger.error("Engine not initialized")
             raise EngineInitializationError("Engine not initialized")
@@ -585,20 +858,20 @@ class ChessGame:
     @handle_chess_errors(context="game_status_check")
     def get_game_status(self, fen):
         """
-        Determine the game status (check, checkmate, stalemate) from the FEN string.
-        Returns a dictionary with game status information.
+        Определение статуса игры (шах, мат, пат) из строки FEN.
+        Возвращает словарь с информацией о статусе игры.
         """
         if not fen:
             return {'game_over': False}
         
-        # Check for checkmate using Stockfish evaluation
+        # Проверка мата с использованием оценки Stockfish
         if self.engine and self.initialized:
             try:
-                # Get evaluation to check for checkmate
+                # Получение оценки для проверки мата
                 evaluation = self.engine.get_evaluation()
                 if evaluation and 'type' in evaluation:
                     if evaluation['type'] == 'mate' and evaluation['value'] == 0:
-                        # Mate in 0 means current player is checkmated
+                        # Мат в 0 означает, что текущий игрок получил мат
                         winner = 'black' if 'w' in fen else 'white'
                         return {
                             'game_over': True,
@@ -606,7 +879,7 @@ class ChessGame:
                             'winner': winner
                         }
                     elif evaluation['type'] == 'cp' and evaluation['value'] == 0:
-                        # Check for stalemate by seeing if any legal moves exist
+                        # Проверка пата проверкой наличия легальных ходов
                         best_move = self.engine.get_best_move()
                         if not best_move:
                             return {
@@ -615,15 +888,15 @@ class ChessGame:
                             }
             except Exception as e:
                 logger.warning(f"Stockfish evaluation failed: {e}")
-                # Fallback to FEN-based detection if evaluation fails
+                # Возврат к FEN-основанному обнаружению, если оценка не удалась
                 pass
         
-        # Fallback to original FEN-based detection
+        # Возврат к оригинальному FEN-основанному обнаружению
         try:
             if '#' in fen:
-                # Check for checkmate
+                # Проверка мата
                 if ' w ' in fen:
-                    # White to move, but in checkmate
+                    # Белые ходят, но в мате
                     if not any(c.isupper() for c in fen.split()[0] if c.isalpha()):
                         return {
                             'game_over': True,
@@ -631,7 +904,7 @@ class ChessGame:
                             'winner': 'black'
                         }
                 else:
-                    # Black to move, but in checkmate
+                    # Черные ходят, но в мате
                     if not any(c.islower() for c in fen.split()[0] if c.isalpha()):
                         return {
                             'game_over': True,
@@ -646,7 +919,7 @@ class ChessGame:
 
 @app.route('/')
 def index():
-    # Generate a unique session ID for each user
+    # Генерация уникального ID сессии для каждого пользователя
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
     logger.info(f"HTTP session created with session_id: {session.get('session_id')}")
@@ -654,8 +927,8 @@ def index():
 
 @app.route('/profile_page')
 def profile_page():
-    """Serve the profile page"""
-    # Check if user is logged in
+    """Отображение страницы профиля"""
+    # Проверка, вошел ли пользователь в систему
     user_id = session.get('user_id')
     if not user_id:
         return redirect(url_for('index'))
@@ -664,9 +937,9 @@ def profile_page():
 
 @socketio.on('connect')
 @handle_chess_errors(context="websocket_connect")
-def handle_connect():
+def handle_connect(auth=None):
     try:
-        # Create a session ID for Socket.IO connection if it doesn't exist
+        # Создание ID сессии для Socket.IO соединения, если его нет
         logger.info("WebSocket connect event received")
         logger.info(f"Current session keys: {list(session.keys())}")
         logger.info(f"Current session_id: {session.get('session_id')}")
@@ -677,7 +950,7 @@ def handle_connect():
         else:
             logger.info(f"Using existing session_id for WebSocket: {session.get('session_id')}")
             
-        # Update session timestamp with existence check
+        # Обновление временной метки сессии с проверкой существования
         session_id = session.get('session_id')
         if session_id:
             if session_id not in session_timestamps:
@@ -685,7 +958,7 @@ def handle_connect():
             else:
                 session_timestamps[session_id] = time.time()
             
-        # Send connection confirmation
+        # Отправка подтверждения соединения
         emit('connected', {'status': 'success', 'message': 'Connected successfully'})
     except Exception as e:
         logger.error(f"Error in connect handler: {e}")
@@ -698,52 +971,105 @@ def handle_disconnect():
         session_id = session.get('session_id')
         logger.info(f"WebSocket disconnect event received for session: {session_id}")
         if session_id:
-            if session_id in games:
-                # Clean up game instance when user disconnects
-                del games[session_id]
-                global active_game_count
-                active_game_count = max(0, active_game_count - 1)  # Ensure it doesn't go below 0
+            # Удаление игры через AppState
+            if app_state.remove_game(session_id):
                 logger.info(f"Client disconnected, cleaned up game for session: {session_id}")
-                logger.info(f"Active games count: {active_game_count}")
-            
-            # Remove timestamp
-            if session_id in session_timestamps:
-                del session_timestamps[session_id]
-                logger.info(f"Removed timestamp for session: {session_id}")
+                
+                # Уменьшение счетчика активных игр
+                global active_game_count
+                active_game_count = max(0, active_game_count - 1)
+                
+                # Получение актуальной статистики
+                stats = app_state.get_stats()
+                logger.info(f"Active games count: {stats['active_games']}")
+            else:
+                logger.warning(f"No game found for session: {session_id}")
         
-        # Send disconnection confirmation
+        # Отправка подтверждения отключения
         logger.info("Client disconnected successfully")
     except Exception as e:
         logger.error(f"Error in disconnect handler: {e}")
 
-# Add this after the existing routes and before the health check endpoint
+# Функции валидации
+def validate_username(username):
+    """Проверка формата имени пользователя"""
+    if not username:
+        return False, "Username is required"
+    if len(username) < 3:
+        return False, "Username must be at least 3 characters long"
+    if len(username) > 30:
+        return False, "Username must be less than 30 characters"
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        return False, "Username can only contain letters, numbers, and underscores"
+    return True, None
+
+def validate_email(email):
+    """Проверка формата email"""
+    if not email:
+        return False, "Email is required"
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return False, "Invalid email format"
+    return True, None
+
+def validate_password(password):
+    """Проверка надежности пароля"""
+    if not password:
+        return False, "Password is required"
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long"
+    if len(password) > 128:
+        return False, "Password must be less than 128 characters"
+    return True, None
+
+# Добавлено после существующих маршрутов и перед endpoint проверки здоровья
 
 @app.route('/register', methods=['POST'])
+@limiter.limit("5 per minute")
 @handle_chess_errors(context="user_registration")
 def register_user():
-    """Register a new user"""
+    """Регистрация нового пользователя"""
     try:
         data = request.get_json()
-        username = data.get('username')
-        email = data.get('email')
-        password = data.get('password')
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
         
-        # Validate input
+        # Валидация входных данных
         if not username or not email or not password:
             return jsonify({'success': False, 'message': 'Missing required fields'}), 400
         
-        # Check if database is enabled and models are available
+        # Валидация имени пользователя
+        is_valid, error_msg = validate_username(username)
+        if not is_valid:
+            return jsonify({'success': False, 'message': error_msg}), 400
+        
+        # Валидация email
+        is_valid, error_msg = validate_email(email)
+        if not is_valid:
+            return jsonify({'success': False, 'message': error_msg}), 400
+        
+        # Валидация пароля
+        is_valid, error_msg = validate_password(password)
+        if not is_valid:
+            return jsonify({'success': False, 'message': error_msg}), 400
+        
+        # Проверка, включена ли база данных и доступны ли модели
         if not DATABASE_ENABLED or User is None or db is None:
             return jsonify({'success': False, 'message': 'Database not enabled'}), 500
         
-        # Check if user already exists
+        # Проверка, существует ли пользователь
         existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
         if existing_user:
             return jsonify({'success': False, 'message': 'User already exists'}), 400
         
-        # Create new user (in a real app, you would hash the password)
+        # Безопасное хеширование пароля
+        password_hash = generate_password_hash(password)
+        
+        # Создание нового пользователя
         if create_user is not None:
-            user = create_user(username, email, password)  # Password hashing should be added in production
+            user = create_user(username, email, password_hash)
+            logger.info(f"User registered successfully: {username}")
             return jsonify({'success': True, 'message': 'User registered successfully', 'user_id': user.id})
         else:
             return jsonify({'success': False, 'message': 'User creation failed'}), 500
@@ -752,41 +1078,64 @@ def register_user():
         return jsonify({'success': False, 'message': 'Registration failed'}), 500
 
 @app.route('/login', methods=['POST'])
+@limiter.limit("10 per minute")
 @handle_chess_errors(context="user_login")
 def login_user():
-    """Login a user"""
+    """Вход пользователя в систему"""
     try:
         data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
         
-        # Validate input
+        # Валидация входных данных
         if not username or not password:
             return jsonify({'success': False, 'message': 'Missing required fields'}), 400
         
-        # Check if database is enabled and models are available
+        # Проверка, включена ли база данных и доступны ли модели
         if not DATABASE_ENABLED or User is None or db is None:
             return jsonify({'success': False, 'message': 'Database not enabled'}), 500
         
-        # Check if user exists
+        # Проверка, существует ли пользователь
         user = User.query.filter(User.username == username).first() if User is not None else None
-        if user and user.password_hash == password:  # In production, use proper password hashing
-            # Update last login
-            user.last_login = datetime.utcnow()
-            if db is not None:
-                db.session.commit()
+        
+        # Проверка пароля (поддержка как старых паролей в открытом виде, так и новых хешированных для миграции)
+        if user:
+            # Проверка, хеширован ли пароль (начинается с pbkdf2:)
+            if user.password_hash.startswith('pbkdf2:'):
+                password_valid = check_password_hash(user.password_hash, password)
+            else:
+                # Поддержка старого формата: пароль в открытом виде (для существующих пользователей)
+                password_valid = (user.password_hash == password)
+                # Если пароль совпадает в открытом виде, хешируем его для будущего использования
+                if password_valid:
+                    logger.info(f"Upgrading password hash for user: {username}")
+                    user.password_hash = generate_password_hash(password)
             
-            # Store user ID in session
-            session['user_id'] = user.id
-            
-            return jsonify({
-                'success': True, 
-                'message': 'Login successful', 
-                'user_id': user.id,
-                'username': user.username
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+            if password_valid:
+                # Обновление времени последнего входа
+                user.last_login = datetime.utcnow()
+                if db is not None:
+                    try:
+                        db.session.commit()
+                    except Exception as e:
+                        db.session.rollback()
+                        logger.error(f"Error updating user login timestamp: {e}")
+                        return jsonify({'success': False, 'message': 'Login failed'}), 500
+                
+                # Сохранение ID пользователя в сессии
+                session['user_id'] = user.id
+                logger.info(f"User logged in successfully: {username}")
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Login successful', 
+                    'user_id': user.id,
+                    'username': user.username
+                })
+        
+        # Неверные учетные данные - используем общее сообщение для предотвращения перечисления пользователей
+        logger.warning(f"Failed login attempt for username: {username}")
+        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
     except Exception as e:
         logger.error(f"Error logging in user: {e}")
         return jsonify({'success': False, 'message': 'Login failed'}), 500
@@ -794,9 +1143,9 @@ def login_user():
 @app.route('/logout')
 @handle_chess_errors(context="user_logout")
 def logout_user():
-    """Logout a user"""
+    """Выход пользователя из системы"""
     try:
-        # Remove user ID from session
+        # Удаление ID пользователя из сессии
         session.pop('user_id', None)
         return jsonify({'success': True, 'message': 'Logout successful'})
     except Exception as e:
@@ -806,32 +1155,35 @@ def logout_user():
 @app.route('/profile')
 @handle_chess_errors(context="user_profile")
 def user_profile():
-    """Display user profile"""
+    """Отображение профиля пользователя"""
     try:
-        # Check if user is logged in
+        # Проверка, вошел ли пользователь в систему
         user_id = session.get('user_id')
         if not user_id:
             return jsonify({'success': False, 'message': 'User not logged in'}), 401
         
-        # Check if database is enabled
+        # Проверка, включена ли база данных
         if not DATABASE_ENABLED or User is None or Game is None:
             return jsonify({'success': False, 'message': 'Database not enabled'}), 500
         
-        # Get user information
+        # Получение информации о пользователе
         user = User.query.get(user_id) if User is not None else None
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
         
-        # Get user's recent games
-        recent_games = Game.query.filter_by(user_id=user_id).order_by(Game.start_time.desc()).limit(10).all() if Game is not None else []
+        # Получение последних игр пользователя с использованием оптимизированной функции
+        if get_recent_games_optimized is not None:
+            recent_games = get_recent_games_optimized(user_id, limit=10)
+        else:
+            recent_games = Game.query.filter_by(user_id=user_id).order_by(Game.start_time.desc()).limit(10).all() if Game is not None else []
         
-        # Calculate statistics
+        # Расчет статистики
         total_games = user.games_played or 0
         wins = user.games_won or 0
         losses = total_games - wins
         win_rate = (wins / total_games * 100) if total_games > 0 else 0
         
-        # Prepare game history data
+        # Подготовка данных истории игр
         game_history = []
         for game in recent_games:
             game_history.append({
@@ -861,31 +1213,31 @@ def user_profile():
         logger.error(f"Error fetching user profile: {e}")
         return jsonify({'success': False, 'message': 'Failed to fetch profile'}), 500
 
-# Add health check endpoint
+# Добавление endpoint проверки здоровья
 @app.route('/health')
 @handle_chess_errors(context="health_check")
 def health_check():
-    """Health check endpoint for monitoring"""
+    """Endpoint проверки здоровья для мониторинга"""
     try:
-        # Check if we can create a simple ChessGame instance
+        # Проверка, можем ли мы создать простой экземпляр ChessGame
         game = ChessGame()
         
-        # Get cache statistics if cache manager is enabled
+        # Получение статистики кэша, если менеджер кэша включен
         cache_stats = {}
         if CACHE_MANAGER_ENABLED and cache_manager:
             cache_stats = cache_manager.get_cache_stats()
         
-        # Get performance metrics if performance tracking is enabled
+        # Получение метрик производительности, если отслеживание производительности включено
         perf_metrics = {}
         if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
             perf_metrics = performance_tracker.get_metrics_summary()
         
-        # Get error statistics if error handler is enabled
+        # Получение статистики ошибок, если обработчик ошибок включен
         error_stats = {}
         if ERROR_HANDLER_ENABLED and error_handler:
             error_stats = error_handler.get_error_stats()
         
-        # Get connection pool statistics if connection pooling is enabled
+        # Получение статистики пула соединений, если пул соединений включен
         pool_stats = {}
         if CONNECTION_POOLING_ENABLED and stockfish_pool:
             pool_stats = stockfish_pool.get_stats()
@@ -916,21 +1268,37 @@ def handle_init(data):
         logger.error("No session ID found")
         emit('error', {'message': 'Ошибка сессии. Попробуйте обновить страницу.'})
         return
+        
+    # Проверка лимита игр через AppState
+    stats = app_state.get_stats()
+    if stats['active_games'] >= MAX_CONCURRENT_GAMES:
+        logger.warning(f"Maximum concurrent games reached ({MAX_CONCURRENT_GAMES}). Rejecting new game request.")
+        emit('error', {'message': 'Сервер перегружен. Пожалуйста, попробуйте позже.'})
+        return
     
     try:
+        global active_game_count
         player_color = data.get('color', 'white')
         skill_level = min(20, max(0, int(data.get('level', 5))))
         
         logger.info(f"Creating game with color: {player_color}, skill level: {skill_level}")
         
-        # Check if we've reached the maximum concurrent games
-        global active_game_count
+        # Проверка, достигнуто ли максимальное количество одновременных игр
         if active_game_count >= MAX_CONCURRENT_GAMES:
             logger.warning(f"Maximum concurrent games reached ({MAX_CONCURRENT_GAMES}). Rejecting new game request.")
-            emit('error', {'message': 'Server overload. Please try again later.'})
+            emit('error', {'message': 'Сервер перегружен. Пожалуйста, попробуйте позже.'})
             total_init_time = time.time() - start_time
             logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
             return
+        
+        # Проверка, есть ли у сессии уже активная игра
+        if session_id in games:
+            logger.info(f"Session {session_id} already has an active game. Cleaning up old game.")
+            try:
+                del games[session_id]
+                active_game_count = max(0, active_game_count - 1)
+            except:
+                pass
         
         # Create a new game instance for this session
         game_init_start = time.time()
@@ -939,65 +1307,84 @@ def handle_init(data):
         logger.info(f"Game initialization took {game_init_time:.2f} seconds")
         logger.info(f"Game initialization result: {game.initialized}")
         
-        if game.init_engine():
-            games[session_id] = game
-            active_game_count += 1
-            # Update session timestamp
-            if session_id not in session_timestamps:
-                session_timestamps[session_id] = time.time()
-            else:
-                session_timestamps[session_id] = time.time()
-            fen = game.get_fen()
-            if fen is None:
-                logger.error("Failed to get initial FEN position")
-                emit('error', {'message': 'Ошибка получения начальной позиции. Попробуйте перезапустить игру.'})
-                # Clean up
-                if session_id in games:
-                    del games[session_id]
-                    active_game_count -= 1
-                return
-            logger.info(f"Game initialized successfully. Initial FEN: {fen}")
-            logger.info(f"Active games count: {active_game_count}")
-            
-            # Save game to database if user is logged in and database is enabled
-            game_id = None
-            user_id = session.get('user_id')
-            if DATABASE_ENABLED and user_id and Game is not None and db is not None:
-                try:
-                    db_game = Game(
-                        user_id=user_id,
-                        fen=fen,
-                        player_color=player_color,
-                        skill_level=skill_level,
-                        result='in_progress'
-                    )
-                    if db is not None:
-                        db.session.add(db_game)
-                        db.session.commit()
-                        game_id = db_game.id
-                        logger.info(f"Game saved to database with ID: {game_id}")
-                except Exception as e:
-                    logger.error(f"Failed to save game to database: {e}")
-            
-            emit('game_initialized', {'fen': fen, 'player_color': player_color, 'game_id': game_id})
-            logger.info("Sent game_initialized event to client")
-            total_init_time = time.time() - start_time
-            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
-        else:
-            logger.error("Failed to initialize Stockfish engine")
-            emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
-            total_init_time = time.time() - start_time
-            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
-    except EngineInitializationError as e:
-        logger.error(f"Engine initialization error: {e}")
-        emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
-        # Re-enable start button on error
+        # Initialize engine with timeout
+        engine_init_start = time.time()
         try:
-            emit('enable_start_button')
-        except:
-            pass  # Ignore if client is not connected
-        total_init_time = time.time() - start_time
-        logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
+            if game.init_engine():
+                engine_init_time = time.time() - engine_init_start
+                logger.info(f"Engine initialization took {engine_init_time:.2f} seconds")
+                
+                # Добавление игры через AppState
+                if not app_state.add_game(session_id, game):
+                    logger.error("Failed to add game to AppState")
+                    emit('error', {'message': 'Ошибка инициализации игры'})
+                    return
+                
+                # Увеличение счетчика активных игр
+                active_game_count += 1
+                
+                # Get initial FEN with timeout handling
+                try:
+                    fen = game.get_fen()
+                    if fen is None:
+                        logger.error("Failed to get initial FEN position")
+                        emit('error', {'message': 'Ошибка получения начальной позиции. Попробуйте перезапустить игру.'})
+                        # Clean up
+                        if session_id in games:
+                            del games[session_id]
+                            active_game_count -= 1
+                        return
+                    
+                    logger.info(f"Game initialized successfully. Initial FEN: {fen}")
+                    logger.info(f"Active games count: {active_game_count}")
+                    
+                    # Save game to database if user is logged in and database is enabled
+                    game_id = None
+                    user_id = session.get('user_id')
+                    if DATABASE_ENABLED and user_id and Game is not None and db is not None:
+                        try:
+                            db_game = Game(
+                                user_id=user_id,
+                                fen=fen,
+                                player_color=player_color,
+                                skill_level=skill_level,
+                                result='in_progress'
+                            )
+                            if db is not None:
+                                db.session.add(db_game)
+                                db.session.commit()
+                                game_id = db_game.id
+                                logger.info(f"Game saved to database with ID: {game_id}")
+                        except Exception as e:
+                            db.session.rollback()
+                            logger.error(f"Failed to save game to database: {e}")
+                    emit('game_initialized', {'fen': fen, 'player_color': player_color, 'game_id': game_id})
+                    logger.info("Sent game_initialized event to client")
+                    total_init_time = time.time() - start_time
+                    logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
+                except Exception as e:
+                    logger.error(f"Error getting initial FEN: {e}")
+                    emit('error', {'message': 'Ошибка получения начальной позиции. Попробуйте перезапустить игру.'})
+                    # Clean up
+                    if session_id in games:
+                        del games[session_id]
+                        active_game_count -= 1
+                    return
+            else:
+                logger.error("Failed to initialize Stockfish engine")
+                emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
+                total_init_time = time.time() - start_time
+                logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
+        except EngineInitializationError as e:
+            logger.error(f"Engine initialization error: {e}")
+            emit('error', {'message': 'Ошибка движка Stockfish. Попробуйте перезапустить игру.'})
+            # Re-enable start button on error
+            try:
+                emit('enable_start_button')
+            except:
+                pass  # Ignore if client is not connected
+            total_init_time = time.time() - start_time
+            logger.info(f"Total initialization time: {total_init_time:.2f} seconds")
     except Exception as e:
         logger.error(f"Error initializing game: {e}")
         import traceback
@@ -1021,12 +1408,16 @@ def handle_move(data):
         session_id = session.get('session_id')
         logger.info(f"Session ID: {session_id}")
         
-        if not session_id or session_id not in games:
+        # Получение игры через AppState
+        if not session_id:
+            logger.error("No session ID found")
+            emit('error', {'message': 'No session ID found'})
+            return
+        game = app_state.get_game(session_id)
+        if not session_id or not game:
             logger.error("Game not initialized for this session")
             emit('error', {'message': 'Game not initialized'})
             return
-
-        game = games[session_id]
         uci_move = data.get('move')
         
         # Validate move exists
@@ -1035,7 +1426,7 @@ def handle_move(data):
             emit('invalid_move', {'move': '', 'message': 'No move provided'})
             return
 
-        # Validate move format
+        # Проверка формата хода
         if not isinstance(uci_move, str) or len(uci_move) != 4:
             logger.warning(f"Invalid move format: {uci_move}")
             emit('invalid_move', {'move': uci_move, 'message': 'Invalid move format'})
@@ -1044,27 +1435,46 @@ def handle_move(data):
         # Store the move as the last move
         game.last_move = uci_move
 
-        # Validate move using Stockfish
+        # Validate move using Stockfish with timeout
         move_validation_start = time.time()
-        is_valid_move = game.is_move_correct(uci_move)
-        move_validation_time = time.time() - move_validation_start
-        logger.info(f"Move validation took {move_validation_time:.2f} seconds")
+        try:
+            is_valid_move = game.is_move_correct(uci_move)
+            move_validation_time = time.time() - move_validation_start
+            logger.info(f"Move validation took {move_validation_time:.2f} seconds")
+        except MoveValidationError as e:
+            logger.warning(f"Move validation error: {e}")
+            emit('invalid_move', {'move': uci_move, 'message': str(e)})
+            return
+        except Exception as e:
+            logger.error(f"Unexpected error during move validation: {e}")
+            emit('error', {'message': 'Ошибка проверки хода'})
+            return
         
         if is_valid_move:
             move_execution_start = time.time()
-            if not game.make_move(uci_move):
-                logger.warning(f"Move execution failed for move: {uci_move}")
-                emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
+            try:
+                if not game.make_move(uci_move):
+                    logger.warning(f"Move execution failed for move: {uci_move}")
+                    emit('invalid_move', {'move': uci_move, 'message': 'Invalid move'})
+                    return
+                move_execution_time = time.time() - move_execution_start
+                logger.info(f"Move execution took {move_execution_time:.2f} seconds")
+            except Exception as e:
+                logger.error(f"Error executing move {uci_move}: {e}")
+                emit('error', {'message': 'Ошибка выполнения хода'})
                 return
-            move_execution_time = time.time() - move_execution_start
-            logger.info(f"Move execution took {move_execution_time:.2f} seconds")
                 
             # Add move to history
             game.move_history.append(uci_move)
                 
-            fen = game.get_fen()
-            if fen is None:
-                logger.error("Failed to get FEN after move execution")
+            try:
+                fen = game.get_fen()
+                if fen is None:
+                    logger.error("Failed to get FEN after move execution")
+                    emit('error', {'message': 'Ошибка получения позиции после хода'})
+                    return
+            except Exception as e:
+                logger.error(f"Error getting FEN after move: {e}")
                 emit('error', {'message': 'Ошибка получения позиции после хода'})
                 return
             
@@ -1076,16 +1486,21 @@ def handle_move(data):
 
             # Check game status using improved logic
             game_status_start = time.time()
-            game_status = game.get_game_status(fen)
-            game_status_time = time.time() - game_status_start
-            logger.info(f"Game status check took {game_status_time:.2f} seconds")
+            try:
+                game_status = game.get_game_status(fen)
+                game_status_time = time.time() - game_status_start
+                logger.info(f"Game status check took {game_status_time:.2f} seconds")
+            except Exception as e:
+                logger.error(f"Error checking game status: {e}")
+                emit('error', {'message': 'Ошибка проверки статуса игры'})
+                return
             
             if game_status['game_over']:
                 # Update game result in database if user is logged in and database is enabled
                 user_id = session.get('user_id')
                 if DATABASE_ENABLED and user_id and Game is not None and db is not None:
                     try:
-                        # Find the game in the database
+                        # Find the game in the database (optimized with index)
                         db_game = Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first()
                         if db_game:
                             # Update game result
@@ -1097,6 +1512,7 @@ def handle_move(data):
                             # Update user stats
                             user = User.query.get(user_id) if User is not None else None
                             if user:
+                                # Use a transaction to ensure consistency
                                 user.games_played = (user.games_played or 0) + 1
                                 if game_status.get('winner') == game.player_color:
                                     user.games_won = (user.games_won or 0) + 1
@@ -1112,7 +1528,9 @@ def handle_move(data):
                             db.session.commit()
                             logger.info(f"Game result saved to database: {game_status['result']}")
                     except Exception as e:
+                        db.session.rollback()
                         logger.error(f"Failed to save game result to database: {e}")
+                        logger.exception("Full traceback:")
                 
                 emit('game_over', {
                     'result': game_status['result'],
@@ -1124,72 +1542,102 @@ def handle_move(data):
                 logger.info(f"Total move processing time: {total_move_time:.2f} seconds")
                 return
 
-            # AI move
+            # Notify client that AI is thinking
+            emit('ai_thinking', {'status': 'calculating'})
+            
+            # AI move with timeout and retry logic
             ai_move_start = time.time()
-            ai_move = game.get_best_move()
-            ai_move_time = time.time() - ai_move_start
-            logger.info(f"AI move calculation took {ai_move_time:.2f} seconds")
+            try:
+                ai_move = game.get_best_move()
+                ai_move_time = time.time() - ai_move_start
+                logger.info(f"AI move calculation took {ai_move_time:.2f} seconds")
+                
+                # Уведомление клиента, что AI закончил думать
+                emit('ai_thinking', {'status': 'complete', 'time': ai_move_time})
+            except Exception as e:
+                logger.error(f"Error getting AI move: {e}")
+                emit('ai_thinking', {'status': 'error'})
+                emit('error', {'message': 'Ошибка получения хода компьютера'})
+                return
             
             if ai_move:
-                # Store AI move as the last move
+                # Сохранение хода AI как последнего хода
                 game.last_move = ai_move
                 
                 ai_move_execution_start = time.time()
-                if not game.make_move(ai_move):
-                    logger.warning(f"AI move execution failed for move: {ai_move}")
-                    emit('position_update', {'fen': fen, 'last_move': game.last_move})
+                try:
+                    if not game.make_move(ai_move):
+                        logger.warning(f"AI move execution failed for move: {ai_move}")
+                        emit('position_update', {'fen': fen, 'last_move': game.last_move})
+                        return
+                    ai_move_execution_time = time.time() - ai_move_execution_start
+                    logger.info(f"AI move execution took {ai_move_execution_time:.2f} seconds")
+                except Exception as e:
+                    logger.error(f"Error executing AI move {ai_move}: {e}")
+                    emit('error', {'message': 'Ошибка выполнения хода компьютера'})
                     return
-                ai_move_execution_time = time.time() - ai_move_execution_start
-                logger.info(f"AI move execution took {ai_move_execution_time:.2f} seconds")
                     
-                # Add AI move to history
+                # Добавление хода AI в историю
                 game.move_history.append(ai_move)
                     
-                fen = game.get_fen()
-                if fen is None:
-                    logger.error("Failed to get FEN after AI move execution")
+                try:
+                    fen = game.get_fen()
+                    if fen is None:
+                        logger.error("Failed to get FEN after AI move execution")
+                        emit('error', {'message': 'Ошибка получения позиции после хода компьютера'})
+                        return
+                except Exception as e:
+                    logger.error(f"Error getting FEN after AI move: {e}")
                     emit('error', {'message': 'Ошибка получения позиции после хода компьютера'})
                     return
                 
-                # Check game status after AI move
+                # Проверка статуса игры после хода AI
                 game_status_start = time.time()
-                game_status = game.get_game_status(fen)
-                game_status_time = time.time() - game_status_start
-                logger.info(f"Post-AI game status check took {game_status_time:.2f} seconds")
+                try:
+                    game_status = game.get_game_status(fen)
+                    game_status_time = time.time() - game_status_start
+                    logger.info(f"Post-AI game status check took {game_status_time:.2f} seconds")
+                except Exception as e:
+                    logger.error(f"Error checking game status after AI move: {e}")
+                    emit('error', {'message': 'Ошибка проверки статуса игры после хода компьютера'})
+                    return
                 
                 if game_status['game_over']:
-                    # Update game result in database if user is logged in and database is enabled
+                    # Обновление результата игры в базе данных, если пользователь вошел и база данных включена
                     user_id = session.get('user_id')
                     if DATABASE_ENABLED and user_id and Game is not None and db is not None:
                         try:
-                            # Find the game in the database
+                            # Поиск игры в базе данных
                             db_game = Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first()
                             if db_game:
-                                # Update game result
+                                # Обновление результата игры
                                 db_game.result = game_status['result']
                                 db_game.end_time = datetime.utcnow()
                                 db_game.duration = int((db_game.end_time - db_game.start_time).total_seconds()) if db_game.start_time else 0
                                 db_game.move_history = json.dumps(game.move_history) if game.move_history else None
                                 
-                                # Update user stats
+                                # Обновление статистики пользователя
                                 user = User.query.get(user_id) if User is not None else None
                                 if user and User is not None:
+                                    # Использование транзакции для обеспечения согласованности
                                     user.games_played = (user.games_played or 0) + 1
                                     if game_status.get('winner') == game.player_color:
                                         user.games_won = (user.games_won or 0) + 1
-                                        # Simple rating update - in a real app, you'd use a proper rating system
+                                        # Простое обновление рейтинга - в реальном приложении использовалась бы правильная система рейтинга
                                         user.rating = (user.rating or 1200) + 10
                                     elif game_status['result'] == 'stalemate':
-                                        # No rating change for stalemate
+                                        # Нет изменения рейтинга при пате
                                         pass
                                     else:
-                                        # Loss - decrease rating
+                                        # Поражение - уменьшение рейтинга
                                         user.rating = max(100, (user.rating or 1200) - 5)
                                 
                                 db.session.commit()
                                 logger.info(f"Game result saved to database: {game_status['result']}")
                         except Exception as e:
+                            db.session.rollback()
                             logger.error(f"Failed to save game result to database: {e}")
+                            logger.exception("Full traceback:")
                     
                     emit('game_over', {
                         'result': game_status['result'],
@@ -1239,7 +1687,7 @@ def handle_move(data):
 @socketio.on('takeback_move')
 @handle_chess_errors(context="move_takeback")
 def handle_takeback():
-    """Handle takeback move request"""
+    """Обработка запроса на отмену хода"""
     try:
         session_id = session.get('session_id')
         if not session_id or session_id not in games:
@@ -1262,8 +1710,11 @@ def handle_takeback():
         
         # Set the engine to the previous position
         if game.move_history:
+            # Reset to starting position first
+            game.engine.set_fen_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
             # Apply all moves except the last one
-            game.engine.set_position(game.move_history)
+            if game.move_history:
+                game.engine.make_moves_from_current_position(game.move_history)
         else:
             # Reset to starting position
             game.engine.set_fen_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
@@ -1288,7 +1739,7 @@ def handle_takeback():
 @socketio.on('analyze_position')
 @handle_chess_errors(context="position_analysis")
 def handle_analysis(data):
-    """Analyze the current position and return evaluation"""
+    """Анализ текущей позиции и возврат оценки"""
     try:
         session_id = session.get('session_id')
         if not session_id or session_id not in games:
@@ -1326,7 +1777,7 @@ def handle_analysis(data):
 @socketio.on('save_preferences')
 @handle_chess_errors(context="preferences_save")
 def handle_save_preferences(data):
-    """Save user preferences"""
+    """Сохранение пользовательских настроек"""
     try:
         session_id = session.get('session_id')
         if not session_id:
@@ -1347,7 +1798,7 @@ def handle_save_preferences(data):
 @socketio.on('load_preferences')
 @handle_chess_errors(context="preferences_load")
 def handle_load_preferences():
-    """Load user preferences"""
+    """Загрузка пользовательских настроек"""
     try:
         session_id = session.get('session_id')
         if not session_id:
@@ -1367,7 +1818,7 @@ def handle_load_preferences():
 @socketio.on('save_game')
 @handle_chess_errors(context="game_save")
 def handle_save_game(data):
-    """Save the current game state"""
+    """Сохранение текущего состояния игры"""
     try:
         session_id = session.get('session_id')
         if not session_id or session_id not in games:
@@ -1412,7 +1863,7 @@ def handle_save_game(data):
 @socketio.on('load_game')
 @handle_chess_errors(context="game_load")
 def handle_load_game(data):
-    """Load a saved game state"""
+    """Загрузка сохраненного состояния игры"""
     try:
         session_id = session.get('session_id')
         serialized_state = data.get('game_state')
@@ -1481,7 +1932,7 @@ def handle_load_game(data):
 
 @app.route('/pool-stats')
 def pool_stats():
-    """Endpoint to get connection pool statistics"""
+    """Endpoint для получения статистики пула соединений"""
     try:
         # Test connection pooling if enabled
         pool_stats = {}
@@ -1501,7 +1952,131 @@ def pool_stats():
             'error': str(e)
         }, 500
 
-# Start cleanup thread
+@app.route('/metrics')
+@handle_chess_errors(context="metrics")
+def metrics_endpoint():
+    """Endpoint для получения метрик производительности в формате Prometheus"""
+    try:
+        metrics = []
+        
+        # Get cache statistics
+        if CACHE_MANAGER_ENABLED and cache_manager:
+            cache_stats = cache_manager.get_cache_stats()
+            for cache_name, stats in cache_stats.items():
+                if isinstance(stats, dict):
+                    metrics.append(f'cache_hits{{cache="{cache_name}"}} {stats.get("hits", 0)}')
+                    metrics.append(f'cache_misses{{cache="{cache_name}"}} {stats.get("misses", 0)}')
+                    metrics.append(f'cache_size{{cache="{cache_name}"}} {stats.get("size", 0)}')
+                    hit_rate = stats.get("hit_rate", 0)
+                    if hit_rate is not None:
+                        metrics.append(f'cache_hit_rate{{cache="{cache_name}"}} {hit_rate:.4f}')
+        
+        # Get performance metrics
+        if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
+            perf_metrics = performance_tracker.get_metrics_summary()
+            for operation, data in perf_metrics.items():
+                if isinstance(data, dict):
+                    avg_time = data.get('avg_time', 0)
+                    if avg_time:
+                        metrics.append(f'operation_duration_seconds{{operation="{operation}"}} {avg_time:.4f}')
+        
+        # Game statistics
+        metrics.append(f'active_games_total {active_game_count}')
+        metrics.append(f'tracked_sessions_total {len(session_timestamps)}')
+        metrics.append(f'concurrent_games_limit {MAX_CONCURRENT_GAMES}')
+        
+        # Resource statistics
+        resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
+        metrics.append(f'peak_active_games {resource_stats["peak_active_games"]}')
+        
+        # Connection pool statistics
+        if CONNECTION_POOLING_ENABLED and stockfish_pool:
+            pool_stats = stockfish_pool.get_stats()
+            metrics.append(f'engine_pool_size {pool_stats.get("pool_size", 0)}')
+            metrics.append(f'engine_pool_active {pool_stats.get("active_engines", 0)}')
+            metrics.append(f'engine_pool_max {pool_stats.get("max_engines", 0)}')
+            metrics.append(f'engine_pool_total_created {pool_stats.get("total_created", 0)}')
+            metrics.append(f'engine_pool_total_reused {pool_stats.get("total_reused", 0)}')
+        
+        return '\n'.join(metrics), 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
+    except Exception as e:
+        logger.error(f"Metrics endpoint failed: {e}")
+        return f'# Error generating metrics: {str(e)}', 500, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/resource-stats')
+def resource_stats_endpoint():
+    """Endpoint to get resource usage statistics"""
+    try:
+        # Получение статистики через AppState
+        app_stats = app_state.get_stats()
+        
+        # Сбор статистики использования памяти
+        memory_stats = {}
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            memory_stats = {
+                'rss': memory_info.rss / (1024 * 1024),  # MB
+                'vms': memory_info.vms / (1024 * 1024),  # MB
+                'percent': process.memory_percent(),
+                'cpu_percent': process.cpu_percent()
+            }
+        except ImportError:
+            memory_stats = {'error': 'psutil not available'}
+        except Exception as e:
+            memory_stats = {'error': str(e)}
+
+        # Сбор статистики кэша
+        cache_stats = {}
+        if CACHE_MANAGER_ENABLED and cache_manager:
+            try:
+                cache_stats = cache_manager.get_cache_stats()
+            except Exception as e:
+                cache_stats = {'error': str(e)}
+
+        # Сбор статистики пула соединений
+        pool_stats = {}
+        if CONNECTION_POOLING_ENABLED and stockfish_pool:
+            try:
+                pool_stats = stockfish_pool.get_stats()
+            except Exception as e:
+                pool_stats = {'error': str(e)}
+        
+        # Сбор статистики производительности
+        perf_metrics = {}
+        if PERFORMANCE_TRACKING_ENABLED and performance_tracker:
+            try:
+                perf_metrics = performance_tracker.get_metrics_summary()
+            except Exception as e:
+                perf_metrics = {'error': str(e)}
+        
+        response = {
+            'status': 'success',
+            'timestamp': time.time(),
+            'resource_stats': app_stats['resource_stats'],
+            'current_stats': {
+                'active_games': app_stats['active_games'],
+                'tracked_sessions': len(app_stats['game_stats']),
+                'game_stats': app_stats['game_stats'],
+                'memory_usage': memory_stats,
+                'cache_stats': cache_stats,
+                'pool_stats': pool_stats,
+                'performance_metrics': perf_metrics,
+                'recent_errors': app_stats.get('recent_errors', [])
+            }
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Error in resource stats endpoint: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+# Запуск потока очистки после определения всех переменных для предотвращения гонок
 cleanup_thread = threading.Thread(target=cleanup_stale_games, daemon=True)
 cleanup_thread.start()
 

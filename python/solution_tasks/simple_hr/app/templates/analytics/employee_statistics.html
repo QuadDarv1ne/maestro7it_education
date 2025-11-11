@@ -44,7 +44,11 @@
                 <h5>Распределение сотрудников по подразделениям</h5>
             </div>
             <div class="card-body">
+                {% if distribution_chart %}
                 <img src="data:image/png;base64,{{ distribution_chart }}" class="img-fluid" alt="Распределение по подразделениям">
+                {% else %}
+                <div class="alert alert-warning">Графики недоступны. Установите matplotlib для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -54,7 +58,11 @@
                 <h5>Распределение сотрудников по статусам</h5>
             </div>
             <div class="card-body">
+                {% if status_chart %}
                 <img src="data:image/png;base64,{{ status_chart }}" class="img-fluid" alt="Распределение по статусам">
+                {% else %}
+                <div class="alert alert-warning">Графики недоступны. Установите matplotlib для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>

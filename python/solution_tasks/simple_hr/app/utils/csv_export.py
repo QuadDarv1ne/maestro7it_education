@@ -3,8 +3,8 @@ from app.models import Employee, Department, Position
 from app import db
 import io
 
-def export_employees_to_csv():
-    """Export all employees to CSV format"""
+def export_employees_to_csv(encoding='utf-8'):
+    """Export all employees to CSV format with specified encoding"""
     employees = Employee.query.all()
     
     # Create DataFrame
@@ -22,6 +22,13 @@ def export_employees_to_csv():
     
     df = pd.DataFrame(data)
     return df
+
+def export_employees_to_csv_string(encoding='utf-8'):
+    """Export all employees to CSV string with specified encoding"""
+    df = export_employees_to_csv()
+    output = io.StringIO()
+    df.to_csv(output, index=False, encoding=encoding)
+    return output.getvalue()
 
 def export_departments_to_csv():
     """Export all departments to CSV format"""

@@ -49,7 +49,7 @@
         <div class="card border-left-primary h-100">
             <div class="card-body">
                 <h5 class="card-title">Активные отпуска</h5>
-                <h3 class="text-primary">0</h3>
+                <h3 class="text-primary">{{ interactive_data.employees_on_vacation }}</h3>
             </div>
         </div>
     </div>
@@ -57,7 +57,7 @@
         <div class="card border-left-success h-100">
             <div class="card-body">
                 <h5 class="card-title">Начинаются сегодня</h5>
-                <h3 class="text-success">0</h3>
+                <h3 class="text-success">{{ interactive_data.employees_starting_vacation }}</h3>
             </div>
         </div>
     </div>
@@ -65,15 +65,15 @@
         <div class="card border-left-warning h-100">
             <div class="card-body">
                 <h5 class="card-title">Заканчиваются сегодня</h5>
-                <h3 class="text-warning">0</h3>
+                <h3 class="text-warning">{{ interactive_data.employees_ending_vacation }}</h3>
             </div>
         </div>
     </div>
     <div class="col-md-3 mb-3">
         <div class="card border-left-info h-100">
             <div class="card-body">
-                <h5 class="card-title">Должности</h5>
-                <h3 class="text-info">{{ interactive_data.position_stats|length }}</h3>
+                <h5 class="card-title">Новые сотрудники (30 дн)</h5>
+                <h3 class="text-info">{{ interactive_data.recent_hires }}</h3>
             </div>
         </div>
     </div>
@@ -87,7 +87,11 @@
                 <h5>Распределение сотрудников по статусам</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.status_chart %}
                 <div id="status_chart">{{ interactive_charts.status_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -97,7 +101,11 @@
                 <h5>Распределение сотрудников по подразделениям</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.department_chart %}
                 <div id="department_chart">{{ interactive_charts.department_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -110,7 +118,11 @@
                 <h5>Распределение отпусков по типам</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.vacation_chart %}
                 <div id="vacation_chart">{{ interactive_charts.vacation_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -120,7 +132,60 @@
                 <h5>Динамика найма сотрудников</h5>
             </div>
             <div class="card-body">
+                {% if interactive_charts.hiring_trend_chart %}
                 <div id="hiring_trend_chart">{{ interactive_charts.hiring_trend_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly, matplotlib и pandas для отображения графиков.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Новые интерактивные графики -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Сравнение численности подразделений</h5>
+            </div>
+            <div class="card-body">
+                {% if interactive_charts.department_comparison_chart %}
+                <div id="department_comparison_chart">{{ interactive_charts.department_comparison_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Текучесть кадров по месяцам</h5>
+            </div>
+            <div class="card-body">
+                {% if interactive_charts.turnover_chart %}
+                <div id="turnover_chart">{{ interactive_charts.turnover_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly, matplotlib и pandas для отображения графиков.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Распределение отпусков по длительности</h5>
+            </div>
+            <div class="card-body">
+                {% if interactive_charts.vacation_duration_chart %}
+                <div id="vacation_duration_chart">{{ interactive_charts.vacation_duration_chart|safe }}</div>
+                {% else %}
+                <div class="alert alert-warning">Интерактивные графики недоступны. Установите plotly для отображения графиков.</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -151,7 +216,7 @@
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="#" class="btn btn-outline-secondary btn-lg w-100 disabled">
+                        <a href="{{ url_for('analytics.export_report') }}" class="btn btn-outline-success btn-lg w-100">
                             <i class="fas fa-file-export"></i><br>Экспорт отчетов
                         </a>
                     </div>

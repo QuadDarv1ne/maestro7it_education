@@ -51,6 +51,23 @@ class ConnectionPool:
             logger.error(f"Failed to create connection: {e}")
             raise
     
+    def _close_connection(self, connection: Any) -> None:
+        """
+        Close a connection.
+        
+        Args:
+            connection: Connection to close
+        """
+        try:
+            if hasattr(connection, 'close'):
+                connection.close()
+            elif hasattr(connection, 'quit'):
+                connection.quit()
+            elif hasattr(connection, '__del__'):
+                connection.__del__()
+        except Exception as e:
+            logger.warning(f"Error closing connection: {e}")
+    
     def get_connection(self, timeout: float = 30.0) -> Any:
         """
         Get a connection from the pool.
@@ -127,23 +144,6 @@ class ConnectionPool:
                 except Exception as e:
                     logger.error(f"Error closing connection: {e}")
     
-    def _close_connection(self, connection: Any) -> None:
-        """
-        Close a connection.
-        
-        Args:
-            connection: Connection to close
-        """
-        try:
-            if hasattr(connection, 'close'):
-                connection.close()
-            elif hasattr(connection, 'quit'):
-                connection.quit()
-            elif hasattr(connection, '__del__'):
-                connection.__del__()
-        except Exception as e:
-            logger.warning(f"Error closing connection: {e}")
-    
     def close_all(self) -> None:
         """Close all connections in the pool."""
         with self.lock:
@@ -184,7 +184,7 @@ class StockfishEnginePool:
     Specialized connection pool for Stockfish engines.
     """
     
-    def __init__(self, max_engines: int = 5, idle_timeout: int = 600):
+    def __init__(self, max_engines: int = 10, idle_timeout: int = 300):
         """
         Initialize Stockfish engine pool.
         
@@ -200,6 +200,7 @@ class StockfishEnginePool:
         self.total_created = 0
         self.total_reused = 0
         self.skill_level_configs = {}  # Track skill level for each engine
+        self._engine_startup_time = 2.0  # Expected time for engine startup
         
     def _create_engine(self, skill_level: int = 5) -> Any:
         """
@@ -223,18 +224,22 @@ class StockfishEnginePool:
             # Create engine
             engine = Stockfish(path=stockfish_path)
             
-            # Configure engine
+            # Configure engine with optimized settings
             engine.set_skill_level(skill_level)
-            engine.set_depth(10)
+            # Dynamically adjust depth based on skill level for better performance
+            depth = max(5, min(20, skill_level + 5))  # Depth between 5-20 based on skill
+            engine.set_depth(depth)
             engine.update_engine_parameters({
-                'Threads': 2,
-                'Hash': 128,
-                'Contempt': 0,
-                'Ponder': False
+                'Threads': 2,  # Use multiple threads for better performance
+                'Hash': 128,   # Allocate 128 MB hash for position evaluation
+                'Contempt': 0, # Neutral contempt factor
+                'Ponder': False, # Disable pondering for faster response
+                'Slow Mover': 100, # Optimize time management
+                'Move Overhead': 10 # Reduce move overhead
             })
             
             self.total_created += 1
-            logger.info(f"Created new Stockfish engine with skill level {skill_level}. Total created: {self.total_created}")
+            logger.info(f"Created new Stockfish engine with skill level {skill_level} and depth {depth}. Total created: {self.total_created}")
             return engine
         except Exception as e:
             logger.error(f"Failed to create Stockfish engine: {e}")
@@ -303,6 +308,20 @@ class StockfishEnginePool:
         
         return None
     
+    def _close_engine(self, engine: Any) -> None:
+        """
+        Close a Stockfish engine properly.
+        
+        Args:
+            engine: Stockfish engine to close
+        """
+        try:
+            # Stockfish engines don't have a quit method, just dereference
+            # The engine will be garbage collected
+            del engine
+        except Exception as e:
+            logger.warning(f"Error closing Stockfish engine: {e}")
+
     def get_engine(self, skill_level: int = 5, timeout: float = 30.0) -> Any:
         """
         Get a Stockfish engine from the pool.
@@ -325,7 +344,7 @@ class StockfishEnginePool:
                 
                 # Check if engine is still valid and not timed out
                 if time.time() - last_used < self.idle_timeout:
-                    # If skill level matches or we can reconfigure, use it
+                    # If skill level matches, use it directly
                     if engine_skill_level == skill_level:
                         self.active_engines += 1
                         self.total_reused += 1
@@ -335,6 +354,9 @@ class StockfishEnginePool:
                         # Try to reconfigure engine skill level
                         try:
                             engine.set_skill_level(skill_level)
+                            # Adjust depth based on new skill level
+                            depth = max(5, min(20, skill_level + 5))
+                            engine.set_depth(depth)
                             self.skill_level_configs[id(engine)] = skill_level
                             self.active_engines += 1
                             self.total_reused += 1
@@ -346,7 +368,7 @@ class StockfishEnginePool:
                 else:
                     # Engine timed out, close it
                     try:
-                        engine.quit()
+                        self._close_engine(engine)
                     except:
                         pass
             
@@ -363,8 +385,9 @@ class StockfishEnginePool:
                 # Pool is at maximum capacity
                 logger.warning("Stockfish engine pool at maximum capacity")
         
-        # Wait for an engine to become available
-        while time.time() - start_time < timeout:
+        # Wait for an engine to become available with adaptive timeout
+        adjusted_timeout = max(timeout, self._engine_startup_time)
+        while time.time() - start_time < adjusted_timeout:
             time.sleep(0.1)
             with self.lock:
                 if self.pool:
@@ -374,6 +397,9 @@ class StockfishEnginePool:
                         if engine_skill_level != skill_level:
                             try:
                                 engine.set_skill_level(skill_level)
+                                # Adjust depth based on new skill level
+                                depth = max(5, min(20, skill_level + 5))
+                                engine.set_depth(depth)
                                 self.skill_level_configs[id(engine)] = skill_level
                             except:
                                 # If reconfiguration fails, put engine back
@@ -387,7 +413,7 @@ class StockfishEnginePool:
                     else:
                         # Engine timed out, close it
                         try:
-                            engine.quit()
+                            self._close_engine(engine)
                         except:
                             pass
         
@@ -415,7 +441,7 @@ class StockfishEnginePool:
             else:
                 # Pool is full, close the engine
                 try:
-                    engine.quit()
+                    self._close_engine(engine)
                     logger.debug("Closed Stockfish engine (pool full)")
                 except Exception as e:
                     logger.error(f"Error closing Stockfish engine: {e}")
@@ -431,7 +457,7 @@ class StockfishEnginePool:
             while self.pool:
                 engine, _, _ = self.pool.popleft()
                 try:
-                    engine.quit()
+                    self._close_engine(engine)
                 except Exception as e:
                     logger.error(f"Error closing Stockfish engine: {e}")
             
@@ -462,8 +488,8 @@ class StockfishEnginePool:
                 )
             }
 
-# Global connection pool instances
-stockfish_pool = StockfishEnginePool(max_engines=5, idle_timeout=600)
+# Global connection pool instances - increased pool size for better performance
+stockfish_pool = StockfishEnginePool(max_engines=10, idle_timeout=300)
 
 @contextmanager
 def get_stockfish_engine(skill_level: int = 5):

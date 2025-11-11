@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Отчет по заработной плате{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Отчет по заработной плате сотрудников</h2>
+    <div>
+        <a href="{{ url_for('reports.export_report', type='salary_report') }}" class="btn btn-success">
+            <i class="fas fa-file-export"></i> Экспорт в CSV
+        </a>
+        <a href="{{ url_for('reports.generate_report') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Назад к отчетам
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Табельный номер</th>
+                        <th>ФИО</th>
+                        <th>Подразделение</th>
+                        <th>Должность</th>
+                        <th>Базовая зарплата</th>
+                        <th>Бонус</th>
+                        <th>Итого</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in report_data %}
+                    <tr>
+                        <td>{{ employee.employee_id }}</td>
+                        <td>{{ employee.full_name }}</td>
+                        <td>{{ employee.department }}</td>
+                        <td>{{ employee.position }}</td>
+                        <td>{{ employee.base_salary }} руб.</td>
+                        <td>{{ employee.bonus }} руб.</td>
+                        <td><strong>{{ employee.total_salary }} руб.</strong></td>
+                        <td>
+                            {% if employee.status == 'active' %}
+                                <span class="badge bg-success">Активен</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Уволен</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Общий фонд оплаты труда</h5>
+                <h3>{{ report_data|sum(attribute='total_salary') }} руб.</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Средняя зарплата</h5>
+                <h3>{{ (report_data|sum(attribute='total_salary') / report_data|length)|round(2) }} руб.</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Количество сотрудников</h5>
+                <h3>{{ report_data|length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

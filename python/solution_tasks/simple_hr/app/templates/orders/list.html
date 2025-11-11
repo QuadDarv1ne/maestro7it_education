@@ -24,7 +24,7 @@
         {% for order in orders %}
         <tr>
             <td>{{ order.id }}</td>
-            <td>{{ order.employee.full_name }}</td>
+            <td>{{ order.employee.full_name if order.employee else 'Неизвестный сотрудник' }}</td>
             <td>
                 {% if order.type == 'hire' %}Прием
                 {% elif order.type == 'transfer' %}Перевод

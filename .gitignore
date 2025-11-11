@@ -14,6 +14,7 @@
 
 # Окружение и зависимости
 venv/
+hr_env/
 env/
 ENV/
 .venv

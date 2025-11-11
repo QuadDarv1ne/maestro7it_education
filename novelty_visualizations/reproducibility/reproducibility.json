@@ -1,0 +1,215 @@
+{
+  "session_id": "20251108_140843_upl33qaf",
+  "version": "4.1.0",
+  "generation_date": "2025-11-08T14:08:50.112633",
+  "config": {
+    "dpi": 300,
+    "figure_size": [
+      10,
+      8
+    ],
+    "font_size": 11,
+    "line_width": 1.8,
+    "marker_size": 8,
+    "save_formats": [
+      "png",
+      "pdf",
+      "svg"
+    ],
+    "grayscale_mode": false,
+    "interactive_mode": false,
+    "statistical_alpha": 0.05,
+    "memory_optimization": true
+  },
+  "color_scheme": {
+    "russian_human": {
+      "color": "#1E88E5",
+      "linewidth": 2.16,
+      "linestyle": "-",
+      "alpha": 0.9,
+      "marker": "o",
+      "zorder": 5,
+      "edgecolor": "black",
+      "edgewidth": 1.0
+    },
+    "russian_ai": {
+      "color": "#1E88E5",
+      "linewidth": 1.8,
+      "linestyle": "--",
+      "alpha": 0.6,
+      "marker": "^",
+      "zorder": 4,
+      "edgecolor": "#1E88E5",
+      "edgewidth": 0.5
+    },
+    "chinese_human": {
+      "color": "#6D4C41",
+      "linewidth": 2.16,
+      "linestyle": "-",
+      "alpha": 0.9,
+      "marker": "s",
+      "zorder": 5,
+      "edgecolor": "black",
+      "edgewidth": 1.0
+    },
+    "chinese_ai": {
+      "color": "#6D4C41",
+      "linewidth": 1.8,
+      "linestyle": "--",
+      "alpha": 0.6,
+      "marker": "D",
+      "zorder": 4,
+      "edgecolor": "#6D4C41",
+      "edgewidth": 0.5
+    },
+    "japanese_human": {
+      "color": "#004D40",
+      "linewidth": 2.16,
+      "linestyle": "-",
+      "alpha": 0.9,
+      "marker": "d",
+      "zorder": 5,
+      "edgecolor": "black",
+      "edgewidth": 1.0
+    },
+    "japanese_ai": {
+      "color": "#004D40",
+      "linewidth": 1.8,
+      "linestyle": "--",
+      "alpha": 0.6,
+      "marker": "v",
+      "zorder": 4,
+      "edgecolor": "#004D40",
+      "edgewidth": 0.5
+    },
+    "european_human": {
+      "color": "#5E35B1",
+      "linewidth": 2.16,
+      "linestyle": "-",
+      "alpha": 0.9,
+      "marker": "P",
+      "zorder": 5,
+      "edgecolor": "black",
+      "edgewidth": 1.0
+    },
+    "european_ai": {
+      "color": "#5E35B1",
+      "linewidth": 1.8,
+      "linestyle": "--",
+      "alpha": 0.6,
+      "marker": "X",
+      "zorder": 4,
+      "edgecolor": "#5E35B1",
+      "edgewidth": 0.5
+    },
+    "ai_human": {
+      "color": "#00ACC1",
+      "linewidth": 2.16,
+      "linestyle": "-",
+      "alpha": 0.9,
+      "marker": "o",
+      "zorder": 5,
+      "edgecolor": "black",
+      "edgewidth": 1.0
+    },
+    "ai_ai": {
+      "color": "#00ACC1",
+      "linewidth": 1.8,
+      "linestyle": "--",
+      "alpha": 0.6,
+      "marker": "x",
+      "zorder": 4,
+      "edgecolor": "#00ACC1",
+      "edgewidth": 0.5
+    },
+    "human_human": {
+      "color": "#FFC107",
+      "linewidth": 2.16,
+      "linestyle": "-",
+      "alpha": 0.9,
+      "marker": "o",
+      "zorder": 5,
+      "edgecolor": "black",
+      "edgewidth": 1.0
+    },
+    "human_ai": {
+      "color": "#FFC107",
+      "linewidth": 1.8,
+      "linestyle": "--",
+      "alpha": 0.6,
+      "marker": "x",
+      "zorder": 4,
+      "edgecolor": "#FFC107",
+      "edgewidth": 0.5
+    },
+    "human": {
+      "color": "#FFC107",
+      "linewidth": 2.16,
+      "linestyle": "-",
+      "alpha": 0.85,
+      "marker": "o",
+      "zorder": 6
+    },
+    "ai": {
+      "color": "#00ACC1",
+      "linewidth": 2.16,
+      "linestyle": "--",
+      "alpha": 0.85,
+      "marker": "^",
+      "zorder": 5
+    },
+    "intentionality": {
+      "color": "#5E35B1",
+      "alpha": 0.15
+    },
+    "spontaneity": {
+      "color": "#004D40",
+      "alpha": 0.15
+    },
+    "flatness": {
+      "color": "#757575",
+      "alpha": 0.12
+    },
+    "neutral": {
+      "color": "#212121",
+      "alpha": 0.8
+    },
+    "significance": {
+      "color": "#D81B60",
+      "alpha": 0.8
+    },
+    "confidence": {
+      "color": "#1E88E5",
+      "alpha": 0.3
+    },
+    "background": {
+      "color": "#FFFFFF"
+    },
+    "text": {
+      "color": "#212121"
+    },
+    "highlight": {
+      "color": "#FFC107",
+      "alpha": 0.3
+    }
+  },
+  "dependencies": {
+    "numpy": "2.3.3",
+    "matplotlib": "3.10.7",
+    "scipy": "1.16.2",
+    "scikit-learn": "not installed",
+    "seaborn": "0.13.2",
+    "pandas": "2.3.3",
+    "networkx": "3.5",
+    "python": "3.13.9",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "system_info": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "python_version": "3.13.9",
+    "numpy_version": "2.3.3",
+    "matplotlib_version": "3.10.7"
+  },
+  "random_state": 1849184134
+}

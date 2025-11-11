@@ -6,43 +6,62 @@
 <h2>{% if vacation %}Редактирование отпуска{% else %}Добавление отпуска{% endif %}</h2>
 
 <form method="POST">
+    {{ form.hidden_tag() }}
+    
     <div class="mb-3">
-        <label for="employee_id" class="form-label">Сотрудник</label>
-        <select class="form-select" id="employee_id" name="employee_id" required>
-            <option value="">Выберите сотрудника</option>
-            {% for employee in employees %}
-                <option value="{{ employee.id }}" {% if vacation and vacation.employee_id == employee.id %}selected{% endif %}>
-                    {{ employee.full_name }}
-                </option>
-            {% endfor %}
-        </select>
+        {{ form.employee_id.label(class="form-label") }}
+        {{ form.employee_id(class="form-select") }}
+        {% if form.employee_id.choices|length == 0 %}
+            <div class="text-warning">Нет доступных сотрудников. Пожалуйста, добавьте сотрудников в систему.</div>
+        {% endif %}
+        {% for error in form.employee_id.errors %}
+            <div class="text-danger">{{ error }}</div>
+        {% endfor %}
     </div>
     
     <div class="mb-3">
-        <label for="type" class="form-label">Тип отпуска</label>
-        <select class="form-select" id="type" name="type" required>
-            <option value="">Выберите тип</option>
-            <option value="paid" {% if vacation and vacation.type == 'paid' %}selected{% endif %}>Оплачиваемый</option>
-            <option value="unpaid" {% if vacation and vacation.type == 'unpaid' %}selected{% endif %}>Неоплачиваемый</option>
-            <option value="sick" {% if vacation and vacation.type == 'sick' %}selected{% endif %}>Больничный</option>
-        </select>
+        {{ form.type.label(class="form-label") }}
+        {{ form.type(class="form-select") }}
+        {% for error in form.type.errors %}
+            <div class="text-danger">{{ error }}</div>
+        {% endfor %}
     </div>
     
     <div class="mb-3">
-        <label for="start_date" class="form-label">Дата начала</label>
-        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ vacation.start_date.strftime('%Y-%m-%d') if vacation else '' }}" required>
+        {{ form.start_date.label(class="form-label") }}
+        {{ form.start_date(class="form-control") }}
+        {% for error in form.start_date.errors %}
+            <div class="text-danger">{{ error }}</div>
+        {% endfor %}
     </div>
     
     <div class="mb-3">
-        <label for="end_date" class="form-label">Дата окончания</label>
-        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ vacation.end_date.strftime('%Y-%m-%d') if vacation else '' }}" required>
+        {{ form.end_date.label(class="form-label") }}
+        {{ form.end_date(class="form-control") }}
+        {% for error in form.end_date.errors %}
+            <div class="text-danger">{{ error }}</div>
+        {% endfor %}
     </div>
     
     <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-            {% if vacation %}Обновить{% else %}Добавить{% endif %}
-        </button>
+        {{ form.submit(class="btn btn-primary") }}
         <a href="{{ url_for('vacations.list_vacations') }}" class="btn btn-secondary">Отмена</a>
     </div>
 </form>
+
+<!-- Debug information for developers -->
+{% if config.DEBUG %}
+<div class="mt-4 p-3 bg-light border">
+    <h5>Debug Information</h5>
+    <p>Employee choices count: {{ form.employee_id.choices|length }}</p>
+    {% if form.employee_id.choices|length > 0 %}
+    <p>First few employee choices:</p>
+    <ul>
+        {% for choice in form.employee_id.choices[:5] %}
+        <li>{{ choice }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

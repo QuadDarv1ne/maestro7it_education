@@ -56,8 +56,8 @@
                             <td>{{ employee.employee_id }}</td>
                             <td>{{ employee.full_name }}</td>
                             <td>{{ employee.email }}</td>
-                            <td>{{ employee.department.name }}</td>
-                            <td>{{ employee.position.title }}</td>
+                            <td>{{ employee.department.name if employee.department else 'Не указано' }}</td>
+                            <td>{{ employee.position.title if employee.position else 'Не указана' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
