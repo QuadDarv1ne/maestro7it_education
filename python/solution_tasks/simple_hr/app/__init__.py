@@ -138,9 +138,9 @@ def create_app(config_class=Config):
         from app.routes.audit import bp as audit_bp
         app.register_blueprint(audit_bp, url_prefix='/audit')
         
-        # Two-Factor Authentication
-        from app.routes.two_factor import bp as two_factor_bp
-        app.register_blueprint(two_factor_bp)
+        # Two-Factor Authentication (temporarily disabled - missing qrcode module)
+        # from app.routes.two_factor import bp as two_factor_bp
+        # app.register_blueprint(two_factor_bp)
         
         # Advanced Search
         from app.routes.search import bp as search_bp
@@ -198,10 +198,10 @@ def create_app(config_class=Config):
         db.session.rollback()
         return render_template('errors/500.html'), 500
     
-    # Initialize SocketIO with app
-    from app.utils.websocket import socketio as ws
-    global socketio
-    socketio = ws
-    socketio.init_app(app)
+    # Initialize SocketIO with app (temporarily disabled - compatibility issues)
+    # from app.utils.websocket import socketio as ws
+    # global socketio
+    # socketio = ws
+    # socketio.init_app(app)
     
     return app
