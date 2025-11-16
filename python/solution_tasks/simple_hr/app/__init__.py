@@ -142,6 +142,10 @@ def create_app(config_class=Config):
         from app.routes.two_factor import bp as two_factor_bp
         app.register_blueprint(two_factor_bp)
         
+        # Advanced Search
+        from app.routes.search import bp as search_bp
+        app.register_blueprint(search_bp)
+        
         # REST API endpoints
         from app.routes.api import bp as api_bp
         app.register_blueprint(api_bp)
