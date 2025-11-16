@@ -5,6 +5,7 @@ from app.forms import EmployeeForm, EmployeeSearchForm
 from app.utils.notifications import notify_employee_created, notify_employee_updated
 from app.utils.audit import log_employee_create, log_employee_update, log_employee_delete
 from app.utils.csv_import import import_employees_from_csv
+from app.utils.excel_pdf_export import ExcelExporter, PDFExporter
 from app import db
 import os
 from sqlalchemy import or_
@@ -250,4 +251,77 @@ def employee_details(id):
     except Exception as e:
         logger.error(f"Error in employee_details {id}: {str(e)}")
         flash('Ошибка при загрузке информации о сотруднике', 'error')
+        return redirect(url_for('employees.list_employees'))
+
+@bp.route('/export/excel')
+@login_required
+def export_excel():
+    """Экспорт списка сотрудников в Excel"""
+    try:
+        # Получаем тех же отфильтрованных сотрудников
+        department_id = request.args.get('department_id', type=int)
+        position_id = request.args.get('position_id', type=int)
+        status = request.args.get('status', type=str)
+        search = request.args.get('search', type=str)
+        
+        query = Employee.query
+        
+        if department_id:
+            query = query.filter(Employee.department_id == department_id)
+        if position_id:
+            query = query.filter(Employee.position_id == position_id)
+        if status:
+            query = query.filter(Employee.status == status)
+        if search:
+            search_filter = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Employee.full_name.like(search_filter),
+                    Employee.email.like(search_filter),
+                    Employee.employee_id.like(search_filter)
+                )
+            )
+        
+        employees = query.all()
+        return ExcelExporter.export_employees(employees)
+        
+    except Exception as e:
+        logger.error(f"Error exporting to Excel: {str(e)}")
+        flash(f'Ошибка при экспорте в Excel: {str(e)}', 'error')
+        return redirect(url_for('employees.list_employees'))
+
+@bp.route('/export/pdf')
+@login_required
+def export_pdf():
+    """Экспорт списка сотрудников в PDF"""
+    try:
+        department_id = request.args.get('department_id', type=int)
+        position_id = request.args.get('position_id', type=int)
+        status = request.args.get('status', type=str)
+        search = request.args.get('search', type=str)
+        
+        query = Employee.query
+        
+        if department_id:
+            query = query.filter(Employee.department_id == department_id)
+        if position_id:
+            query = query.filter(Employee.position_id == position_id)
+        if status:
+            query = query.filter(Employee.status == status)
+        if search:
+            search_filter = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Employee.full_name.like(search_filter),
+                    Employee.email.like(search_filter),
+                    Employee.employee_id.like(search_filter)
+                )
+            )
+        
+        employees = query.all()
+        return PDFExporter.export_employees_report(employees)
+        
+    except Exception as e:
+        logger.error(f"Error exporting to PDF: {str(e)}")
+        flash(f'Ошибка при экспорте в PDF: {str(e)}', 'error')
         return redirect(url_for('employees.list_employees'))

@@ -7,6 +7,12 @@
     <h2>Список сотрудников</h2>
     <div>
         <a href="{{ url_for('employees.import_employees') }}" class="btn btn-success me-2">Импорт из CSV</a>
+        <a href="{{ url_for('employees.export_excel', **request.args) }}" class="btn btn-info me-2">
+            <i class="bi bi-file-earmark-excel"></i> Экспорт Excel
+        </a>
+        <a href="{{ url_for('employees.export_pdf', **request.args) }}" class="btn btn-danger me-2">
+            <i class="bi bi-file-earmark-pdf"></i> Экспорт PDF
+        </a>
         <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary">Добавить сотрудника</a>
     </div>
 </div>

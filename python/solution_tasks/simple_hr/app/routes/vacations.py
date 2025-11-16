@@ -4,6 +4,7 @@ from app.models import Vacation, Employee
 from app.forms import VacationForm
 from app.utils.notifications import notify_vacation_created
 from app.utils.audit import log_vacation_create
+from app.utils.excel_pdf_export import ExcelExporter
 from app import db
 from datetime import datetime, date, timedelta
 from calendar import monthrange
@@ -274,4 +275,16 @@ def reject_vacation(id):
         db.session.rollback()
         logger.error(f"Error rejecting vacation {id}: {str(e)}")
         flash('Ошибка при отклонении отпуска', 'error')
+        return redirect(url_for('vacations.list_vacations'))
+
+@bp.route('/export/excel')
+@login_required
+def export_vacations_excel():
+    """Экспорт отпусков в Excel"""
+    try:
+        vacations = Vacation.query.all()
+        return ExcelExporter.export_vacations(vacations)
+    except Exception as e:
+        logger.error(f"Error exporting vacations to Excel: {str(e)}")
+        flash(f'Ошибка при экспорте в Excel: {str(e)}', 'error')
         return redirect(url_for('vacations.list_vacations'))
