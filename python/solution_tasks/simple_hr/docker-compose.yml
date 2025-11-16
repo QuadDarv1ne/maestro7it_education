@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MySQL база данных
+  db:
+    image: mysql:8.0
+    container_name: simple_hr_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DB:-simple_hr_db}
+      MYSQL_USER: ${MYSQL_USER:-hr_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-hr_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./create_simple_hr_db.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - hr_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Flask приложение
+  web:
+    build: .
+    container_name: simple_hr_web
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me}
+      - MYSQL_USER=${MYSQL_USER:-hr_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-hr_password}
+      - MYSQL_HOST=db
+      - MYSQL_DB=${MYSQL_DB:-simple_hr_db}
+      - DEBUG=False
+      - FLASK_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./backups:/app/backups
+    networks:
+      - hr_network
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        sleep 10 &&
+        flask db upgrade &&
+        python run.py
+      "
+
+volumes:
+  mysql_data:
+
+networks:
+  hr_network:
+    driver: bridge

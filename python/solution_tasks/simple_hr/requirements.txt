@@ -3,6 +3,10 @@ Flask>=2.0.0,<3.0.0
 
 # Расширения Flask
 Flask-Bootstrap>=3.3.7,<4.0.0
+Flask-Migrate>=4.0.0,<5.0.0
+Flask-Limiter>=3.0.0,<4.0.0
+Flask-Caching>=2.0.0,<3.0.0
+Flask-CORS>=4.0.0,<5.0.0
 
 # Работа с базой данных
 Flask-SQLAlchemy>=3.0.0,<4.0.0
@@ -39,3 +43,6 @@ Flask-Logging>=0.1.0,<1.0.0
 # Тестирование
 pytest>=7.0.0,<8.0.0
 coverage>=6.0.0,<7.0.0
+
+# Безопасность
+bcrypt>=4.0.0,<5.0.0

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}403 - Доступ запрещен{% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="error-template">
+                <h1 class="display-1">403</h1>
+                <h2>Доступ запрещен</h2>
+                <div class="error-details mb-4">
+                    У вас нет прав доступа к данному ресурсу.
+                </div>
+                <div class="error-actions">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-house"></i> На главную
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-arrow-left"></i> Назад
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

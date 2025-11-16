@@ -1,6 +1,11 @@
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_caching import Cache
+from flask_cors import CORS
 from instance.config import Config
 import logging
 from logging.handlers import RotatingFileHandler
@@ -12,7 +17,14 @@ from sqlalchemy.pool import Pool
 logger = logging.getLogger(__name__)
 
 db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+cache = Cache()
 
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
@@ -43,9 +55,36 @@ def create_app(config_class=Config):
         except Exception as e:
             logger.error(f"Error setting SQLite pragma: {str(e)}")
     
+    # Инициализация расширений
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'  # type: ignore
+    limiter.init_app(app)
+    cache.init_app(app, config={
+        'CACHE_TYPE': 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 300
+    })
+    
+    # Настройка CORS с безопасными параметрами
+    CORS(app, resources={
+        r"/*": {
+            "origins": app.config.get('CORS_ORIGINS', ['http://localhost:5000']),
+            "methods": ["GET", "POST", "PUT", "DELETE"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }
+    })
+    
+    # Настройка безопасных заголовков
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:;"
+        return response
     
     from app.models import User
     
@@ -98,10 +137,25 @@ def create_app(config_class=Config):
         logger.error(f"Error registering blueprints: {str(e)}")
     
     # Обработка ошибок
+    @app.errorhandler(400)
+    def bad_request_error(error):
+        logger.warning(f"400 error: {str(error)}")
+        return render_template('errors/400.html'), 400
+    
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        logger.warning(f"403 error: {str(error)}")
+        return render_template('errors/403.html'), 403
+    
     @app.errorhandler(404)
     def not_found_error(error):
         logger.warning(f"404 error: {str(error)}")
         return render_template('errors/404.html'), 404
+    
+    @app.errorhandler(429)
+    def ratelimit_error(error):
+        logger.warning(f"429 error: {str(error)}")
+        return render_template('errors/429.html'), 429
     
     @app.errorhandler(500)
     def internal_error(error):
