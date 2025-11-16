@@ -180,6 +180,62 @@ def backup_db():
         click.echo(f'✗ Ошибка при создании резервной копии: {str(e)}', err=True)
 
 
+@cli.command()
+@with_appcontext
+def migrate_vacation_status():
+    """Добавить поле status в таблицу vacation"""
+    click.echo('Выполнение миграции vacation...')
+    
+    try:
+        # Проверяем, есть ли уже колонка status
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        columns = [c['name'] for c in inspector.get_columns('vacation')]
+        
+        if 'status' in columns:
+            click.echo('⚠ Колонка status уже существует')
+            return
+        
+        # Выполняем миграцию через SQLAlchemy
+        from sqlalchemy import text
+        
+        with db.engine.connect() as conn:
+            # Для SQLite
+            if 'sqlite' in str(db.engine.url):
+                click.echo('Миграция для SQLite...')
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'approved'"))
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN notes TEXT"))
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP"))
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"))
+                conn.commit()
+            # Для MySQL
+            else:
+                click.echo('Миграция для MySQL...')
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'approved'"))
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN notes TEXT"))
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP"))
+                conn.execute(text("ALTER TABLE vacation ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))
+                conn.execute(text("CREATE INDEX idx_vacation_status ON vacation(status)"))
+                conn.commit()
+        
+        click.echo('✓ Миграция выполнена успешно')
+        
+        # Обновляем все существующие записи
+        from app.models import Vacation
+        vacations = Vacation.query.all()
+        for v in vacations:
+            if not hasattr(v, 'status') or v.status is None:
+                v.status = 'approved'
+        db.session.commit()
+        
+        click.echo(f'✓ Обновлено {len(vacations)} записей отпусков')
+        
+    except Exception as e:
+        click.echo(f'✗ Ошибка миграции: {str(e)}', err=True)
+        import traceback
+        click.echo(traceback.format_exc(), err=True)
+
+
 def register_commands(app):
     """Регистрация всех команд в приложении"""
     app.cli.add_command(cli)

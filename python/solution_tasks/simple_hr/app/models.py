@@ -174,6 +174,10 @@ class Vacation(db.Model):
     start_date = db.Column(db.Date, nullable=False, index=True)
     end_date = db.Column(db.Date, nullable=False, index=True)
     type = db.Column(db.String(20), nullable=False, index=True)  # paid, unpaid, sick
+    status = db.Column(db.String(20), nullable=False, default='pending', index=True)  # pending, approved, rejected
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationship
     employee = db.relationship('Employee', backref=db.backref('vacations', lazy=True))
@@ -182,7 +186,30 @@ class Vacation(db.Model):
     __table_args__ = (
         db.Index('idx_vacation_employee_dates', 'employee_id', 'start_date', 'end_date'),
         db.Index('idx_vacation_dates_type', 'start_date', 'end_date', 'type'),
+        db.Index('idx_vacation_status', 'status'),
     )
+    
+    def approve(self):
+        """Одобрить отпуск"""
+        self.status = 'approved'
+        self.updated_at = datetime.utcnow()
+    
+    def reject(self, notes=None):
+        """Отклонить отпуск"""
+        self.status = 'rejected'
+        if notes:
+            self.notes = notes
+        self.updated_at = datetime.utcnow()
+    
+    def is_approved(self):
+        """Проверка, одобрен ли отпуск"""
+        return self.status == 'approved'
+    
+    def duration_days(self):
+        """Вычислить продолжительность отпуска в днях"""
+        if self.start_date and self.end_date:
+            return (self.end_date - self.start_date).days + 1
+        return 0
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)

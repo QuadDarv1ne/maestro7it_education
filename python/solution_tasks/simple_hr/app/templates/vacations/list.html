@@ -26,6 +26,7 @@
                         <th>Дата начала</th>
                         <th>Дата окончания</th>
                         <th>Длительность</th>
+                        <th>Статус</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -35,28 +36,78 @@
                         <td>{{ vacation.employee.full_name }}</td>
                         <td>
                             {% if vacation.type == 'paid' %}
-                                Оплачиваемый
+                                <span class="badge bg-primary">Оплачиваемый</span>
                             {% elif vacation.type == 'unpaid' %}
-                                Неоплачиваемый
+                                <span class="badge bg-secondary">Неоплачиваемый</span>
                             {% elif vacation.type == 'sick' %}
-                                Больничный
+                                <span class="badge bg-warning">Больничный</span>
                             {% endif %}
                         </td>
                         <td>{{ vacation.start_date.strftime('%d.%m.%Y') }}</td>
                         <td>{{ vacation.end_date.strftime('%d.%m.%Y') }}</td>
-                        <td>{{ (vacation.end_date - vacation.start_date).days + 1 }} дней</td>
+                        <td>{{ vacation.duration_days() }} дней</td>
                         <td>
-                            <a href="{{ url_for('vacations.edit_vacation', id=vacation.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit"></i> Редактировать
+                            {% if vacation.status == 'approved' %}
+                                <span class="badge bg-success">Одобрен</span>
+                            {% elif vacation.status == 'rejected' %}
+                                <span class="badge bg-danger">Отклонен</span>
+                            {% else %}
+                                <span class="badge bg-warning">Ожидает</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if vacation.status == 'pending' %}
+                                <form method="POST" action="{{ url_for('vacations.approve_vacation', id=vacation.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Одобрить">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-warning" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#rejectModal{{ vacation.id }}" 
+                                        title="Отклонить">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            {% endif %}
+                            <a href="{{ url_for('vacations.edit_vacation', id=vacation.id) }}" 
+                               class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                <i class="fas fa-edit"></i>
                             </a>
                             <form method="POST" action="{{ url_for('vacations.delete_vacation', id=vacation.id) }}" class="d-inline">
                                 <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                        onclick="return confirm('Вы уверены, что хотите удалить этот отпуск?')">
-                                    <i class="fas fa-trash"></i> Удалить
+                                        onclick="return confirm('Вы уверены, что хотите удалить этот отпуск?')"
+                                        title="Удалить">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </form>
                         </td>
                     </tr>
+                    
+                    <!-- Modal для отклонения -->
+                    <div class="modal fade" id="rejectModal{{ vacation.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Отклонить отпуск</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{{ url_for('vacations.reject_vacation', id=vacation.id) }}">
+                                    <div class="modal-body">
+                                        <p>Отклонить отпуск для {{ vacation.employee.full_name }}?</p>
+                                        <div class="mb-3">
+                                            <label for="notes{{ vacation.id }}" class="form-label">Причина (необязательно)</label>
+                                            <textarea class="form-control" id="notes{{ vacation.id }}" 
+                                                      name="notes" rows="3"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                        <button type="submit" class="btn btn-warning">Отклонить</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                     {% endfor %}
                 </tbody>
             </table>
