@@ -18,6 +18,11 @@ class User(UserMixin, db.Model):
     reset_token = db.Column(db.String(100), unique=True, nullable=True)
     reset_token_expires = db.Column(db.DateTime, nullable=True)
     
+    # Поля для двухфакторной аутентификации
+    totp_secret = db.Column(db.String(32), nullable=True)
+    totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    backup_codes = db.Column(db.Text, nullable=True)  # JSON список резервных кодов
+    
     # Index for faster queries
     __table_args__ = (
         db.Index('idx_user_role_active', 'role', 'is_active'),
@@ -58,6 +63,53 @@ class User(UserMixin, db.Model):
     
     def can_manage_employees(self):
         return self.role in ['admin', 'hr']
+    
+    def generate_totp_secret(self):
+        """Генерация секретного ключа для TOTP"""
+        import pyotp
+        self.totp_secret = pyotp.random_base32()
+        return self.totp_secret
+    
+    def get_totp_uri(self):
+        """Получение URI для QR-кода TOTP"""
+        import pyotp
+        if not self.totp_secret:
+            self.generate_totp_secret()
+        return pyotp.totp.TOTP(self.totp_secret).provisioning_uri(
+            name=self.email,
+            issuer_name='Simple HR'
+        )
+    
+    def verify_totp(self, token):
+        """Проверка TOTP токена"""
+        import pyotp
+        if not self.totp_secret or not self.totp_enabled:
+            return False
+        totp = pyotp.TOTP(self.totp_secret)
+        return totp.verify(token, valid_window=1)
+    
+    def generate_backup_codes(self, count=8):
+        """Генерация резервных кодов для восстановления доступа"""
+        import json
+        codes = [secrets.token_hex(4).upper() for _ in range(count)]
+        # Храним хэши кодов
+        hashed_codes = [generate_password_hash(code) for code in codes]
+        self.backup_codes = json.dumps(hashed_codes)
+        return codes  # Возвращаем открытые коды для отображения пользователю
+    
+    def verify_backup_code(self, code):
+        """Проверка резервного кода"""
+        import json
+        if not self.backup_codes:
+            return False
+        codes = json.loads(self.backup_codes)
+        for i, hashed_code in enumerate(codes):
+            if check_password_hash(hashed_code, code.upper()):
+                # Удаляем использованный код
+                codes.pop(i)
+                self.backup_codes = json.dumps(codes)
+                return True
+        return False
     
     def can_manage_departments(self):
         return self.role in ['admin', 'hr']

@@ -8,12 +8,20 @@ from app import db, limiter
 bp = Blueprint('auth', __name__)
 
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("15 per 5 minutes")
 def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
+            # Проверка, включена ли 2FA
+            if user.totp_enabled:
+                # Сохраняем ID пользователя в сессии для проверки 2FA
+                from flask import session
+                session['user_id_2fa'] = user.id
+                session['next_page_2fa'] = request.args.get('next')
+                return redirect(url_for('two_factor.verify'))
+            
             # Обновление времени последнего входа
             from datetime import datetime
             user.last_login = datetime.utcnow()

@@ -26,6 +26,9 @@ limiter = Limiter(
 )
 cache = Cache()
 
+# Import SocketIO from utils
+from app.utils.websocket import socketio
+
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
@@ -134,6 +137,14 @@ def create_app(config_class=Config):
         from app.routes.audit import bp as audit_bp
         app.register_blueprint(audit_bp, url_prefix='/audit')
         
+        # Two-Factor Authentication
+        from app.routes.two_factor import bp as two_factor_bp
+        app.register_blueprint(two_factor_bp)
+        
+        # REST API endpoints
+        from app.routes.api import bp as api_bp
+        app.register_blueprint(api_bp)
+        
         # Health check endpoints
         from app.utils.health import create_health_check_blueprint
         health_bp = create_health_check_blueprint()
@@ -181,5 +192,8 @@ def create_app(config_class=Config):
         logger.error(f"500 error: {str(error)}")
         db.session.rollback()
         return render_template('errors/500.html'), 500
+    
+    # Initialize SocketIO with app
+    socketio.init_app(app)
     
     return app
