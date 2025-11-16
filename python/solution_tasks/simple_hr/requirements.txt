@@ -7,6 +7,8 @@ Flask-Migrate>=4.0.0,<5.0.0
 Flask-Limiter>=3.0.0,<4.0.0
 Flask-Caching>=2.0.0,<3.0.0
 Flask-CORS>=4.0.0,<5.0.0
+Flask-SocketIO>=5.3.0,<6.0.0
+python-socketio>=5.9.0,<6.0.0
 
 # Работа с базой данных
 Flask-SQLAlchemy>=3.0.0,<4.0.0
