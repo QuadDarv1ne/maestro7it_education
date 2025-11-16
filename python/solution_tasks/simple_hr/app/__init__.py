@@ -133,8 +133,27 @@ def create_app(config_class=Config):
         
         from app.routes.audit import bp as audit_bp
         app.register_blueprint(audit_bp, url_prefix='/audit')
+        
+        # Health check endpoints
+        from app.utils.health import create_health_check_blueprint
+        health_bp = create_health_check_blueprint()
+        app.register_blueprint(health_bp)
     except Exception as e:
         logger.error(f"Error registering blueprints: {str(e)}")
+    
+    # Настройка middleware
+    try:
+        from app.middleware import setup_middleware
+        setup_middleware(app)
+    except Exception as e:
+        logger.error(f"Error setting up middleware: {str(e)}")
+    
+    # Регистрация CLI команд
+    try:
+        from app.cli import register_commands
+        register_commands(app)
+    except Exception as e:
+        logger.error(f"Error registering CLI commands: {str(e)}")
     
     # Обработка ошибок
     @app.errorhandler(400)

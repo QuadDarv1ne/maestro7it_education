@@ -271,3 +271,28 @@ open htmlcov/index.html
 ## Лицензия
 
 Этот проект предназначен для образовательных целей.
+
+---
+
+## Документация
+
+- [API Документация](API.md) - Полное описание всех endpoints
+- [Docker Руководство](DOCKER.md) - Использование Docker и Docker Compose
+- [CLI Команды](CLI.md) - Управление через командную строку
+- [История изменений](CHANGELOG.md) - Список всех изменений
+
+## Полезные ссылки
+
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [SQLAlchemy Documentation](https://www.sqlalchemy.org/)
+- [Bootstrap 5](https://getbootstrap.com/)
+
+## Поддержка
+
+По вопросам и предложениям создавайте issue в GitHub репозитории.
+
+**Автор:** Дуплей Максим Игоревич  
+**Telegram:** @quadd4rv1n7  
+**Email:** maksimqwe42@mail.ru  
+**Версия:** 2.0
+

@@ -161,6 +161,177 @@ docker-compose exec web flask db upgrade
 - [ ] Celery для фоновых задач
 - [ ] GraphQL API
 
+### Дополнительные улучшения в версии 2.0.1
+
+#### 1. Мониторинг и Health Checks
+- **Health Check endpoints**
+  - `/health/` - общий статус приложения
+  - `/health/system` - мониторинг системных ресурсов (CPU, RAM, диск)
+  - `/health/database` - проверка подключения к БД
+  - `/health/ping` - простой ping
+- **Библиотека psutil** для мониторинга ресурсов
+- **Отслеживание uptime** приложения
+
+#### 2. Performance Middleware
+- Автоматическое логирование медленных запросов (>1 сек)
+- Добавление заголовка `X-Request-Duration` ко всем ответам
+- Request/Response logging для production
+
+#### 3. CLI Management
+- **Расширенные CLI команды:**
+  - `flask cli init-db` - инициализация БД
+  - `flask cli seed-db` - тестовые данные
+  - `flask cli create-user` - создание пользователей
+  - `flask cli reset-password` - сброс пароля
+  - `flask cli list-users` - список пользователей
+  - `flask cli stats` - статистика системы
+  - `flask cli drop-db` - очистка БД
+  - `flask cli backup-db` - создание backup
+- Полная документация в **CLI.md**
+
+#### 4. Улучшенный Dashboard
+- Расширенная статистика на главной странице
+- Счётчики:
+  - Активные сотрудники
+  - Недавние наймы (за последние 30 дней)
+  - Предстоящие отпуска (следующие 7 дней)
+- Последние 10 приказов
+- Распределение сотрудников по отделам
+- **Кэширование** dashboard (60 сек)
+
+#### 5. Утилиты экспорта
+- Модуль `app/utils/export.py`
+- Экспорт в CSV:
+  - Сотрудники
+  - Отпуска
+  - Приказы
+  - Отделы
+- Автоматическая генерация имён файлов с timestamp
+
+#### 6. CI/CD
+- **GitHub Actions workflow**
+  - Автоматическое тестирование с pytest
+  - Coverage отчёты
+  - Линтинг с flake8
+  - Security проверки (safety, bandit)
+  - Docker build
+- Интеграция с MySQL в CI
+- Кэширование pip зависимостей
+
+#### 7. Makefile для автоматизации
+- Более 20 команд для разработки
+- Команды для тестирования, линтинга, форматирования
+- Docker команды
+- Управление миграциями
+- Создание backup
+- Очистка временных файлов
+
+### Новые файлы
+
+```
+app/
+├── cli.py              # CLI команды
+├── middleware.py       # Performance middleware
+└── utils/
+    ├── health.py       # Health check утилиты
+    └── export.py       # Экспорт данных
+
+.github/
+└── workflows/
+    └── ci.yml          # GitHub Actions CI/CD
+
+CLI.md                  # Документация CLI
+Makefile               # Команды автоматизации
+```
+
+### Технические детали
+
+**Новые зависимости:**
+- `psutil>=5.9.0` - мониторинг системы
+- `click` - CLI (входит во Flask)
+
+**Обновлённые файлы:**
+- `app/__init__.py` - регистрация health endpoints и middleware
+- `app/routes/main.py` - расширенный dashboard с кэшированием
+- `instance/config.py` - новые настройки
+
+### Использование новых возможностей
+
+#### Health Checks
+
+```bash
+# Общий статус
+curl http://localhost:5000/health/
+
+# Только система
+curl http://localhost:5000/health/system
+
+# Только БД
+curl http://localhost:5000/health/database
+
+# Простой ping
+curl http://localhost:5000/health/ping
+```
+
+**Пример ответа:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-11-16T14:30:22.123456",
+  "system": {
+    "cpu_usage": 25.5,
+    "memory_usage": 45.2,
+    "disk_usage": 60.1,
+    "status": "healthy"
+  },
+  "database": {
+    "status": "healthy",
+    "message": "Database connection is working"
+  },
+  "version": "2.0",
+  "uptime": "2d 5h 30m"
+}
+```
+
+#### CLI Команды
+
+```bash
+# Статистика
+flask cli stats
+
+# Создать пользователя
+flask cli create-user
+
+# Список пользователей
+flask cli list-users
+
+# Backup
+flask cli backup-db
+```
+
+#### Makefile
+
+```bash
+# Запуск тестов
+make test
+
+# С покрытием
+make coverage
+
+# Линтинг
+make lint
+
+# Docker
+make docker-up
+make docker-logs
+
+# Миграции
+make migrate
+
+# Очистка
+make clean
+```
+
 ### Breaking Changes
 
 Нет breaking changes в этой версии. Все изменения обратно совместимы.
