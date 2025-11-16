@@ -26,10 +26,11 @@ limiter = Limiter(
 )
 cache = Cache()
 
-# Import SocketIO from utils
-from app.utils.websocket import socketio
+# Import SocketIO (will be initialized later in create_app)
+socketio = None
 
 def create_app(config_class=Config):
+    global socketio
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
     
@@ -194,6 +195,9 @@ def create_app(config_class=Config):
         return render_template('errors/500.html'), 500
     
     # Initialize SocketIO with app
+    from app.utils.websocket import socketio as ws
+    global socketio
+    socketio = ws
     socketio.init_app(app)
     
     return app
