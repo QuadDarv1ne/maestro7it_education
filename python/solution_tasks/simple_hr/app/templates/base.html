@@ -6,6 +6,8 @@
     <title>{% block title %}Simple HR System{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -13,6 +15,9 @@
             <a class="navbar-brand" href="{{ url_for('main.index') }}">Simple HR</a>
             {% if current_user.is_authenticated %}
             <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('dashboard.index') }}">
+                    <i class="bi bi-graph-up"></i> Дашборд
+                </a>
                 <a class="nav-link" href="{{ url_for('employees.list_employees') }}">Сотрудники</a>
                 <a class="nav-link" href="{{ url_for('departments.list_departments') }}">Подразделения</a>
                 <a class="nav-link" href="{{ url_for('positions.list_positions') }}">Должности</a>

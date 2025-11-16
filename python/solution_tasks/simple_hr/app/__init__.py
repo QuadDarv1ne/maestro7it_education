@@ -146,6 +146,10 @@ def create_app(config_class=Config):
         from app.routes.search import bp as search_bp
         app.register_blueprint(search_bp)
         
+        # Dashboard with Charts
+        from app.routes.dashboard import bp as dashboard_bp
+        app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+        
         # REST API endpoints
         from app.routes.api import bp as api_bp
         app.register_blueprint(api_bp)
