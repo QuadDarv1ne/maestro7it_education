@@ -21,31 +21,13 @@ def update_profile():
     """Обновление основной информации профиля"""
     try:
         # Получение данных из формы
-        current_user.full_name = request.form.get('full_name')
-        current_user.email = request.form.get('email')
-        current_user.phone = request.form.get('phone')
-        current_user.position = request.form.get('position')
-        current_user.department = request.form.get('department')
-        current_user.bio = request.form.get('bio')
-        current_user.gender = request.form.get('gender')
+        current_user.email = request.form.get('email') or current_user.email
         
-        # Обработка даты рождения
-        birth_date_str = request.form.get('birth_date')
-        if birth_date_str:
-            current_user.birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
-        
-        # Обработка аватара
+        # Обработка аватара (заглушка - поля нет в модели)
         if 'avatar' in request.files:
             avatar = request.files['avatar']
             if avatar and avatar.filename:
-                filename = secure_filename(avatar.filename)
-                # Создание уникального имени файла
-                filename = f"{current_user.id}_{datetime.now().timestamp()}_{filename}"
-                upload_folder = os.path.join('app', 'static', 'uploads', 'avatars')
-                os.makedirs(upload_folder, exist_ok=True)
-                filepath = os.path.join(upload_folder, filename)
-                avatar.save(filepath)
-                current_user.avatar_url = f'/static/uploads/avatars/{filename}'
+                flash('Загрузка аватара временно недоступна', 'warning')
         
         db.session.commit()
         flash('Профиль успешно обновлен!', 'success')
@@ -60,17 +42,10 @@ def update_profile():
 def update_additional_info():
     """Обновление дополнительной информации"""
     try:
-        current_user.address = request.form.get('address')
-        current_user.city = request.form.get('city')
-        current_user.country = request.form.get('country')
-        current_user.timezone = request.form.get('timezone')
-        current_user.language = request.form.get('language')
-        
-        db.session.commit()
-        flash('Дополнительная информация обновлена!', 'success')
+        # Заглушка - поля не существуют в модели User
+        flash('Дополнительные поля профиля будут добавлены в следующей версии', 'info')
     except Exception as e:
-        db.session.rollback()
-        flash(f'Ошибка при обновлении: {str(e)}', 'error')
+        flash(f'Ошибка: {str(e)}', 'error')
     
     return redirect(url_for('profile.settings'))
 
