@@ -1,0 +1,96 @@
+/**
+ * Fallback для иконок
+ * Если Font Awesome не загружен, используем unicode символы
+ */
+
+/* Проверка загрузки Font Awesome */
+@font-face {
+    font-family: 'FontAwesome-Test';
+    src: local('Font Awesome 6 Free');
+}
+
+/* Fallback иконки через unicode и текст */
+.icon-fallback-enabled .fas::before,
+.icon-fallback-enabled .far::before,
+.icon-fallback-enabled .fab::before,
+.icon-fallback-enabled .bi::before {
+    font-family: Arial, sans-serif !important;
+    font-weight: normal !important;
+}
+
+/* Специфичные fallback для часто используемых иконок */
+.icon-fallback-enabled .fa-users-cog::before { content: '👥'; }
+.icon-fallback-enabled .fa-moon::before { content: '🌙'; }
+.icon-fallback-enabled .fa-sun::before { content: '☀️'; }
+.icon-fallback-enabled .fa-bell::before { content: '🔔'; }
+.icon-fallback-enabled .fa-user-circle::before { content: '👤'; }
+.icon-fallback-enabled .fa-user::before { content: '👤'; }
+.icon-fallback-enabled .fa-cog::before { content: '⚙️'; }
+.icon-fallback-enabled .fa-question-circle::before { content: '❓'; }
+.icon-fallback-enabled .fa-sign-out-alt::before { content: '🚪'; }
+.icon-fallback-enabled .fa-envelope::before { content: '✉️'; }
+.icon-fallback-enabled .fa-briefcase::before { content: '💼'; }
+.icon-fallback-enabled .fa-file-alt::before { content: '📄'; }
+.icon-fallback-enabled .fa-umbrella-beach::before { content: '🏖️'; }
+.icon-fallback-enabled .fa-chart-bar::before { content: '📊'; }
+.icon-fallback-enabled .fa-chart-line::before { content: '📈'; }
+.icon-fallback-enabled .fa-history::before { content: '🕐'; }
+.icon-fallback-enabled .fa-cogs::before { content: '⚙️'; }
+.icon-fallback-enabled .fa-database::before { content: '💾'; }
+.icon-fallback-enabled .fa-plus::before { content: '+'; }
+.icon-fallback-enabled .fa-edit::before { content: '✏️'; }
+.icon-fallback-enabled .fa-trash::before { content: '🗑️'; }
+.icon-fallback-enabled .fa-search::before { content: '🔍'; }
+.icon-fallback-enabled .fa-download::before { content: '⬇️'; }
+.icon-fallback-enabled .fa-upload::before { content: '⬆️'; }
+.icon-fallback-enabled .fa-save::before { content: '💾'; }
+.icon-fallback-enabled .fa-times::before { content: '✖️'; }
+.icon-fallback-enabled .fa-check::before { content: '✓'; }
+.icon-fallback-enabled .fa-arrow-left::before { content: '←'; }
+.icon-fallback-enabled .fa-arrow-right::before { content: '→'; }
+
+/* Bootstrap Icons fallback */
+.icon-fallback-enabled .bi-house-fill::before { content: '🏠'; }
+.icon-fallback-enabled .bi-speedometer2::before { content: '📊'; }
+.icon-fallback-enabled .bi-people-fill::before { content: '👥'; }
+.icon-fallback-enabled .bi-building::before { content: '🏢'; }
+.icon-fallback-enabled .bi-magic::before { content: '✨'; }
+
+/* Альтернативный вариант - текстовые метки */
+.icon-fallback-text .fa-users-cog::after { content: ' Сотрудники'; margin-left: 4px; }
+.icon-fallback-text .fa-moon::after { content: ' Тема'; margin-left: 4px; }
+.icon-fallback-text .fa-bell::after { content: ' Уведомления'; margin-left: 4px; }
+.icon-fallback-text .bi-house-fill::after { content: ' Главная'; margin-left: 4px; }
+.icon-fallback-text .bi-speedometer2::after { content: ' Панель'; margin-left: 4px; }
+
+/* Стиль для emoji иконок */
+.icon-fallback-enabled .fas,
+.icon-fallback-enabled .far,
+.icon-fallback-enabled .fab,
+.icon-fallback-enabled .bi {
+    font-style: normal;
+    font-size: 1.2em;
+    vertical-align: middle;
+}
+
+/* Скрыть пустые иконки если не загружены */
+.no-icons-loaded .fas::before,
+.no-icons-loaded .far::before,
+.no-icons-loaded .fab::before,
+.no-icons-loaded .bi::before {
+    content: '' !important;
+}
+
+/* Индикатор загрузки иконок */
+.icons-loading {
+    position: relative;
+}
+
+.icons-loading::after {
+    content: '⏳';
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 0.8em;
+    opacity: 0.5;
+}
