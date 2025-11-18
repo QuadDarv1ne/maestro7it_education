@@ -955,6 +955,7 @@ pre {
 
 .data-grid-table th.sortable {
     cursor: pointer;
+    -webkit-user-select: none;
     user-select: none;
     transition: background-color 0.2s;
 }
