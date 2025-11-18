@@ -106,7 +106,7 @@
         </div>
     </div>
     
-    <div class="card mt-4" id="statisticsCard" style="display: none;">
+    <div class="card mt-4 statistics-card" id="statisticsCard">
         <div class="card-header">
             <h5>Статистика результатов</h5>
         </div>
@@ -140,7 +140,7 @@
         </div>
     </div>
     
-    <div class="card mt-4" id="resultsCard" style="display: none;">
+    <div class="card mt-4 results-card" id="resultsCard">
         <div class="card-header">
             <h5>Результаты поиска</h5>
         </div>
@@ -211,7 +211,7 @@ function displayResults(data) {
     
     if (data.employees.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="text-center">Сотрудники не найдены</td></tr>';
-        document.getElementById('resultsCard').style.display = 'block';
+        document.getElementById('resultsCard').classList.add('show');
         return;
     }
     
@@ -219,9 +219,9 @@ function displayResults(data) {
         const tr = document.createElement('tr');
         
         let statusBadge = '';
-        if (emp.status === 'active') statusBadge = '<span class="badge badge-success">Активный</span>';
-        else if (emp.status === 'inactive') statusBadge = '<span class="badge badge-secondary">Уволен</span>';
-        else if (emp.status === 'on_leave') statusBadge = '<span class="badge badge-warning">В отпуске</span>';
+        if (emp.status === 'active') statusBadge = '<span class="badge bg-success">Активный</span>';
+        else if (emp.status === 'inactive') statusBadge = '<span class="badge bg-secondary">Уволен</span>';
+        else if (emp.status === 'on_leave') statusBadge = '<span class="badge bg-warning">В отпуске</span>';
         
         tr.innerHTML = `
             <td>${emp.full_name}</td>
@@ -240,7 +240,7 @@ function displayResults(data) {
         tbody.appendChild(tr);
     });
     
-    document.getElementById('resultsCard').style.display = 'block';
+    document.getElementById('resultsCard').classList.add('show');
 }
 
 function displayStatistics(stats) {
@@ -249,7 +249,7 @@ function displayStatistics(stats) {
     document.getElementById('inactiveCount').textContent = stats.by_status.inactive || 0;
     document.getElementById('onLeaveCount').textContent = stats.by_status.on_leave || 0;
     
-    document.getElementById('statisticsCard').style.display = 'block';
+    document.getElementById('statisticsCard').classList.add('show');
 }
 
 function displayPagination(pagination) {
@@ -289,8 +289,8 @@ function changePage(page) {
 
 function resetForm() {
     document.getElementById('searchForm').reset();
-    document.getElementById('resultsCard').style.display = 'none';
-    document.getElementById('statisticsCard').style.display = 'none';
+    document.getElementById('resultsCard').classList.remove('show');
+    document.getElementById('statisticsCard').classList.remove('show');
 }
 </script>
 

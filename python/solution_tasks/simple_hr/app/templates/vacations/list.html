@@ -92,7 +92,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title">Отклонить отпуск</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть" title="Закрыть"></button>
                                 </div>
                                 <form method="POST" action="{{ url_for('vacations.reject_vacation', id=vacation.id) }}">
                                     <div class="modal-body">

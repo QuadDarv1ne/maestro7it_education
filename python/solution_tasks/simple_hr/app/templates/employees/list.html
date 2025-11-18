@@ -88,13 +88,9 @@
                          id="searchSpinner" role="status">
                         <span class="visually-hidden">Поиск...</span>
                     </div>
-                    <div class="list-group position-absolute w-100 shadow-lg d-none" id="searchSuggestions" 
-                         style="z-index: 1000; max-height: 300px; overflow-y: auto;"></div>
+                    <div class="list-group position-absolute w-100 shadow-lg d-none search-suggestions" id="searchSuggestions"></div>
                 </div>
                 <small class="text-muted">Поиск по ФИО, email, табельному номеру</small>
-            </div>
-                <small class="text-muted">Поиск по ФИО, email, табельному номеру</small>
-                <datalist id="search-suggestions"></datalist>
             </div>
             <div class="col-md-2">
                 <label for="department_id" class="form-label">
@@ -137,7 +133,7 @@
                 </select>
             </div>
             <div class="col-md-1 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100" title="Поиск">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
@@ -159,13 +155,13 @@
             <table class="table table-hover mb-0" id="employees-table">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 10%">Табельный №</th>
-                        <th style="width: 25%">Сотрудник</th>
-                        <th style="width: 15%">Подразделение</th>
-                        <th style="width: 15%">Должность</th>
-                        <th style="width: 10%">Дата приема</th>
-                        <th style="width: 10%">Статус</th>
-                        <th style="width: 15%" class="text-center">Действия</th>
+                        <th class="col-10">Табельный №</th>
+                        <th class="col-25">Сотрудник</th>
+                        <th class="col-15">Подразделение</th>
+                        <th class="col-15">Должность</th>
+                        <th class="col-10">Дата приема</th>
+                        <th class="col-10">Статус</th>
+                        <th class="col-15 text-center">Действия</th>
                     </tr>
                 </thead>
                 <tbody id="employees-tbody">

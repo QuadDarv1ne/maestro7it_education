@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSocket Notifications Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
@@ -12,7 +13,7 @@
     <div id="status">Статус: <span id="connection-status">Отключено</span></div>
     
     <h2>Уведомления:</h2>
-    <div id="notifications" style="border: 1px solid #ccc; padding: 10px; min-height: 200px; max-height: 400px; overflow-y: auto;">
+    <div id="notifications" class="notification-box">
         <!-- Notifications will appear here -->
     </div>
     
