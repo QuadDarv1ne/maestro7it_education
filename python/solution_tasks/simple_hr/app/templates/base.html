@@ -46,6 +46,29 @@
     <!-- Custom Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
+    <!-- Force Font Awesome visibility -->
+    <style>
+        /* Ensure Font Awesome icons are visible */
+        .fa, .fas, .far, .fal, .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro" !important;
+            font-weight: 900;
+            -webkit-font-smoothing: antialiased;
+            display: inline-block !important;
+            font-style: normal;
+            font-variant: normal;
+            line-height: 1;
+            text-rendering: auto;
+        }
+        
+        .far {
+            font-weight: 400;
+        }
+        
+        .fab {
+            font-family: "Font Awesome 6 Brands" !important;
+        }
+    </style>
+    
     <!-- Icon Loader (загрузка в head для ранней проверки) -->
     <script src="{{ url_for('static', filename='icon-loader.js') }}"></script>
     
@@ -58,11 +81,16 @@
     </button>
     
     <!-- Top Navbar -->
-    <nav class="navbar navbar-expand-lg shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-modern">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
-                <i class="fas fa-users-cog me-2"></i>
-                <span>Simple HR</span>
+                <div class="brand-icon-wrapper">
+                    <i class="fas fa-users-cog"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">Simple HR</span>
+                    <small class="brand-subtitle">Управление персоналом</small>
+                </div>
             </a>
             
             {% if current_user.is_authenticated %}
@@ -71,10 +99,49 @@
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Quick Search -->
+                <form class="search-form mx-auto d-none d-lg-flex" action="{{ url_for('search.advanced_search') }}" method="get">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" 
+                               class="form-control search-input" 
+                               name="text" 
+                               placeholder="Быстрый поиск сотрудников, отделов..."
+                               autocomplete="off">
+                        <kbd class="search-shortcut">Ctrl+K</kbd>
+                    </div>
+                </form>
+                
                 <ul class="navbar-nav ms-auto align-items-center">
+                    <!-- Quick Actions -->
+                    <li class="nav-item dropdown me-2">
+                        <a class="nav-link nav-icon" 
+                           href="#" 
+                           role="button" 
+                           data-bs-toggle="dropdown"
+                           aria-label="Быстрые действия"
+                           title="Быстрые действия">
+                            <i class="fas fa-plus-circle"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                            <li><h6 class="dropdown-header">
+                                <i class="fas fa-bolt me-2"></i>Быстрые действия
+                            </h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employees.create_employee') }}">
+                                <i class="fas fa-user-plus me-2 text-primary"></i>Добавить сотрудника
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('vacations.create_vacation') }}">
+                                <i class="fas fa-calendar-plus me-2 text-success"></i>Создать отпуск
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('orders.create_order') }}">
+                                <i class="fas fa-file-alt me-2 text-warning"></i>Новый приказ
+                            </a></li>
+                        </ul>
+                    </li>
                     <!-- Notifications -->
                     <li class="nav-item dropdown me-2">
-                        <a class="nav-link position-relative d-flex align-items-center" 
+                        <a class="nav-link nav-icon position-relative" 
                            href="#" 
                            role="button" 
                            data-bs-toggle="dropdown"
@@ -96,13 +163,20 @@
                     
                     <!-- User Menu -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" 
+                        <a class="nav-link user-menu d-flex align-items-center" 
                            href="#" 
                            role="button" 
                            data-bs-toggle="dropdown"
                            aria-label="Профиль пользователя">
-                            <i class="fas fa-user-circle me-2"></i>
-                            <span>{{ current_user.username }}</span>
+                            <div class="user-avatar">
+                                <i class="fas fa-user-circle"></i>
+                                <span class="status-indicator"></span>
+                            </div>
+                            <div class="user-info d-none d-lg-block">
+                                <span class="user-name">{{ current_user.username }}</span>
+                                <small class="user-role">{{ current_user.role if current_user.role else 'Сотрудник' }}</small>
+                            </div>
+                            <i class="fas fa-chevron-down ms-2 dropdown-arrow"></i>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
                             <li><h6 class="dropdown-header">

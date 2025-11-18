@@ -169,10 +169,10 @@ def create_app(config_class=Config):
     
     # Инициализация систем мониторинга и оптимизации
     try:
-        # Инициализация Redis кэша
-        from app.utils.redis_cache import cache as redis_cache
-        redis_cache.init_app(app)
-        logger.info("Redis cache initialized")
+        # Инициализация Redis кэша (отключен для стабильности)
+        # from app.utils.redis_cache import cache as redis_cache
+        # redis_cache.init_app(app)
+        # logger.info("Redis cache initialized")
         
         # Инициализация мониторинга производительности
         from app.utils.performance_monitoring import performance_monitor
