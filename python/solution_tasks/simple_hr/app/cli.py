@@ -236,6 +236,69 @@ def migrate_vacation_status():
         click.echo(traceback.format_exc(), err=True)
 
 
+@cli.command()
+@with_appcontext
+def optimize_static():
+    """Оптимизация статических файлов (минификация и сжатие)"""
+    from app.utils.static_optimizer import optimize_static_files
+    
+    try:
+        from flask import current_app
+        stats = optimize_static_files(current_app)
+        click.echo('✓ Оптимизация завершена успешно')
+    except Exception as e:
+        click.echo(f'✗ Ошибка оптимизации: {str(e)}', err=True)
+
+
+@cli.command()
+@with_appcontext
+def clear_cache():
+    """Очистка всего кэша приложения"""
+    from app.utils.redis_cache import cache
+    
+    try:
+        if cache.flush_all():
+            click.echo('✓ Кэш успешно очищен')
+        else:
+            click.echo('⚠ Кэш не включен или не доступен')
+    except Exception as e:
+        click.echo(f'✗ Ошибка очистки кэша: {str(e)}', err=True)
+
+
+@cli.command()
+@with_appcontext
+def cache_stats_cli():
+    """Показать статистику кэша"""
+    from app.utils.redis_cache import cache_stats
+    
+    try:
+        stats = cache_stats()
+        click.echo('\n📊 Статистика кэша')
+        click.echo('=' * 50)
+        
+        if not stats.get('enabled'):
+            click.echo('⚠ Кэш выключен')
+            if 'error' in stats:
+                click.echo(f'Ошибка: {stats["error"]}')
+        else:
+            click.echo(f'Тип кэша: {stats.get("type", "unknown")}')
+            click.echo(f'Количество ключей: {stats.get("keys", 0)}')
+            
+            if stats.get('type') == 'redis':
+                click.echo(f'Попаданий: {stats.get("hits", 0)}')
+                click.echo(f'Промахов: {stats.get("misses", 0)}')
+                click.echo(f'Использовано памяти: {stats.get("memory_used", "N/A")}')
+                
+                total = stats.get('hits', 0) + stats.get('misses', 0)
+                if total > 0:
+                    hit_rate = (stats.get('hits', 0) / total) * 100
+                    click.echo(f'Hit Rate: {hit_rate:.1f}%')
+        
+        click.echo('=' * 50 + '\n')
+    except Exception as e:
+        click.echo(f'✗ Ошибка получения статистики: {str(e)}', err=True)
+
+
 def register_commands(app):
     """Регистрация всех команд в приложении"""
     app.cli.add_command(cli)

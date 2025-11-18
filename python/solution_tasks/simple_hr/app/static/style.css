@@ -213,6 +213,33 @@ body.dark-mode .skeleton {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Notification Badge */
+.badge-notification {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    font-size: 0.65rem;
+    padding: 0.25em 0.4em;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+.nav-link {
+    position: relative;
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #667eea;
+}
+
+.nav-link .fas,
+.nav-link .bi {
+    font-size: 1.2rem;
+}
+
 /* Icon spacing */
 .fas:not(:last-child), 
 .far:not(:last-child), 
@@ -539,6 +566,7 @@ a .bi {
 /* Navbar Enhancements */
 .navbar {
     box-shadow: var(--shadow-sm);
+    background-color: #ffffff !important;
 }
 
 .navbar-brand {
@@ -550,16 +578,19 @@ a .bi {
     background-clip: text;
 }
 
-.nav-link {
+/* Navbar Links */
+.navbar .nav-link {
     position: relative;
     transition: var(--transition-base);
+    color: #495057 !important;
+    padding: 0.5rem 1rem;
 }
 
-.nav-link:hover {
+.navbar .nav-link:hover {
     color: #667eea !important;
 }
 
-.nav-link::after {
+.navbar .nav-link::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -571,8 +602,97 @@ a .bi {
     transform: translateX(-50%);
 }
 
-.nav-link:hover::after {
+.navbar .nav-link:hover::after {
     width: 80%;
+}
+
+/* Notification Bell */
+.navbar .nav-link .fa-bell {
+    font-size: 1.3rem;
+    color: #495057;
+}
+
+.navbar .nav-link:hover .fa-bell {
+    color: #667eea;
+    animation: bellRing 0.5s ease;
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+}
+
+/* Notification Badge - Enhanced */
+.badge-notification {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #dc3545 !important;
+    color: white !important;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.25em 0.5em;
+    border-radius: 10px;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.4);
+    z-index: 10;
+}
+
+/* User Menu Icon */
+.navbar .fa-user-circle {
+    font-size: 1.5rem;
+    color: #495057;
+}
+
+.navbar .nav-link:hover .fa-user-circle {
+    color: #667eea;
+}
+
+/* Dropdown Menu Enhancements */
+.dropdown-menu {
+    border: none !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    border-radius: 10px;
+    padding: 0.5rem 0;
+    min-width: 250px;
+}
+
+.navbar .dropdown-menu {
+    min-width: 300px;
+}
+
+.dropdown-header {
+    font-weight: 700;
+    color: #667eea;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+.dropdown-item {
+    padding: 0.75rem 1.25rem;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    padding-left: 1.5rem;
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.dropdown-divider {
+    margin: 0.5rem 0;
+    opacity: 0.1;
 }
 
 /* Alert Styles */
