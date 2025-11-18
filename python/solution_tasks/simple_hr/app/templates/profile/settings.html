@@ -329,7 +329,7 @@
                     </div>
 
                     <!-- Вкладка: Безопасность -->
-                    <div class="tab-content" id="account-content" style="display: none;">
+                    <div class="tab-content d-none" id="account-content">
                         <div class="card shadow-sm mb-4">
                             <div class="card-header bg-white">
                                 <h5 class="mb-0">
@@ -384,7 +384,7 @@
                     </div>
 
                     <!-- Вкладка: Уведомления -->
-                    <div class="tab-content" id="notifications-content" style="display: none;">
+                    <div class="tab-content d-none" id="notifications-content">
                         <div class="card shadow-sm">
                             <div class="card-header bg-white">
                                 <h5 class="mb-0">
@@ -439,7 +439,7 @@
                     </div>
 
                     <!-- Вкладка: Предпочтения -->
-                    <div class="tab-content" id="preferences-content" style="display: none;">
+                    <div class="tab-content d-none" id="preferences-content">
                         <div class="card shadow-sm">
                             <div class="card-header bg-white">
                                 <h5 class="mb-0">
@@ -492,8 +492,8 @@
                     </div>
 
                     <!-- Вкладка: Приватность -->
-                    <div class="tab-content" id="privacy-content" style="display: none;">
-                        <div class="card shadow-sm">
+                    <div class="tab-content d-none" id="privacy-content">
+                        <div class="card shadow-sm mb-4">
                             <div class="card-header bg-white">
                                 <h5 class="mb-0">
                                     <i class="fas fa-user-shield me-2"></i>
@@ -564,80 +564,82 @@
     </div>
 </div>
 
+<!-- Toast библиотека -->
+<script src="https://cdn.jsdelivr.net/npm/hot-toast@1.0.4/dist/hot-toast.min.js"></script>
+
 <style>
-.list-group-item {
-    border-left: 3px solid transparent;
-    transition: all 0.3s ease;
-}
-
-.list-group-item.active {
-    background-color: rgba(102, 126, 234, 0.1);
-    border-left-color: #667eea;
-    color: #667eea;
-    font-weight: 600;
-}
-
-.list-group-item:hover {
-    background-color: rgba(102, 126, 234, 0.05);
-}
-
-.avatar-preview img {
-    object-fit: cover;
-    border: 3px solid #e2e8f0;
-}
-
-.card {
-    border: none;
-    border-radius: 12px;
-}
-
-.card-header {
-    border-bottom: 1px solid #e2e8f0;
-    padding: 1.25rem;
-}
+    .list-group-item.active { background: rgba(102,126,234,.08); border-left: 4px solid #667eea; font-weight: 600; }
+    .list-group-item:hover:not(.active) { background: rgba(102,126,234,.04); }
+    .card { border-radius: 1rem; }
+    #avatar-preview { transition: all .3s; }
+    #avatar-preview:hover { border-color: #667eea !important; }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Переключение вкладок
-    const tabLinks = document.querySelectorAll('[data-tab]');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('[data-tab]');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', e => {
             e.preventDefault();
-            
-            // Убрать active у всех ссылок
-            tabLinks.forEach(l => l.classList.remove('active'));
-            
-            // Скрыть все контенты
-            tabContents.forEach(content => content.style.display = 'none');
-            
-            // Показать выбранный контент
-            const tabName = this.getAttribute('data-tab');
-            document.getElementById(tabName + '-content').style.display = 'block';
-            
-            // Добавить active к текущей ссылке
-            this.classList.add('active');
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.add('d-none'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab + '-content').classList.remove('d-none');
+            history.replaceState(null, '', '#' + tab.dataset.tab);
         });
     });
 
     // Предпросмотр аватара
-    const avatarInput = document.getElementById('avatar');
-    const avatarPreview = document.getElementById('avatar-preview');
-    
-    if (avatarInput) {
-        avatarInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    avatarPreview.src = e.target.result;
+    document.getElementById('avatar')?.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file && file.size <= 5*1024*1024) {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                document.getElementById('avatar-preview').src = ev.target.result;
+                document.getElementById('header-avatar').src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else if (file) {
+            hotToast.error('Файл больше 5 МБ');
+        }
+    });
+
+    // Удаление аватара
+    document.getElementById('delete-avatar')?.addEventListener('click', () => {
+        if (confirm('Удалить фото профиля?')) {
+            fetch('{{ url_for("profile.delete_avatar") }}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    document.getElementById('avatar-preview').src = '{{ url_for('static', filename='img/default-avatar.png') }}';
+                    document.getElementById('header-avatar').src = '{{ url_for('static', filename='img/default-avatar.png') }}';
+                    hotToast.success('Фото удалено');
                 }
-                reader.readAsDataURL(file);
-            }
+            });
+        }
+    });
+
+    // Счётчик символов в био
+    const bio = document.querySelector('[name="bio"]');
+    if (bio) bio.addEventListener('input', () => document.getElementById('bio-counter').textContent = bio.value.length);
+
+    // Успешное сохранение всех форм
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            const oldHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Сохранение...';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = oldHTML;
+                hotToast.success('Изменения сохранены');
+            }, 1200);
         });
-    }
+    });
 });
 </script>
 {% endblock %}

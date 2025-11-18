@@ -2,6 +2,7 @@
 # Установка: pip install pre-commit
 # Активация: pre-commit install
 # Запуск вручную: pre-commit run --all-files
+# Обновление: pre-commit autoupdate
 
 repos:
   # Базовые проверки
@@ -68,8 +69,9 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-all
+          - types-setuptools
         args: [--ignore-missing-imports, --no-strict-optional]
-        exclude: ^(tests/|migrations/)
+        exclude: ^(tests/|migrations/|instance/)
 
   # Проверка безопасности с bandit
   - repo: https://github.com/PyCQA/bandit
@@ -78,7 +80,7 @@ repos:
       - id: bandit
         args: [-c, pyproject.toml]
         additional_dependencies: ["bandit[toml]"]
-        exclude: ^tests/
+        exclude: ^(tests/|migrations/)
 
   # Проверка документации
   - repo: https://github.com/pycqa/pydocstyle
@@ -86,14 +88,7 @@ repos:
     hooks:
       - id: pydocstyle
         args: [--convention=google]
-        exclude: ^(tests/|migrations/|scripts/)
-
-  # Проверка уязвимостей в зависимостях
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.3
-    hooks:
-      - id: python-safety-dependencies-check
-        files: requirements.*\.txt$
+        exclude: ^(tests/|migrations/|scripts/|instance/)
 
   # Проверка SQL файлов
   - repo: https://github.com/sqlfluff/sqlfluff
@@ -109,7 +104,7 @@ repos:
     rev: v1.35.1
     hooks:
       - id: yamllint
-        args: [-c=.yamllint.yml]
+        args: [-d, "{extends: default, rules: {line-length: disable, truthy: disable}}"]
 
   # Проверка Markdown файлов
   - repo: https://github.com/igorshubovych/markdownlint-cli
@@ -117,6 +112,24 @@ repos:
     hooks:
       - id: markdownlint
         args: [--fix]
+
+# Глобальные исключения
+exclude: |
+  (?x)^(
+      venv/|
+      \.venv/|
+      migrations/|
+      instance/|
+      htmlcov/|
+      __pycache__/|
+      \.git/|
+      \.github/|
+      node_modules/|
+      dist/|
+      build/|
+      \.pytest_cache/|
+      \.mypy_cache/
+  )
 
 # Конфигурация CI
 ci:

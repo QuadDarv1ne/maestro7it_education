@@ -113,11 +113,13 @@ python run.py
 ### Режимы запуска
 
 **Режим разработки:**
+
 ```bash
 python run.py
 ```
 
 **С использованием Flask CLI:**
+
 ```bash
 export FLASK_APP=run.py
 export FLASK_ENV=development
@@ -125,6 +127,7 @@ flask run
 ```
 
 **С Docker:**
+
 ```bash
 # Быстрый старт
 docker-compose up -d
@@ -295,12 +298,14 @@ flask cli cache-stats-cli
 ### Оптимизированные файлы
 
 **CSS (44.69 KB):**
+
 - `style.css` (19.42 KB) - основные стили
 - `enhanced-animations.css` (9.66 KB) - анимации
 - `theme-system.css` (11.46 KB) - система тем
 - `icon-fallback.css` (4.15 KB) - fallback иконки
 
 **JavaScript (148.82 KB):**
+
 - 12 модульных компонентов
 - Готовы к минификации
 - Lazy loading поддержка
@@ -416,7 +421,7 @@ server {
 
 **Автор:** Дуплей Максим Игоревич  
 **Telegram:** @quadd4rv1n7  
-**Email:** maksimqwe42@mail.ru  
+**Email:** [maksimqwe42@mail.ru](mailto:maksimqwe42@mail.ru)  
 **Версия:** 2.3
 
 
