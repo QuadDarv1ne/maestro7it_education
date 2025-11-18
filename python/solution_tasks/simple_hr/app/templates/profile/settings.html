@@ -1,0 +1,644 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки профиля - Simple HR{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-user-cog me-2 text-primary"></i>
+                        Настройки профиля
+                    </h1>
+                    <p class="text-muted mb-0">Управление личной информацией и настройками аккаунта</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Боковое меню настроек -->
+                <div class="col-lg-3 col-md-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                <a href="#profile" class="list-group-item list-group-item-action active" data-tab="profile">
+                                    <i class="fas fa-user me-2"></i> Профиль
+                                </a>
+                                <a href="#account" class="list-group-item list-group-item-action" data-tab="account">
+                                    <i class="fas fa-shield-alt me-2"></i> Безопасность
+                                </a>
+                                <a href="#notifications" class="list-group-item list-group-item-action" data-tab="notifications">
+                                    <i class="fas fa-bell me-2"></i> Уведомления
+                                </a>
+                                <a href="#preferences" class="list-group-item list-group-item-action" data-tab="preferences">
+                                    <i class="fas fa-sliders-h me-2"></i> Предпочтения
+                                </a>
+                                <a href="#privacy" class="list-group-item list-group-item-action" data-tab="privacy">
+                                    <i class="fas fa-lock me-2"></i> Приватность
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Информация об аккаунте -->
+                    <div class="card shadow-sm mt-3">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Информация об аккаунте
+                            </h6>
+                            <div class="small">
+                                <div class="mb-2">
+                                    <span class="text-muted">Статус:</span>
+                                    <span class="badge bg-success ms-2">Активен</span>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="text-muted">Роль:</span>
+                                    <strong class="ms-2">{{ current_user.role or 'Сотрудник' }}</strong>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="text-muted">Дата регистрации:</span>
+                                    <div class="ms-2">{{ current_user.created_at.strftime('%d.%m.%Y') if current_user.created_at else 'Не указано' }}</div>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Последний вход:</span>
+                                    <div class="ms-2">{{ current_user.last_login.strftime('%d.%m.%Y %H:%M') if current_user.last_login else 'Никогда' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Основной контент -->
+                <div class="col-lg-9 col-md-8">
+                    <!-- Вкладка: Профиль -->
+                    <div class="tab-content active" id="profile-content">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-id-card me-2"></i>
+                                    Личная информация
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('profile.update_profile') }}" enctype="multipart/form-data">
+                                    {{ form.hidden_tag() }}
+                                    
+                                    <!-- Аватар -->
+                                    <div class="row mb-4">
+                                        <div class="col-12">
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-upload-wrapper">
+                                                    <div class="avatar-preview">
+                                                        <img src="{{ current_user.avatar_url or url_for('static', filename='img/default-avatar.png') }}" 
+                                                             alt="Avatar" 
+                                                             class="rounded-circle" 
+                                                             width="120" 
+                                                             height="120"
+                                                             id="avatar-preview">
+                                                    </div>
+                                                </div>
+                                                <div class="ms-4">
+                                                    <h5>{{ current_user.full_name or current_user.username }}</h5>
+                                                    <p class="text-muted mb-2">{{ current_user.email }}</p>
+                                                    <div>
+                                                        <label for="avatar" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-upload me-1"></i> Загрузить фото
+                                                        </label>
+                                                        <input type="file" id="avatar" name="avatar" class="d-none" accept="image/*">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger ms-2">
+                                                            <i class="fas fa-trash me-1"></i> Удалить
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <!-- ФИО -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="full_name" class="form-label">
+                                                <i class="fas fa-user me-1"></i> Полное имя
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="full_name" 
+                                                   name="full_name" 
+                                                   value="{{ current_user.full_name or '' }}"
+                                                   placeholder="Иванов Иван Иванович">
+                                        </div>
+
+                                        <!-- Логин -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="username" class="form-label">
+                                                <i class="fas fa-at me-1"></i> Логин
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="username" 
+                                                   name="username" 
+                                                   value="{{ current_user.username }}"
+                                                   readonly>
+                                            <small class="text-muted">Логин нельзя изменить</small>
+                                        </div>
+
+                                        <!-- Email -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="email" class="form-label">
+                                                <i class="fas fa-envelope me-1"></i> Email
+                                            </label>
+                                            <input type="email" 
+                                                   class="form-control" 
+                                                   id="email" 
+                                                   name="email" 
+                                                   value="{{ current_user.email or '' }}"
+                                                   placeholder="example@company.com">
+                                        </div>
+
+                                        <!-- Телефон -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="phone" class="form-label">
+                                                <i class="fas fa-phone me-1"></i> Номер телефона
+                                            </label>
+                                            <input type="tel" 
+                                                   class="form-control" 
+                                                   id="phone" 
+                                                   name="phone" 
+                                                   value="{{ current_user.phone or '' }}"
+                                                   placeholder="+7 (999) 123-45-67">
+                                        </div>
+
+                                        <!-- Должность -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="position" class="form-label">
+                                                <i class="fas fa-briefcase me-1"></i> Должность
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="position" 
+                                                   name="position" 
+                                                   value="{{ current_user.position or '' }}"
+                                                   placeholder="Менеджер">
+                                        </div>
+
+                                        <!-- Отдел -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="department" class="form-label">
+                                                <i class="fas fa-building me-1"></i> Отдел
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="department" 
+                                                   name="department" 
+                                                   value="{{ current_user.department or '' }}"
+                                                   placeholder="IT отдел">
+                                        </div>
+
+                                        <!-- Дата рождения -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="birth_date" class="form-label">
+                                                <i class="fas fa-birthday-cake me-1"></i> Дата рождения
+                                            </label>
+                                            <input type="date" 
+                                                   class="form-control" 
+                                                   id="birth_date" 
+                                                   name="birth_date" 
+                                                   value="{{ current_user.birth_date.strftime('%Y-%m-%d') if current_user.birth_date else '' }}">
+                                        </div>
+
+                                        <!-- Пол -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="gender" class="form-label">
+                                                <i class="fas fa-venus-mars me-1"></i> Пол
+                                            </label>
+                                            <select class="form-select" id="gender" name="gender">
+                                                <option value="">Не указано</option>
+                                                <option value="male" {{ 'selected' if current_user.gender == 'male' else '' }}>Мужской</option>
+                                                <option value="female" {{ 'selected' if current_user.gender == 'female' else '' }}>Женский</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- О себе -->
+                                        <div class="col-12 mb-3">
+                                            <label for="bio" class="form-label">
+                                                <i class="fas fa-info-circle me-1"></i> О себе
+                                            </label>
+                                            <textarea class="form-control" 
+                                                      id="bio" 
+                                                      name="bio" 
+                                                      rows="3" 
+                                                      placeholder="Расскажите немного о себе...">{{ current_user.bio or '' }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i> Сохранить изменения
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Дополнительная информация -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    Дополнительная информация
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('profile.update_additional_info') }}">
+                                    <div class="row">
+                                        <!-- Адрес -->
+                                        <div class="col-md-12 mb-3">
+                                            <label for="address" class="form-label">
+                                                <i class="fas fa-home me-1"></i> Адрес проживания
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="address" 
+                                                   name="address" 
+                                                   value="{{ current_user.address or '' }}"
+                                                   placeholder="г. Москва, ул. Примерная, д. 1, кв. 1">
+                                        </div>
+
+                                        <!-- Город -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="city" class="form-label">
+                                                <i class="fas fa-city me-1"></i> Город
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="city" 
+                                                   name="city" 
+                                                   value="{{ current_user.city or '' }}"
+                                                   placeholder="Москва">
+                                        </div>
+
+                                        <!-- Страна -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="country" class="form-label">
+                                                <i class="fas fa-flag me-1"></i> Страна
+                                            </label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="country" 
+                                                   name="country" 
+                                                   value="{{ current_user.country or '' }}"
+                                                   placeholder="Россия">
+                                        </div>
+
+                                        <!-- Часовой пояс -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="timezone" class="form-label">
+                                                <i class="fas fa-clock me-1"></i> Часовой пояс
+                                            </label>
+                                            <select class="form-select" id="timezone" name="timezone">
+                                                <option value="Europe/Moscow" selected>Москва (UTC+3)</option>
+                                                <option value="Europe/Samara">Самара (UTC+4)</option>
+                                                <option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option>
+                                                <option value="Asia/Novosibirsk">Новосибирск (UTC+7)</option>
+                                                <option value="Asia/Vladivostok">Владивосток (UTC+10)</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Язык -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="language" class="form-label">
+                                                <i class="fas fa-language me-1"></i> Язык интерфейса
+                                            </label>
+                                            <select class="form-select" id="language" name="language">
+                                                <option value="ru" selected>Русский</option>
+                                                <option value="en">English</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i> Сохранить
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка: Безопасность -->
+                    <div class="tab-content" id="account-content" style="display: none;">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-key me-2"></i>
+                                    Смена пароля
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('profile.change_password') }}">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="current_password" class="form-label">Текущий пароль</label>
+                                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="new_password" class="form-label">Новый пароль</label>
+                                            <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                            <small class="text-muted">Минимум 8 символов</small>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="confirm_password" class="form-label">Подтвердите пароль</label>
+                                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-shield-alt me-1"></i> Изменить пароль
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Двухфакторная аутентификация -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-mobile-alt me-2"></i>
+                                    Двухфакторная аутентификация
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Дополнительная защита вашей учетной записи</p>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="2fa-toggle">
+                                    <label class="form-check-label" for="2fa-toggle">
+                                        Включить двухфакторную аутентификацию
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка: Уведомления -->
+                    <div class="tab-content" id="notifications-content" style="display: none;">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-bell me-2"></i>
+                                    Настройки уведомлений
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('profile.update_notifications') }}">
+                                    <div class="mb-3">
+                                        <h6>Email уведомления</h6>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="email_new_vacation" name="email_new_vacation" checked>
+                                            <label class="form-check-label" for="email_new_vacation">
+                                                Новые заявки на отпуск
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="email_new_order" name="email_new_order" checked>
+                                            <label class="form-check-label" for="email_new_order">
+                                                Новые приказы
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="email_new_employee" name="email_new_employee">
+                                            <label class="form-check-label" for="email_new_employee">
+                                                Новые сотрудники
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <hr>
+
+                                    <div class="mb-3">
+                                        <h6>Push уведомления</h6>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="push_enabled" name="push_enabled" checked>
+                                            <label class="form-check-label" for="push_enabled">
+                                                Включить push-уведомления
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i> Сохранить настройки
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка: Предпочтения -->
+                    <div class="tab-content" id="preferences-content" style="display: none;">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-palette me-2"></i>
+                                    Интерфейс и отображение
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('profile.update_preferences') }}">
+                                    <div class="mb-3">
+                                        <label class="form-label">Тема оформления</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="theme_light" value="light" checked>
+                                            <label class="form-check-label" for="theme_light">
+                                                <i class="fas fa-sun me-1"></i> Светлая
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="theme_dark" value="dark">
+                                            <label class="form-check-label" for="theme_dark">
+                                                <i class="fas fa-moon me-1"></i> Темная
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="theme_auto" value="auto">
+                                            <label class="form-check-label" for="theme_auto">
+                                                <i class="fas fa-adjust me-1"></i> Авто (по системе)
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="items_per_page" class="form-label">Элементов на странице</label>
+                                        <select class="form-select" id="items_per_page" name="items_per_page">
+                                            <option value="10">10</option>
+                                            <option value="20" selected>20</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="text-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i> Сохранить
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка: Приватность -->
+                    <div class="tab-content" id="privacy-content" style="display: none;">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-user-shield me-2"></i>
+                                    Настройки приватности
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6>Видимость профиля</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_email" name="show_email" checked>
+                                        <label class="form-check-label" for="show_email">
+                                            Показывать email другим сотрудникам
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_phone" name="show_phone" checked>
+                                        <label class="form-check-label" for="show_phone">
+                                            Показывать телефон другим сотрудникам
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_birthdate" name="show_birthdate">
+                                        <label class="form-check-label" for="show_birthdate">
+                                            Показывать дату рождения
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <hr>
+
+                                <div class="mb-3">
+                                    <h6 class="text-danger">Опасная зона</h6>
+                                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                        <i class="fas fa-exclamation-triangle me-1"></i> Удалить аккаунт
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно удаления аккаунта -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Удаление аккаунта
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить свой аккаунт?</p>
+                <p class="text-danger"><strong>Это действие необратимо!</strong></p>
+                <p>Все ваши данные будут безвозвратно удалены.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger">Удалить аккаунт</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.list-group-item {
+    border-left: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.list-group-item.active {
+    background-color: rgba(102, 126, 234, 0.1);
+    border-left-color: #667eea;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.list-group-item:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+.avatar-preview img {
+    object-fit: cover;
+    border: 3px solid #e2e8f0;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+}
+
+.card-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.25rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Переключение вкладок
+    const tabLinks = document.querySelectorAll('[data-tab]');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Убрать active у всех ссылок
+            tabLinks.forEach(l => l.classList.remove('active'));
+            
+            // Скрыть все контенты
+            tabContents.forEach(content => content.style.display = 'none');
+            
+            // Показать выбранный контент
+            const tabName = this.getAttribute('data-tab');
+            document.getElementById(tabName + '-content').style.display = 'block';
+            
+            // Добавить active к текущей ссылке
+            this.classList.add('active');
+        });
+    });
+
+    // Предпросмотр аватара
+    const avatarInput = document.getElementById('avatar');
+    const avatarPreview = document.getElementById('avatar-preview');
+    
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
