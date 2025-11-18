@@ -2,33 +2,95 @@
 
 {% block title %}Список сотрудников{% endblock %}
 
+{% block extra_head %}
+<style>
+    .employee-row {
+        transition: background-color 0.2s;
+    }
+    .employee-row:hover {
+        background-color: #f8f9fa;
+    }
+    .search-highlight {
+        background-color: #fff3cd;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    .filter-card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .action-btn {
+        margin: 2px;
+    }
+    .employee-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Список сотрудников</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <a href="{{ url_for('employees.import_employees') }}" class="btn btn-success me-2">Импорт из CSV</a>
-        <a href="{{ url_for('employees.export_excel', **request.args) }}" class="btn btn-info me-2">
-            <i class="bi bi-file-earmark-excel"></i> Экспорт Excel
+        <h2>
+            <i class="fas fa-users text-primary"></i> 
+            Список сотрудников
+        </h2>
+        <p class="text-muted mb-0">
+            <i class="fas fa-info-circle"></i>
+            Всего в системе: <strong>{{ employees.total }}</strong> сотрудников
+        </p>
+    </div>
+    <div>
+        <a href="{{ url_for('employees.import_employees') }}" class="btn btn-success me-2">
+            <i class="fas fa-file-import"></i> Импорт из CSV
         </a>
-        <a href="{{ url_for('employees.export_pdf', **request.args) }}" class="btn btn-danger me-2">
-            <i class="bi bi-file-earmark-pdf"></i> Экспорт PDF
+        <div class="btn-group me-2" role="group">
+            <a href="{{ url_for('employees.export_excel', **request.args) }}" class="btn btn-info" title="Экспорт в Excel">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </a>
+            <a href="{{ url_for('employees.export_pdf', **request.args) }}" class="btn btn-danger" title="Экспорт в PDF">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
+        </div>
+        <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Добавить сотрудника
         </a>
-        <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary">Добавить сотрудника</a>
     </div>
 </div>
 
 <!-- Форма фильтрации -->
-<div class="card mb-3">
+<div class="card mb-4 filter-card">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="fas fa-filter"></i> Фильтры и поиск
+        </h5>
+    </div>
     <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-3">
-                <label for="search" class="form-label">Поиск</label>
-                <input type="text" class="form-control" id="search" name="search" value="{{ current_search or '' }}" placeholder="ФИО, email, табельный номер">
+        <form method="GET" class="row g-3" id="filterForm">
+            <div class="col-md-4">
+                <label for="search" class="form-label">
+                    <i class="fas fa-search"></i> Быстрый поиск
+                </label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ current_search or '' }}" 
+                       placeholder="Введите ФИО, email или табельный номер"
+                       autocomplete="off">
+                <small class="text-muted">Поиск по ФИО, email, табельному номеру</small>
             </div>
-            <div class="col-md-3">
-                <label for="department_id" class="form-label">Подразделение</label>
+            <div class="col-md-2">
+                <label for="department_id" class="form-label">
+                    <i class="fas fa-building"></i> Подразделение
+                </label>
                 <select class="form-select" id="department_id" name="department_id">
-                    <option value="">Все подразделения</option>
+                    <option value="">Все</option>
                     {% for dept in departments %}
                         <option value="{{ dept.id }}" {% if current_department == dept.id %}selected{% endif %}>
                             {{ dept.name }}
@@ -37,9 +99,11 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="position_id" class="form-label">Должность</label>
+                <label for="position_id" class="form-label">
+                    <i class="fas fa-briefcase"></i> Должность
+                </label>
                 <select class="form-select" id="position_id" name="position_id">
-                    <option value="">Все должности</option>
+                    <option value="">Все</option>
                     {% for pos in positions %}
                         <option value="{{ pos.id }}" {% if current_position == pos.id %}selected{% endif %}>
                             {{ pos.title }}
@@ -48,36 +112,140 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="status" class="form-label">Статус</label>
+                <label for="status" class="form-label">
+                    <i class="fas fa-toggle-on"></i> Статус
+                </label>
                 <select class="form-select" id="status" name="status">
-                    <option value="">Все статусы</option>
-                    <option value="active" {% if current_status == 'active' %}selected{% endif %}>Активен</option>
-                    <option value="dismissed" {% if current_status == 'dismissed' %}selected{% endif %}>Уволен</option>
+                    <option value="">Все</option>
+                    <option value="active" {% if current_status == 'active' %}selected{% endif %}>
+                        ✓ Активен
+                    </option>
+                    <option value="dismissed" {% if current_status == 'dismissed' %}selected{% endif %}>
+                        ✗ Уволен
+                    </option>
                 </select>
             </div>
             <div class="col-md-1 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary">Фильтр</button>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
         </form>
+        {% if current_search or current_department or current_position or current_status %}
+        <div class="mt-3">
+            <a href="{{ url_for('employees.list_employees') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-times"></i> Сбросить фильтры
+            </a>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Табельный номер</th>
-            <th>ФИО</th>
-            <th>Email</th>
-            <th>Подразделение</th>
-            <th>Должность</th>
-            <th>Дата приема</th>
-            <th>Статус</th>
-            <th>Действия</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for employee in employees.items %}
-        <tr>
+<!-- Таблица сотрудников -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 10%">Табельный №</th>
+                        <th style="width: 25%">Сотрудник</th>
+                        <th style="width: 15%">Подразделение</th>
+                        <th style="width: 15%">Должность</th>
+                        <th style="width: 10%">Дата приема</th>
+                        <th style="width: 10%">Статус</th>
+                        <th style="width: 15%" class="text-center">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees.items %}
+                    <tr class="employee-row">
+                        <td><strong class="text-primary">{{ employee.employee_id }}</strong></td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="employee-avatar">
+                                    {{ employee.full_name[0]|upper if employee.full_name else '?' }}
+                                </div>
+                                <div>
+                                    <strong>{{ employee.full_name }}</strong><br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-envelope"></i>
+                                        {{ employee.email }}
+                                    </small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-success-soft text-success">
+                                <i class="fas fa-building"></i>
+                                {{ employee.department.name if employee.department else 'Не указано' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info-soft text-info">
+                                <i class="fas fa-briefcase"></i>
+                                {{ employee.position.title if employee.position else 'Не указана' }}
+                            </span>
+                        </td>
+                        <td>
+                            <small>
+                                <i class="fas fa-calendar-alt text-muted"></i>
+                                {{ employee.hire_date.strftime('%d.%m.%Y') if employee.hire_date else 'Не указана' }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if employee.status == 'active' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Активен
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-times-circle"></i> Уволен
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('employees.edit_employee', id=employee.id) }}" 
+                                   class="btn btn-sm btn-outline-primary action-btn" 
+                                   title="Редактировать">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-outline-info action-btn" title="Просмотр">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <form method="POST" 
+                                      action="{{ url_for('employees.delete_employee', id=employee.id) }}" 
+                                      class="d-inline">
+                                    <button type="submit" 
+                                            class="btn btn-sm btn-outline-danger action-btn" 
+                                            onclick="return confirm('Вы уверены, что хотите удалить сотрудника {{ employee.full_name }}?')"
+                                            title="Удалить">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">
+                                {% if current_search or current_department or current_position or current_status %}
+                                    Сотрудники не найдены по заданным критериям
+                                {% else %}
+                                    Список сотрудников пуст
+                                {% endif %}
+                            </p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
             <td>{{ employee.employee_id }}</td>
             <td>{{ employee.full_name }}</td>
             <td>{{ employee.email }}</td>
@@ -104,23 +272,34 @@
 
 <!-- Пагинация -->
 {% if employees.pages > 1 %}
-<nav aria-label="Пагинация">
+<nav aria-label="Пагинация" class="mt-4">
     <ul class="pagination justify-content-center">
         {% if employees.has_prev %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.prev_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">Предыдущая</a>
+                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.prev_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
+                    <i class="fas fa-chevron-left"></i> Предыдущая
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i> Предыдущая</span>
             </li>
         {% endif %}
         
-        {% for page_num in employees.iter_pages() %}
+        {% for page_num in employees.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
             {% if page_num %}
                 {% if page_num != employees.page %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('employees.list_employees', page=page_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">{{ page_num }}</a>
+                        <a class="page-link" href="{{ url_for('employees.list_employees', page=page_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
+                            {{ page_num }}
+                        </a>
                     </li>
                 {% else %}
                     <li class="page-item active">
-                        <span class="page-link">{{ page_num }}</span>
+                        <span class="page-link">
+                            {{ page_num }}
+                            <span class="visually-hidden">(текущая)</span>
+                        </span>
                     </li>
                 {% endif %}
             {% else %}
@@ -132,12 +311,48 @@
         
         {% if employees.has_next %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.next_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">Следующая</a>
+                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.next_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
+                    Следующая <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Следующая <i class="fas fa-chevron-right"></i></span>
             </li>
         {% endif %}
     </ul>
 </nav>
 {% endif %}
 
-<p class="text-center">Показано {{ employees.items|length }} из {{ employees.total }} сотрудников</p>
+<!-- Информация о количестве -->
+<div class="text-center mt-3 mb-4">
+    <p class="text-muted">
+        <i class="fas fa-info-circle"></i>
+        Показано <strong>{{ employees.items|length }}</strong> из <strong>{{ employees.total }}</strong> сотрудников
+        {% if employees.pages > 1 %}
+            (страница {{ employees.page }} из {{ employees.pages }})
+        {% endif %}
+    </p>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Автоматическая отправка формы при изменении фильтров
+    document.querySelectorAll('#department_id, #position_id, #status').forEach(element => {
+        element.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+    
+    // Debounce для поиска
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 500); // Отправка формы через 500мс после последнего ввода
+    });
+</script>
 {% endblock %}

@@ -341,7 +341,7 @@ def generate_vacation_calendar(year, month):
     """Генерация календаря отпусков на месяц"""
     try:
         from calendar import monthrange
-        from datetime import date, datetime
+        from datetime import date, datetime, timedelta
         
         # Получаем первый и последний день месяца
         first_day = date(year, month, 1)
@@ -353,16 +353,16 @@ def generate_vacation_calendar(year, month):
             Vacation.end_date >= first_day
         ).all()
         
-        # Создаем календарь
-        calendar_data = {}
+        # Создаем словарь отпусков по датам
+        vacation_dict = {}
         
-        # Заполняем календарь отпусками
+        # Заполняем словарь отпусками
         for vacation in vacations:
             try:
                 # Определяем даты отпуска в пределах месяца
                 # Преобразуем datetime в date, если необходимо
-                v_start = vacation.start_date if isinstance(vacation.start_date, date) else vacation.start_date.date()
-                v_end = vacation.end_date if isinstance(vacation.end_date, date) else vacation.end_date.date()
+                v_start = vacation.start_date.date() if isinstance(vacation.start_date, datetime) else vacation.start_date
+                v_end = vacation.end_date.date() if isinstance(vacation.end_date, datetime) else vacation.end_date
                 
                 start = max(v_start, first_day)
                 end = min(v_end, last_day)
@@ -370,18 +370,36 @@ def generate_vacation_calendar(year, month):
                 # Добавляем отпуск в календарь для каждой даты
                 current_date = start
                 while current_date <= end:
-                    if current_date not in calendar_data:
-                        calendar_data[current_date] = []
-                    calendar_data[current_date].append(vacation)
+                    if current_date not in vacation_dict:
+                        vacation_dict[current_date] = []
+                    vacation_dict[current_date].append({
+                        'employee_name': vacation.employee.full_name,
+                        'department': vacation.employee.department.name,
+                        'position': vacation.employee.position.title,
+                        'type': vacation.type
+                    })
                     current_date += timedelta(days=1)
             except Exception as e:
                 logger.error(f"Error processing vacation {vacation.id} for calendar: {str(e)}")
                 continue
         
+        # Формируем список для всех дней месяца
+        calendar_data = []
+        current_date = first_day
+        while current_date <= last_day:
+            weekday = current_date.weekday()
+            calendar_data.append({
+                'date': current_date,
+                'weekday': weekday,
+                'is_weekend': weekday in [5, 6],  # Saturday=5, Sunday=6
+                'vacations': vacation_dict.get(current_date, [])
+            })
+            current_date += timedelta(days=1)
+        
         return calendar_data
     except Exception as e:
         logger.error(f"Error generating vacation calendar: {str(e)}")
-        return {}
+        return []
 
 @lru_cache(maxsize=32)
 def generate_turnover_report(period_days=365):

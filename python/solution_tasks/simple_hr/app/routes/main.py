@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template
-from flask_login import login_required
-from app.models import Employee, Department, Position, Vacation, Order
+from flask import Blueprint, render_template, current_app
+from flask_login import login_required, current_user
+from app.models import Employee, Department, Position, Vacation, Order, Notification
 from app import db, cache
 from datetime import datetime, timedelta
+from sqlalchemy import func
 
 bp = Blueprint('main', __name__)
 
@@ -11,46 +12,63 @@ bp = Blueprint('main', __name__)
 @cache.cached(timeout=60)  # Cache for 1 minute
 def index():
     # Get statistics
-    employee_count = Employee.query.count()
+    employee_count = Employee.query.filter_by(status='active').count()
     department_count = Department.query.count()
     position_count = Position.query.count()
     
-    # Active employees count
-    active_employees = Employee.query.filter_by(status='active').count()
-    
-    # Recent hires (last 30 days)
-    thirty_days_ago = datetime.utcnow().date() - timedelta(days=30)
-    recent_hires = Employee.query.filter(
-        Employee.hire_date >= thirty_days_ago
-    ).count()
-    
-    # Upcoming vacations (next 7 days)
+    # Current vacations
     today = datetime.utcnow().date()
-    week_later = today + timedelta(days=7)
-    upcoming_vacations = Vacation.query.filter(
-        Vacation.start_date >= today,
-        Vacation.start_date <= week_later
+    vacation_count = Vacation.query.filter(
+        Vacation.start_date <= today,
+        Vacation.end_date >= today,
+        Vacation.status == 'approved'
     ).count()
     
-    # Recent orders (last 10)
-    recent_orders = Order.query.order_by(Order.date_issued.desc()).limit(10).all()
+    # Birthdays in next 30 days (simulated)
+    birthday_count = 0  # TODO: Add birth_date field to Employee model
     
-    # Get recent employees
-    recent_employees = Employee.query.order_by(Employee.id.desc()).limit(5).all()
+    # Orders count
+    order_count = Order.query.count()
     
-    # Department distribution
-    departments_with_count = db.session.query(
-        Department.name,
-        db.func.count(Employee.id).label('count')
-    ).join(Employee).group_by(Department.id, Department.name).all()
+    # Get recent employees (last 10)
+    recent_employees = Employee.query.order_by(Employee.id.desc()).limit(10).all()
     
-    return render_template('dashboard.html', 
+    # Get recent notifications for current user (last 5)
+    recent_notifications = Notification.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Notification.created_at.desc()).limit(5).all()
+    
+    # Activity data for chart (new employees per day for last 30 days)
+    # Note: Using hire_date as proxy for created_at since Employee model doesn't have created_at
+    activity_labels = []
+    activity_data = []
+    for i in range(29, -1, -1):
+        date = today - timedelta(days=i)
+        next_date = date + timedelta(days=1)
+        count = Employee.query.filter(
+            Employee.hire_date >= date,
+            Employee.hire_date < next_date
+        ).count()
+        activity_labels.append(date.strftime('%d.%m'))
+        activity_data.append(count)
+    
+    # Current date formatted in Russian
+    months_ru = {
+        1: 'января', 2: 'февраля', 3: 'марта', 4: 'апреля',
+        5: 'мая', 6: 'июня', 7: 'июля', 8: 'августа',
+        9: 'сентября', 10: 'октября', 11: 'ноября', 12: 'декабря'
+    }
+    current_date = f"{today.day} {months_ru[today.month]} {today.year} г."
+    
+    return render_template('dashboard.html',
                          employee_count=employee_count,
-                         active_employees=active_employees,
                          department_count=department_count,
                          position_count=position_count,
-                         recent_hires=recent_hires,
-                         upcoming_vacations=upcoming_vacations,
+                         vacation_count=vacation_count,
+                         birthday_count=birthday_count,
+                         order_count=order_count,
                          recent_employees=recent_employees,
-                         recent_orders=recent_orders,
-                         departments_with_count=departments_with_count)
+                         recent_notifications=recent_notifications,
+                         activity_labels=activity_labels,
+                         activity_data=activity_data,
+                         current_date=current_date)

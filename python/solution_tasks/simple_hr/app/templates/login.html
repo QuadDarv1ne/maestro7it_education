@@ -1,53 +1,209 @@
 {% extends "base.html" %}
 
-{% block title %}Вход в систему{% endblock %}
+{% block title %}Вход в систему - Simple HR{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .login-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .login-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        overflow: hidden;
+    }
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+    .login-header h3 {
+        margin: 0;
+        font-weight: 600;
+    }
+    .login-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+    .login-body {
+        padding: 2.5rem;
+        background: white;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-login {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 0.75rem;
+        font-weight: 600;
+        transition: transform 0.2s;
+    }
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+    }
+    .form-control {
+        border-left: none;
+    }
+    .login-links {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e9ecef;
+    }
+    .login-links a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    .login-links a:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+    .icon-input {
+        position: relative;
+    }
+    .icon-input i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    .icon-input input {
+        padding-left: 45px;
+    }
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .login-card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="text-center">Вход в систему</h3>
+<div class="login-container">
+    <div class="col-md-5 col-lg-4">
+        <div class="card login-card">
+            <div class="login-header">
+                <i class="fas fa-user-shield fa-3x mb-3"></i>
+                <h3>Simple HR System</h3>
+                <p>Вход в систему управления персоналом</p>
             </div>
-            <div class="card-body">
-                <form method="POST">
+            <div class="login-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'info-circle' }}"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" novalidate>
                     {{ form.hidden_tag() }}
                     
-                    <div class="mb-3">
-                        {{ form.username.label(class="form-label") }}
-                        {{ form.username(class="form-control") }}
+                    <div class="mb-4">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user"></i> Имя пользователя
+                        </label>
+                        <div class="icon-input">
+                            <i class="fas fa-user"></i>
+                            {{ form.username(class="form-control form-control-lg", placeholder="Введите имя пользователя") }}
+                        </div>
                         {% if form.username.errors %}
-                            <div class="text-danger">
+                            <div class="text-danger mt-2">
                                 {% for error in form.username.errors %}
-                                    <small>{{ error }}</small>
+                                    <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </div>
                     
-                    <div class="mb-3">
-                        {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control") }}
+                    <div class="mb-4">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i> Пароль
+                        </label>
+                        <div class="icon-input">
+                            <i class="fas fa-lock"></i>
+                            {{ form.password(class="form-control form-control-lg", placeholder="Введите пароль") }}
+                        </div>
                         {% if form.password.errors %}
-                            <div class="text-danger">
+                            <div class="text-danger mt-2">
                                 {% for error in form.password.errors %}
-                                    <small>{{ error }}</small>
+                                    <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
                                 {% endfor %}
                             </div>
                         {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="rememberMe">
+                            <label class="form-check-label" for="rememberMe">
+                                Запомнить меня
+                            </label>
+                        </div>
                     </div>
                     
                     <div class="d-grid">
-                        {{ form.submit(class="btn btn-primary") }}
+                        <button type="submit" class="btn btn-primary btn-lg btn-login">
+                            <i class="fas fa-sign-in-alt"></i> Войти в систему
+                        </button>
                     </div>
                 </form>
-                <div class="text-center mt-3">
-                    <a href="{{ url_for('auth.reset_password_request') }}">Забыли пароль?</a>
+
+                <div class="login-links">
+                    <a href="{{ url_for('auth.reset_password_request') }}">
+                        <i class="fas fa-key"></i> Забыли пароль?
+                    </a>
+                    <a href="{{ url_for('auth.register') }}">
+                        <i class="fas fa-user-plus"></i> Регистрация
+                    </a>
                 </div>
-                <div class="text-center mt-2">
-                    <a href="{{ url_for('auth.register') }}">Регистрация</a>
+
+                <div class="text-center mt-4 text-muted">
+                    <small>
+                        <i class="fas fa-shield-alt"></i>
+                        Защищенное соединение
+                    </small>
                 </div>
             </div>
+        </div>
+
+        <!-- Информация для демо -->
+        <div class="text-center mt-3 text-white">
+            <small>
+                <i class="fas fa-info-circle"></i>
+                Демо-доступ: admin / admin123
+            </small>
         </div>
     </div>
 </div>

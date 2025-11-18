@@ -2,68 +2,354 @@
 
 {% block title %}Панель управления{% endblock %}
 
+{% block extra_head %}
+<style>
+    .stat-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .stat-icon {
+        font-size: 3rem;
+        opacity: 0.7;
+    }
+    .quick-action-btn {
+        margin: 5px;
+    }
+    .recent-activity {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .activity-item {
+        border-left: 3px solid #007bff;
+        padding-left: 15px;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-md-4">
-        <div class="card text-white bg-primary mb-3">
-            <div class="card-header">Сотрудники</div>
-            <div class="card-body">
-                <h5 class="card-title">{{ employee_count }}</h5>
-                <p class="card-text">Общее количество сотрудников</p>
-            </div>
-        </div>
+<!-- Приветствие -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">
+            <i class="fas fa-chart-line text-primary"></i> 
+            Добро пожаловать, {{ current_user.username }}!
+        </h1>
+        <p class="lead text-muted">Сегодня {{ current_date|default('18 ноября 2025 г.') }}</p>
     </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-header">Подразделения</div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-light">
             <div class="card-body">
-                <h5 class="card-title">{{ department_count }}</h5>
-                <p class="card-text">Общее количество подразделений</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-white bg-info mb-3">
-            <div class="card-header">Должности</div>
-            <div class="card-body">
-                <h5 class="card-title">{{ position_count }}</h5>
-                <p class="card-text">Общее количество должностей</p>
+                <h5 class="card-title">
+                    <i class="fas fa-bolt text-warning"></i> Быстрые действия
+                </h5>
+                <a href="{{ url_for('employees.create_employee') }}" class="btn btn-primary quick-action-btn">
+                    <i class="fas fa-user-plus"></i> Добавить сотрудника
+                </a>
+                <a href="{{ url_for('vacations.create_vacation') }}" class="btn btn-success quick-action-btn">
+                    <i class="fas fa-plane"></i> Оформить отпуск
+                </a>
+                <a href="{{ url_for('orders.create_order') }}" class="btn btn-info quick-action-btn">
+                    <i class="fas fa-file-alt"></i> Создать приказ
+                </a>
+                <a href="{{ url_for('reports.generate_report') }}" class="btn btn-warning quick-action-btn">
+                    <i class="fas fa-chart-bar"></i> Генерация отчёта
+                </a>
+                <a href="{{ url_for('employees.import_employees') }}" class="btn btn-secondary quick-action-btn">
+                    <i class="fas fa-file-import"></i> Импорт данных
+                </a>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5>Последние добавленные сотрудники</h5>
-            </div>
+<!-- Статистические карточки -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3 stat-card" onclick="window.location.href='{{ url_for('employees.list_employees') }}'">
             <div class="card-body">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Табельный номер</th>
-                            <th>ФИО</th>
-                            <th>Email</th>
-                            <th>Подразделение</th>
-                            <th>Должность</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for employee in recent_employees %}
-                        <tr>
-                            <td>{{ employee.employee_id }}</td>
-                            <td>{{ employee.full_name }}</td>
-                            <td>{{ employee.email }}</td>
-                            <td>{{ employee.department.name if employee.department else 'Не указано' }}</td>
-                            <td>{{ employee.position.title if employee.position else 'Не указана' }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase">Сотрудники</h6>
+                        <h2 class="mb-0">{{ employee_count }}</h2>
+                        <small>Всего активных</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-users stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-primary border-0">
+                <small><i class="fas fa-arrow-right"></i> Перейти к списку</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3 stat-card" onclick="window.location.href='{{ url_for('departments.list_departments') }}'">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase">Подразделения</h6>
+                        <h2 class="mb-0">{{ department_count }}</h2>
+                        <small>Активных отделов</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-building stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-success border-0">
+                <small><i class="fas fa-arrow-right"></i> Перейти к списку</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3 stat-card" onclick="window.location.href='{{ url_for('positions.list_positions') }}'">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase">Должности</h6>
+                        <h2 class="mb-0">{{ position_count }}</h2>
+                        <small>Всего должностей</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-briefcase stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-info border-0">
+                <small><i class="fas fa-arrow-right"></i> Перейти к списку</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3 stat-card" onclick="window.location.href='{{ url_for('vacations.list_vacations') }}'">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-uppercase">Отпуска</h6>
+                        <h2 class="mb-0">{{ vacation_count|default(0) }}</h2>
+                        <small>Текущие отпуска</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar-alt stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-warning border-0">
+                <small><i class="fas fa-arrow-right"></i> Перейти к списку</small>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Основной контент -->
+<div class="row">
+    <!-- Последние сотрудники -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-tie text-primary"></i> 
+                    Последние добавленные сотрудники
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Табельный №</th>
+                                <th>ФИО</th>
+                                <th>Email</th>
+                                <th>Подразделение</th>
+                                <th>Должность</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee in recent_employees %}
+                            <tr>
+                                <td><strong>{{ employee.employee_id }}</strong></td>
+                                <td>
+                                    <i class="fas fa-user-circle text-muted"></i>
+                                    {{ employee.full_name }}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        <i class="fas fa-envelope"></i>
+                                        {{ employee.email }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        {{ employee.department.name if employee.department else 'Не указано' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ employee.position.title if employee.position else 'Не указана' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('employees.edit_employee', id=employee.id) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white">
+                <a href="{{ url_for('employees.list_employees') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-list"></i> Посмотреть всех сотрудников
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Информационная панель -->
+    <div class="col-md-4">
+        <!-- Уведомления -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bell text-warning"></i> 
+                    Уведомления
+                </h5>
+            </div>
+            <div class="card-body recent-activity">
+                {% if recent_notifications %}
+                    {% for notification in recent_notifications[:5] %}
+                    <div class="activity-item">
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i>
+                            {{ notification.created_at.strftime('%d.%m.%Y %H:%M') if notification.created_at else 'Недавно' }}
+                        </small>
+                        <p class="mb-1">{{ notification.message }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-inbox"></i><br>
+                        Нет новых уведомлений
+                    </p>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white">
+                <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-sm btn-outline-warning">
+                    <i class="fas fa-list"></i> Все уведомления
+                </a>
+            </div>
+        </div>
+
+        <!-- Быстрая статистика -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie text-info"></i> 
+                    Быстрая статистика
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-user-check text-success"></i> Активных</span>
+                        <span class="badge bg-success rounded-pill">{{ employee_count }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-plane text-info"></i> В отпуске</span>
+                        <span class="badge bg-info rounded-pill">{{ vacation_count|default(0) }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-birthday-cake text-warning"></i> Дни рождения</span>
+                        <span class="badge bg-warning rounded-pill">{{ birthday_count|default(0) }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file-alt text-primary"></i> Приказов</span>
+                        <span class="badge bg-primary rounded-pill">{{ order_count|default(0) }}</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-footer bg-white">
+                <a href="{{ url_for('analytics.dashboard') }}" class="btn btn-sm btn-outline-info">
+                    <i class="fas fa-chart-line"></i> Подробная аналитика
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- График активности (если есть данные) -->
+{% if activity_data %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area text-success"></i> 
+                    График активности за последние 30 дней
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if activity_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // График активности
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    const activityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ activity_labels|tojson }},
+            datasets: [{
+                label: 'Новые сотрудники',
+                data: {{ activity_data|tojson }},
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}
