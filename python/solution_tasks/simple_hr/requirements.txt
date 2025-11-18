@@ -1,57 +1,54 @@
 # Веб-фреймворк
-Flask>=2.0.0,<3.0.0
+Flask==3.0.3
 
 # Расширения Flask
-Flask-Bootstrap>=3.3.7,<4.0.0
-Flask-Migrate>=4.0.0,<5.0.0
-Flask-Limiter>=3.0.0,<4.0.0
-Flask-Caching>=2.0.0,<3.0.0
-Flask-CORS>=4.0.0,<5.0.0
-Flask-SocketIO>=5.3.0,<6.0.0
-python-socketio>=5.9.0,<6.0.0
+Flask-Bootstrap4==4.0.2
+Flask-Migrate==4.0.7
+Flask-Limiter==3.8.0
+Flask-Caching==2.3.0
+Flask-CORS==5.0.0
+Flask-SocketIO==5.4.1
+python-socketio==5.11.4
 
 # Работа с базой данных
-Flask-SQLAlchemy>=3.0.0,<4.0.0
-SQLAlchemy>=2.0.0,<3.0.0
-PyMySQL>=1.0.0,<2.0.0
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.35
+PyMySQL==1.1.1
 
 # Авторизация и безопасность
-Flask-Login>=0.6.0,<1.0.0
-Werkzeug>=2.0.0,<3.0.0
-bcrypt>=4.0.0,<5.0.0
-pyotp>=2.8.0,<3.0.0
-qrcode>=7.4.0,<8.0.0
-Pillow>=10.0.0,<11.0.0
+Flask-Login==0.6.3
+Werkzeug==3.0.4
+bcrypt==4.2.0
+pyotp==2.9.0
+qrcode==8.0
+Pillow==11.0.0
 
 # Формы и валидация
-Flask-WTF>=1.0.0,<2.0.0
-WTForms>=3.0.0,<4.0.0
-email-validator>=1.1.0,<2.0.0
+Flask-WTF==1.2.1
+WTForms==3.1.2
+email-validator==2.2.0
 
 # Импорт/экспорт CSV и отчёты
-pandas>=1.3.0,<2.0.0
-matplotlib>=3.5.0,<4.0.0
-seaborn>=0.11.0,<1.0.0
-plotly>=5.0.0,<6.0.0
+pandas==2.2.3
+matplotlib==3.9.2
+seaborn==0.13.2
+plotly==5.24.1
 
-# Управление переменными окружения (для SECRET_KEY, данных БД)
-python-dotenv>=0.19.0,<1.0.0
+# Управление переменными окружения
+python-dotenv==1.0.1
 
-# Вспомогательные утилиты для работы с датами (отпуска, отчёты)
-python-dateutil>=2.8.0,<3.0.0
+# Работа с датами
+python-dateutil==2.9.0.post0
 
-# Опционально: улучшенная поддержка кодировок (на случай CSV в CP1251)
-chardet>=4.0.0,<5.0.0
-
-# Логирование
-Flask-Logging>=0.1.0,<1.0.0
+# Поддержка кодировок
+chardet==5.2.0
 
 # Тестирование
-pytest>=7.0.0,<8.0.0
-coverage>=6.0.0,<7.0.0
-
-# Безопасность (moved up)
-# bcrypt>=4.0.0,<5.0.0
+pytest==8.3.3
+coverage==7.6.1
 
 # Мониторинг
-psutil>=5.9.0,<6.0.0
+psutil==6.1.0
+
+# Генерация тестовых данных
+Faker==33.1.0
