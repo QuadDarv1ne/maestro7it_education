@@ -23,6 +23,9 @@
     <!-- Loading Animations -->
     <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
     
+    <!-- Enhanced Animations -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='enhanced-animations.css') }}">
+    
     <!-- Custom Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
@@ -365,6 +368,10 @@
     
     <!-- Loading Helpers -->
     <script src="{{ url_for('static', filename='loading-helpers.js') }}"></script>
+    
+    <!-- Theme Switcher -->
+    <script src="{{ url_for('static', filename='theme-switcher.js') }}"></script>
+    
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
