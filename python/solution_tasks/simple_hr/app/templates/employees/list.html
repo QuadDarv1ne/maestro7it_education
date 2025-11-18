@@ -79,10 +79,20 @@
                 <label for="search" class="form-label">
                     <i class="fas fa-search"></i> Быстрый поиск
                 </label>
-                  <input list="search-suggestions" type="text" class="form-control" id="search" name="search" 
-                       value="{{ current_search or '' }}" 
-                       placeholder="Введите ФИО, email или табельный номер"
-                       autocomplete="off">
+                <div class="position-relative">
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ current_search or '' }}" 
+                           placeholder="Введите ФИО, email или табельный номер"
+                           autocomplete="off">
+                    <div class="spinner-border spinner-border-sm position-absolute top-50 end-0 translate-middle-y me-3 d-none" 
+                         id="searchSpinner" role="status">
+                        <span class="visually-hidden">Поиск...</span>
+                    </div>
+                    <div class="list-group position-absolute w-100 shadow-lg d-none" id="searchSuggestions" 
+                         style="z-index: 1000; max-height: 300px; overflow-y: auto;"></div>
+                </div>
+                <small class="text-muted">Поиск по ФИО, email, табельному номеру</small>
+            </div>
                 <small class="text-muted">Поиск по ФИО, email, табельному номеру</small>
                 <datalist id="search-suggestions"></datalist>
             </div>

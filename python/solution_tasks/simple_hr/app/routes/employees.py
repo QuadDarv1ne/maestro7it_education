@@ -9,6 +9,7 @@ from app.utils.excel_pdf_export import ExcelExporter, PDFExporter
 from app import db
 import os
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 import logging
 
 # Set up logging
@@ -27,8 +28,11 @@ def list_employees():
         status = request.args.get('status', type=str)
         search = request.args.get('search', type=str)
         
-        # Базовый запрос
-        query = Employee.query
+        # Базовый запрос с eager loading для оптимизации (избежание N+1 проблемы)
+        query = Employee.query.options(
+            joinedload(Employee.department),
+            joinedload(Employee.position)
+        )
         
         # Применяем фильтры
         if department_id:
