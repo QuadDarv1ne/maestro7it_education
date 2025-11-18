@@ -156,7 +156,7 @@
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0" id="employees-table">
                 <thead class="table-light">
                     <tr>
                         <th style="width: 10%">Табельный №</th>
@@ -168,7 +168,7 @@
                         <th style="width: 15%" class="text-center">Действия</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="employees-tbody">
                     {% for employee in employees.items %}
                     <tr class="employee-row">
                         <td><strong class="text-primary">{{ employee.employee_id }}</strong></td>

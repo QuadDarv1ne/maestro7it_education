@@ -72,3 +72,9 @@ def index():
                          activity_labels=activity_labels,
                          activity_data=activity_data,
                          current_date=current_date)
+
+@bp.route('/animations-demo')
+@login_required
+def animations_demo():
+    """Demo page for loading animations and skeletons"""
+    return render_template('animations_demo.html')
