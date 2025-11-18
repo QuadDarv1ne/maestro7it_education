@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Демонстрация DataGrid и Charts{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4"><i class="fas fa-chart-line me-2"></i>Демонстрация компонентов данных</h1>
+            <p class="lead">DataGrid, графики и визуализация данных</p>
+        </div>
+    </div>
+
+    <!-- DataGrid Demo -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-table me-2"></i>DataGrid - Продвинутая таблица</h3>
+                </div>
+                <div class="card-body">
+                    <div id="employeesGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Demo -->
+    <div class="row mb-5">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>График по месяцам</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="lineChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Сотрудники по отделам</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="barChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Распределение по должностям</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="pieChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Динамика найма</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="areaChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mixed Chart & Doughnut -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Смешанный график</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="mixedChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-circle-notch me-2"></i>Статусы</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="doughnutChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sparklines & Progress Bars -->
+    <div class="row mb-5">
+        <div class="col-lg-3 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-3">Новые сотрудники</h6>
+                    <canvas id="sparkline1" height="50"></canvas>
+                    <h3 class="mt-3 mb-0" id="number1">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-3">Активные заявки</h6>
+                    <canvas id="sparkline2" height="50"></canvas>
+                    <h3 class="mt-3 mb-0 text-success" id="number2">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-3">Отпуска</h6>
+                    <canvas id="sparkline3" height="50"></canvas>
+                    <h3 class="mt-3 mb-0 text-warning" id="number3">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-3">Завершено задач</h6>
+                    <canvas id="sparkline4" height="50"></canvas>
+                    <h3 class="mt-3 mb-0 text-info" id="number4">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bars -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Прогресс по отделам</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-6 mb-3">
+                            <label class="form-label">Отдел разработки</label>
+                            <div id="progress1"></div>
+                        </div>
+                        <div class="col-lg-6 mb-3">
+                            <label class="form-label">Отдел продаж</label>
+                            <div id="progress2"></div>
+                        </div>
+                        <div class="col-lg-6 mb-3">
+                            <label class="form-label">Отдел маркетинга</label>
+                            <div id="progress3"></div>
+                        </div>
+                        <div class="col-lg-6 mb-3">
+                            <label class="form-label">Служба поддержки</label>
+                            <div id="progress4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Данные для DataGrid
+const employeesData = [
+    { id: 1, name: 'Иванов Иван Иванович', position: 'Менеджер', department: 'Продажи', salary: 80000, hireDate: '2020-01-15', status: 'Активен' },
+    { id: 2, name: 'Петрова Мария Сергеевна', position: 'Разработчик', department: 'IT', salary: 120000, hireDate: '2019-05-20', status: 'Активен' },
+    { id: 3, name: 'Сидоров Петр Алексеевич', position: 'Дизайнер', department: 'Маркетинг', salary: 70000, hireDate: '2021-03-10', status: 'Активен' },
+    { id: 4, name: 'Козлова Анна Викторовна', position: 'HR-менеджер', department: 'HR', salary: 75000, hireDate: '2018-11-01', status: 'Активен' },
+    { id: 5, name: 'Смирнов Дмитрий Павлович', position: 'Аналитик', department: 'IT', salary: 95000, hireDate: '2020-07-15', status: 'Активен' },
+    { id: 6, name: 'Новикова Елена Игоревна', position: 'Бухгалтер', department: 'Финансы', salary: 65000, hireDate: '2019-02-28', status: 'Активен' },
+    { id: 7, name: 'Морозов Сергей Владимирович', position: 'Тестировщик', department: 'IT', salary: 85000, hireDate: '2021-06-01', status: 'Активен' },
+    { id: 8, name: 'Васильева Ольга Дмитриевна', position: 'Контент-менеджер', department: 'Маркетинг', salary: 60000, hireDate: '2020-09-15', status: 'В отпуске' },
+    { id: 9, name: 'Федоров Александр Николаевич', position: 'Тимлид', department: 'IT', salary: 150000, hireDate: '2017-04-12', status: 'Активен' },
+    { id: 10, name: 'Павлова Татьяна Андреевна', position: 'Специалист поддержки', department: 'Поддержка', salary: 55000, hireDate: '2021-01-20', status: 'Активен' },
+    { id: 11, name: 'Егоров Михаил Сергеевич', position: 'DevOps', department: 'IT', salary: 130000, hireDate: '2019-08-05', status: 'Активен' },
+    { id: 12, name: 'Лебедева Наталья Викторовна', position: 'Менеджер по продажам', department: 'Продажи', salary: 85000, hireDate: '2020-12-01', status: 'Активен' },
+    { id: 13, name: 'Соколов Андрей Петрович', position: 'Юрист', department: 'Юридический', salary: 90000, hireDate: '2018-06-15', status: 'Активен' },
+    { id: 14, name: 'Волкова Ирина Александровна', position: 'PR-менеджер', department: 'Маркетинг', salary: 78000, hireDate: '2020-03-25', status: 'Активен' },
+    { id: 15, name: 'Зайцев Николай Дмитриевич', position: 'Backend разработчик', department: 'IT', salary: 125000, hireDate: '2019-10-10', status: 'Активен' }
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация DataGrid
+    const grid = new DataGrid('employeesGrid', {
+        data: employeesData,
+        columns: [
+            { key: 'id', label: 'ID', width: '60px', sortable: true },
+            { key: 'name', label: 'ФИО', sortable: true, filterable: true },
+            { key: 'position', label: 'Должность', sortable: true, filterable: true },
+            { key: 'department', label: 'Отдел', sortable: true, filterable: true },
+            { 
+                key: 'salary', 
+                label: 'Зарплата', 
+                sortable: true,
+                render: (value) => value.toLocaleString('ru-RU') + ' ₽'
+            },
+            { key: 'hireDate', label: 'Дата найма', sortable: true },
+            { 
+                key: 'status', 
+                label: 'Статус',
+                render: (value) => {
+                    const color = value === 'Активен' ? 'success' : 'warning';
+                    return `<span class="badge bg-${color}">${value}</span>`;
+                }
+            }
+        ],
+        pageSize: 10,
+        selectable: true,
+        searchable: true,
+        exportable: true
+    });
+
+    // Инициализация ChartHelper
+    const chartHelper = new ChartHelper();
+
+    // 1. Line Chart - График найма по месяцам
+    chartHelper.createLineChart('lineChart', {
+        labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+        datasets: [{
+            label: 'Новые сотрудники',
+            data: [12, 19, 8, 15, 22, 18, 25, 20, 17, 23, 16, 14]
+        }]
+    }, {
+        title: 'Динамика найма сотрудников в 2024 году'
+    });
+
+    // 2. Bar Chart - Сотрудники по отделам
+    chartHelper.createBarChart('barChart', {
+        labels: ['IT', 'Продажи', 'Маркетинг', 'HR', 'Финансы', 'Поддержка'],
+        datasets: [{
+            label: 'Количество сотрудников',
+            data: [45, 32, 28, 15, 12, 18]
+        }]
+    }, {
+        title: 'Распределение персонала'
+    });
+
+    // 3. Pie Chart - Должности
+    chartHelper.createPieChart('pieChart', {
+        labels: ['Разработчики', 'Менеджеры', 'Дизайнеры', 'Аналитики', 'Другие'],
+        datasets: [{
+            data: [40, 25, 15, 12, 8]
+        }]
+    }, {
+        title: 'Распределение по специальностям'
+    });
+
+    // 4. Area Chart - Динамика найма
+    chartHelper.createAreaChart('areaChart', {
+        labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
+        datasets: [{
+            label: 'Приняты',
+            data: [15, 22, 18, 25, 20, 28]
+        }]
+    });
+
+    // 5. Mixed Chart
+    chartHelper.createMixedChart('mixedChart', {
+        labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
+        datasets: [
+            {
+                type: 'bar',
+                label: 'Заявки',
+                data: [65, 78, 90, 81, 95, 102]
+            },
+            {
+                type: 'line',
+                label: 'Одобрено',
+                data: [45, 55, 70, 65, 75, 85]
+            }
+        ]
+    }, {
+        title: 'Заявки и одобрения'
+    });
+
+    // 6. Doughnut Chart
+    chartHelper.createDoughnutChart('doughnutChart', {
+        labels: ['Активны', 'В отпуске', 'На больничном', 'В командировке'],
+        datasets: [{
+            data: [142, 8, 3, 5]
+        }]
+    }, {
+        title: 'Статусы сотрудников'
+    });
+
+    // 7-10. Sparklines
+    chartHelper.createSparkline('sparkline1', [5, 8, 12, 10, 15, 18, 22], 'line');
+    chartHelper.createSparkline('sparkline2', [45, 52, 48, 55, 60, 58, 62], 'bar');
+    chartHelper.createSparkline('sparkline3', [8, 6, 10, 7, 9, 11, 8], 'line');
+    chartHelper.createSparkline('sparkline4', [75, 78, 82, 85, 88, 90, 95], 'area');
+
+    // Анимация чисел
+    chartHelper.animateNumber(document.getElementById('number1'), 0, 22, 2000);
+    chartHelper.animateNumber(document.getElementById('number2'), 0, 62, 2000);
+    chartHelper.animateNumber(document.getElementById('number3'), 0, 8, 2000);
+    chartHelper.animateNumber(document.getElementById('number4'), 0, 95, 2000);
+
+    // 11-14. Progress Bars
+    chartHelper.createProgressBar('progress1', 85, 100, { color: '#0d6efd', label: 'Загрузка: 85%' });
+    chartHelper.createProgressBar('progress2', 72, 100, { color: '#198754', label: 'Загрузка: 72%' });
+    chartHelper.createProgressBar('progress3', 93, 100, { color: '#ffc107', label: 'Загрузка: 93%' });
+    chartHelper.createProgressBar('progress4', 68, 100, { color: '#0dcaf0', label: 'Загрузка: 68%' });
+});
+</script>
+{% endblock %}

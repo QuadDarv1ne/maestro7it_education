@@ -78,14 +78,21 @@ def index():
 def animations_demo():
     """Demo page for loading animations and skeletons"""
     return render_template('animations_demo.html')
+
 @bp.route('/features-demo')
 @login_required
 def features_demo():
-    ""Demo page for new features""
+    """Demo page for new features"""
     return render_template('features_demo.html')
 
 @bp.route('/icon-test')
 @login_required
 def icon_test():
-    ""Icon test page""
+    """Icon test page"""
     return render_template('icon_test.html')
+
+@bp.route('/data-demo')
+@login_required
+def data_demo():
+    """Demo page for DataGrid and Charts"""
+    return render_template('data_demo.html')

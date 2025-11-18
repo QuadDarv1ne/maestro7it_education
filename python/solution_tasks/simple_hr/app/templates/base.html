@@ -366,6 +366,12 @@
         });
     </script>
     
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Utilities -->
+    <script src="{{ url_for('static', filename='date-utils.js') }}"></script>
+    
     <!-- Loading Helpers -->
     <script src="{{ url_for('static', filename='loading-helpers.js') }}"></script>
     
@@ -380,6 +386,21 @@
     
     <!-- Enhanced Table -->
     <script src="{{ url_for('static', filename='enhanced-table.js') }}"></script>
+    
+    <!-- Storage Manager -->
+    <script src="{{ url_for('static', filename='storage-manager.js') }}"></script>
+    
+    <!-- API Client -->
+    <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+    
+    <!-- Modal Manager -->
+    <script src="{{ url_for('static', filename='modal-manager.js') }}"></script>
+    
+    <!-- DataGrid -->
+    <script src="{{ url_for('static', filename='data-grid.js') }}"></script>
+    
+    <!-- Chart Helper -->
+    <script src="{{ url_for('static', filename='chart-helper.js') }}"></script>
     
     {% block extra_scripts %}{% endblock %}
 </body>
