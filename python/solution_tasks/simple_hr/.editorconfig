@@ -1,0 +1,68 @@
+# EditorConfig — единообразие стиля кода для всех редакторов
+# https://editorconfig.org
+
+root = true
+
+# Настройки по умолчанию для всех файлов
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Python файлы
+[*.py]
+indent_size = 4
+max_line_length = 100
+
+# JavaScript/TypeScript
+[*.{js,jsx,ts,tsx}]
+indent_size = 2
+
+# HTML, CSS, SCSS
+[*.{html,css,scss,sass}]
+indent_size = 2
+
+# YAML файлы
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON файлы
+[*.json]
+indent_size = 2
+
+# Markdown файлы (не убираем trailing whitespace - используются для переноса строк)
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 80
+
+# Makefile (должны использовать табы)
+[Makefile]
+indent_style = tab
+
+# Shell скрипты
+[*.sh]
+indent_size = 2
+
+# SQL файлы
+[*.sql]
+indent_size = 2
+
+# INI и конфигурационные файлы
+[*.{ini,cfg,conf}]
+indent_size = 2
+
+# Docker файлы
+[Dockerfile*]
+indent_size = 2
+
+# .env файлы
+[.env*]
+insert_final_newline = false
+
+# Минимизированные файлы - не трогаем
+[*.min.*]
+insert_final_newline = false
+trim_trailing_whitespace = false

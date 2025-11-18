@@ -360,8 +360,12 @@ def generate_vacation_calendar(year, month):
         for vacation in vacations:
             try:
                 # Определяем даты отпуска в пределах месяца
-                start = max(vacation.start_date, first_day)
-                end = min(vacation.end_date, last_day)
+                # Убеждаемся, что работаем с date объектами, а не datetime
+                v_start = vacation.start_date.date() if hasattr(vacation.start_date, 'date') else vacation.start_date
+                v_end = vacation.end_date.date() if hasattr(vacation.end_date, 'date') else vacation.end_date
+                
+                start = max(v_start, first_day)
+                end = min(v_end, last_day)
                 
                 # Добавляем отпуск в календарь для каждой даты
                 current_date = start

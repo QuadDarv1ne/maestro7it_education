@@ -155,8 +155,7 @@ def create_app(config_class=Config):
         app.register_blueprint(api_bp)
         
         # Health check endpoints
-        from app.utils.health import create_health_check_blueprint
-        health_bp = create_health_check_blueprint()
+        from app.routes.health import health_bp
         app.register_blueprint(health_bp)
     except Exception as e:
         logger.error(f"Error registering blueprints: {str(e)}")
