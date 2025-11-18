@@ -95,13 +95,18 @@ class CacheManager:
                 self.redis_client = redis.from_url(
                     redis_url,
                     decode_responses=True,
-                    socket_connect_timeout=2,
-                    socket_timeout=2
+                    socket_connect_timeout=1,
+                    socket_timeout=1
                 )
                 # Проверка подключения
-                self.redis_client.ping()
-                self.enabled = True
-                logger.info(f"Redis подключен: {redis_url}")
+                try:
+                    self.redis_client.ping()
+                    self.enabled = True
+                    logger.info(f"Redis подключен: {redis_url}")
+                except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError, TimeoutError):
+                    logger.warning(f"Не удалось подключиться к Redis (timeout). Используется fallback")
+                    self.redis_client = None
+                    self.enabled = True  # Включаем с memory cache
             except Exception as e:
                 logger.warning(f"Не удалось подключиться к Redis: {e}. Используется fallback")
                 self.redis_client = None

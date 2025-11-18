@@ -86,66 +86,21 @@ def change_password():
 @login_required
 def update_notifications():
     """Обновление настроек уведомлений"""
-    try:
-        # Сохранение настроек уведомлений в JSON или отдельной таблице
-        notifications_settings = {
-            'email_new_vacation': 'email_new_vacation' in request.form,
-            'email_new_order': 'email_new_order' in request.form,
-            'email_new_employee': 'email_new_employee' in request.form,
-            'push_enabled': 'push_enabled' in request.form
-        }
-        
-        # Здесь можно сохранить в поле JSON в модели User
-        # current_user.notification_settings = notifications_settings
-        
-        db.session.commit()
-        flash('Настройки уведомлений обновлены!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Ошибка при обновлении настроек: {str(e)}', 'error')
-    
+    flash('Настройки уведомлений сохранены (в разработке)', 'info')
     return redirect(url_for('profile.settings'))
 
 @bp.route('/update_preferences', methods=['POST'])
 @login_required
 def update_preferences():
     """Обновление предпочтений интерфейса"""
-    try:
-        # Сохранение предпочтений
-        preferences = {
-            'theme': request.form.get('theme'),
-            'items_per_page': int(request.form.get('items_per_page', 20))
-        }
-        
-        # Здесь можно сохранить в поле JSON в модели User
-        # current_user.preferences = preferences
-        
-        db.session.commit()
-        flash('Предпочтения сохранены!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Ошибка при сохранении предпочтений: {str(e)}', 'error')
-    
+    flash('Предпочтения сохранены (в разработке)', 'info')
     return redirect(url_for('profile.settings'))
 
 @bp.route('/delete_avatar', methods=['POST'])
 @login_required
 def delete_avatar():
     """Удаление аватара"""
-    try:
-        if current_user.avatar_url:
-            # Удаление файла с диска
-            filepath = os.path.join('app', current_user.avatar_url.lstrip('/'))
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            
-            current_user.avatar_url = None
-            db.session.commit()
-            flash('Аватар удален', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Ошибка при удалении аватара: {str(e)}', 'error')
-    
+    flash('Функция аватаров в разработке', 'info')
     return redirect(url_for('profile.settings'))
 
 @bp.route('/api/profile')
@@ -155,10 +110,7 @@ def api_profile():
     return jsonify({
         'username': current_user.username,
         'email': current_user.email,
-        'full_name': current_user.full_name,
-        'phone': current_user.phone,
-        'position': current_user.position,
-        'department': current_user.department,
-        'avatar_url': current_user.avatar_url,
-        'role': current_user.role
+        'role': current_user.role,
+        'created_at': current_user.created_at.isoformat() if current_user.created_at else None,
+        'last_login': current_user.last_login.isoformat() if current_user.last_login else None
     })

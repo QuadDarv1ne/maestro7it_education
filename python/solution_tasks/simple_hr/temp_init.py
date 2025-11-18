@@ -150,10 +150,6 @@ def create_app(config_class=Config):
         from app.routes.dashboard import bp as dashboard_bp
         app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
         
-        # Profile and Settings
-        from app.routes.profile import bp as profile_bp
-        app.register_blueprint(profile_bp, url_prefix='/profile')
-        
         # REST API endpoints
         from app.routes.api import bp as api_bp
         app.register_blueprint(api_bp)
