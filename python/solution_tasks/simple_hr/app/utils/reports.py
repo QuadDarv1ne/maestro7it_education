@@ -341,7 +341,7 @@ def generate_vacation_calendar(year, month):
     """Генерация календаря отпусков на месяц"""
     try:
         from calendar import monthrange
-        from datetime import date
+        from datetime import date, datetime
         
         # Получаем первый и последний день месяца
         first_day = date(year, month, 1)
@@ -360,9 +360,9 @@ def generate_vacation_calendar(year, month):
         for vacation in vacations:
             try:
                 # Определяем даты отпуска в пределах месяца
-                # Убеждаемся, что работаем с date объектами, а не datetime
-                v_start = vacation.start_date.date() if hasattr(vacation.start_date, 'date') else vacation.start_date
-                v_end = vacation.end_date.date() if hasattr(vacation.end_date, 'date') else vacation.end_date
+                # Преобразуем datetime в date, если необходимо
+                v_start = vacation.start_date if isinstance(vacation.start_date, date) else vacation.start_date.date()
+                v_end = vacation.end_date if isinstance(vacation.end_date, date) else vacation.end_date.date()
                 
                 start = max(v_start, first_day)
                 end = min(v_end, last_day)
@@ -468,19 +468,31 @@ def generate_performance_report():
 
 @lru_cache(maxsize=32)
 def generate_salary_report():
-    """Генерация отчета по зарплате (заглушка для демонстрации)"""
+    """Генерация отчета по зарплате (демо с фиктивными данными)"""
     try:
+        from random import uniform, randint
+        
         # Получаем всех сотрудников
         employees = Employee.query.all()
         
         report_data = []
         for employee in employees:
             try:
+                # Генерируем фиктивные данные зарплаты для демонстрации
+                # В реальном приложении это должно браться из таблицы Salaries
+                base_salary = randint(30000, 150000)
+                bonus = randint(0, 30000)
+                total_salary = base_salary + bonus
+                
                 report_data.append({
                     'id': employee.id,
+                    'employee_id': f"EMP-{employee.id:04d}",
                     'full_name': employee.full_name,
                     'department': employee.department.name,
                     'position': employee.position.title,
+                    'base_salary': base_salary,
+                    'bonus': bonus,
+                    'total_salary': total_salary,
                     'status': employee.status
                 })
             except Exception as e:
