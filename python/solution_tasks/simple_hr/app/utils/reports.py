@@ -2,6 +2,7 @@ from app.models import Employee, Department, Position, Vacation, Order
 from app import db
 from datetime import datetime, date, timedelta
 from functools import lru_cache
+from app import cache
 import logging
 import time
 
@@ -15,6 +16,7 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
+@cache.memoize(timeout=600)
 @lru_cache(maxsize=32)
 def generate_employee_report():
     """Генерация отчета по сотрудникам"""
@@ -110,6 +112,7 @@ def generate_department_report():
         logger.error(f"Error generating department report: {str(e)}")
         return []
 
+@cache.memoize(timeout=600)
 @lru_cache(maxsize=32)
 def generate_vacation_report(period_days=365):
     """Генерация отчета по отпускам за указанный период"""
@@ -336,6 +339,7 @@ def get_vacation_statistics():
             'avg_duration': 0
         }
 
+@cache.memoize(timeout=600)
 @lru_cache(maxsize=32)
 def generate_vacation_calendar(year, month):
     """Генерация календаря отпусков на месяц"""
@@ -691,19 +695,41 @@ def invalidate_reports_cache():
     """Инвалидация кэша отчетов"""
     global _cache_storage
     _cache_storage.clear()
+    try:
+        cache.clear()
+    except Exception:
+        logger.info("Flask cache clear failed or not initialized yet")
     # Clear lru_cache as well
-    generate_employee_report.cache_clear()
-    generate_department_report.cache_clear()
-    generate_vacation_report.cache_clear()
-    generate_hiring_report.cache_clear()
-    get_employee_statistics.cache_clear()
-    get_vacation_statistics.cache_clear()
-    generate_vacation_calendar.cache_clear()
-    generate_turnover_report.cache_clear()
-    generate_performance_report.cache_clear()
-    generate_salary_report.cache_clear()
-    generate_employee_birthday_report.cache_clear()
-    generate_upcoming_vacations_report.cache_clear()
+    try:
+        generate_employee_report.cache_clear()
+    except Exception:
+        try:
+            generate_employee_report.__wrapped__.cache_clear()
+        except Exception:
+            pass
+    for func in [generate_department_report, generate_vacation_report, generate_hiring_report, get_employee_statistics, get_vacation_statistics]:
+        try:
+            func.cache_clear()
+        except Exception:
+            try:
+                func.__wrapped__.cache_clear()
+            except Exception:
+                pass
+    try:
+        generate_vacation_calendar.cache_clear()
+    except Exception:
+        try:
+            generate_vacation_calendar.__wrapped__.cache_clear()
+        except Exception:
+            pass
+    for func in [generate_turnover_report, generate_performance_report, generate_salary_report, generate_employee_birthday_report, generate_upcoming_vacations_report]:
+        try:
+            func.cache_clear()
+        except Exception:
+            try:
+                func.__wrapped__.cache_clear()
+            except Exception:
+                pass
     
     logger.info("Reports cache invalidated successfully")
     return True

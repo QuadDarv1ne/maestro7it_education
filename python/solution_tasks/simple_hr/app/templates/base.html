@@ -110,6 +110,14 @@
             border-bottom: 2px solid #e3e6f0;
         }
     </style>
+    <!-- Tailwind (CDN) - keep preflight disabled to avoid conflict with Bootstrap -->
+    <script>
+        // Disable Tailwind preflight so Bootstrap styles remain authoritative
+        if (!window.tailwind) window.tailwind = {};
+        if (!window.tailwind.config) window.tailwind.config = {};
+        window.tailwind.config.corePlugins = { preflight: false };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
     
     {% block extra_head %}{% endblock %}
 </head>
@@ -176,14 +184,14 @@
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('main.index') }}">
-                                <i class="fas fa-home"></i>
-                                <span>Главная</span>
+                                <i class="bi bi-house-fill"></i>
+                                <span class="ms-1">Главная</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('dashboard.index') }}">
-                                <i class="fas fa-tachometer-alt"></i>
-                                <span>Дашборд</span>
+                                <i class="bi bi-speedometer2"></i>
+                                <span class="ms-1">Дашборд</span>
                             </a>
                         </li>
                         
@@ -191,14 +199,14 @@
                         
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('employees.list_employees') }}">
-                                <i class="fas fa-users"></i>
-                                <span>Сотрудники</span>
+                                <i class="bi bi-people-fill"></i>
+                                <span class="ms-1">Сотрудники</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('departments.list_departments') }}">
-                                <i class="fas fa-building"></i>
-                                <span>Подразделения</span>
+                                <i class="bi bi-building"></i>
+                                <span class="ms-1">Подразделения</span>
                             </a>
                         </li>
                         <li class="nav-item">
