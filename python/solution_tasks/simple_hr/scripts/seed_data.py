@@ -3,11 +3,18 @@
 Создает пользователей, подразделения, должности, сотрудников, приказы и отпуска.
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Добавляем корневую директорию проекта в путь для импорта
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 from app import create_app, db
 from app.models import User, Department, Position, Employee, Order, Vacation, Notification, AuditLog
 from datetime import date, datetime, timedelta
 import random
-import sys
 
 try:
     from faker import Faker
@@ -68,6 +75,8 @@ def create_users(fake=None):
     admin.active = True
     admin.set_password('admin123')
     admin.created_at = datetime.utcnow() - timedelta(days=365)
+    admin.totp_enabled = False
+    admin.totp_secret = None
     users.append(admin)
     
     # HR менеджеры
@@ -79,6 +88,8 @@ def create_users(fake=None):
         hr.active = True
         hr.set_password(f'hr{i}123')
         hr.created_at = datetime.utcnow() - timedelta(days=random.randint(100, 300))
+        hr.totp_enabled = False
+        hr.totp_secret = None
         users.append(hr)
     
     db.session.add_all(users)
@@ -164,9 +175,9 @@ def create_employees(departments, positions, count=50, fake=None):
     print(f"✅ Создано {count} сотрудников")
     return Employee.query.all()
 
-def create_orders(employees, departments, positions, count=30):
+def create_orders(employees, departments, positions):
     """Создание приказов"""
-    print(f"📋 Создание {count} приказов...")
+    print(f"📋 Создание приказов...")
     orders = []
     
     active_employees = [e for e in employees if e.status == 'active']
@@ -252,6 +263,24 @@ def create_vacations(employees, count=40):
             duration = random.randint(5, 20)
         
         vacation.end_date = vacation.start_date + timedelta(days=duration)
+        
+        # Установка статуса отпуска
+        vacation.status = random.choice(['pending', 'approved', 'rejected'])
+        
+        # Добавление заметок для отклоненных отпусков
+        if vacation.status == 'rejected':
+            vacation.notes = random.choice([
+                'Недостаточно дней для отпуска',
+                'Конфликт с рабочим графиком',
+                'Необходимо согласование с руководителем'
+            ])
+        else:
+            vacation.notes = None
+        
+        # Даты создания и обновления
+        days_created_ago = random.randint(0, 60)
+        vacation.created_at = datetime.utcnow() - timedelta(days=days_created_ago)
+        vacation.updated_at = vacation.created_at
         
         vacations.append(vacation)
     
@@ -366,14 +395,27 @@ def main():
         print("📈 СТАТИСТИКА СОЗДАННЫХ ДАННЫХ")
         print("="*60)
         print(f"Пользователей:        {len(users)}")
+        print(f"  - Администраторов:  {len([u for u in users if u.role == 'admin'])}")
+        print(f"  - HR менеджеров:    {len([u for u in users if u.role == 'hr'])}")
         print(f"Подразделений:        {len(departments)}")
         print(f"Должностей:           {len(positions)}")
         print(f"Сотрудников:          {len(employees)}")
         print(f"  - Активных:         {len([e for e in employees if e.status == 'active'])}")
         print(f"  - Уволенных:        {len([e for e in employees if e.status == 'dismissed'])}")
         print(f"Приказов:             {len(orders)}")
+        print(f"  - О приёме:         {len([o for o in orders if o.type == 'hire'])}")
+        print(f"  - О переводе:       {len([o for o in orders if o.type == 'transfer'])}")
+        print(f"  - Об увольнении:    {len([o for o in orders if o.type == 'dismissal'])}")
         print(f"Отпусков:             {len(vacations)}")
+        print(f"  - Оплачиваемых:     {len([v for v in vacations if v.type == 'paid'])}")
+        print(f"  - Неоплачиваемых:   {len([v for v in vacations if v.type == 'unpaid'])}")
+        print(f"  - Больничных:       {len([v for v in vacations if v.type == 'sick'])}")
+        print(f"  - Одобренных:       {len([v for v in vacations if v.status == 'approved'])}")
+        print(f"  - Ожидающих:        {len([v for v in vacations if v.status == 'pending'])}")
+        print(f"  - Отклонённых:      {len([v for v in vacations if v.status == 'rejected'])}")
         print(f"Уведомлений:          {len(notifications)}")
+        print(f"  - Прочитанных:      {len([n for n in notifications if n.is_read])}")
+        print(f"  - Непрочитанных:    {len([n for n in notifications if not n.is_read])}")
         print(f"Записей аудита:       {len(audit_logs)}")
         print("="*60)
         
