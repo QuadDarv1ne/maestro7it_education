@@ -83,3 +83,9 @@ def animations_demo():
 def features_demo():
     ""Demo page for new features""
     return render_template('features_demo.html')
+
+@bp.route('/icon-test')
+@login_required
+def icon_test():
+    ""Icon test page""
+    return render_template('icon_test.html')

@@ -172,14 +172,43 @@ body.dark-mode .skeleton {
     font-size: 3rem;
 }
 
-/* Font Awesome and Bootstrap Icons Fix */
-.fas, .far, .fab, .fal, .fad,
-.bi {
-    display: inline-block;
+/* Font Awesome Icons Fix */
+.fas, .far, .fal, .fad {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
     font-style: normal;
     font-variant: normal;
     text-rendering: auto;
     line-height: 1;
+    display: inline-block;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.far {
+    font-weight: 400;
+}
+
+.fab {
+    font-family: "Font Awesome 6 Brands";
+    font-weight: 400;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+    display: inline-block;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Bootstrap Icons Fix */
+.bi {
+    font-family: "bootstrap-icons" !important;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+    display: inline-block;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -195,13 +224,6 @@ body.dark-mode .skeleton {
 /* Icon alignment */
 i.fas, i.far, i.fab, i.bi {
     vertical-align: middle;
-}
-
-/* Ensure icons load properly */
-@supports (font-variation-settings: normal) {
-    .fas, .far, .fab {
-        font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", sans-serif;
-    }
 }
 
 .bi {
@@ -363,9 +385,16 @@ textarea[placeholder]::placeholder {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-/* Icon Improvements */
-.fas, .far, .fab, .bi {
-    margin-right: 0.5rem;
+/* Additional icon spacing in buttons and links */
+.btn .fas, 
+.btn .far, 
+.btn .fab, 
+.btn .bi,
+a .fas,
+a .far,
+a .fab,
+a .bi {
+    margin-right: 0.35rem;
 }
 
 .sidebar .nav-link i {
