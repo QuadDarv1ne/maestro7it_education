@@ -12,16 +12,28 @@
 - Расширенные возможности отчетности
 - Функциональность импорта/экспорта `CSV`
 - Адаптивный веб-интерфейс
+- **Новое:** Миграции базы данных (Flask-Migrate)
+- **Новое:** Защита от брутфорса (Rate Limiting)
+- **Новое:** Кэширование для производительности
+- **Новое:** Безопасные заголовки (CSP, CORS)
+- **Новое:** Docker поддержка
+- **Новое:** Журнал аудита
+- **Новое:** Система уведомлений
+- **Новое:** Аналитика и визуализация данных
 
 ## Используемые технологии
 
 - **Бэкенд**: Flask (Python)
 - **База данных**: MySQL с ORM SQLAlchemy (поддержка SQLite для тестирования)
+- **Миграции БД**: Flask-Migrate (Alembic)
 - **Фронтенд**: Bootstrap 5, HTML, CSS
 - **Аутентификация**: Flask-Login
 - **Обработка данных**: pandas, chardet
 - **Визуализация данных**: matplotlib, seaborn, plotly
 - **Формы**: Flask-WTF, WTForms
+- **Безопасность**: Flask-Limiter, Flask-CORS, bcrypt
+- **Кэширование**: Flask-Caching
+- **Контейнеризация**: Docker, Docker Compose
 
 ## Установка
 
@@ -79,9 +91,33 @@ python run.py
 
 Приложение будет доступно по адресу `http://localhost:5000`
 
+### Режимы запуска
+
+**Режим разработки:**
 ```bash
-python run.py mode --dev
+python run.py
 ```
+
+**С использованием Flask CLI:**
+```bash
+export FLASK_APP=run.py
+export FLASK_ENV=development
+flask run
+```
+
+**С Docker:**
+```bash
+# Быстрый старт
+docker-compose up -d
+
+# Просмотр логов
+docker-compose logs -f
+
+# Остановка
+docker-compose down
+```
+
+См. [DOCKER.md](DOCKER.md) для подробной информации о Docker.
 
 ## Пользователи по умолчанию
 
@@ -147,6 +183,116 @@ simple_hr/
 - Экспорт отчетов в формат CSV
 - Автоматическое определение кодировки
 
+## Безопасность
+
+### Реализованные меры безопасности
+
+- **Хеширование паролей** - PBKDF2 через Werkzeug
+- **CSRF защита** - Flask-WTF
+- **Rate Limiting** - защита от брутфорса и DDoS
+  - Вход: 5 попыток в минуту
+  - Регистрация: 3 попытки в час
+- **Безопасные заголовки**
+  - X-Content-Type-Options
+  - X-Frame-Options
+  - X-XSS-Protection
+  - Strict-Transport-Security
+  - Content-Security-Policy
+- **CORS** - настраиваемые origins
+- **Валидация паролей** - минимум 6 символов, буквы и цифры
+- **Журнал аудита** - логирование всех действий пользователей
+- **Токены восстановления пароля** - безопасное восстановление
+
+## API Документация
+
+Полная документация API доступна в файле [API.md](API.md)
+
+## Docker
+
+Приложение полностью поддерживает Docker. См. [DOCKER.md](DOCKER.md) для инструкций.
+
+### Быстрый старт с Docker
+
+```bash
+# Скопируйте .env файл
+cp .env.example .env
+
+# Запустите контейнеры
+docker-compose up -d
+
+# Инициализируйте БД
+docker-compose exec web flask db upgrade
+docker-compose exec web python seed_data.py
+```
+
+## Миграции базы данных
+
+Проект использует Flask-Migrate для управления схемой БД:
+
+```bash
+# Инициализация миграций (только первый раз)
+flask db init
+
+# Создание новой миграции
+flask db migrate -m "Описание изменений"
+
+# Применение миграций
+flask db upgrade
+
+# Откат миграции
+flask db downgrade
+```
+
+## Тестирование
+
+```bash
+# Запуск тестов
+pytest
+
+# С покрытием кода
+pytest --cov=app --cov-report=html
+
+# Просмотр отчёта
+open htmlcov/index.html
+```
+
+## Production рекомендации
+
+1. **Измените SECRET_KEY** на уникальное значение
+2. **Настройте MySQL** вместо SQLite
+3. **Используйте HTTPS** с SSL сертификатами
+4. **Настройте reverse proxy** (nginx/Apache)
+5. **Включите logrotate** для логов
+6. **Регулярно создавайте backup** базы данных
+7. **Мониторинг** - настройте Sentry или аналог
+8. **Настройте firewall** и security groups
+9. **Используйте gunicorn/uwsgi** вместо Flask dev server
+
 ## Лицензия
 
 Этот проект предназначен для образовательных целей.
+
+---
+
+## Документация
+
+- [API Документация](API.md) - Полное описание всех endpoints
+- [Docker Руководство](DOCKER.md) - Использование Docker и Docker Compose
+- [CLI Команды](CLI.md) - Управление через командную строку
+- [История изменений](CHANGELOG.md) - Список всех изменений
+
+## Полезные ссылки
+
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [SQLAlchemy Documentation](https://www.sqlalchemy.org/)
+- [Bootstrap 5](https://getbootstrap.com/)
+
+## Поддержка
+
+По вопросам и предложениям создавайте issue в GitHub репозитории.
+
+**Автор:** Дуплей Максим Игоревич  
+**Telegram:** @quadd4rv1n7  
+**Email:** maksimqwe42@mail.ru  
+**Версия:** 2.0
+

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Сканируйте QR-код{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Настройка двухфакторной аутентификации</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Шаг 3: Отсканируйте QR-код</h5>
+                    <p>Откройте приложение-аутентификатор и отсканируйте этот QR-код:</p>
+                    
+                    <div class="text-center my-4">
+                        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="img-fluid" style="max-width: 300px;">
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Сохраните резервные коды!</strong>
+                        <p class="mt-2">
+                            Эти коды помогут вам восстановить доступ, если вы потеряете устройство с аутентификатором.
+                            Сохраните их в безопасном месте.
+                        </p>
+                    </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title">Резервные коды:</h6>
+                            <div class="row">
+                                {% for code in backup_codes %}
+                                <div class="col-md-6 mb-2">
+                                    <code class="p-2 d-block text-center bg-white">{{ code }}</code>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mt-3" onclick="copyBackupCodes()">
+                                <i class="fas fa-copy"></i> Скопировать коды
+                            </button>
+                        </div>
+                    </div>
+
+                    <h5>Шаг 4: Введите код для проверки</h5>
+                    <p>Введите 6-значный код из приложения-аутентификатора:</p>
+
+                    <form method="POST" action="{{ url_for('two_factor.setup') }}">
+                        <input type="hidden" name="action" value="verify">
+                        <div class="form-group">
+                            <input type="text" 
+                                   name="token" 
+                                   class="form-control form-control-lg text-center" 
+                                   placeholder="000000"
+                                   maxlength="6"
+                                   pattern="[0-9]{6}"
+                                   required
+                                   autofocus
+                                   style="letter-spacing: 0.5em; font-size: 2em;">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-check"></i> Подтвердить и включить 2FA
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyBackupCodes() {
+    const codes = {{ backup_codes | tojson }};
+    const text = codes.join('\n');
+    
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Резервные коды скопированы в буфер обмена!');
+    }).catch(() => {
+        alert('Ошибка при копировании. Пожалуйста, скопируйте коды вручную.');
+    });
+}
+</script>
+{% endblock %}

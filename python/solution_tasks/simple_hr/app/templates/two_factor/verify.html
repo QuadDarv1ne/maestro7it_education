@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Проверка 2FA{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">
+                        <i class="fas fa-shield-alt"></i> Двухфакторная аутентификация
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-center text-muted mb-4">
+                        Введите 6-значный код из приложения-аутентификатора
+                    </p>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="close" data-dismiss="alert">
+                                        <span>&times;</span>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" id="verifyForm">
+                        <input type="hidden" name="use_backup" id="useBackup" value="false">
+                        
+                        <div class="form-group">
+                            <input type="text" 
+                                   name="token" 
+                                   id="tokenInput"
+                                   class="form-control form-control-lg text-center" 
+                                   placeholder="000000"
+                                   maxlength="6"
+                                   pattern="[0-9A-F]{6,8}"
+                                   required
+                                   autofocus>
+                            <small class="form-text text-muted text-center" id="inputHelp">
+                                Введите код из приложения
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block btn-lg">
+                            <i class="fas fa-sign-in-alt"></i> Войти
+                        </button>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <button class="btn btn-link" onclick="toggleBackupMode()">
+                            <i class="fas fa-key"></i> Использовать резервный код
+                        </button>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-link text-muted">
+                            <i class="fas fa-arrow-left"></i> Вернуться к входу
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let isBackupMode = false;
+
+function toggleBackupMode() {
+    isBackupMode = !isBackupMode;
+    const tokenInput = document.getElementById('tokenInput');
+    const useBackup = document.getElementById('useBackup');
+    const inputHelp = document.getElementById('inputHelp');
+    
+    if (isBackupMode) {
+        tokenInput.placeholder = 'XXXXXXXX';
+        tokenInput.maxLength = '8';
+        tokenInput.pattern = '[0-9A-F]{8}';
+        useBackup.value = 'true';
+        inputHelp.textContent = 'Введите резервный код';
+        event.target.innerHTML = '<i class="fas fa-mobile-alt"></i> Использовать код из приложения';
+    } else {
+        tokenInput.placeholder = '000000';
+        tokenInput.maxLength = '6';
+        tokenInput.pattern = '[0-9]{6}';
+        useBackup.value = 'false';
+        inputHelp.textContent = 'Введите код из приложения';
+        event.target.innerHTML = '<i class="fas fa-key"></i> Использовать резервный код';
+    }
+    
+    tokenInput.value = '';
+    tokenInput.focus();
+}
+
+// Автоматическая отправка формы при вводе 6 цифр (только для TOTP)
+document.getElementById('tokenInput').addEventListener('input', function(e) {
+    if (!isBackupMode && this.value.length === 6 && /^[0-9]{6}$/.test(this.value)) {
+        setTimeout(() => {
+            document.getElementById('verifyForm').submit();
+        }, 200);
+    }
+});
+</script>
+{% endblock %}

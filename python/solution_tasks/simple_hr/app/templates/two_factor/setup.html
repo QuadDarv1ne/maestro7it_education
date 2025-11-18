@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Настройка 2FA{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Настройка двухфакторной аутентификации</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Что такое 2FA?</strong>
+                        <p class="mb-0 mt-2">
+                            Двухфакторная аутентификация добавляет дополнительный уровень безопасности к вашему аккаунту.
+                            После включения, вам потребуется вводить код из приложения-аутентификатора при каждом входе.
+                        </p>
+                    </div>
+
+                    <h5 class="mt-4">Шаг 1: Установите приложение-аутентификатор</h5>
+                    <p>Установите одно из следующих приложений на ваш смартфон:</p>
+                    <ul>
+                        <li>Google Authenticator (iOS, Android)</li>
+                        <li>Microsoft Authenticator (iOS, Android)</li>
+                        <li>Authy (iOS, Android, Desktop)</li>
+                    </ul>
+
+                    <h5 class="mt-4">Шаг 2: Включите 2FA</h5>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="enable">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-shield-alt"></i> Включить двухфакторную аутентификацию
+                        </button>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Вернуться назад
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Notifications Test</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>WebSocket Notifications Test</h1>
+    
+    <div id="status">Статус: <span id="connection-status">Отключено</span></div>
+    
+    <h2>Уведомления:</h2>
+    <div id="notifications" style="border: 1px solid #ccc; padding: 10px; min-height: 200px; max-height: 400px; overflow-y: auto;">
+        <!-- Notifications will appear here -->
+    </div>
+    
+    <h2>Отправить тестовое уведомление:</h2>
+    <button onclick="testNotification()">Отправить уведомление</button>
+    
+    <script>
+        const socket = io();
+        
+        socket.on('connect', function() {
+            document.getElementById('connection-status').textContent = 'Подключено';
+            document.getElementById('connection-status').style.color = 'green';
+            addNotification('Подключено к серверу WebSocket', 'success');
+        });
+        
+        socket.on('disconnect', function() {
+            document.getElementById('connection-status').textContent = 'Отключено';
+            document.getElementById('connection-status').style.color = 'red';
+            addNotification('Отключено от сервера WebSocket', 'error');
+        });
+        
+        socket.on('connected', function(data) {
+            addNotification('Сервер: ' + data.message, 'info');
+        });
+        
+        socket.on('notification', function(data) {
+            const message = `[${data.type.toUpperCase()}] ${data.message}`;
+            addNotification(message, data.type);
+        });
+        
+        socket.on('error', function(data) {
+            addNotification('Ошибка: ' + data.message, 'error');
+        });
+        
+        function addNotification(message, type) {
+            const container = document.getElementById('notifications');
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString('ru-RU');
+            
+            let color = 'black';
+            switch(type) {
+                case 'success': color = 'green'; break;
+                case 'error': color = 'red'; break;
+                case 'warning': color = 'orange'; break;
+                case 'info': color = 'blue'; break;
+            }
+            
+            div.style.color = color;
+            div.style.marginBottom = '5px';
+            div.textContent = `[${time}] ${message}`;
+            
+            container.insertBefore(div, container.firstChild);
+        }
+        
+        function testNotification() {
+            socket.emit('test_notification', {message: 'Test from client'});
+        }
+    </script>
+</body>
+</html>

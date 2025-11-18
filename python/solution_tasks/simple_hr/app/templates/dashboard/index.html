@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд - Статистика{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    .stat-card {
+        border-radius: 10px;
+        padding: 20px;
+        color: white;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .stat-card h3 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    .stat-card p {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+    .stat-card.primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .stat-card.success {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    .stat-card.info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    .stat-card.warning {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+    .stat-card.danger {
+        background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 30px;
+    }
+    .card-chart {
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">
+        <i class="bi bi-graph-up"></i> Дашборд - Статистика и Аналитика
+    </h1>
+
+    <!-- Статистические карточки -->
+    <div class="row">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card primary">
+                <i class="bi bi-people-fill" style="font-size: 2rem;"></i>
+                <h3>{{ total_employees }}</h3>
+                <p>Активных сотрудников</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card success">
+                <i class="bi bi-building" style="font-size: 2rem;"></i>
+                <h3>{{ total_departments }}</h3>
+                <p>Подразделений</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card info">
+                <i class="bi bi-briefcase-fill" style="font-size: 2rem;"></i>
+                <h3>{{ total_positions }}</h3>
+                <p>Должностей</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card warning">
+                <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+                <h3>{{ active_vacations }}</h3>
+                <p>Активных отпусков</p>
+            </div>
+        </div>
+    </div>
+
+    {% if pending_vacations > 0 %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                <strong>Внимание!</strong> Есть {{ pending_vacations }} отпуск(ов) ожидающих одобрения.
+                <a href="{{ url_for('vacations.list_vacations') }}" class="alert-link">Перейти к отпускам</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Графики -->
+    <div class="row mt-4">
+        <!-- Сотрудники по подразделениям -->
+        <div class="col-md-6">
+            <div class="card card-chart">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart-fill"></i> Распределение по подразделениям
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="departmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Сотрудники по должностям -->
+        <div class="col-md-6">
+            <div class="card card-chart">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bar-chart-fill"></i> Топ-10 должностей
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="positionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Тренды найма -->
+        <div class="col-md-8">
+            <div class="card card-chart">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up"></i> Тренды найма (последние 12 месяцев)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="hiringTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика отпусков -->
+        <div class="col-md-4">
+            <div class="card card-chart">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar3"></i> Отпуска по типам
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="vacationStatsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Статус отпусков -->
+        <div class="col-md-6">
+            <div class="card card-chart">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart"></i> Статус отпусков
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="vacationStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статус сотрудников -->
+        <div class="col-md-6">
+            <div class="card card-chart">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-check"></i> Статус сотрудников
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="employeeStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Общие настройки Chart.js
+Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+Chart.defaults.color = '#666';
+
+// Цветовая палитра
+const colorPalette = [
+    'rgba(102, 126, 234, 0.8)',
+    'rgba(118, 75, 162, 0.8)',
+    'rgba(240, 147, 251, 0.8)',
+    'rgba(245, 87, 108, 0.8)',
+    'rgba(79, 172, 254, 0.8)',
+    'rgba(0, 242, 254, 0.8)',
+    'rgba(250, 112, 154, 0.8)',
+    'rgba(254, 225, 64, 0.8)',
+    'rgba(48, 207, 208, 0.8)',
+    'rgba(51, 8, 103, 0.8)'
+];
+
+// 1. График по подразделениям (Pie Chart)
+fetch('{{ url_for("dashboard.employees_by_department") }}')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('departmentChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: colorPalette,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.parsed || 0;
+                                let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                let percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+// 2. График по должностям (Bar Chart)
+fetch('{{ url_for("dashboard.employees_by_position") }}')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('positionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Количество сотрудников',
+                    data: data.data,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+// 3. Тренды найма (Line Chart)
+fetch('{{ url_for("dashboard.hiring_trends") }}')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('hiringTrendsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Количество нанятых',
+                    data: data.data,
+                    borderColor: 'rgba(79, 172, 254, 1)',
+                    backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+// 4. Статистика отпусков (Doughnut Chart)
+fetch('{{ url_for("dashboard.vacation_statistics") }}')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('vacationStatsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: [
+                        'rgba(240, 147, 251, 0.8)',
+                        'rgba(245, 87, 108, 0.8)',
+                        'rgba(254, 225, 64, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    });
+
+// 5. Статус отпусков (Pie Chart)
+fetch('{{ url_for("dashboard.vacation_status_distribution") }}')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('vacationStatusChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: [
+                        'rgba(254, 225, 64, 0.8)',
+                        'rgba(79, 172, 254, 0.8)',
+                        'rgba(245, 87, 108, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    });
+
+// 6. Статус сотрудников (Doughnut Chart)
+fetch('{{ url_for("dashboard.employee_status_distribution") }}')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('employeeStatusChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(245, 87, 108, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

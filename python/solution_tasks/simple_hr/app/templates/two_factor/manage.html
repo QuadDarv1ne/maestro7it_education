@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Управление 2FA{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3>
+                        <i class="fas fa-shield-alt"></i> Двухфакторная аутентификация включена
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        Ваш аккаунт защищен двухфакторной аутентификацией
+                    </div>
+
+                    <h5 class="mt-4">Управление резервными кодами</h5>
+                    <p>Резервные коды используются для входа, если у вас нет доступа к приложению-аутентификатору.</p>
+                    
+                    <button class="btn btn-primary mb-4" data-toggle="modal" data-target="#regenerateModal">
+                        <i class="fas fa-sync-alt"></i> Сгенерировать новые резервные коды
+                    </button>
+
+                    <hr>
+
+                    <h5 class="text-danger">Отключить 2FA</h5>
+                    <p class="text-muted">
+                        Отключение двухфакторной аутентификации снизит безопасность вашего аккаунта.
+                    </p>
+
+                    <button class="btn btn-danger" data-toggle="modal" data-target="#disableModal">
+                        <i class="fas fa-times-circle"></i> Отключить двухфакторную аутентификацию
+                    </button>
+
+                    <hr class="my-4">
+
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Вернуться назад
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для регенерации кодов -->
+<div class="modal fade" id="regenerateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Генерация новых резервных кодов</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="regenerateForm">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Старые резервные коды перестанут работать!
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Введите ваш пароль для подтверждения:</label>
+                        <input type="password" class="form-control" id="regeneratePassword" name="password" required>
+                    </div>
+                    <div id="newCodesContainer" class="d-none">
+                        <h6>Новые резервные коды:</h6>
+                        <div id="newCodesDisplay" class="bg-light p-3 rounded"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary" id="regenerateBtn">Сгенерировать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для отключения 2FA -->
+<div class="modal fade" id="disableModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Отключение двухфакторной аутентификации</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('two_factor.disable') }}">
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Внимание!</strong> Это действие снизит безопасность вашего аккаунта.
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Введите ваш пароль для подтверждения:</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">Отключить 2FA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('regenerateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('password', document.getElementById('regeneratePassword').value);
+    
+    fetch("{{ url_for('two_factor.regenerate_codes') }}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Ошибка: ' + data.error);
+            return;
+        }
+        
+        // Отображаем новые коды
+        const container = document.getElementById('newCodesContainer');
+        const display = document.getElementById('newCodesDisplay');
+        
+        let html = '<div class="row">';
+        data.backup_codes.forEach(code => {
+            html += `<div class="col-md-6 mb-2"><code class="d-block text-center p-2 bg-white">${code}</code></div>`;
+        });
+        html += '</div>';
+        html += '<button class="btn btn-sm btn-outline-primary mt-3" onclick="copyNewCodes()">Скопировать коды</button>';
+        
+        display.innerHTML = html;
+        container.classList.remove('d-none');
+        document.getElementById('regenerateBtn').disabled = true;
+        
+        // Сохраняем коды для копирования
+        window.newBackupCodes = data.backup_codes;
+    })
+    .catch(error => {
+        alert('Произошла ошибка при генерации кодов');
+        console.error(error);
+    });
+});
+
+function copyNewCodes() {
+    const text = window.newBackupCodes.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Резервные коды скопированы в буфер обмена!');
+    }).catch(() => {
+        alert('Ошибка при копировании. Пожалуйста, скопируйте коды вручную.');
+    });
+}
+</script>
+{% endblock %}

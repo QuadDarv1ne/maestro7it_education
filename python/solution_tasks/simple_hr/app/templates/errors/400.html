@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}400 - Неверный запрос{% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="error-template">
+                <h1 class="display-1">400</h1>
+                <h2>Неверный запрос</h2>
+                <div class="error-details mb-4">
+                    Извините, ваш запрос не может быть обработан. Проверьте корректность данных.
+                </div>
+                <div class="error-actions">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-house"></i> На главную
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-arrow-left"></i> Назад
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
