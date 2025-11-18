@@ -253,29 +253,6 @@
         </div>
     </div>
 </div>
-            <td>{{ employee.employee_id }}</td>
-            <td>{{ employee.full_name }}</td>
-            <td>{{ employee.email }}</td>
-            <td>{{ employee.department.name if employee.department else 'Не указано' }}</td>
-            <td>{{ employee.position.title if employee.position else 'Не указана' }}</td>
-            <td>{{ employee.hire_date.strftime('%d.%m.%Y') if employee.hire_date else 'Не указана' }}</td>
-            <td>
-                {% if employee.status == 'active' %}
-                    <span class="badge bg-success">Активен</span>
-                {% else %}
-                    <span class="badge bg-secondary">Уволен</span>
-                {% endif %}
-            </td>
-            <td>
-                <a href="{{ url_for('employees.edit_employee', id=employee.id) }}" class="btn btn-sm btn-outline-primary">Редактировать</a>
-                <form method="POST" action="{{ url_for('employees.delete_employee', id=employee.id) }}" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Вы уверены?')">Удалить</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
 
 <!-- Пагинация -->
 {% if employees.pages > 1 %}

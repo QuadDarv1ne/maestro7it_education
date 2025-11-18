@@ -179,6 +179,54 @@ class Validator:
             raise ValidationError(f"{field_name} должно быть целым числом")
     
     @staticmethod
+    def validate_salary(salary):
+        """Валидация зарплаты"""
+        if salary is None:
+            return True  # Salary is optional
+        
+        try:
+            salary_value = float(salary)
+            if salary_value < 0:
+                raise ValidationError("Зарплата не может быть отрицательной")
+            if salary_value > 10000000:  # 10 млн максимум
+                raise ValidationError("Зарплата превышает допустимый максимум")
+            return True
+        except (ValueError, TypeError):
+            raise ValidationError("Зарплата должна быть числом")
+    
+    @staticmethod
+    def validate_birth_date(birth_date):
+        """Валидация даты рождения"""
+        if birth_date is None:
+            return True  # Birth date is optional
+        
+        if isinstance(birth_date, str):
+            try:
+                birth_date = datetime.strptime(birth_date, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValidationError("Дата рождения должна быть в формате YYYY-MM-DD")
+        
+        # Проверка что дата рождения не в будущем
+        if birth_date > datetime.now().date():
+            raise ValidationError("Дата рождения не может быть в будущем")
+        
+        # Проверка минимального возраста (16 лет)
+        today = datetime.now().date()
+        min_age = 16
+        age = today.year - birth_date.year
+        if today.month < birth_date.month or (today.month == birth_date.month and today.day < birth_date.day):
+            age -= 1
+        
+        if age < min_age:
+            raise ValidationError(f"Минимальный возраст для трудоустройства: {min_age} лет")
+        
+        # Проверка максимального возраста (100 лет)
+        if age > 100:
+            raise ValidationError("Некорректная дата рождения")
+        
+        return True
+    
+    @staticmethod
     def validate_future_date(date_value, field_name="Дата"):
         """Проверка что дата не в прошлом"""
         if isinstance(date_value, str):
@@ -229,6 +277,25 @@ class EmployeeValidator(Validator):
             Validator.validate_past_date(data.get('hire_date', ''), 'Дата найма')
         except ValidationError as e:
             errors.append(str(e))
+        
+        # Валидация опциональных полей
+        if 'birth_date' in data and data.get('birth_date'):
+            try:
+                Validator.validate_birth_date(data.get('birth_date'))
+            except ValidationError as e:
+                errors.append(str(e))
+        
+        if 'phone' in data and data.get('phone'):
+            try:
+                Validator.validate_phone(data.get('phone'))
+            except ValidationError as e:
+                errors.append(str(e))
+        
+        if 'salary' in data and data.get('salary'):
+            try:
+                Validator.validate_salary(data.get('salary'))
+            except ValidationError as e:
+                errors.append(str(e))
         
         if errors:
             raise ValidationError('; '.join(errors))

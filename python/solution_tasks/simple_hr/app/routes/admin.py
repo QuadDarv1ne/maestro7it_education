@@ -165,3 +165,52 @@ def cleanup_backups():
         flash(f'Ошибка при очистке резервных копий: {str(e)}')
     
     return redirect(url_for('admin.backup'))
+
+
+@bp.route('/performance')
+@login_required
+@admin_required
+def performance_monitoring():
+    """Мониторинг производительности"""
+    from app.utils.performance_monitoring import performance_monitor
+    from app.utils.redis_cache import cache
+    
+    # Получение статистики
+    perf_stats = performance_monitor.get_stats()
+    slow_queries = performance_monitor.get_slow_queries(limit=20)
+    recent_requests = performance_monitor.get_recent_requests(limit=50)
+    endpoint_stats = performance_monitor.get_endpoint_stats()
+    cache_stats = cache.get_stats()
+    
+    return render_template('admin/performance.html',
+                         stats=perf_stats,
+                         slow_queries=slow_queries,
+                         recent_requests=recent_requests,
+                         endpoint_stats=endpoint_stats,
+                         cache_stats=cache_stats)
+
+
+@bp.route('/performance/reset', methods=['POST'])
+@login_required
+@admin_required
+def reset_performance_stats():
+    """Сброс статистики производительности"""
+    from app.utils.performance_monitoring import performance_monitor
+    
+    performance_monitor.reset_stats()
+    flash('Статистика производительности сброшена', 'success')
+    
+    return redirect(url_for('admin.performance_monitoring'))
+
+
+@bp.route('/cache/clear', methods=['POST'])
+@login_required
+@admin_required
+def clear_cache():
+    """Очистка кэша"""
+    from app.utils.redis_cache import cache
+    
+    cache.flush_all()
+    flash('Кэш успешно очищен', 'success')
+    
+    return redirect(url_for('admin.performance_monitoring'))

@@ -2,8 +2,10 @@ from flask import Blueprint, render_template, current_app
 from flask_login import login_required, current_user
 from app.models import Employee, Department, Position, Vacation, Order, Notification
 from app import db, cache
+from app.utils.performance import QueryOptimizer
 from datetime import datetime, timedelta
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 bp = Blueprint('main', __name__)
 
@@ -24,14 +26,22 @@ def index():
         Vacation.status == 'approved'
     ).count()
     
-    # Birthdays in next 30 days (simulated)
-    birthday_count = 0  # TODO: Add birth_date field to Employee model
+    # Birthdays in next 30 days
+    today = datetime.utcnow().date()
+    birthday_count = 0
+    all_employees = Employee.query.filter_by(status='active').all()
+    for emp in all_employees:
+        if emp.is_birthday_soon(30):
+            birthday_count += 1
     
     # Orders count
     order_count = Order.query.count()
     
-    # Get recent employees (last 10)
-    recent_employees = Employee.query.order_by(Employee.id.desc()).limit(10).all()
+    # Get recent employees (last 10) with eager loading
+    recent_employees = Employee.query.options(
+        joinedload(Employee.department),
+        joinedload(Employee.position)
+    ).order_by(Employee.id.desc()).limit(10).all()
     
     # Get recent notifications for current user (last 5)
     recent_notifications = Notification.query.filter_by(

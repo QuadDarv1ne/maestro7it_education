@@ -167,39 +167,38 @@ def create_app(config_class=Config):
     except Exception as e:
         logger.error(f"Error setting up middleware: {str(e)}")
     
+    # Инициализация систем мониторинга и оптимизации
+    try:
+        # Инициализация Redis кэша
+        from app.utils.redis_cache import cache as redis_cache
+        redis_cache.init_app(app)
+        logger.info("Redis cache initialized")
+        
+        # Инициализация мониторинга производительности
+        from app.utils.performance_monitoring import performance_monitor
+        performance_monitor.init_app(app)
+        logger.info("Performance monitoring initialized")
+        
+        # Инициализация обработчиков ошибок
+        from app.utils.error_handlers import init_error_handlers, register_api_error_handlers
+        init_error_handlers(app)
+        register_api_error_handlers(app)
+        logger.info("Error handlers initialized")
+        
+        # Инициализация планировщика задач (только для production)
+        if not app.debug and not app.testing:
+            from app.utils.scheduler import init_scheduler
+            init_scheduler(app)
+            logger.info("Task scheduler initialized")
+    except Exception as e:
+        logger.error(f"Error initializing optimization systems: {str(e)}")
+    
     # Регистрация CLI команд
     try:
         from app.cli import register_commands
         register_commands(app)
     except Exception as e:
         logger.error(f"Error registering CLI commands: {str(e)}")
-    
-    # Обработка ошибок
-    @app.errorhandler(400)
-    def bad_request_error(error):
-        logger.warning(f"400 error: {str(error)}")
-        return render_template('errors/400.html'), 400
-    
-    @app.errorhandler(403)
-    def forbidden_error(error):
-        logger.warning(f"403 error: {str(error)}")
-        return render_template('errors/403.html'), 403
-    
-    @app.errorhandler(404)
-    def not_found_error(error):
-        logger.warning(f"404 error: {str(error)}")
-        return render_template('errors/404.html'), 404
-    
-    @app.errorhandler(429)
-    def ratelimit_error(error):
-        logger.warning(f"429 error: {str(error)}")
-        return render_template('errors/429.html'), 429
-    
-    @app.errorhandler(500)
-    def internal_error(error):
-        logger.error(f"500 error: {str(error)}")
-        db.session.rollback()
-        return render_template('errors/500.html'), 500
     
     # Initialize SocketIO with app (temporarily disabled - compatibility issues)
     # from app.utils.websocket import socketio as ws

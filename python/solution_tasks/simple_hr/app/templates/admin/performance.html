@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Мониторинг производительности{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-speedometer2 text-primary"></i>
+            Мониторинг производительности
+        </h2>
+        <div>
+            <form method="POST" action="{{ url_for('admin.clear_cache') }}" class="d-inline">
+                <button type="submit" class="btn btn-warning" onclick="return confirm('Очистить весь кэш?')">
+                    <i class="bi bi-trash"></i> Очистить кэш
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.reset_performance_stats') }}" class="d-inline">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Сбросить статистику?')">
+                    <i class="bi bi-arrow-clockwise"></i> Сбросить статистику
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Основная статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-activity"></i> Всего запросов
+                    </h5>
+                    <h2>{{ stats.total_requests | default(0) }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-clock"></i> Среднее время
+                    </h5>
+                    <h2>{{ stats.average_time | default(0) }} мс</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-exclamation-triangle"></i> Медленные запросы
+                    </h5>
+                    <h2>{{ stats.slow_queries_count | default(0) }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-x-circle"></i> Ошибки
+                    </h5>
+                    <h2>{{ stats.error_count | default(0) }} ({{ stats.error_rate | default(0) }}%)</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика кэша -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-database"></i> Статистика кэша
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if cache_stats.enabled %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Тип:</strong> {{ cache_stats.type }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Ключей:</strong> {{ cache_stats.keys | default(0) }}
+                    </div>
+                    {% if cache_stats.type == 'redis' %}
+                    <div class="col-md-3">
+                        <strong>Попадания:</strong> {{ cache_stats.hits | default(0) }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Промахи:</strong> {{ cache_stats.misses | default(0) }}
+                    </div>
+                    <div class="col-md-3 mt-2">
+                        <strong>Память:</strong> {{ cache_stats.memory_used | default('N/A') }}
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Кэширование отключено
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Медленные запросы -->
+    {% if slow_queries %}
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="bi bi-hourglass-split"></i> Медленные запросы (> 1 сек)
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Время</th>
+                            <th>Метод</th>
+                            <th>Путь</th>
+                            <th>Статус</th>
+                            <th>Длительность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for query in slow_queries %}
+                        <tr>
+                            <td><small>{{ query.timestamp[:19] }}</small></td>
+                            <td>
+                                <span class="badge bg-{{ 'primary' if query.method == 'GET' else 'info' }}">
+                                    {{ query.method }}
+                                </span>
+                            </td>
+                            <td><code>{{ query.path }}</code></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if query.status_code < 400 else 'danger' }}">
+                                    {{ query.status_code }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong class="text-danger">{{ query.execution_time }} мс</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Статистика по эндпоинтам -->
+    {% if endpoint_stats %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-bar-chart"></i> Статистика по эндпоинтам (Топ 20)
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Путь</th>
+                            <th>Запросов</th>
+                            <th>Среднее время</th>
+                            <th>Ошибки</th>
+                            <th>% ошибок</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for path, stats in endpoint_stats.items() %}
+                        <tr>
+                            <td><code>{{ path }}</code></td>
+                            <td>{{ stats.count }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if stats.average_time < 100 else 'warning' if stats.average_time < 500 else 'danger' }}">
+                                    {{ stats.average_time }} мс
+                                </span>
+                            </td>
+                            <td>{{ stats.errors }}</td>
+                            <td>
+                                {% if stats.error_rate > 0 %}
+                                    <span class="badge bg-danger">{{ stats.error_rate }}%</span>
+                                {% else %}
+                                    <span class="badge bg-success">0%</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Последние запросы -->
+    {% if recent_requests %}
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-list"></i> Последние запросы (50)
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="sticky-top bg-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Время</th>
+                            <th>Метод</th>
+                            <th>Путь</th>
+                            <th>Статус</th>
+                            <th>Длительность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in recent_requests|reverse %}
+                        <tr>
+                            <td><small>{{ req.id }}</small></td>
+                            <td><small>{{ req.timestamp[11:19] }}</small></td>
+                            <td>
+                                <span class="badge bg-{{ 'primary' if req.method == 'GET' else 'info' if req.method == 'POST' else 'warning' }}">
+                                    {{ req.method }}
+                                </span>
+                            </td>
+                            <td><small><code>{{ req.path }}</code></small></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if req.status_code < 400 else 'warning' if req.status_code < 500 else 'danger' }}">
+                                    {{ req.status_code }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="{{ 'text-danger' if req.execution_time > 1000 else 'text-warning' if req.execution_time > 500 else '' }}">
+                                    {{ req.execution_time }} мс
+                                </small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+</style>
+{% endblock %}

@@ -6,10 +6,11 @@ from app.utils.notifications import notify_employee_created, notify_employee_upd
 from app.utils.audit import log_employee_create, log_employee_update, log_employee_delete
 from app.utils.csv_import import import_employees_from_csv
 from app.utils.excel_pdf_export import ExcelExporter, PDFExporter
+from app.utils.redis_cache import cache, cached, invalidate_cache
 from app import db
 import os
 from sqlalchemy import or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 import logging
 
 # Set up logging
@@ -57,9 +58,9 @@ def list_employees():
         # Пагинация
         employees = query.paginate(page=page, per_page=10, error_out=False)
         
-        # Получаем все подразделения и должности для фильтров
-        departments = Department.query.all()
-        positions = Position.query.all()
+        # Получаем все подразделения и должности для фильтров (с кэшированием)
+        departments = get_cached_departments()
+        positions = get_cached_positions()
         
         # Create search form
         search_form = EmployeeSearchForm()
@@ -107,6 +108,10 @@ def create_employee():
                 
                 db.session.add(employee)
                 db.session.commit()
+                
+                # Инвалидация кэша
+                invalidate_employee_cache()
+                
                 # Отправляем уведомление
                 notify_employee_created(current_user.id, employee.full_name)
                 # Логируем действие
@@ -152,6 +157,10 @@ def edit_employee(id):
                 employee.status = form.status.data
                 
                 db.session.commit()
+                
+                # Инвалидация кэша
+                invalidate_employee_cache()
+                
                 # Отправляем уведомление
                 notify_employee_updated(current_user.id, employee.full_name)
                 # Логируем действие
@@ -184,6 +193,9 @@ def delete_employee(id):
         employee_id = employee.id
         db.session.delete(employee)
         db.session.commit()
+        
+        # Инвалидация кэша
+        invalidate_employee_cache()
         # Логируем действие
         log_employee_delete(employee_id, employee_name, current_user.id)
         flash('Сотрудник успешно удален', 'success')
@@ -329,3 +341,24 @@ def export_pdf():
         logger.error(f"Error exporting to PDF: {str(e)}")
         flash(f'Ошибка при экспорте в PDF: {str(e)}', 'error')
         return redirect(url_for('employees.list_employees'))
+
+
+# ========== Вспомогательные функции с кэшированием ==========
+
+@cached(timeout=600, key_prefix='departments')
+def get_cached_departments():
+    """Получить список подразделений с кэшированием на 10 минут"""
+    return Department.query.order_by(Department.name).all()
+
+
+@cached(timeout=600, key_prefix='positions')
+def get_cached_positions():
+    """Получить список должностей с кэшированием на 10 минут"""
+    return Position.query.order_by(Position.title).all()
+
+
+def invalidate_employee_cache():
+    """Инвалидация кэша при изменении данных о сотрудниках"""
+    invalidate_cache('view:employees:*')
+    invalidate_cache('view:list_employees:*')
+    logger.info("Кэш сотрудников инвалидирован")

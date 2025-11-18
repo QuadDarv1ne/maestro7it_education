@@ -139,15 +139,55 @@ class Employee(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     employee_id = db.Column(db.String(50), unique=True, nullable=False, index=True)  # табельный номер
     hire_date = db.Column(db.Date, nullable=False, index=True)
+    birth_date = db.Column(db.Date, nullable=True, index=True)  # дата рождения
+    phone = db.Column(db.String(20), nullable=True)  # телефон
+    address = db.Column(db.String(200), nullable=True)  # адрес
+    salary = db.Column(db.Numeric(10, 2), nullable=True)  # зарплата
     status = db.Column(db.String(20), default='active', index=True)  # active, dismissed
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False, index=True)
     position_id = db.Column(db.Integer, db.ForeignKey('position.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Index for faster queries
     __table_args__ = (
         db.Index('idx_employee_status_department', 'status', 'department_id'),
         db.Index('idx_employee_hire_date_status', 'hire_date', 'status'),
+        db.Index('idx_employee_birth_date', 'birth_date'),
     )
+    
+    def get_age(self):
+        """Вычислить возраст сотрудника"""
+        if not self.birth_date:
+            return None
+        today = datetime.utcnow().date()
+        age = today.year - self.birth_date.year
+        if today.month < self.birth_date.month or (today.month == self.birth_date.month and today.day < self.birth_date.day):
+            age -= 1
+        return age
+    
+    def get_years_of_service(self):
+        """Вычислить стаж работы"""
+        if not self.hire_date:
+            return 0
+        today = datetime.utcnow().date()
+        years = today.year - self.hire_date.year
+        if today.month < self.hire_date.month or (today.month == self.hire_date.month and today.day < self.hire_date.day):
+            years -= 1
+        return years
+    
+    def is_birthday_soon(self, days=30):
+        """Проверить, будет ли день рождения в ближайшие N дней"""
+        if not self.birth_date:
+            return False
+        today = datetime.utcnow().date()
+        # Создаем дату рождения в текущем году
+        this_year_birthday = self.birth_date.replace(year=today.year)
+        # Если др уже прошел в этом году, берем следующий год
+        if this_year_birthday < today:
+            this_year_birthday = self.birth_date.replace(year=today.year + 1)
+        days_until = (this_year_birthday - today).days
+        return 0 <= days_until <= days
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
