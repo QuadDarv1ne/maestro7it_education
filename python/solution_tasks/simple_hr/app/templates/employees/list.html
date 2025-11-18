@@ -258,30 +258,50 @@
 {% if employees.pages > 1 %}
 <nav aria-label="Пагинация" class="mt-4">
     <ul class="pagination justify-content-center">
-        {% if employees.has_prev %}<li class="page-item">
-                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.prev_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
-                    <i class="fas fa-chevron-left"></i> Предыдущая
-                </a>
-            </li>{% else %}<li class="page-item disabled">
-                <span class="page-link"><i class="fas fa-chevron-left"></i> Предыдущая</span>
-            </li>{% endif %}{% for page_num in employees.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}{% if page_num %}{% if page_num != employees.page %}<li class="page-item">
-                        <a class="page-link" href="{{ url_for('employees.list_employees', page=page_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
-                            {{ page_num }}
-                        </a>
-                    </li>{% else %}<li class="page-item active">
-                        <span class="page-link">
-                            {{ page_num }}
-                            <span class="visually-hidden">(текущая)</span>
-                        </span>
-                    </li>{% endif %}{% else %}<li class="page-item disabled">
-                    <span class="page-link">…</span>
-                </li>{% endif %}{% endfor %}{% if employees.has_next %}<li class="page-item">
-                <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.next_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
-                    Следующая <i class="fas fa-chevron-right"></i>
-                </a>
-            </li>{% else %}<li class="page-item disabled">
-                <span class="page-link">Следующая <i class="fas fa-chevron-right"></i></span>
-            </li>{% endif %}
+        {% if employees.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.prev_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
+                <i class="fas fa-chevron-left"></i> Предыдущая
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link"><i class="fas fa-chevron-left"></i> Предыдущая</span>
+        </li>
+        {% endif %}
+        {% for page_num in employees.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+            {% if page_num %}
+                {% if page_num != employees.page %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('employees.list_employees', page=page_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
+                        {{ page_num }}
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item active">
+                    <span class="page-link">
+                        {{ page_num }}
+                        <span class="visually-hidden">(текущая)</span>
+                    </span>
+                </li>
+                {% endif %}
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">…</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+        {% if employees.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('employees.list_employees', page=employees.next_num, department_id=current_department, position_id=current_position, status=current_status, search=current_search) }}">
+                Следующая <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Следующая <i class="fas fa-chevron-right"></i></span>
+        </li>
+        {% endif %}
     </ul>
 </nav>
 {% endif %}
