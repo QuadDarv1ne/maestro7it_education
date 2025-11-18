@@ -78,3 +78,8 @@ def index():
 def animations_demo():
     """Demo page for loading animations and skeletons"""
     return render_template('animations_demo.html')
+@bp.route('/features-demo')
+@login_required
+def features_demo():
+    ""Demo page for new features""
+    return render_template('features_demo.html')
