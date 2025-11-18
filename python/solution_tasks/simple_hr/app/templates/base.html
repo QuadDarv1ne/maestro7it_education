@@ -114,33 +114,168 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">Simple HR</a>
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+                <i class="fas fa-users-cog me-2"></i>
+                <span>Simple HR</span>
+            </a>
+            
             {% if current_user.is_authenticated %}
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('dashboard.index') }}">
-                    <i class="bi bi-graph-up"></i> Дашборд
-                </a>
-                <a class="nav-link" href="{{ url_for('employees.list_employees') }}">Сотрудники</a>
-                <a class="nav-link" href="{{ url_for('departments.list_departments') }}">Подразделения</a>
-                <a class="nav-link" href="{{ url_for('positions.list_positions') }}">Должности</a>
-                <a class="nav-link" href="{{ url_for('vacations.list_vacations') }}">Отпуска</a>
-                <a class="nav-link" href="{{ url_for('reports.generate_report') }}">Отчеты</a>
-                <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">Аналитика</a>
-                <a class="nav-link" href="{{ url_for('notifications.list_notifications') }}">
-                    Уведомления 
-                    <span id="notification-count" class="badge bg-danger"></span>
-                </a>
-                {% if current_user.role == 'admin' %}
-                <a class="nav-link" href="{{ url_for('audit.list_logs') }}">Аудит</a>
-                <a class="nav-link" href="{{ url_for('admin.index') }}">Администрирование</a>
-                {% endif %}
-                <a class="nav-link" href="{{ url_for('auth.logout') }}">Выход</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Notifications -->
+                    <li class="nav-item dropdown me-3">
+                        <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-bell fa-fw"></i>
+                            <span id="notification-count" class="badge bg-danger badge-notification">0</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header"><i class="fas fa-bell me-2"></i>Уведомления</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('notifications.list_notifications') }}">
+                                <i class="fas fa-envelope me-2"></i>Все уведомления
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- User Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle fa-fw me-1"></i>
+                            <span>{{ current_user.username }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header"><i class="fas fa-user me-2"></i>Профиль</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Настройки</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-question-circle me-2"></i>Помощь</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Выход
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
             {% endif %}
         </div>
     </nav>
+    
+    {% if current_user.is_authenticated %}
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.index') }}">
+                                <i class="fas fa-home"></i>
+                                <span>Главная</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard.index') }}">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>Дашборд</span>
+                            </a>
+                        </li>
+                        
+                        <li class="mt-3"><h6 class="text-white-50 px-3 text-uppercase" style="font-size: 0.75rem;">Управление</h6></li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('employees.list_employees') }}">
+                                <i class="fas fa-users"></i>
+                                <span>Сотрудники</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('departments.list_departments') }}">
+                                <i class="fas fa-building"></i>
+                                <span>Подразделения</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('positions.list_positions') }}">
+                                <i class="fas fa-briefcase"></i>
+                                <span>Должности</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('orders.list_orders') }}">
+                                <i class="fas fa-file-alt"></i>
+                                <span>Приказы</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('vacations.list_vacations') }}">
+                                <i class="fas fa-umbrella-beach"></i>
+                                <span>Отпуска</span>
+                            </a>
+                        </li>
+                        
+                        <li class="mt-3"><h6 class="text-white-50 px-3 text-uppercase" style="font-size: 0.75rem;">Аналитика</h6></li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('reports.generate_report') }}">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Отчеты</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Аналитика</span>
+                            </a>
+                        </li>
+                        
+                        {% if current_user.role == 'admin' %}
+                        <li class="mt-3"><h6 class="text-white-50 px-3 text-uppercase" style="font-size: 0.75rem;">Администрирование</h6></li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('audit.list_logs') }}">
+                                <i class="fas fa-history"></i>
+                                <span>Аудит</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.index') }}">
+                                <i class="fas fa-cogs"></i>
+                                <span>Настройки</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.backup') }}">
+                                <i class="fas fa-database"></i>
+                                <span>Резервные копии</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    
+                    <div class="mt-4 px-3">
+                        <div class="card bg-white bg-opacity-10 border-0 text-white">
+                            <div class="card-body text-center py-3">
+                                <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                <p class="small mb-0">Нужна помощь?</p>
+                                <a href="#" class="btn btn-sm btn-light mt-2">Документация</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+    {% else %}
+    <div class="container">
+    {% endif %}
 
     <div class="container mt-4 flex-grow-1">
         {% with messages = get_flashed_messages() %}

@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+
+{% block title %}Сотрудники{% endblock %}
+
+{% block extra_head %}
+<style>
+    .employee-card {
+        transition: all 0.3s;
+        border: none;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .employee-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .employee-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        color: white;
+        margin-right: 15px;
+    }
+    
+    .search-box-enhanced {
+        position: relative;
+    }
+    
+    .search-box-enhanced i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    
+    .search-box-enhanced input {
+        padding-left: 45px;
+        border-radius: 25px;
+        border: 2px solid #e3e6f0;
+    }
+    
+    .search-box-enhanced input:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .filter-badge {
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .filter-badge:hover {
+        transform: scale(1.1);
+    }
+    
+    .status-badge {
+        padding: 5px 15px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .action-buttons .btn {
+        margin: 0 2px;
+    }
+    
+    .avatar-bg-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .avatar-bg-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .avatar-bg-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .avatar-bg-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .avatar-bg-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-users text-primary me-2"></i>
+                Управление сотрудниками
+            </h1>
+            <nav aria-label="breadcrumb" class="d-inline-block mt-2">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i></a></li>
+                    <li class="breadcrumb-item active">Сотрудники</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>
+                Добавить сотрудника
+            </a>
+            <a href="{{ url_for('employees.import_employees') }}" class="btn btn-success">
+                <i class="fas fa-file-import me-2"></i>
+                Импорт
+            </a>
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>
+                Печать
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card primary">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small">Всего сотрудников</div>
+                        <div class="h3 mb-0">{{ employees|length }}</div>
+                    </div>
+                    <div>
+                        <i class="fas fa-users fa-3x text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small">Активные</div>
+                        <div class="h3 mb-0">{{ employees|selectattr('status', 'equalto', 'active')|list|length }}</div>
+                    </div>
+                    <div>
+                        <i class="fas fa-user-check fa-3x text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small">В отпуске</div>
+                        <div class="h3 mb-0">{{ employees|selectattr('status', 'equalto', 'on_vacation')|list|length }}</div>
+                    </div>
+                    <div>
+                        <i class="fas fa-umbrella-beach fa-3x text-info opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted small">Новых за месяц</div>
+                        <div class="h3 mb-0">5</div>
+                    </div>
+                    <div>
+                        <i class="fas fa-user-plus fa-3x text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="search-box-enhanced">
+                    <i class="fas fa-search"></i>
+                    <input type="text" 
+                           id="searchInput" 
+                           class="form-control form-control-lg" 
+                           placeholder="Поиск по имени, должности, email..."
+                           onkeyup="searchEmployees()">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-primary filter-badge" onclick="filterByStatus('all')">
+                        <i class="fas fa-list me-1"></i>Все
+                    </span>
+                    <span class="badge bg-success filter-badge" onclick="filterByStatus('active')">
+                        <i class="fas fa-check-circle me-1"></i>Активные
+                    </span>
+                    <span class="badge bg-warning filter-badge" onclick="filterByStatus('on_vacation')">
+                        <i class="fas fa-umbrella-beach me-1"></i>В отпуске
+                    </span>
+                    <span class="badge bg-danger filter-badge" onclick="filterByStatus('dismissed')">
+                        <i class="fas fa-times-circle me-1"></i>Уволенные
+                    </span>
+                    <select class="form-select form-select-sm ms-auto" style="width: auto;" onchange="filterByDepartment(this.value)">
+                        <option value="">Все подразделения</option>
+                        {% for dept in departments|default([]) %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employees List -->
+<div class="row" id="employeesList">
+    {% for employee in employees %}
+    <div class="col-lg-6 mb-4 employee-item" data-status="{{ employee.status }}" data-department="{{ employee.department_id }}">
+        <div class="card employee-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="employee-avatar avatar-bg-{{ loop.index % 5 + 1 }}">
+                        {{ employee.full_name.split()[1][0] if employee.full_name.split()|length > 1 else employee.full_name[0] }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">
+                            <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" class="text-decoration-none">
+                                {{ employee.full_name }}
+                            </a>
+                        </h5>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-briefcase me-1"></i>
+                            {{ employee.position.title if employee.position else 'Не указано' }}
+                        </p>
+                    </div>
+                    <div>
+                        {% if employee.status == 'active' %}
+                        <span class="status-badge bg-success">
+                            <i class="fas fa-check-circle"></i> Активен
+                        </span>
+                        {% elif employee.status == 'on_vacation' %}
+                        <span class="status-badge bg-warning">
+                            <i class="fas fa-umbrella-beach"></i> В отпуске
+                        </span>
+                        {% elif employee.status == 'dismissed' %}
+                        <span class="status-badge bg-danger">
+                            <i class="fas fa-times-circle"></i> Уволен
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-building me-1"></i>
+                            Подразделение
+                        </small>
+                        <span>{{ employee.department.name if employee.department else '-' }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-envelope me-1"></i>
+                            Email
+                        </small>
+                        <span class="small">{{ employee.email }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-phone me-1"></i>
+                            Телефон
+                        </small>
+                        <span>{{ employee.phone|default('-') }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-calendar me-1"></i>
+                            Дата приема
+                        </small>
+                        <span>{{ employee.hire_date.strftime('%d.%m.%Y') if employee.hire_date else '-' }}</span>
+                    </div>
+                </div>
+                
+                <div class="action-buttons d-flex gap-2">
+                    <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" 
+                       class="btn btn-sm btn-outline-primary flex-fill">
+                        <i class="fas fa-eye me-1"></i>Просмотр
+                    </a>
+                    <a href="{{ url_for('employees.edit_employee', employee_id=employee.id) }}" 
+                       class="btn btn-sm btn-outline-success flex-fill">
+                        <i class="fas fa-edit me-1"></i>Редактировать
+                    </a>
+                    <button onclick="deleteEmployee({{ employee.id }})" 
+                            class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                <h4>Нет сотрудников</h4>
+                <p class="text-muted">Начните добавлять сотрудников в систему</p>
+                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Добавить первого сотрудника
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination %}
+<nav aria-label="Навигация по страницам">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+            <a class="page-link" href="{{ url_for('employees.list_employees', page=pagination.prev_num) if pagination.has_prev else '#' }}">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+                <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                    <a class="page-link" href="{{ url_for('employees.list_employees', page=page_num) }}">{{ page_num }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+            <a class="page-link" href="{{ url_for('employees.list_employees', page=pagination.next_num) if pagination.has_next else '#' }}">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<script>
+function searchEmployees() {
+    const searchValue = document.getElementById('searchInput').value.toLowerCase();
+    const employeeItems = document.querySelectorAll('.employee-item');
+    
+    employeeItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(searchValue)) {
+            item.style.display = '';
+            item.classList.add('animate__animated', 'animate__fadeIn');
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function filterByStatus(status) {
+    const employeeItems = document.querySelectorAll('.employee-item');
+    
+    employeeItems.forEach(item => {
+        if (status === 'all' || item.dataset.status === status) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function filterByDepartment(deptId) {
+    const employeeItems = document.querySelectorAll('.employee-item');
+    
+    employeeItems.forEach(item => {
+        if (!deptId || item.dataset.department === deptId) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function deleteEmployee(employeeId) {
+    if (confirm('Вы уверены, что хотите удалить этого сотрудника?')) {
+        // Здесь должен быть AJAX запрос на удаление
+        window.location.href = `/employees/delete/${employeeId}`;
+    }
+}
+</script>
+{% endblock %}
