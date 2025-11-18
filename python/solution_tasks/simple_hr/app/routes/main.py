@@ -96,3 +96,9 @@ def icon_test():
 def data_demo():
     """Demo page for DataGrid and Charts"""
     return render_template('data_demo.html')
+
+@bp.route('/component-test')
+@login_required
+def component_test():
+    """Component testing page"""
+    return render_template('component_test.html')

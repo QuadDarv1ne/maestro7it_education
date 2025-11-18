@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Тест компонентов{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Тестирование JavaScript компонентов</h1>
+    
+    <!-- Статус загрузки компонентов -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Статус загрузки компонентов</h5>
+                </div>
+                <div class="card-body">
+                    <div id="component-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Тест DateUtils -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>DateUtils</h5>
+                </div>
+                <div class="card-body">
+                    <div id="date-test"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Тест StorageManager -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>StorageManager</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="testStorage()">Тест Storage</button>
+                    <div id="storage-test" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Тест NotificationManager -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>NotificationManager</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-success" onclick="testNotifications()">Успех</button>
+                    <button class="btn btn-danger" onclick="testNotifications('error')">Ошибка</button>
+                    <button class="btn btn-warning" onclick="testNotifications('warning')">Предупреждение</button>
+                    <button class="btn btn-info" onclick="testNotifications('info')">Информация</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Тест ModalManager -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>ModalManager</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="testModal()">Confirm</button>
+                    <button class="btn btn-success" onclick="testAlert()">Alert</button>
+                    <button class="btn btn-info" onclick="testForm()">Form</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Тест ChartHelper -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>ChartHelper - Line Chart</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="testLineChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>ChartHelper - Bar Chart</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="testBarChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Тест DataGrid -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>DataGrid</h5>
+                </div>
+                <div class="card-body">
+                    <div id="testDataGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Проверка загрузки компонентов
+document.addEventListener('DOMContentLoaded', function() {
+    const components = {
+        'DateUtils': typeof DateUtils !== 'undefined',
+        'StorageManager': typeof StorageManager !== 'undefined',
+        'CacheManager': typeof CacheManager !== 'undefined',
+        'APIClient': typeof APIClient !== 'undefined',
+        'ModalManager': typeof ModalManager !== 'undefined',
+        'DataGrid': typeof DataGrid !== 'undefined',
+        'ChartHelper': typeof ChartHelper !== 'undefined',
+        'NotificationManager': typeof notificationManager !== 'undefined',
+        'Chart.js': typeof Chart !== 'undefined'
+    };
+    
+    let statusHTML = '<ul class="list-group">';
+    for (const [name, loaded] of Object.entries(components)) {
+        const icon = loaded ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-times-circle text-danger"></i>';
+        statusHTML += `<li class="list-group-item">${icon} ${name}: ${loaded ? 'Загружен' : 'НЕ загружен'}</li>`;
+    }
+    statusHTML += '</ul>';
+    document.getElementById('component-status').innerHTML = statusHTML;
+    
+    // Тест DateUtils
+    if (typeof DateUtils !== 'undefined') {
+        const now = new Date();
+        const testHTML = `
+            <p><strong>format:</strong> ${DateUtils.format(now, 'DD.MM.YYYY')}</p>
+            <p><strong>formatRu:</strong> ${DateUtils.formatRu(now, 'long')}</p>
+            <p><strong>relative:</strong> ${DateUtils.relative(now)}</p>
+            <p><strong>getDayName:</strong> ${DateUtils.getDayName(now)}</p>
+        `;
+        document.getElementById('date-test').innerHTML = testHTML;
+    }
+    
+    // Тест ChartHelper
+    if (typeof ChartHelper !== 'undefined' && typeof Chart !== 'undefined') {
+        try {
+            const chartHelper = new ChartHelper();
+            
+            // Line Chart
+            chartHelper.createLineChart('testLineChart', {
+                labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май'],
+                datasets: [{
+                    label: 'Тестовые данные',
+                    data: [12, 19, 8, 15, 22]
+                }]
+            }, { title: 'Тестовый линейный график' });
+            
+            // Bar Chart
+            chartHelper.createBarChart('testBarChart', {
+                labels: ['A', 'B', 'C', 'D'],
+                datasets: [{
+                    label: 'Столбцы',
+                    data: [45, 32, 28, 15]
+                }]
+            }, { title: 'Тестовый столбчатый график' });
+        } catch (e) {
+            console.error('Ошибка ChartHelper:', e);
+        }
+    }
+    
+    // Тест DataGrid
+    if (typeof DataGrid !== 'undefined') {
+        try {
+            const testData = [
+                { id: 1, name: 'Иванов Иван', position: 'Менеджер', salary: 80000 },
+                { id: 2, name: 'Петрова Мария', position: 'Разработчик', salary: 120000 },
+                { id: 3, name: 'Сидоров Петр', position: 'Дизайнер', salary: 70000 }
+            ];
+            
+            const grid = new DataGrid('testDataGrid', {
+                data: testData,
+                columns: [
+                    { key: 'id', label: 'ID', sortable: true },
+                    { key: 'name', label: 'ФИО', sortable: true, filterable: true },
+                    { key: 'position', label: 'Должность', sortable: true },
+                    { 
+                        key: 'salary', 
+                        label: 'Зарплата',
+                        render: (v) => v.toLocaleString('ru-RU') + ' ₽'
+                    }
+                ],
+                pageSize: 10,
+                selectable: true,
+                searchable: true
+            });
+        } catch (e) {
+            console.error('Ошибка DataGrid:', e);
+            document.getElementById('testDataGrid').innerHTML = '<div class="alert alert-danger">Ошибка DataGrid: ' + e.message + '</div>';
+        }
+    }
+});
+
+// Тест Storage
+function testStorage() {
+    if (typeof storage !== 'undefined') {
+        storage.set('test_key', 'test_value');
+        const value = storage.get('test_key');
+        document.getElementById('storage-test').innerHTML = `
+            <div class="alert alert-success">
+                Сохранено: test_value<br>
+                Получено: ${value}
+            </div>
+        `;
+    }
+}
+
+// Тест Notifications
+function testNotifications(type = 'success') {
+    if (typeof notificationManager !== 'undefined') {
+        switch(type) {
+            case 'success':
+                notificationManager.success('Тестовое успешное уведомление', 'Успех');
+                break;
+            case 'error':
+                notificationManager.error('Тестовая ошибка', 'Ошибка');
+                break;
+            case 'warning':
+                notificationManager.warning('Тестовое предупреждение', 'Внимание');
+                break;
+            case 'info':
+                notificationManager.info('Тестовая информация', 'Информация');
+                break;
+        }
+    }
+}
+
+// Тест Modal
+async function testModal() {
+    if (typeof modalManager !== 'undefined') {
+        const confirmed = await modalManager.confirm({
+            title: 'Тест подтверждения',
+            message: 'Это тестовое модальное окно. Подтвердить?',
+            confirmText: 'Да',
+            cancelText: 'Нет'
+        });
+        
+        if (confirmed) {
+            notificationManager.success('Вы подтвердили действие', 'Подтверждено');
+        }
+    }
+}
+
+async function testAlert() {
+    if (typeof modalManager !== 'undefined') {
+        await modalManager.alert({
+            title: 'Тест Alert',
+            message: 'Это тестовое окно предупреждения',
+            icon: 'success'
+        });
+    }
+}
+
+async function testForm() {
+    if (typeof modalManager !== 'undefined') {
+        const data = await modalManager.form({
+            title: 'Тестовая форма',
+            fields: [
+                { name: 'name', label: 'Имя', type: 'text', required: true },
+                { name: 'email', label: 'Email', type: 'email', required: true }
+            ]
+        });
+        
+        if (data) {
+            notificationManager.success(`Получены данные: ${JSON.stringify(data)}`, 'Форма отправлена');
+        }
+    }
+}
+</script>
+{% endblock %}
