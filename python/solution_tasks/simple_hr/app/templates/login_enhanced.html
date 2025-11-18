@@ -300,16 +300,19 @@
                 </div>
                 
                 <div class="login-body">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} animate__animated animate__headShake" role="alert">
-                                    <i class="fas fa-exclamation-circle me-2"></i>
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+                    {# Переопределяем блок flash_messages для страницы логина #}
+                    {% block flash_messages %}
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} animate__animated animate__headShake" role="alert">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        {{ message }}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    {% endblock %}
                     
                     <form method="POST" action="{{ url_for('auth.login') }}">
                         {{ form.hidden_tag() }}
