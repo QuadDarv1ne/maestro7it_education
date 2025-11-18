@@ -101,12 +101,13 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
 .venv
 env/
 venv/
 ENV/
-env.bak
-venv.bak
+env.bak/
+venv.bak/
 
 # Spyder project settings
 .spyderproject
@@ -157,9 +158,15 @@ temp/
 # Database files
 *.db
 *.sqlite
+instance/*.db
+instance/*.sqlite
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
 
 # CSV test files (if needed for local testing only)
-*.csv
+# *.csv
 
 # Test files
-test_*.py
+# test_*.py
