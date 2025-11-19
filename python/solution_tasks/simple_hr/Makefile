@@ -3,39 +3,88 @@
 .PHONY: help install test run clean docker-build docker-up docker-down migrate backup
 
 help:
-	@echo "Simple HR - Makefile команды"
+	@echo "╔════════════════════════════════════════════════════════════╗"
+	@echo "║          Simple HR - Makefile команды (v2.4)               ║"
+	@echo "╚════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "Доступные команды:"
+	@echo "📦 Установка и окружение:"
 	@echo "  make install       - Установить зависимости"
-	@echo "  make test          - Запустить тесты"
-	@echo "  make coverage      - Запустить тесты с покрытием"
-	@echo "  make run           - Запустить приложение"
-	@echo "  make dev           - Запустить в режиме разработки"
+	@echo "  make dev-install   - Установить зависимости + dev tools"
 	@echo "  make clean         - Очистить временные файлы"
-	@echo "  make lint          - Проверить код с помощью flake8"
-	@echo "  make format        - Форматировать код с помощью black"
+	@echo ""
+	@echo "🧪 Тестирование:"
+	@echo "  make test          - Запустить все тесты"
+	@echo "  make test-unit     - Запустить только unit тесты"
+	@echo "  make test-api      - Запустить API тесты"
+	@echo "  make coverage      - Запустить тесты с покрытием"
+	@echo ""
+	@echo "🎨 Качество кода:"
+	@echo "  make lint          - Проверить код (ruff)"
+	@echo "  make format        - Форматировать код (black, isort)"
+	@echo "  make type-check    - Проверка типов (mypy)"
+	@echo "  make quality       - Все проверки качества"
+	@echo ""
+	@echo "🚀 Запуск приложения:"
+	@echo "  make run           - Запустить production"
+	@echo "  make dev           - Запустить в режиме разработки"
+	@echo ""
+	@echo "🐳 Docker:"
 	@echo "  make docker-build  - Собрать Docker образ"
-	@echo "  make docker-up     - Запустить Docker контейнеры"
-	@echo "  make docker-down   - Остановить Docker контейнеры"
+	@echo "  make docker-up     - Запустить контейнеры"
+	@echo "  make docker-down   - Остановить контейнеры"
+	@echo "  make docker-logs   - Просмотр логов"
+	@echo ""
+	@echo "🗄️  База данных:"
 	@echo "  make migrate       - Выполнить миграции БД"
+	@echo "  make migrate-init  - Инициализировать миграции"
+	@echo "  make migrate-create - Создать новую миграцию"
 	@echo "  make backup        - Создать резервную копию БД"
 	@echo "  make init-db       - Инициализировать БД"
 	@echo "  make seed-db       - Заполнить БД тестовыми данными"
+	@echo ""
+	@echo "📊 Утилиты:"
+	@echo "  make shell         - Flask shell"
+	@echo "  make stats         - Статистика БД"
+	@echo "  make create-user   - Создать пользователя"
+	@echo "  make requirements  - Обновить requirements.txt"
+	@echo "  make security-check - Проверка безопасности"
 
 install:
 	pip install -r requirements.txt
 
+dev-install:
+	pip install -r requirements.txt
+	pip install -r requirements-dev.txt
+
 test:
 	pytest -v
 
+test-unit:
+	pytest -v -m unit
+
+test-api:
+	pytest -v -m api
+
 coverage:
-	pytest --cov=app --cov-report=html --cov-report=term
+	pytest --cov=app --cov-report=html --cov-report=term-missing
+
+lint:
+	ruff check app/
+
+format:
+	black app/
+	isort app/
+
+type-check:
+	mypy app/ --ignore-missing-imports
+
+quality: lint type-check
 
 run:
 	python run.py
 
 dev:
-	export FLASK_ENV=development && flask run --reload
+	set FLASK_ENV=development && python -m flask run --reload
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +

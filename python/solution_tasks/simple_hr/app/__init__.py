@@ -1,63 +1,66 @@
-from flask import Flask, render_template
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-from flask_migrate import Migrate
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+"""
+Flask application factory and initialization module.
+
+This module contains the Flask app factory and initialization of all extensions.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from logging.handlers import RotatingFileHandler
+from typing import Optional
+
+from flask import Flask, Response
 from flask_caching import Cache
 from flask_cors import CORS
-from instance.config import Config
-import logging
-from logging.handlers import RotatingFileHandler
-import os
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_login import LoginManager
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import event
 from sqlalchemy.pool import Pool
+
+from instance.config import Config
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Initialize Flask extensions
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://"
+    storage_uri="memory://",
 )
 cache = Cache()
 
-# Import SocketIO (will be initialized later in create_app)
-socketio = None
+# SocketIO will be initialized later in create_app
+socketio: Optional[object] = None
 
-def create_app(config_class=Config):
+
+def create_app(config_class: type = Config) -> Flask:
+    """
+    Create and configure the Flask application.
+
+    Args:
+        config_class: Configuration class for the application.
+
+    Returns:
+        Configured Flask application instance.
+    """
     global socketio
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
-    
-    # Настройка логирования
-    if not app.debug and not app.testing:
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        file_handler = RotatingFileHandler('logs/simple_hr.log', maxBytes=10240, backupCount=10)
-        file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-        ))
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
-        
-        app.logger.setLevel(logging.INFO)
-        app.logger.info('Simple HR startup')
-    
+
+    # Configure logging
+    _setup_logging(app)
+
     # Configure database connection pooling for better performance
-    @event.listens_for(Pool, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        try:
-            if 'sqlite' in str(type(dbapi_connection)).lower():
-                cursor = dbapi_connection.cursor()
-                cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.close()
-        except Exception as e:
-            logger.error(f"Error setting SQLite pragma: {str(e)}")
+    _setup_database_pragmas()
     
     # Инициализация расширений
     db.init_app(app)
