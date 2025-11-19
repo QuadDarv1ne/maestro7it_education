@@ -9,6 +9,7 @@ Flask-Caching==2.3.0
 Flask-CORS==5.0.0
 Flask-SocketIO==5.4.1
 python-socketio==5.11.4
+Flasgger==0.9.7.1
 
 # Работа с базой данных
 Flask-SQLAlchemy==3.1.1

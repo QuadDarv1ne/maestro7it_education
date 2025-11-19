@@ -4,7 +4,7 @@
 
 help:
 	@echo "╔════════════════════════════════════════════════════════════╗"
-	@echo "║          Simple HR - Makefile команды (v2.4)               ║"
+	@echo "║          Simple HR - Makefile команды (v2.5)               ║"
 	@echo "╚════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "📦 Установка и окружение:"
@@ -16,6 +16,7 @@ help:
 	@echo "  make test          - Запустить все тесты"
 	@echo "  make test-unit     - Запустить только unit тесты"
 	@echo "  make test-api      - Запустить API тесты"
+	@echo "  make test-v2.5     - Запустить тесты оптимизации v2.5"
 	@echo "  make coverage      - Запустить тесты с покрытием"
 	@echo ""
 	@echo "🎨 Качество кода:"
@@ -27,6 +28,12 @@ help:
 	@echo "🚀 Запуск приложения:"
 	@echo "  make run           - Запустить production"
 	@echo "  make dev           - Запустить в режиме разработки"
+	@echo "  make swagger       - Открыть Swagger UI (http://localhost:5000/apidocs)"
+	@echo ""
+	@echo "⚡ Оптимизация (v2.5):"
+	@echo "  make optimize-static  - Оптимизировать статические файлы"
+	@echo "  make optimize-api     - Оптимизировать API endpoints"
+	@echo "  make api-stats        - Просмотр статистики endpoints"
 	@echo ""
 	@echo "🐳 Docker:"
 	@echo "  make docker-build  - Собрать Docker образ"
@@ -65,6 +72,9 @@ test-unit:
 test-api:
 	pytest -v -m api
 
+test-v2.5:
+	pytest tests/test_optimization_v2_5.py -v
+
 coverage:
 	pytest --cov=app --cov-report=html --cov-report=term-missing
 
@@ -85,6 +95,18 @@ run:
 
 dev:
 	set FLASK_ENV=development && python -m flask run --reload
+
+swagger:
+	start http://localhost:5000/apidocs || open http://localhost:5000/apidocs
+
+optimize-static:
+	python -c "from app.static_optimizer import StaticAssetManager; mgr = StaticAssetManager('app/static'); print(mgr.optimize_all())"
+
+optimize-api:
+	python -c "from app.api_optimizer import init_api_optimizer; init_api_optimizer(); print('API optimizer initialized')"
+
+api-stats:
+	python -c "from app.api_optimizer import get_api_optimizer; opt = get_api_optimizer(); print('Slow endpoints:', opt.get_slow_endpoints()); print('High query endpoints:', opt.get_high_query_endpoints())"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
