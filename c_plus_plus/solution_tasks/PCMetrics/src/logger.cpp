@@ -12,7 +12,7 @@ Logger& Logger::getInstance() {
     return instance;
 }
 
-Logger::Logger() : minimumLevel(LogLevel::INFO), outputToConsole(true), initialized(false) {}
+Logger::Logger() : minimumLevel(LogLevel::INFO_LEVEL), outputToConsole(true), initialized(false) {}
 
 Logger::~Logger() {
     if (logFile.is_open()) {
@@ -51,11 +51,11 @@ std::string Logger::getCurrentTimestamp() {
 
 std::string Logger::levelToString(LogLevel level) {
     switch (level) {
-        case LogLevel::DEBUG:   return "DEBUG";
-        case LogLevel::INFO:    return "INFO";
-        case LogLevel::WARNING: return "WARN";
-        case LogLevel::ERROR:   return "ERROR";
-        default:                return "UNKNOWN";
+        case LogLevel::DEBUG_LEVEL:   return "DEBUG";
+        case LogLevel::INFO_LEVEL:    return "INFO";
+        case LogLevel::WARNING_LEVEL: return "WARN";
+        case LogLevel::ERROR_LEVEL:   return "ERROR";
+        default:                      return "UNKNOWN";
     }
 }
 
@@ -78,10 +78,10 @@ void Logger::log(LogLevel level, const std::string& message) {
     
     if (outputToConsole) {
         switch (level) {
-            case LogLevel::ERROR:
+            case LogLevel::ERROR_LEVEL:
                 std::cerr << logMessage << std::endl;
                 break;
-            case LogLevel::WARNING:
+            case LogLevel::WARNING_LEVEL:
                 std::cout << logMessage << std::endl;
                 break;
             default:
@@ -92,17 +92,17 @@ void Logger::log(LogLevel level, const std::string& message) {
 }
 
 void Logger::debug(const std::string& message) {
-    log(LogLevel::DEBUG, message);
+    log(LogLevel::DEBUG_LEVEL, message);
 }
 
 void Logger::info(const std::string& message) {
-    log(LogLevel::INFO, message);
+    log(LogLevel::INFO_LEVEL, message);
 }
 
 void Logger::warning(const std::string& message) {
-    log(LogLevel::WARNING, message);
+    log(LogLevel::WARNING_LEVEL, message);
 }
 
 void Logger::error(const std::string& message) {
-    log(LogLevel::ERROR, message);
+    log(LogLevel::ERROR_LEVEL, message);
 }
