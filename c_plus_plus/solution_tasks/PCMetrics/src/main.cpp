@@ -31,7 +31,7 @@ void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
                              DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor);
 
 /**
- * @brief Отображает меню экпорта метрик
+ * @brief Отображает меню экспорта метрик
  * 
  * Позволяет пользователю выбрать формат экспорта (CSV или JSON)
  * и сохранить текущие метрики системы в файл.
@@ -97,7 +97,7 @@ void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
  */
 int main() {
     // Инициализация логгера
-    Logger::getInstance().initialize("pcmetrics.log", Logger::LogLevel::INFO, true);
+    Logger::getInstance().initialize("pcmetrics.log", Logger::LogLevel::INFO_LEVEL, true);
     Logger::getInstance().info("Запуск PCMetrics v1.0.0");
     
     // Установка кодировки для корректного отображения русского текста
