@@ -80,3 +80,24 @@ if(ENABLE_INTEL_GPA)
 else()
     message(STATUS "Intel GPA support disabled")
 endif()
+
+# Создание тестового исполняемого файла
+file(GLOB TEST_SOURCES
+    "${PROJECT_SOURCE_DIR}/tests/*.cpp"
+)
+
+# Исключаем main_test.cpp из обычных исходников, чтобы избежать конфликта main функций
+list(FILTER SOURCES EXCLUDE REGEX "main.cpp")
+
+# Для тестов нам нужно включить реализации из src
+set(TEST_SOURCES_WITH_IMPLEMENTATION 
+    ${TEST_SOURCES}
+    ${PROJECT_SOURCE_DIR}/src/logger.cpp
+    ${PROJECT_SOURCE_DIR}/src/memory_monitor.cpp
+)
+
+add_executable(pcmetrics_tests ${TEST_SOURCES_WITH_IMPLEMENTATION})
+target_link_libraries(pcmetrics_tests pdh)
+
+# Копируем заголовочные файлы тестового фреймворка
+include_directories(${PROJECT_SOURCE_DIR}/tests)
