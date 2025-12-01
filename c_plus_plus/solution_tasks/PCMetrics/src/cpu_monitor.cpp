@@ -23,7 +23,7 @@ bool CPUMonitor::initialize() {
         return false;
     }
     
-    status = PdhAddCounter(query, L"\\Processor(_Total)\\% Processor Time", 0, &counter);
+    status = PdhAddCounterA(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
     if (status != ERROR_SUCCESS) {
         Logger::getInstance().error("Ошибка добавления счетчика PDH: " + std::to_string(status));
         std::cerr << "Ошибка добавления счетчика PDH: " << status << std::endl;
