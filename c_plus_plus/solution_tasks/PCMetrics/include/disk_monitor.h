@@ -70,13 +70,13 @@ public:
         }
     }
     
-    void getDiskPerformance(const wchar_t* drive) {
-        std::wstring counterPath = L"\\PhysicalDisk(0 C:)\\Disk Bytes/sec";
+    void getDiskPerformance(const char* drive = "C:") {
+        std::string counterPath = "\\PhysicalDisk(0 C:)\\Disk Bytes/sec";
         PDH_HQUERY query;
         PDH_HCOUNTER counter;
         
         PdhOpenQuery(NULL, 0, &query);
-        PdhAddCounter(query, counterPath.c_str(), 0, &counter);
+        PdhAddCounterA(query, counterPath.c_str(), 0, &counter);
         PdhCollectQueryData(query);
         Sleep(1000);
         

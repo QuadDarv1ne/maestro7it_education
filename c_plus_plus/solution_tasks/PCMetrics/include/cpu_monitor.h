@@ -16,7 +16,7 @@ private:
 public:
     CPUMonitor() {
         PdhOpenQuery(NULL, 0, &query);
-        PdhAddCounter(query, L"\\Processor(_Total)\\% Processor Time", 0, &counter);
+        PdhAddCounterA(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
         PdhCollectQueryData(query);
     }
     
