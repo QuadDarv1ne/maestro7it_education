@@ -16,6 +16,7 @@
 #include "../include/memory_monitor.h"
 #include "../include/gpu_monitor.h"
 #include "../include/metrics_exporter.h"
+#include "../include/logger.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -30,7 +31,7 @@ void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
                              DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor);
 
 /**
- * @brief Отображает меню экспорта метрик
+ * @brief Отображает меню экпорта метрик
  * 
  * Позволяет пользователю выбрать формат экспорта (CSV или JSON)
  * и сохранить текущие метрики системы в файл.
@@ -42,6 +43,8 @@ void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
  */
 void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
                    DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor) {
+    Logger::getInstance().info("Отображение меню экспорта метрик");
+    
     std::cout << "\n=== Экспорт метрик ===" << std::endl;
     std::cout << "Выберите формат экспорта:" << std::endl;
     std::cout << "1. CSV (значения, разделенные запятыми)" << std::endl;
@@ -59,20 +62,28 @@ void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
         
         bool success = false;
         if (choice == 1) {
+            Logger::getInstance().info("Экспорт метрик в формат CSV: " + filename);
             success = MetricsExporter::exportToCSV(filename, cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
             if (success) {
                 std::cout << "Метрики успешно экспортированы в " << filename << std::endl;
+                Logger::getInstance().info("Метрики успешно экспортированы в " + filename);
             } else {
                 std::cout << "Ошибка при экспорте в " << filename << std::endl;
+                Logger::getInstance().error("Ошибка при экспорте в " + filename);
             }
         } else if (choice == 2) {
+            Logger::getInstance().info("Экспорт метрик в формат JSON: " + filename);
             success = MetricsExporter::exportToJSON(filename, cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
             if (success) {
                 std::cout << "Метрики успешно экспортированы в " << filename << std::endl;
+                Logger::getInstance().info("Метрики успешно экспортированы в " + filename);
             } else {
                 std::cout << "Ошибка при экспорте в " << filename << std::endl;
+                Logger::getInstance().error("Ошибка при экспорте в " + filename);
             }
         }
+    } else {
+        Logger::getInstance().info("Экспорт метрик отменен пользователем");
     }
 }
 
@@ -85,6 +96,10 @@ void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
  * @return int Код возврата программы (0 при успешном завершении)
  */
 int main() {
+    // Инициализация логгера
+    Logger::getInstance().initialize("pcmetrics.log", Logger::LogLevel::INFO, true);
+    Logger::getInstance().info("Запуск PCMetrics v1.0.0");
+    
     // Установка кодировки для корректного отображения русского текста
     // SetConsoleOutputCP(CP_UTF8);
     // setlocale(LC_ALL, "Russian");
@@ -93,14 +108,17 @@ int main() {
     setupConsoleEncoding();
     
     printHeader();
+    Logger::getInstance().info("Отображение заголовка программы");
     
     // CPU мониторинг
     printSeparator();
+    Logger::getInstance().info("Инициализация монитора CPU");
     CPUMonitor cpuMonitor;
     std::cout << "=== Информация о процессоре ===" << std::endl;
     cpuMonitor.getCPUInfo();
     
     std::cout << "\nМониторинг загрузки CPU (5 секунд)..." << std::endl;
+    Logger::getInstance().info("Начало мониторинга загрузки CPU");
     for (int i = 0; i < 5; i++) {
         Sleep(1000);
         double usage = cpuMonitor.getCPUUsage();
@@ -108,19 +126,23 @@ int main() {
                   << std::fixed << std::setprecision(2) 
                   << usage << "%" << std::endl;
     }
+    Logger::getInstance().info("Завершение мониторинга загрузки CPU");
     
     // Память
     printSeparator();
+    Logger::getInstance().info("Инициализация монитора памяти");
     MemoryMonitor memMonitor;
     memMonitor.printMemoryInfo();
     
     // Диски
     printSeparator();
+    Logger::getInstance().info("Инициализация монитора дисков");
     DiskMonitor diskMonitor;
     diskMonitor.printDiskInfo();
     
     // GPU (базовая информация)
     printSeparator();
+    Logger::getInstance().info("Инициализация монитора GPU");
     GPUMonitor gpuMonitor;
     gpuMonitor.printGPUInfo();
     
@@ -139,6 +161,7 @@ int main() {
     std::cin >> choice;
     
     if (choice == 'y' || choice == 'Y') {
+        Logger::getInstance().info("Переход в режим непрерывного мониторинга");
         continuousMonitoringMode(cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
     }
     
@@ -152,6 +175,7 @@ int main() {
     if (std::cin.peek() == '\n') std::cin.get(); // Handle newline character
     std::cin.get();
     
+    Logger::getInstance().info("Завершение работы PCMetrics");
     return 0;
 }
 
@@ -239,12 +263,15 @@ void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
         if (_kbhit()) {
             char ch = _getch();
             if (ch == 'q' || ch == 'Q') {
+                Logger::getInstance().info("Выход из режима непрерывного мониторинга");
                 break; // Exit continuous monitoring mode
             } else {
                 paused = !paused;
                 if (paused) {
+                    Logger::getInstance().info("Пауза в режиме непрерывного мониторинга");
                     std::cout << "\n[ПАУЗА] Мониторинг приостановлен. Нажмите любую клавишу для продолжения." << std::endl;
                 } else {
+                    Logger::getInstance().info("Возобновление режима непрерывного мониторинга");
                     std::cout << "\n[ВОЗОБНОВЛЕНИЕ] Мониторинг продолжается..." << std::endl;
                 }
             }

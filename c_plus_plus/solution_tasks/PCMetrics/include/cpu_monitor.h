@@ -3,18 +3,14 @@
 
 #include <windows.h>
 #include <pdh.h>
-#include <pdhmsg.h>
 #include <iostream>
-
-#pragma comment(lib, "pdh.lib")
 
 /**
  * @class CPUMonitor
- * @brief Класс для мониторинга загрузки процессора и получения информации о CPU
+ * @brief Класс для мониторинга процессора
  * 
- * CPUMonitor предоставляет функции для получения текущей загрузки процессора,
- * информации о системе и количестве ядер. Использует Windows PDH (Performance Data Helper)
- * для сбора метрик производительности.
+ * CPUMonitor предоставляет функции для получения информации о процессоре системы,
+ * включая загрузку, количество ядер и архитектуру.
  */
 class CPUMonitor {
 private:
@@ -26,47 +22,31 @@ public:
     /**
      * @brief Конструктор класса CPUMonitor
      * 
-     * Инициализирует PDH query и counter для мониторинга загрузки процессора.
-     * Выполняет начальный сбор данных для инициализации.
+     * Инициализирует монитор CPU с неинициализированным состоянием.
      */
-    CPUMonitor() : initialized(false) {
-        // Initialize PDH query and counter
-        PDH_STATUS status = PdhOpenQuery(NULL, 0, &query);
-        if (status != ERROR_SUCCESS) {
-            std::cerr << "Ошибка инициализации PDH query: " << status << std::endl;
-            return;
-        }
-        
-        status = PdhAddCounterA(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
-        if (status != ERROR_SUCCESS) {
-            std::cerr << "Ошибка добавления счетчика PDH: " << status << std::endl;
-            PdhCloseQuery(query);
-            return;
-        }
-        
-        // First collection to initialize
-        PdhCollectQueryData(query);
-        Sleep(100);
-        status = PdhCollectQueryData(query);
-        if (status != ERROR_SUCCESS) {
-            std::cerr << "Ошибка сбора данных PDH: " << status << std::endl;
-            PdhCloseQuery(query);
-            return;
-        }
-        
-        initialized = true;
+    CPUMonitor() : query(NULL), counter(NULL), initialized(false) {
+        initialize();
     }
     
     /**
      * @brief Деструктор класса CPUMonitor
      * 
-     * Освобождает ресурсы PDH query при завершении работы.
+     * Корректно завершает работу с PDH и освобождает ресурсы.
      */
     ~CPUMonitor() {
-        if (initialized) {
+        if (initialized && query) {
             PdhCloseQuery(query);
         }
     }
+    
+    /**
+     * @brief Инициализирует монитор CPU
+     * 
+     * Настраивает PDH (Performance Data Helper) для сбора данных о загрузке процессора.
+     * 
+     * @return bool true если инициализация успешна, false в противном случае
+     */
+    bool initialize();
     
     /**
      * @brief Получает текущую загрузку процессора
@@ -75,80 +55,28 @@ public:
      * 
      * @return double Значение загрузки CPU в процентах (0.0 - 100.0) или -1.0 в случае ошибки
      */
-    double getCPUUsage() const {
-        if (!initialized) {
-            std::cerr << "CPU монитор не инициализирован" << std::endl;
-            return -1.0;
-        }
-        
-        PDH_FMT_COUNTERVALUE value;
-        Sleep(100); // Small delay between measurements
-        
-        PDH_STATUS status = PdhCollectQueryData(query);
-        if (status != ERROR_SUCCESS) {
-            std::cerr << "Ошибка сбора данных CPU: " << status << std::endl;
-            return -1.0;
-        }
-        
-        status = PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value);
-        if (status != ERROR_SUCCESS) {
-            std::cerr << "Ошибка получения форматированного значения CPU: " << status << std::endl;
-            return -1.0;
-        }
-        
-        // Ensure value is within reasonable bounds
-        if (value.doubleValue < 0.0 || value.doubleValue > 100.0) {
-            std::cerr << "Получено некорректное значение загрузки CPU: " << value.doubleValue << std::endl;
-            return -1.0;
-        }
-        
-        return value.doubleValue;
-    }
+    double getCPUUsage() const;
     
     /**
      * @brief Выводит информацию о процессоре
      * 
      * Отображает количество ядер и архитектуру процессора.
      */
-    void getCPUInfo() {
-        SYSTEM_INFO sysInfo;
-        GetSystemInfo(&sysInfo);
-        std::cout << "Количество процессоров: " << sysInfo.dwNumberOfProcessors << std::endl;
-        std::cout << "Архитектура: ";
-        switch(sysInfo.wProcessorArchitecture) {
-            case PROCESSOR_ARCHITECTURE_AMD64:
-                std::cout << "x64 (AMD or Intel)" << std::endl;
-                break;
-            case PROCESSOR_ARCHITECTURE_INTEL:
-                std::cout << "x86" << std::endl;
-                break;
-            case PROCESSOR_ARCHITECTURE_ARM:
-                std::cout << "ARM" << std::endl;
-                break;
-            default:
-                std::cout << "Unknown" << std::endl;
-        }
-    }
+    void getCPUInfo();
     
     /**
      * @brief Получает количество процессоров в системе
      * 
      * @return int Количество логических процессоров в системе
      */
-    int getProcessorCount() {
-        SYSTEM_INFO sysInfo;
-        GetSystemInfo(&sysInfo);
-        return sysInfo.dwNumberOfProcessors;
-    }
+    int getProcessorCount();
     
     /**
      * @brief Проверяет, инициализирован ли монитор
      * 
      * @return bool true если монитор успешно инициализирован, false в противном случае
      */
-    bool isInitialized() const {
-        return initialized;
-    }
+    bool isInitialized() const;
 };
 
 #endif // CPU_MONITOR_H
