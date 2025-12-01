@@ -18,7 +18,13 @@ public:
     MemoryInfo getMemoryInfo() {
         MEMORYSTATUSEX memInfo;
         memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-        GlobalMemoryStatusEx(&memInfo);
+        
+        if (!GlobalMemoryStatusEx(&memInfo)) {
+            // Handle error
+            MemoryInfo errorInfo = {0};
+            std::cerr << "Ошибка получения информации о памяти" << std::endl;
+            return errorInfo;
+        }
         
         MemoryInfo info;
         info.totalPhys = memInfo.ullTotalPhys;
@@ -28,11 +34,21 @@ public:
         info.totalVirtual = memInfo.ullTotalVirtual;
         info.availVirtual = memInfo.ullAvailVirtual;
         
+        // Validate data
+        if (info.totalPhys == 0) {
+            std::cerr << "Получены некорректные данные о памяти" << std::endl;
+        }
+        
         return info;
     }
     
     void printMemoryInfo() {
         MemoryInfo info = getMemoryInfo();
+        
+        if (info.totalPhys == 0) {
+            std::cout << "Не удалось получить информацию о памяти" << std::endl;
+            return;
+        }
         
         std::cout << "\n=== Информация о памяти ===" << std::endl;
         std::cout << "Всего физической памяти: " 
@@ -46,6 +62,10 @@ public:
                   << (info.totalVirtual / (1024*1024*1024)) << " ГБ" << std::endl;
         std::cout << "Доступно виртуальной памяти: " 
                   << (info.availVirtual / (1024*1024*1024)) << " ГБ" << std::endl;
+    }
+    
+    bool isValidMemoryInfo(const MemoryInfo& info) const {
+        return info.totalPhys > 0 && info.memoryLoad <= 100;
     }
 };
 

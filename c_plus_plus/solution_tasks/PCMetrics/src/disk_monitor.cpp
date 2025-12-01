@@ -2,7 +2,5 @@
 #include <iostream>
 #include <windows.h>
 
-void DiskMonitor::printDiskInfo() {
-    // TODO: Реализовать вывод информации о дисках
-    std::cout << "Диск: Информация о дисках (заглушка)" << std::endl;
-}
+// Implementation is already in the header file, so this file can be minimal
+// We'll keep it for consistency with the project structure

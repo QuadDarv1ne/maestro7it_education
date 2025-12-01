@@ -1,4 +1,3 @@
-
 cmake_minimum_required(VERSION 3.10)
 project(PCMetrics VERSION 1.0.0 DESCRIPTION "PC Metrics Monitoring Tool")
 
@@ -27,3 +26,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Установка
 install(TARGETS pcmetrics DESTINATION bin)
+
+# Опциональная поддержка NVIDIA NVML
+option(ENABLE_NVML "Enable NVIDIA NVML support" OFF)
+
+if(ENABLE_NVML)
+    # Здесь можно добавить пути к библиотекам NVML если они установлены
+    target_compile_definitions(pcmetrics PRIVATE ENABLE_NVML)
+    message(STATUS "NVIDIA NVML support enabled")
+else()
+    message(STATUS "NVIDIA NVML support disabled")
+endif()

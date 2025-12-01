@@ -9,56 +9,60 @@
 #include <locale>
 #include <clocale>
 #include <windows.h>
+#include <conio.h>  // For _kbhit() and _getch()
+#include <iomanip>  // For std::setprecision
 #include "../include/cpu_monitor.h"
 #include "../include/disk_monitor.h"
 #include "../include/memory_monitor.h"
 #include "../include/gpu_monitor.h"
+#include "../include/metrics_exporter.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-// using namespace std;
+// Forward declarations for helper functions
+void setupConsoleEncoding();
+void printHeader();
+void printSeparator();
+void printContinuousMonitoringInstructions();
+void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
+                             DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor);
 
-/**
- * @brief Функция для настройки кодировки консоли
- * 
- * Настраивает консоль для корректного отображения UTF-8 символов
- * на разных операционных системах.
- */
-void setupConsoleEncoding() {
-    #ifdef _WIN32
-    // Для Windows устанавливаем кодовую страницу UTF-8
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-    #else
-    // Для Linux используем более простой подход с локалями
-    // Пробуем установить стандартную UTF-8 локаль
-    try {
-        std::locale::global(std::locale("C.UTF-8"));
-    } catch (const std::exception& e) {
-        try {
-            // Альтернативный вариант для некоторых систем
-            std::locale::global(std::locale("en_US.UTF-8"));
-        } catch (const std::exception& e) {
-            // Если не удалось установить локаль, продолжаем без нее
-            std::cerr << "Предупреждение: не удалось установить локаль UTF-8: " 
-                      << e.what() << std::endl;
+void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
+                   DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor) {
+    std::cout << "\n=== Экспорт метрик ===" << std::endl;
+    std::cout << "Выберите формат экспорта:" << std::endl;
+    std::cout << "1. CSV (значения, разделенные запятыми)" << std::endl;
+    std::cout << "2. JSON (JavaScript Object Notation)" << std::endl;
+    std::cout << "3. Отмена" << std::endl;
+    std::cout << "Введите ваш выбор (1-3): ";
+    
+    int choice;
+    std::cin >> choice;
+    
+    if (choice == 1 || choice == 2) {
+        std::string filename;
+        std::cout << "Введите имя файла (например, metrics.csv или metrics.json): ";
+        std::cin >> filename;
+        
+        bool success = false;
+        if (choice == 1) {
+            success = MetricsExporter::exportToCSV(filename, cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
+            if (success) {
+                std::cout << "Метрики успешно экспортированы в " << filename << std::endl;
+            } else {
+                std::cout << "Ошибка при экспорте в " << filename << std::endl;
+            }
+        } else if (choice == 2) {
+            success = MetricsExporter::exportToJSON(filename, cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
+            if (success) {
+                std::cout << "Метрики успешно экспортированы в " << filename << std::endl;
+            } else {
+                std::cout << "Ошибка при экспорте в " << filename << std::endl;
+            }
         }
     }
-    std::cout.imbue(std::locale());
-    #endif
-}
-
-void printHeader() {
-    std::cout << "======================================" << std::endl;
-    std::cout << "         PCMetrics v1.0.0            " << std::endl;
-    std::cout << "  Мониторинг системных ресурсов ПК   " << std::endl;
-    std::cout << "======================================" << std::endl;
-}
-
-void printSeparator() {
-    std::cout << "\n--------------------------------------\n" << std::endl;
 }
 
 int main() {
@@ -101,6 +105,24 @@ int main() {
     GPUMonitor gpuMonitor;
     gpuMonitor.printGPUInfo();
     
+    // Export option
+    std::cout << "\nХотите экспортировать метрики? (y/n): ";
+    char exportChoice;
+    std::cin >> exportChoice;
+    
+    if (exportChoice == 'y' || exportChoice == 'Y') {
+        showExportMenu(cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
+    }
+    
+    // Continuous monitoring option
+    std::cout << "\nХотите перейти в режим непрерывного мониторинга? (y/n): ";
+    char choice;
+    std::cin >> choice;
+    
+    if (choice == 'y' || choice == 'Y') {
+        continuousMonitoringMode(cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
+    }
+    
     // Завершение
     std::cout << "\n======================================" << std::endl;
     std::cout << "  Мониторинг завершен успешно!" << std::endl;
@@ -108,6 +130,124 @@ int main() {
     
     std::cout << "\nНажмите любую клавишу для выхода..." << std::endl;
     std::cin.get();
+    if (std::cin.peek() == '\n') std::cin.get(); // Handle newline character
+    std::cin.get();
     
     return 0;
+}
+
+/**
+ * @brief Функция для настройки кодировки консоли
+ * 
+ * Настраивает консоль для корректного отображения UTF-8 символов
+ * на разных операционных системах.
+ */
+void setupConsoleEncoding() {
+    #ifdef _WIN32
+    // Для Windows устанавливаем кодовую страницу UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    #else
+    // Для Linux используем более простой подход с локалями
+    // Пробуем установить стандартную UTF-8 локаль
+    try {
+        std::locale::global(std::locale("C.UTF-8"));
+    } catch (const std::exception& e) {
+        try {
+            // Альтернативный вариант для некоторых систем
+            std::locale::global(std::locale("en_US.UTF-8"));
+        } catch (const std::exception& e) {
+            // Если не удалось установить локаль, продолжаем без нее
+            std::cerr << "Предупреждение: не удалось установить локаль UTF-8: " 
+                      << e.what() << std::endl;
+        }
+    }
+    std::cout.imbue(std::locale());
+    #endif
+}
+
+void printHeader() {
+    std::cout << "======================================" << std::endl;
+    std::cout << "         PCMetrics v1.0.0            " << std::endl;
+    std::cout << "  Мониторинг системных ресурсов ПК   " << std::endl;
+    std::cout << "======================================" << std::endl;
+}
+
+void printSeparator() {
+    std::cout << "\n--------------------------------------\n" << std::endl;
+}
+
+void printContinuousMonitoringInstructions() {
+    std::cout << "\n=== Режим непрерывного мониторинга ===" << std::endl;
+    std::cout << "Нажмите 'q' или 'Q' для выхода из режима непрерывного мониторинга" << std::endl;
+    std::cout << "Нажмите любую другую клавишу для паузы/продолжения" << std::endl;
+}
+
+void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
+                             DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor) {
+    printContinuousMonitoringInstructions();
+    
+    bool paused = false;
+    int updateInterval = 1000; // 1 second
+    
+    while (true) {
+        if (_kbhit()) {
+            char ch = _getch();
+            if (ch == 'q' || ch == 'Q') {
+                break; // Exit continuous monitoring mode
+            } else {
+                paused = !paused;
+                if (paused) {
+                    std::cout << "\n[ПАУЗА] Мониторинг приостановлен. Нажмите любую клавишу для продолжения." << std::endl;
+                } else {
+                    std::cout << "\n[ВОЗОБНОВЛЕНИЕ] Мониторинг продолжается..." << std::endl;
+                }
+            }
+        }
+        
+        if (!paused) {
+            // Clear screen (Windows specific)
+            system("cls");
+            
+            // Print header
+            printHeader();
+            
+            // CPU monitoring
+            std::cout << "\n=== Загрузка процессора ===" << std::endl;
+            double cpuUsage = cpuMonitor.getCPUUsage();
+            std::cout << "CPU загрузка: " << std::fixed << std::setprecision(2) 
+                      << cpuUsage << "%" << std::endl;
+            
+            // Memory monitoring
+            std::cout << "\n=== Использование памяти ===" << std::endl;
+            auto memInfo = memMonitor.getMemoryInfo();
+            std::cout << "Использование RAM: " << memInfo.memoryLoad << "%" << std::endl;
+            std::cout << "Доступно: " << (memInfo.availPhys / (1024*1024*1024)) << " ГБ из " 
+                      << (memInfo.totalPhys / (1024*1024*1024)) << " ГБ" << std::endl;
+            
+            // Disk monitoring (show only C: drive for brevity)
+            std::cout << "\n=== Использование диска C: ===" << std::endl;
+            auto disks = diskMonitor.getDiskInfo();
+            for (const auto& disk : disks) {
+                if (disk.drive.find(L"C:") != std::wstring::npos) {
+                    std::wcout << L"Диск C: использовано " << std::fixed << std::setprecision(2) 
+                              << disk.usagePercent << L"%" << std::endl;
+                    break;
+                }
+            }
+            
+            // GPU monitoring
+            std::cout << "\n=== Загрузка GPU ===" << std::endl;
+#ifdef ENABLE_NVML
+            gpuMonitor.getNVIDIAGPUUsage();
+#else
+            std::cout << "GPU мониторинг недоступен (не включена поддержка NVML)" << std::endl;
+#endif
+            
+            std::cout << "\nОбновление каждые " << (updateInterval/1000) << " секунд..." << std::endl;
+            std::cout << "Нажмите 'q' для выхода, любую другую клавишу для паузы" << std::endl;
+        }
+        
+        Sleep(updateInterval);
+    }
 }

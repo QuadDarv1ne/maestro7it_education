@@ -5,12 +5,6 @@
 #include <pdhmsg.h>
 #include <iomanip>
 
-void CPUMonitor::getCPUInfo() {
-    // TODO: Реализовать вывод информации о CPU
-    std::cout << "CPU: Информация о процессоре (заглушка)" << std::endl;
-}
+// Implementation is already in the header file, so this file can be minimal
+// We'll keep it for consistency with the project structure
 
-double CPUMonitor::getCPUUsage() {
-    // TODO: Реализовать получение загрузки CPU
-    return 0.0;
-}

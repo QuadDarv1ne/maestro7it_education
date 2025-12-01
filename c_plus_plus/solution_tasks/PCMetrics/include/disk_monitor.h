@@ -23,6 +23,11 @@ public:
         std::vector<DiskInfo> disks;
         DWORD drives = GetLogicalDrives();
         
+        if (drives == 0) {
+            std::cerr << "Ошибка получения списка логических дисков" << std::endl;
+            return disks;
+        }
+        
         for (int i = 0; i < 26; i++) {
             if (drives & (1 << i)) {
                 wchar_t driveLetter = L'A' + i;
@@ -36,6 +41,12 @@ public:
                     ULARGE_INTEGER freeBytesAvailable, totalBytes, totalFreeBytes;
                     if (GetDiskFreeSpaceExW(drivePath.c_str(), &freeBytesAvailable, 
                                            &totalBytes, &totalFreeBytes)) {
+                        // Check for valid data
+                        if (totalBytes.QuadPart == 0) {
+                            std::cerr << "Некорректные данные для диска " << drivePath << std::endl;
+                            continue;
+                        }
+                        
                         info.totalSpace = totalBytes.QuadPart;
                         info.freeSpace = totalFreeBytes.QuadPart;
                         info.usedSpace = info.totalSpace - info.freeSpace;
@@ -48,6 +59,10 @@ public:
                         }
                         
                         disks.push_back(info);
+                    } else {
+                        DWORD error = GetLastError();
+                        std::cerr << "Ошибка получения информации о диске " << drivePath 
+                                  << " (Error code: " << error << ")" << std::endl;
                     }
                 }
             }
@@ -57,6 +72,13 @@ public:
     
     void printDiskInfo() {
         auto disks = getDiskInfo();
+        
+        if (disks.empty()) {
+            std::wcout << L"\n=== Информация о дисках ===" << std::endl;
+            std::wcout << L"Не удалось получить информацию о дисках" << std::endl;
+            return;
+        }
+        
         std::wcout << L"\n=== Информация о дисках ===" << std::endl;
         
         for (const auto& disk : disks) {
@@ -75,19 +97,45 @@ public:
         PDH_HQUERY query;
         PDH_HCOUNTER counter;
         
-        PdhOpenQuery(NULL, 0, &query);
-        PdhAddCounterA(query, counterPath.c_str(), 0, &counter);
+        PDH_STATUS status = PdhOpenQuery(NULL, 0, &query);
+        if (status != ERROR_SUCCESS) {
+            std::cerr << "Ошибка инициализации PDH query для диска: " << status << std::endl;
+            return;
+        }
+        
+        status = PdhAddCounterA(query, counterPath.c_str(), 0, &counter);
+        if (status != ERROR_SUCCESS) {
+            std::cerr << "Ошибка добавления счетчика PDH для диска: " << status << std::endl;
+            PdhCloseQuery(query);
+            return;
+        }
+        
         PdhCollectQueryData(query);
         Sleep(1000);
         
         PDH_FMT_COUNTERVALUE value;
-        PdhCollectQueryData(query);
-        PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value);
+        status = PdhCollectQueryData(query);
+        if (status != ERROR_SUCCESS) {
+            std::cerr << "Ошибка сбора данных PDH для диска: " << status << std::endl;
+            PdhCloseQuery(query);
+            return;
+        }
+        
+        status = PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value);
+        if (status != ERROR_SUCCESS) {
+            std::cerr << "Ошибка получения форматированного значения PDH для диска: " << status << std::endl;
+            PdhCloseQuery(query);
+            return;
+        }
         
         std::cout << "Скорость диска: " << (value.doubleValue / (1024*1024)) 
                   << " МБ/сек" << std::endl;
         
         PdhCloseQuery(query);
+    }
+    
+    bool isValidDiskInfo(const DiskInfo& info) const {
+        return info.totalSpace > 0 && info.usagePercent >= 0.0 && info.usagePercent <= 100.0;
     }
 };
 

@@ -2,7 +2,5 @@
 #include <iostream>
 #include <windows.h>
 
-void MemoryMonitor::printMemoryInfo() {
-    // TODO: Реализовать вывод информации о памяти
-    std::cout << "Память: Информация о памяти (заглушка)" << std::endl;
-}
+// Implementation is already in the header file, so this file can be minimal
+// We'll keep it for consistency with the project structure
