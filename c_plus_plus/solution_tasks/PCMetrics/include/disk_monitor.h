@@ -7,6 +7,8 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+#include <locale>
+#include <codecvt>
 
 /**
  * @class DiskMonitor
@@ -41,7 +43,7 @@ public:
      * 
      * @return std::vector<DiskInfo> Вектор со структурами информации о дисках
      */
-    std::vector<DiskInfo> getDiskInfo() {
+    std::vector<DiskInfo> getDiskInfo() const {
         std::vector<DiskInfo> disks;
         DWORD drives = GetLogicalDrives();
         
@@ -65,7 +67,10 @@ public:
                                            &totalBytes, &totalFreeBytes)) {
                         // Check for valid data
                         if (totalBytes.QuadPart == 0) {
-                            std::cerr << "Некорректные данные для диска " << drivePath << std::endl;
+                            // Convert wide string to narrow string for output
+                            std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+                            std::string drivePathStr = converter.to_bytes(drivePath);
+                            std::cerr << "Некорректные данные для диска " << drivePathStr << std::endl;
                             continue;
                         }
                         
@@ -83,7 +88,10 @@ public:
                         disks.push_back(info);
                     } else {
                         DWORD error = GetLastError();
-                        std::cerr << "Ошибка получения информации о диске " << drivePath 
+                        // Convert wide string to narrow string for output
+                        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+                        std::string drivePathStr = converter.to_bytes(drivePath);
+                        std::cerr << "Ошибка получения информации о диске " << drivePathStr 
                                   << " (Error code: " << error << ")" << std::endl;
                     }
                 }

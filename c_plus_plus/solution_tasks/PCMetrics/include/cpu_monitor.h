@@ -75,7 +75,7 @@ public:
      * 
      * @return double Значение загрузки CPU в процентах (0.0 - 100.0) или -1.0 в случае ошибки
      */
-    double getCPUUsage() {
+    double getCPUUsage() const {
         if (!initialized) {
             std::cerr << "CPU монитор не инициализирован" << std::endl;
             return -1.0;

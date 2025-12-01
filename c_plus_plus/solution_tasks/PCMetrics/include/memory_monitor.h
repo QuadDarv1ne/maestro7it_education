@@ -37,7 +37,7 @@ public:
      * 
      * @return MemoryInfo Структура с информацией о памяти или пустая структура в случае ошибки
      */
-    MemoryInfo getMemoryInfo() {
+    MemoryInfo getMemoryInfo() const {
         MEMORYSTATUSEX memInfo;
         memInfo.dwLength = sizeof(MEMORYSTATUSEX);
         
