@@ -1,16 +1,31 @@
-# AMD Display Library (ADL)
+# Библиотека отображения AMD (ADL)
 
-This directory should contain the AMD Display Library (ADL) files for AMD GPU monitoring.
+Эта директория должна содержать файлы AMD Display Library (ADL) для мониторинга графических процессоров AMD.
 
-## Required Files:
-- `adl_sdk.h` - Header file for ADL API
-- `ADL.lib` - Static library for linking (Windows)
-- `ADL.dll` - Dynamic library (Windows)
+## Необходимые файлы:
+- `ADL*.h` - Заголовочные файлы для ADL API (несколько файлов)
+- `atiadlxx.dll` - Динамическая библиотека x64 (Windows)
+- `atiadlxy.dll` - Динамическая библиотека x86 (Windows)
 
-## Installation:
-1. Download AMD Display Library SDK from AMD website
-2. Extract ADL files to this directory
-3. Enable ADL support in CMake with `-DENABLE_ADL=ON`
+## Установка:
+1. Скачайте AMD Display Library SDK с официального сайта AMD
+2. Извлеките файлы ADL в эту директорию
+3. Включите поддержку ADL в CMake с помощью флага `-DENABLE_ADL=ON`
 
-## Documentation:
-- [AMD Display Library Documentation](https://developer.amd.com/resources/graphics-development/display-library-adl-sdk/)
+## Подробная инструкция:
+1. Перейдите на сайт разработчика AMD: https://developer.amd.com/adl-sdk/
+2. Зарегистрируйтесь и скачайте последнюю версию ADL SDK
+3. После загрузки извлеките содержимое архива
+4. Скопируйте необходимые файлы в эту директорию:
+   - Заголовочные файлы: `*.h` из папки `include`
+   - Библиотеки: `atiadlxx.dll` и `atiadlxy.dll` из соответствующих папок
+
+## Документация:
+- [Документация AMD Display Library](https://developer.amd.com/resources/graphics-development/display-library-adl-sdk/)
+- [ADL SDK User Guide](https://developer.amd.com/wp-content/resources/ADL_SDK_User_Guide.pdf)
+
+## Примечания:
+- Для работы ADL требуется установленные драйверы AMD
+- Библиотека работает только с видеокартами AMD
+- Может потребоваться регистрация на сайте AMD для скачивания SDK
+- Убедитесь, что используете правильные версии библиотек для вашей архитектуры (x86/x64)

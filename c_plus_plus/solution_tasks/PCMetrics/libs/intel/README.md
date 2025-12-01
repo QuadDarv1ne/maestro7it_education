@@ -1,16 +1,29 @@
-# Intel Graphics Performance Analyzers
+# Анализаторы производительности графики Intel (Intel GPA)
 
-This directory should contain Intel Graphics performance analysis libraries for Intel GPU monitoring.
+Эта директория должна содержать библиотеки анализа производительности графики Intel для мониторинга графических процессоров Intel.
 
-## Required Files:
-- `igpa.h` - Header file for Intel GPA API
-- `igpa.lib` - Static library for linking (Windows)
-- `igpa.dll` - Dynamic library (Windows)
+## Необходимые файлы:
+- `IGPA.h` - Заголовочный файл для Intel GPA API
+- `igpa.lib` - Статическая библиотека для линковки (Windows)
+- `igpa.dll` - Динамическая библиотека (Windows)
 
-## Installation:
-1. Download Intel Graphics Performance Analyzers from Intel website
-2. Extract Intel GPA files to this directory
-3. Enable Intel GPA support in CMake with `-DENABLE_INTEL_GPA=ON`
+## Установка:
+1. Скачайте Intel Graphics Performance Analyzers с официального сайта Intel
+2. Извлеките файлы Intel GPA в эту директорию
+3. Включите поддержку Intel GPA в CMake с помощью флага `-DENABLE_INTEL_GPA=ON`
 
-## Documentation:
-- [Intel Graphics Performance Analyzers Documentation](https://software.intel.com/content/www/us/en/develop/tools/graphics-performance-analyzers.html)
+## Подробная инструкция:
+1. Перейдите на сайт разработчика Intel: https://software.intel.com/content/www/us/en/develop/tools/graphics-performance-analyzers.html
+2. Скачайте Intel Graphics Performance Analyzers
+3. После установки найдите файлы библиотеки в директории установки
+4. Скопируйте необходимые файлы в эту директорию
+
+## Документация:
+- [Документация Intel Graphics Performance Analyzers](https://software.intel.com/content/www/us/en/develop/tools/graphics-performance-analyzers/documentation.html)
+- [Intel GPA User Guide](https://software.intel.com/content/www/us/en/develop/articles/intel-graphics-performance-analyzers-user-guide.html)
+
+## Примечания:
+- Для работы Intel GPA требуется поддерживаемый процессор Intel с графикой
+- Библиотека работает только с интегрированной графикой Intel
+- Может потребоваться регистрация на сайте Intel для скачивания инструментов
+- Убедитесь, что используете совместимую версию Intel GPA с вашим оборудованием
