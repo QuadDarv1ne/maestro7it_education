@@ -23,10 +23,10 @@ public:
      * @brief Уровни логирования
      */
     enum class LogLevel {
-        DEBUG,    ///< Отладочная информация
-        INFO,     ///< Информационные сообщения
-        WARNING,  ///< Предупреждения
-        ERROR     ///< Ошибки
+        DEBUG_LEVEL,    ///< Отладочная информация
+        INFO_LEVEL,     ///< Информационные сообщения
+        WARNING_LEVEL,  ///< Предупреждения
+        ERROR_LEVEL     ///< Ошибки
     };
 
     /**
@@ -43,7 +43,7 @@ public:
      * @param minLevel Минимальный уровень логирования
      * @param consoleOutput Флаг вывода в консоль
      */
-    void initialize(const std::string& filename, LogLevel minLevel = LogLevel::INFO, bool consoleOutput = true);
+    void initialize(const std::string& filename, LogLevel minLevel = LogLevel::INFO_LEVEL, bool consoleOutput = true);
 
     /**
      * @brief Записывает сообщение в лог

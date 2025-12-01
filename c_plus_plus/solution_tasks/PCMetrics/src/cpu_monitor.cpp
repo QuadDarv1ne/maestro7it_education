@@ -2,13 +2,13 @@
 #include <iostream>
 #include <pdh.h>
 #include <windows.h>
+#include <iomanip>
 #include "../include/logger.h"
 
 /**
  * @brief Инициализирует монитор CPU
  * 
  * Настраивает PDH (Performance Data Helper) для сбора данных о загрузке процессора.
- * Устанавливает флаг initialized в зависимости от результата инициализации.
  * 
  * @return bool true если инициализация успешна, false в противном случае
  */
