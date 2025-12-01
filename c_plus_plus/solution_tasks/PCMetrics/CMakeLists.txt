@@ -1,16 +1,17 @@
+
 cmake_minimum_required(VERSION 3.10)
-project(PCMetrics VERSION 1.0.0)
+project(PCMetrics VERSION 1.0.0 DESCRIPTION "PC Metrics Monitoring Tool")
 
 # Установка стандарта C++
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Включаемые директории
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-# Исходные файлы
-set(SOURCES
-    src/main.cpp
+# Автоматический поиск всех исходников в src
+file(GLOB SOURCES
+    "${PROJECT_SOURCE_DIR}/src/*.cpp"
 )
 
 # Создание исполняемого файла
@@ -20,6 +21,9 @@ add_executable(pcmetrics ${SOURCES})
 if(WIN32)
     target_link_libraries(pcmetrics pdh)
 endif()
+
+# Опции сборки
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Установка
 install(TARGETS pcmetrics DESTINATION bin)

@@ -18,6 +18,9 @@ public:
         PdhOpenQuery(NULL, 0, &query);
         PdhAddCounterA(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
         PdhCollectQueryData(query);
+        // Первый замер для инициализации
+        Sleep(100);
+        PdhCollectQueryData(query);
     }
     
     ~CPUMonitor() {
@@ -26,6 +29,7 @@ public:
     
     double getCPUUsage() {
         PDH_FMT_COUNTERVALUE value;
+        Sleep(100); // Небольшая задержка между замерами
         PdhCollectQueryData(query);
         PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value);
         return value.doubleValue;
