@@ -9,6 +9,7 @@ obj/
 # Скомпилированные исполняемые файлы
 *.exe
 pcmetrics.exe
+pcmetrics_manual.exe
 
 # Объектные файлы
 *.o
@@ -72,6 +73,7 @@ _deps/
 
 # Файлы журналов
 *.log
+pcmetrics.log
 
 # Резервные копии
 *.bak
@@ -110,3 +112,9 @@ docs/_build/
 vcpkg/
 conan.lock
 conandata.yml
+
+# Скрипты сборки
+*.sh
+!build_project.sh
+*.bat
+!build_project.bat

@@ -98,6 +98,8 @@ cl /EHsc /I include src\main.cpp pdh.lib /Fe:pcmetrics.exe
 g++ -I include src/main.cpp -o pcmetrics.exe -lpdh -std=c++11
 ```
 
+> ⚠️ **Важно**: При ручной компиляции убедитесь, что включили все файлы `.cpp` из директории `src/`. Если вы пропустите какие-либо файлы, вы получите ошибки "undefined reference".
+
 ### CMake (рекомендуется)
 
 ```bash
@@ -106,6 +108,29 @@ cd build
 cmake ..
 cmake --build .
 ```
+
+> ✅ **Рекомендация**: Используйте CMake для сборки проекта, так как он автоматически находит и включает все необходимые файлы.
+
+### Автоматические скрипты сборки
+
+Для еще более простой сборки проекта вы можете использовать готовые скрипты:
+
+**Для Windows:**
+```bash
+build_project.bat
+```
+
+**Для Linux/macOS:**
+```bash
+chmod +x build_project.sh
+./build_project.sh
+```
+
+### Подробные руководства
+
+Для более подробной информации о сборке и запуске проекта смотрите:
+- [Руководство по сборке (русский)](docs/BUILD_GUIDE.md)
+- [Build Guide (English)](docs/BUILD_GUIDE_EN.md)
 
 ### Сборка с поддержкой NVIDIA NVML
 
@@ -192,7 +217,7 @@ CPU загрузка: 12.67%
 ```bash
 PCMetrics/
 │
-├── src/
+├── src/                      # Исходные файлы (.cpp)
 │   ├── main.cpp              # Основной файл программы
 │   ├── cpu_monitor.cpp       # Реализация мониторинга CPU
 │   ├── disk_monitor.cpp      # Реализация мониторинга дисков
@@ -201,7 +226,7 @@ PCMetrics/
 │   ├── metrics_exporter.cpp  # Экспорт метрик в различные форматы
 │   └── logger.cpp            # Реализация логирования
 │
-├── include/
+├── include/                  # Заголовочные файлы (.h)
 │   ├── cpu_monitor.h         # Заголовок для мониторинга CPU
 │   ├── disk_monitor.h        # Заголовок для мониторинга дисков
 │   ├── memory_monitor.h      # Заголовок для мониторинга памяти
@@ -214,8 +239,11 @@ PCMetrics/
 │   ├── adl/                  # AMD Display Library
 │   └── intel/                # Intel Graphics Performance Analyzers
 │
+├── tests/                    # Тестовые файлы
 ├── build/                    # Директория для сборки
 ├── docs/                     # Документация
+│   ├── BUILD_GUIDE.md        # Руководство по сборке (русский)
+│   └── BUILD_GUIDE_EN.md     # Build Guide (English)
 ├── CMakeLists.txt            # Конфигурация CMake
 ├── README.md                 # Этот файл
 └── LICENSE                   # Лицензия MIT
