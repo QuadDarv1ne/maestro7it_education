@@ -8,17 +8,39 @@
 #include <iostream>
 #include <iomanip>
 
+/**
+ * @class DiskMonitor
+ * @brief Класс для мониторинга дисковой подсистемы
+ * 
+ * DiskMonitor предоставляет функции для получения информации о всех
+ * подключенных дисках системы, включая использование пространства,
+ * типы дисков и производительность.
+ */
 class DiskMonitor {
 public:
+    /**
+     * @struct DiskInfo
+     * @brief Структура для хранения информации о диске
+     * 
+     * Содержит данные о конкретном диске системы.
+     */
     struct DiskInfo {
-        std::wstring drive;
-        ULONGLONG totalSpace;
-        ULONGLONG freeSpace;
-        ULONGLONG usedSpace;
-        double usagePercent;
-        std::wstring type;
+        std::wstring drive;      ///< Буква диска и путь (например, L"C:\\")
+        ULONGLONG totalSpace;    ///< Общий объем диска в байтах
+        ULONGLONG freeSpace;     ///< Свободное место на диске в байтах
+        ULONGLONG usedSpace;     ///< Используемое место на диске в байтах
+        double usagePercent;     ///< Процент использования диска (0.0 - 100.0)
+        std::wstring type;       ///< Тип диска (жесткий диск, съемный и т.д.)
     };
     
+    /**
+     * @brief Получает информацию обо всех дисках системы
+     * 
+     * Сканирует все логические диски системы и собирает информацию
+     * о фиксированных и съемных дисках.
+     * 
+     * @return std::vector<DiskInfo> Вектор со структурами информации о дисках
+     */
     std::vector<DiskInfo> getDiskInfo() {
         std::vector<DiskInfo> disks;
         DWORD drives = GetLogicalDrives();
@@ -70,6 +92,12 @@ public:
         return disks;
     }
     
+    /**
+     * @brief Выводит информацию о дисках в консоль
+     * 
+     * Отображает подробную информацию о всех найденных дисках,
+     * включая общий объем, свободное и используемое пространство.
+     */
     void printDiskInfo() {
         auto disks = getDiskInfo();
         
@@ -92,6 +120,13 @@ public:
         }
     }
     
+    /**
+     * @brief Получает информацию о производительности диска
+     * 
+     * Использует PDH для получения данных о скорости чтения/записи диска.
+     * 
+     * @param drive Буква диска для мониторинга (по умолчанию "C:")
+     */
     void getDiskPerformance(const char* drive = "C:") {
         std::string counterPath = "\\PhysicalDisk(0 C:)\\Disk Bytes/sec";
         PDH_HQUERY query;
@@ -134,6 +169,12 @@ public:
         PdhCloseQuery(query);
     }
     
+    /**
+     * @brief Проверяет корректность информации о диске
+     * 
+     * @param info Ссылка на структуру DiskInfo для проверки
+     * @return bool true если информация корректна, false в противном случае
+     */
     bool isValidDiskInfo(const DiskInfo& info) const {
         return info.totalSpace > 0 && info.usagePercent >= 0.0 && info.usagePercent <= 100.0;
     }

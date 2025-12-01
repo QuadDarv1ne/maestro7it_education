@@ -29,6 +29,17 @@ void printContinuousMonitoringInstructions();
 void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
                              DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor);
 
+/**
+ * @brief Отображает меню экспорта метрик
+ * 
+ * Позволяет пользователю выбрать формат экспорта (CSV или JSON)
+ * и сохранить текущие метрики системы в файл.
+ * 
+ * @param cpuMonitor Ссылка на монитор CPU
+ * @param memMonitor Ссылка на монитор памяти
+ * @param diskMonitor Ссылка на монитор дисков
+ * @param gpuMonitor Ссылка на монитор GPU
+ */
 void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
                    DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor) {
     std::cout << "\n=== Экспорт метрик ===" << std::endl;
@@ -65,6 +76,14 @@ void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
     }
 }
 
+/**
+ * @brief Основная точка входа в программу
+ * 
+ * Выполняет инициализацию всех мониторов, собирает информацию о системе,
+ * предоставляет пользователю опции для экспорта данных и непрерывного мониторинга.
+ * 
+ * @return int Код возврата программы (0 при успешном завершении)
+ */
 int main() {
     // Установка кодировки для корректного отображения русского текста
     // SetConsoleOutputCP(CP_UTF8);
@@ -166,6 +185,11 @@ void setupConsoleEncoding() {
     #endif
 }
 
+/**
+ * @brief Выводит заголовок программы
+ * 
+ * Отображает приветственное сообщение и информацию о версии программы.
+ */
 void printHeader() {
     std::cout << "======================================" << std::endl;
     std::cout << "         PCMetrics v1.0.0            " << std::endl;
@@ -173,16 +197,37 @@ void printHeader() {
     std::cout << "======================================" << std::endl;
 }
 
+/**
+ * @brief Выводит разделитель между секциями
+ * 
+ * Используется для визуального разделения различных секций вывода программы.
+ */
 void printSeparator() {
     std::cout << "\n--------------------------------------\n" << std::endl;
 }
 
+/**
+ * @brief Выводит инструкции для режима непрерывного мониторинга
+ * 
+ * Отображает информацию о том, как управлять режимом непрерывного мониторинга.
+ */
 void printContinuousMonitoringInstructions() {
     std::cout << "\n=== Режим непрерывного мониторинга ===" << std::endl;
     std::cout << "Нажмите 'q' или 'Q' для выхода из режима непрерывного мониторинга" << std::endl;
     std::cout << "Нажмите любую другую клавишу для паузы/продолжения" << std::endl;
 }
 
+/**
+ * @brief Режим непрерывного мониторинга системы
+ * 
+ * Обеспечивает реальное время обновление информации о системе с возможностью
+ * паузы и возобновления мониторинга.
+ * 
+ * @param cpuMonitor Ссылка на монитор CPU
+ * @param memMonitor Ссылка на монитор памяти
+ * @param diskMonitor Ссылка на монитор дисков
+ * @param gpuMonitor Ссылка на монитор GPU
+ */
 void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
                              DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor) {
     printContinuousMonitoringInstructions();

@@ -6,6 +6,14 @@
 #include <nvml.h>
 #endif
 
+/**
+ * @brief Инициализирует NVML библиотеку
+ * 
+ * Пытается инициализировать NVIDIA Management Library для работы с GPU.
+ * Устанавливает флаг nvmlInitialized в зависимости от результата.
+ * 
+ * @return bool true если инициализация успешна, false в противном случае
+ */
 bool GPUMonitor::initNVML() {
 #ifdef ENABLE_NVML
     nvmlReturn_t result = nvmlInit();
@@ -18,6 +26,11 @@ bool GPUMonitor::initNVML() {
     return false;
 }
 
+/**
+ * @brief Завершает работу с NVML библиотекой
+ * 
+ * Освобождает ресурсы NVML при завершении работы и сбрасывает флаг инициализации.
+ */
 void GPUMonitor::shutdownNVML() {
 #ifdef ENABLE_NVML
     if (nvmlInitialized) {
@@ -27,6 +40,14 @@ void GPUMonitor::shutdownNVML() {
 #endif
 }
 
+/**
+ * @brief Получает информацию обо всех доступных GPU
+ * 
+ * Собирает данные обо всех графических процессорах системы через NVML.
+ * Возвращает пустой вектор, если NVML не инициализирован или не доступен.
+ * 
+ * @return std::vector<GPUInfo> Вектор со структурами информации о GPU
+ */
 std::vector<GPUMonitor::GPUInfo> GPUMonitor::getAllGPUInfo() {
     std::vector<GPUInfo> gpus;
     
@@ -98,6 +119,12 @@ std::vector<GPUMonitor::GPUInfo> GPUMonitor::getAllGPUInfo() {
     return gpus;
 }
 
+/**
+ * @brief Получает информацию об использовании NVIDIA GPU
+ * 
+ * Собирает и отображает данные о загрузке GPU и памяти для NVIDIA графических процессоров.
+ * Если NVML не доступен, выводит сообщение с инструкцией по включению поддержки.
+ */
 void GPUMonitor::getNVIDIAGPUUsage() {
 #ifdef ENABLE_NVML
     if (!nvmlInitialized) {
@@ -156,6 +183,12 @@ void GPUMonitor::getNVIDIAGPUUsage() {
 #endif
 }
 
+/**
+ * @brief Выводит информацию о GPU в консоль
+ * 
+ * Отображает информацию о доступных графических процессорах и
+ * инструкции по включению расширенного мониторинга.
+ */
 void GPUMonitor::printGPUInfo() {
     std::cout << "\n=== Информация о GPU ===" << std::endl;
     

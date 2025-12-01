@@ -8,13 +8,27 @@
 
 #pragma comment(lib, "pdh.lib")
 
+/**
+ * @class CPUMonitor
+ * @brief Класс для мониторинга загрузки процессора и получения информации о CPU
+ * 
+ * CPUMonitor предоставляет функции для получения текущей загрузки процессора,
+ * информации о системе и количестве ядер. Использует Windows PDH (Performance Data Helper)
+ * для сбора метрик производительности.
+ */
 class CPUMonitor {
 private:
-    PDH_HQUERY query;
-    PDH_HCOUNTER counter;
-    bool initialized;
+    PDH_HQUERY query;           ///< PDH query handle для сбора данных
+    PDH_HCOUNTER counter;       ///< PDH counter для измерения загрузки CPU
+    bool initialized;           ///< Флаг инициализации монитора
     
 public:
+    /**
+     * @brief Конструктор класса CPUMonitor
+     * 
+     * Инициализирует PDH query и counter для мониторинга загрузки процессора.
+     * Выполняет начальный сбор данных для инициализации.
+     */
     CPUMonitor() : initialized(false) {
         // Initialize PDH query and counter
         PDH_STATUS status = PdhOpenQuery(NULL, 0, &query);
@@ -43,12 +57,24 @@ public:
         initialized = true;
     }
     
+    /**
+     * @brief Деструктор класса CPUMonitor
+     * 
+     * Освобождает ресурсы PDH query при завершении работы.
+     */
     ~CPUMonitor() {
         if (initialized) {
             PdhCloseQuery(query);
         }
     }
     
+    /**
+     * @brief Получает текущую загрузку процессора
+     * 
+     * Собирает данные о загрузке процессора за последний интервал времени.
+     * 
+     * @return double Значение загрузки CPU в процентах (0.0 - 100.0) или -1.0 в случае ошибки
+     */
     double getCPUUsage() {
         if (!initialized) {
             std::cerr << "CPU монитор не инициализирован" << std::endl;
@@ -79,6 +105,11 @@ public:
         return value.doubleValue;
     }
     
+    /**
+     * @brief Выводит информацию о процессоре
+     * 
+     * Отображает количество ядер и архитектуру процессора.
+     */
     void getCPUInfo() {
         SYSTEM_INFO sysInfo;
         GetSystemInfo(&sysInfo);
@@ -99,12 +130,22 @@ public:
         }
     }
     
+    /**
+     * @brief Получает количество процессоров в системе
+     * 
+     * @return int Количество логических процессоров в системе
+     */
     int getProcessorCount() {
         SYSTEM_INFO sysInfo;
         GetSystemInfo(&sysInfo);
         return sysInfo.dwNumberOfProcessors;
     }
     
+    /**
+     * @brief Проверяет, инициализирован ли монитор
+     * 
+     * @return bool true если монитор успешно инициализирован, false в противном случае
+     */
     bool isInitialized() const {
         return initialized;
     }

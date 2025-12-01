@@ -4,17 +4,39 @@
 #include <windows.h>
 #include <iostream>
 
+/**
+ * @class MemoryMonitor
+ * @brief Класс для мониторинга использования памяти системы
+ * 
+ * MemoryMonitor предоставляет функции для получения информации о физической
+ * и виртуальной памяти системы, включая общее количество, доступное и
+ * используемое пространство.
+ */
 class MemoryMonitor {
 public:
+    /**
+     * @struct MemoryInfo
+     * @brief Структура для хранения информации о памяти
+     * 
+     * Содержит данные о физической и виртуальной памяти системы.
+     */
     struct MemoryInfo {
-        DWORDLONG totalPhys;
-        DWORDLONG availPhys;
-        DWORDLONG usedPhys;
-        DWORD memoryLoad;
-        DWORDLONG totalVirtual;
-        DWORDLONG availVirtual;
+        DWORDLONG totalPhys;      ///< Общий объем физической памяти в байтах
+        DWORDLONG availPhys;      ///< Доступная физическая память в байтах
+        DWORDLONG usedPhys;       ///< Используемая физическая память в байтах
+        DWORD memoryLoad;         ///< Процент использования памяти (0-100)
+        DWORDLONG totalVirtual;   ///< Общий объем виртуальной памяти в байтах
+        DWORDLONG availVirtual;   ///< Доступная виртуальная память в байтах
     };
     
+    /**
+     * @brief Получает информацию о памяти системы
+     * 
+     * Использует GlobalMemoryStatusEx для получения актуальной информации
+     * о состоянии памяти системы.
+     * 
+     * @return MemoryInfo Структура с информацией о памяти или пустая структура в случае ошибки
+     */
     MemoryInfo getMemoryInfo() {
         MEMORYSTATUSEX memInfo;
         memInfo.dwLength = sizeof(MEMORYSTATUSEX);
@@ -42,6 +64,12 @@ public:
         return info;
     }
     
+    /**
+     * @brief Выводит информацию о памяти в консоль
+     * 
+     * Отображает подробную информацию о физической и виртуальной памяти,
+     * включая общие объемы, доступное и используемое пространство.
+     */
     void printMemoryInfo() {
         MemoryInfo info = getMemoryInfo();
         
@@ -64,6 +92,12 @@ public:
                   << (info.availVirtual / (1024*1024*1024)) << " ГБ" << std::endl;
     }
     
+    /**
+     * @brief Проверяет корректность информации о памяти
+     * 
+     * @param info Ссылка на структуру MemoryInfo для проверки
+     * @return bool true если информация корректна, false в противном случае
+     */
     bool isValidMemoryInfo(const MemoryInfo& info) const {
         return info.totalPhys > 0 && info.memoryLoad <= 100;
     }

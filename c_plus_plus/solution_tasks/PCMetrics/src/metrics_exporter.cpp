@@ -4,6 +4,13 @@
 #include <codecvt>
 #include <locale>
 
+/**
+ * @brief Получает текущую временную метку
+ * 
+ * Возвращает строку с текущей датой и временем в формате YYYY-MM-DD HH:MM:SS.
+ * 
+ * @return std::string Строка с текущей датой и временем
+ */
 std::string MetricsExporter::getCurrentTimestamp() {
     auto now = std::time(nullptr);
     auto tm = *std::localtime(&now);
@@ -12,6 +19,14 @@ std::string MetricsExporter::getCurrentTimestamp() {
     return oss.str();
 }
 
+/**
+ * @brief Экранирует поле CSV
+ * 
+ * Добавляет кавычки вокруг поля и удваивает внутренние кавычки при необходимости.
+ * 
+ * @param field Поле для экранирования
+ * @return std::string Экранированное поле
+ */
 std::string MetricsExporter::escapeCSVField(const std::string& field) {
     // Check if field contains commas, quotes, or newlines
     if (field.find_first_of(",\"\n") != std::string::npos) {
@@ -28,6 +43,14 @@ std::string MetricsExporter::escapeCSVField(const std::string& field) {
     return field;
 }
 
+/**
+ * @brief Форматирует строковое значение для JSON
+ * 
+ * @param key Ключ JSON
+ * @param value Значение JSON
+ * @param isLast Флаг, указывающий, является ли это последним элементом
+ * @return std::string Отформатированная строка JSON
+ */
 std::string MetricsExporter::formatJSONValue(const std::string& key, const std::string& value, bool isLast) {
     std::ostringstream oss;
     oss << "    \"" << key << "\": \"" << value << "\"";
@@ -38,6 +61,14 @@ std::string MetricsExporter::formatJSONValue(const std::string& key, const std::
     return oss.str();
 }
 
+/**
+ * @brief Форматирует числовое значение для JSON
+ * 
+ * @param key Ключ JSON
+ * @param value Числовое значение
+ * @param isLast Флаг, указывающий, является ли это последним элементом
+ * @return std::string Отформатированная строка JSON
+ */
 std::string MetricsExporter::formatJSONNumber(const std::string& key, double value, bool isLast) {
     std::ostringstream oss;
     oss << "    \"" << key << "\": " << std::fixed << std::setprecision(2) << value;
@@ -48,6 +79,19 @@ std::string MetricsExporter::formatJSONNumber(const std::string& key, double val
     return oss.str();
 }
 
+/**
+ * @brief Экспортирует метрики в формат CSV
+ * 
+ * Создает CSV файл с текущими метриками системы, включая информацию
+ * о CPU, памяти, дисках и GPU.
+ * 
+ * @param filename Имя файла для экспорта
+ * @param cpuMonitor Ссылка на монитор CPU
+ * @param memMonitor Ссылка на монитор памяти
+ * @param diskMonitor Ссылка на монитор дисков
+ * @param gpuMonitor Ссылка на монитор GPU
+ * @return bool true если экспорт успешен, false в противном случае
+ */
 bool MetricsExporter::exportToCSV(const std::string& filename,
                                  const CPUMonitor& cpuMonitor,
                                  const MemoryMonitor& memMonitor,
@@ -107,6 +151,18 @@ bool MetricsExporter::exportToCSV(const std::string& filename,
     return file.good();
 }
 
+/**
+ * @brief Экспортирует метрики в формат JSON
+ * 
+ * Создает JSON файл с текущими метриками системы.
+ * 
+ * @param filename Имя файла для экспорта
+ * @param cpuMonitor Ссылка на монитор CPU
+ * @param memMonitor Ссылка на монитор памяти
+ * @param diskMonitor Ссылка на монитор дисков
+ * @param gpuMonitor Ссылка на монитор GPU
+ * @return bool true если экспорт успешен, false в противном случае
+ */
 bool MetricsExporter::exportToJSON(const std::string& filename,
                                   const CPUMonitor& cpuMonitor,
                                   const MemoryMonitor& memMonitor,
