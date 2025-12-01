@@ -63,6 +63,18 @@
 - `AMD ADL SDK` (для мониторинга AMD GPU)
 - `Intel Graphics API` (для мониторинга Intel GPU)
 
+## 📁 Структура библиотек
+
+Проект теперь включает директорию `libs/` для размещения дополнительных библиотек и драйверов:
+
+```
+PCMetrics/
+├── libs/
+│   ├── nvml/     # NVIDIA Management Library
+│   ├── adl/      # AMD Display Library
+│   └── intel/    # Intel Graphics Performance Analyzers
+```
+
 ## 🛠️ Компиляция
 
 ### Visual Studio
@@ -94,6 +106,33 @@ cmake --build .
 mkdir build
 cd build
 cmake -DENABLE_NVML=ON ..
+cmake --build .
+```
+
+### Сборка с поддержкой AMD ADL
+
+```bash
+mkdir build
+cd build
+cmake -DENABLE_ADL=ON ..
+cmake --build .
+```
+
+### Сборка с поддержкой Intel GPA
+
+```bash
+mkdir build
+cd build
+cmake -DENABLE_INTEL_GPA=ON ..
+cmake --build .
+```
+
+### Сборка со всеми GPU библиотеками
+
+```bash
+mkdir build
+cd build
+cmake -DENABLE_NVML=ON -DENABLE_ADL=ON -DENABLE_INTEL_GPA=ON ..
 cmake --build .
 ```
 
@@ -161,6 +200,11 @@ PCMetrics/
 │   ├── gpu_monitor.h         # Заголовок для мониторинга GPU
 │   └── metrics_exporter.h    # Заголовок для экспорта метрик
 │
+├── libs/                     # Дополнительные библиотеки и драйверы
+│   ├── nvml/                 # NVIDIA Management Library
+│   ├── adl/                  # AMD Display Library
+│   └── intel/                # Intel Graphics Performance Analyzers
+│
 ├── build/                    # Директория для сборки
 ├── docs/                     # Документация
 ├── CMakeLists.txt            # Конфигурация CMake
@@ -173,20 +217,20 @@ PCMetrics/
 ### Добавление мониторинга NVIDIA GPU
 
 1. Скачайте `NVIDIA NVML SDK`
-2. **Подключите библиотеку:**
+2. Поместите файлы в директорию `libs/nvml/`
+3. Соберите проект с флагом `-DENABLE_NVML=ON`
 
-```cpp
-#include <nvml.h>
-#pragma comment(lib, "nvml.lib")
+### Добавление мониторинга AMD GPU
 
-nvmlInit();
-nvmlDevice_t device;
-nvmlDeviceGetHandleByIndex(0, &device);
-nvmlUtilization_t utilization;
-nvmlDeviceGetUtilizationRates(device, &utilization);
-std::cout << "GPU загрузка: " << utilization.gpu << "%" << std::endl;
-nvmlShutdown();
-```
+1. Скачайте `AMD ADL SDK`
+2. Поместите файлы в директорию `libs/adl/`
+3. Соберите проект с флагом `-DENABLE_ADL=ON`
+
+### Добавление мониторинга Intel GPU
+
+1. Скачайте `Intel Graphics Performance Analyzers`
+2. Поместите файлы в директорию `libs/intel/`
+3. Соберите проект с флагом `-DENABLE_INTEL_GPA=ON`
 
 ### Экспорт метрик
 
