@@ -1,0 +1,112 @@
+# PCMetrics .gitignore
+
+# Build directories
+build/
+build-*/
+bin/
+obj/
+
+# Compiled executables
+*.exe
+pcmetrics.exe
+
+# Object files
+*.o
+*.obj
+
+# Libraries and archives
+*.lib
+*.a
+*.so
+*.dll
+*.dylib
+
+# Precompiled headers
+*.gch
+*.pch
+*.ipch
+
+# Debug files
+*.pdb
+*.ilk
+*.sdf
+*.aps
+*.tlog
+*.lastbuildstate
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+*.cmake
+
+# Visual Studio files
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.suo
+*.opensdf
+*.exp
+*.log
+.vs/
+*.VC.db
+*.VC.VC.opendb
+
+# CLion files
+.idea/
+
+# Eclipse files
+.project
+.cproject
+.classpath
+.settings/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Log files
+*.log
+
+# Backup files
+*.bak
+*.backup
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Coverage and test reports
+coverage/
+*.gcda
+*.gcno
+*.gcov
+
+# Libraries directory (except README files)
+libs/*/
+!libs/*/README.md
+
+# Ignore all build artifacts but not the libs directory structure
+!libs/
+
+# Documentation generation
+docs/_build/
+.doctrees/
+
+# Package manager files
+vcpkg/
+conan.lock
+conandata.yml
