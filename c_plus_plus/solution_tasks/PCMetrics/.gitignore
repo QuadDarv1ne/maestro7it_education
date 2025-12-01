@@ -1,32 +1,32 @@
-# PCMetrics .gitignore
+# .gitignore для PCMetrics
 
-# Build directories
+# Директории сборки
 build/
 build-*/
 bin/
 obj/
 
-# Compiled executables
+# Скомпилированные исполняемые файлы
 *.exe
 pcmetrics.exe
 
-# Object files
+# Объектные файлы
 *.o
 *.obj
 
-# Libraries and archives
+# Библиотеки и архивы
 *.lib
 *.a
 *.so
 *.dll
 *.dylib
 
-# Precompiled headers
+# Предварительно скомпилированные заголовки
 *.gch
 *.pch
 *.ipch
 
-# Debug files
+# Отладочные файлы
 *.pdb
 *.ilk
 *.sdf
@@ -34,7 +34,7 @@ pcmetrics.exe
 *.tlog
 *.lastbuildstate
 
-# CMake files
+# Файлы CMake
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
@@ -43,7 +43,7 @@ CTestTestfile.cmake
 _deps/
 *.cmake
 
-# Visual Studio files
+# Файлы Visual Studio
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
@@ -56,57 +56,57 @@ _deps/
 *.VC.db
 *.VC.VC.opendb
 
-# CLion files
+# Файлы CLion
 .idea/
 
-# Eclipse files
+# Файлы Eclipse
 .project
 .cproject
 .classpath
 .settings/
 
-# Temporary files
+# Временные файлы
 *.tmp
 *.temp
 *~
 
-# Log files
+# Файлы журналов
 *.log
 
-# Backup files
+# Резервные копии
 *.bak
 *.backup
 
-# OS generated files
+# Файлы созданные операционной системой
 .DS_Store
 Thumbs.db
 desktop.ini
 ehthumbs.db
 $RECYCLE.BIN/
 
-# Editor files
+# Файлы редакторов
 *.swp
 *.swo
 *~
 
-# Coverage and test reports
+# Отчеты о покрытии и тестировании
 coverage/
 *.gcda
 *.gcno
 *.gcov
 
-# Libraries directory (except README files)
+# Директория библиотек (кроме файлов README)
 libs/*/
 !libs/*/README.md
 
-# Ignore all build artifacts but not the libs directory structure
+# Игнорировать все сборочные артефакты, но сохранить структуру директории libs
 !libs/
 
-# Documentation generation
+# Генерация документации
 docs/_build/
 .doctrees/
 
-# Package manager files
+# Файлы менеджеров пакетов
 vcpkg/
 conan.lock
 conandata.yml
