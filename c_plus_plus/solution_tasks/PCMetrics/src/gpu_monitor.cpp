@@ -1,3 +1,13 @@
+/**
+ * @file gpu_monitor.cpp
+ * @brief Реализация класса GPUMonitor для мониторинга графических процессоров
+ * @author PCMetrics Team
+ * @date 2025
+ * 
+ * Поддерживает мониторинг GPU от NVIDIA (через NVML), AMD (через ADL) и Intel (через GPA).
+ * Функциональность включается условной компиляцией при наличии соответствующих библиотек.
+ */
+
 #include "../include/gpu_monitor.h"
 #include <iostream>
 #include <iomanip>

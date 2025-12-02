@@ -10,6 +10,15 @@
 #include <locale>
 #include <codecvt>
 
+// Вспомогательная функция для конвертации wstring в string
+inline std::string wstringToString(const std::wstring& wstr) {
+    if (wstr.empty()) return std::string();
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+    return strTo;
+}
+
 /**
  * @class DiskMonitor
  * @brief Класс для мониторинга дисковой подсистемы
@@ -68,8 +77,7 @@ public:
                         // Check for valid data
                         if (totalBytes.QuadPart == 0) {
                             // Convert wide string to narrow string for output
-                            std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-                            std::string drivePathStr = converter.to_bytes(drivePath);
+                            std::string drivePathStr = wstringToString(drivePath);
                             std::cerr << "Некорректные данные для диска " << drivePathStr << std::endl;
                             continue;
                         }
@@ -89,8 +97,7 @@ public:
                     } else {
                         DWORD error = GetLastError();
                         // Convert wide string to narrow string for output
-                        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-                        std::string drivePathStr = converter.to_bytes(drivePath);
+                        std::string drivePathStr = wstringToString(drivePath);
                         std::cerr << "Ошибка получения информации о диске " << drivePathStr 
                                   << " (Error code: " << error << ")" << std::endl;
                     }

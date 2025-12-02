@@ -1,3 +1,13 @@
+/**
+ * @file metrics_exporter.cpp
+ * @brief Реализация класса MetricsExporter для экспорта системных метрик
+ * @author PCMetrics Team
+ * @date 2025
+ * 
+ * Этот файл содержит реализацию экспорта метрик в форматы CSV и JSON.
+ * Поддерживает экспорт данных CPU, памяти, дисков и GPU.
+ */
+
 #include "../include/metrics_exporter.h"
 #include <iostream>
 #include <algorithm>
@@ -131,8 +141,12 @@ bool MetricsExporter::exportToCSV(const std::string& filename,
     // Disk data
     for (const auto& disk : disks) {
         // Convert wide string to narrow string for CSV
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-        std::string driveStr = converter.to_bytes(disk.drive);
+        std::string driveStr;
+        if (!disk.drive.empty()) {
+            int size_needed = WideCharToMultiByte(CP_UTF8, 0, &disk.drive[0], (int)disk.drive.size(), NULL, 0, NULL, NULL);
+            driveStr.resize(size_needed);
+            WideCharToMultiByte(CP_UTF8, 0, &disk.drive[0], (int)disk.drive.size(), &driveStr[0], size_needed, NULL, NULL);
+        }
         
         double diskTotal = static_cast<double>(disk.totalSpace) / (1024*1024*1024);
         double diskUsed = static_cast<double>(disk.usedSpace) / (1024*1024*1024);

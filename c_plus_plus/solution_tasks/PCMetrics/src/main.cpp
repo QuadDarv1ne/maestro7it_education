@@ -183,29 +183,45 @@ int main() {
  * @brief Функция для настройки кодировки консоли
  * 
  * Настраивает консоль для корректного отображения UTF-8 символов
- * на разных операционных системах.
+ * на разных операционных системах. Включает обработку ошибок и
+ * логирование состояния настройки.
  */
 void setupConsoleEncoding() {
     #ifdef _WIN32
     // Для Windows устанавливаем кодовую страницу UTF-8
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-    #else
-    // Для Linux используем более простой подход с локалями
-    // Пробуем установить стандартную UTF-8 локаль
-    try {
-        std::locale::global(std::locale("C.UTF-8"));
-    } catch (const std::exception& e) {
-        try {
-            // Альтернативный вариант для некоторых систем
-            std::locale::global(std::locale("en_US.UTF-8"));
-        } catch (const std::exception& e) {
-            // Если не удалось установить локаль, продолжаем без нее
-            std::cerr << "Предупреждение: не удалось установить локаль UTF-8: " 
-                      << e.what() << std::endl;
+    if (!SetConsoleOutputCP(CP_UTF8)) {
+        Logger::getInstance().warning("Не удалось установить кодировку вывода UTF-8");
+    }
+    if (!SetConsoleCP(CP_UTF8)) {
+        Logger::getInstance().warning("Не удалось установить кодировку ввода UTF-8");
+    }
+    
+    // Включаем поддержку ANSI escape последовательностей для цветного вывода
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE) {
+        DWORD dwMode = 0;
+        if (GetConsoleMode(hOut, &dwMode)) {
+            dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleMode(hOut, dwMode);
         }
     }
-    std::cout.imbue(std::locale());
+    
+    Logger::getInstance().debug("Кодировка консоли настроена: UTF-8");
+    #else
+    // Для Linux используем локали
+    try {
+        std::locale::global(std::locale("C.UTF-8"));
+        std::cout.imbue(std::locale());
+        Logger::getInstance().debug("Локаль установлена: C.UTF-8");
+    } catch (const std::exception& e) {
+        try {
+            std::locale::global(std::locale("en_US.UTF-8"));
+            std::cout.imbue(std::locale());
+            Logger::getInstance().debug("Локаль установлена: en_US.UTF-8");
+        } catch (const std::exception& e2) {
+            Logger::getInstance().warning("Не удалось установить локаль UTF-8: " + std::string(e2.what()));
+        }
+    }
     #endif
 }
 

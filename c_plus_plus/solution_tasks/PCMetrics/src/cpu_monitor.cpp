@@ -1,3 +1,10 @@
+/**
+ * @file cpu_monitor.cpp
+ * @brief Реализация класса CPUMonitor для мониторинга процессора
+ * @author PCMetrics Team
+ * @date 2025
+ */
+
 #include "../include/cpu_monitor.h"
 #include <iostream>
 #include <pdh.h>
