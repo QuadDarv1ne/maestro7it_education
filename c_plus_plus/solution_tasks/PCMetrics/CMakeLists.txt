@@ -1,18 +1,43 @@
 cmake_minimum_required(VERSION 3.10)
-project(PCMetrics VERSION 1.0.0 DESCRIPTION "PC Metrics Monitoring Tool")
+project(PCMetrics VERSION 1.0.0 DESCRIPTION "PC Metrics Monitoring Tool" LANGUAGES CXX)
 
 # Установка стандарта C++
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Опции компиляции
+if(MSVC)
+    add_compile_options(/W4 /WX- /utf-8)
+    # Отключаем предупреждения о небезопасных функциях
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# Включение режима отладки по умолчанию
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Включаемые директории
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Директории для дополнительных библиотек
 set(LIBS_DIR ${PROJECT_SOURCE_DIR}/libs)
-include_directories(${LIBS_DIR}/nvml)
-include_directories(${LIBS_DIR}/adl)
-include_directories(${LIBS_DIR}/intel)
+
+# Опциональные включаемые директории для GPU библиотек
+if(EXISTS ${LIBS_DIR}/nvml)
+    include_directories(${LIBS_DIR}/nvml)
+endif()
+if(EXISTS ${LIBS_DIR}/adl)
+    include_directories(${LIBS_DIR}/adl)
+endif()
+if(EXISTS ${LIBS_DIR}/intel)
+    include_directories(${LIBS_DIR}/intel)
+endif()
 
 # Автоматический поиск всех исходников в src
 file(GLOB SOURCES
@@ -24,11 +49,14 @@ add_executable(pcmetrics ${SOURCES})
 
 # Линковка библиотек Windows
 if(WIN32)
-    target_link_libraries(pcmetrics pdh)
+    target_link_libraries(pcmetrics PRIVATE pdh)
+    message(STATUS "Linking Windows PDH library")
 endif()
 
 # Опции сборки
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Установка
 install(TARGETS pcmetrics DESTINATION bin)
@@ -86,8 +114,10 @@ add_executable(pcmetrics_test
     ${PROJECT_SOURCE_DIR}/tests/simple_test.cpp
     ${PROJECT_SOURCE_DIR}/src/logger.cpp
     ${PROJECT_SOURCE_DIR}/src/memory_monitor.cpp
+    ${PROJECT_SOURCE_DIR}/src/cpu_monitor.cpp
+    ${PROJECT_SOURCE_DIR}/src/disk_monitor.cpp
 )
-target_link_libraries(pcmetrics_test pdh)
+target_link_libraries(pcmetrics_test PRIVATE pdh)
 
 # Копируем заголовочные файлы тестового фреймворка
-include_directories(${PROJECT_SOURCE_DIR}/tests)
+target_include_directories(pcmetrics_test PRIVATE ${PROJECT_SOURCE_DIR}/tests)
