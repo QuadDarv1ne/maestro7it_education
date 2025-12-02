@@ -120,5 +120,11 @@ add_executable(pcmetrics_test
 )
 target_link_libraries(pcmetrics_test PRIVATE pdh iphlpapi)
 
+# Минимальный тест без зависимостей
+add_executable(minimal_test 
+    ${PROJECT_SOURCE_DIR}/tests/minimal_test.cpp
+)
+target_link_libraries(minimal_test PRIVATE)
+
 # Копируем заголовочные файлы тестового фреймворка
 target_include_directories(pcmetrics_test PRIVATE ${PROJECT_SOURCE_DIR}/tests)

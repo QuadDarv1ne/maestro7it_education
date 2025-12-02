@@ -166,7 +166,16 @@ public:
      * 
      * @return std::vector<GPUInfo> Вектор со структурами информации о GPU
      */
-    std::vector<GPUInfo> getAllGPUInfo();
+    std::vector<GPUInfo> getAllGPUInfo() const;
+
+private:
+    /**
+     * @brief Форматирует размер в байтах в читаемый формат
+     * 
+     * @param bytes Размер в байтах
+     * @return std::string Отформатированная строка (например, "1.5 GB")
+     */
+    std::string formatBytes(unsigned long long bytes);
 };
 
 #endif // GPU_MONITOR_H

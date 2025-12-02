@@ -163,7 +163,7 @@ void GPUMonitor::shutdownAll() {
  * 
  * @return std::vector<GPUInfo> Вектор со структурами информации о GPU
  */
-std::vector<GPUMonitor::GPUInfo> GPUMonitor::getAllGPUInfo() {
+std::vector<GPUMonitor::GPUInfo> GPUMonitor::getAllGPUInfo() const {
     std::vector<GPUInfo> gpus;
     
 #ifdef ENABLE_NVML

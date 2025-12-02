@@ -149,12 +149,14 @@ int main(int argc, char* argv[]) {
         if (l3Cache != "N/A") std::cout << "  L3: " << l3Cache << std::endl;
     }
     
-    std::cout << "\nМониторинг загрузки CPU (5 секунд)..." << std::endl;
+    // В автоматическом режиме делаем только одно измерение
+    int cpuSamples = autoMode ? 2 : 5;
+    std::cout << "\nМониторинг загрузки CPU (" << cpuSamples << " измерений)..." << std::endl;
     Logger::getInstance().info("Начало мониторинга загрузки CPU");
-    for (int i = 0; i < 5; i++) {
-        Sleep(1000);
+    for (int i = 0; i < cpuSamples; i++) {
+        Sleep(500);  // Сокращено до 500мс для быстрого теста
         double usage = cpuMonitor.getCPUUsage();
-        std::cout << "[" << (i+1) << "/5] CPU загрузка: " 
+        std::cout << "[" << (i+1) << "/" << cpuSamples << "] CPU загрузка: " 
                   << std::fixed << std::setprecision(2) 
                   << usage << "%" << std::endl;
     }
