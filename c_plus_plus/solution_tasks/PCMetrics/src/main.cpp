@@ -253,7 +253,7 @@ void printContinuousMonitoringInstructions() {
  * @param gpuMonitor Ссылка на монитор GPU
  */
 void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor, 
-                             DiskMonitor& diskMonitor, GPUMonitor& gpuMonitor) {
+                             DiskMonitor& diskMonitor, [[maybe_unused]] GPUMonitor& gpuMonitor) {
     printContinuousMonitoringInstructions();
     
     bool paused = false;

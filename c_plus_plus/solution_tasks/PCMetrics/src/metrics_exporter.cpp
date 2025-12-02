@@ -96,7 +96,7 @@ bool MetricsExporter::exportToCSV(const std::string& filename,
                                  const CPUMonitor& cpuMonitor,
                                  const MemoryMonitor& memMonitor,
                                  const DiskMonitor& diskMonitor,
-                                 const GPUMonitor& gpuMonitor) {
+                                 [[maybe_unused]] const GPUMonitor& gpuMonitor) {
     std::ofstream file(filename);
     if (!file.is_open()) {
         return false;
@@ -166,8 +166,8 @@ bool MetricsExporter::exportToCSV(const std::string& filename,
 bool MetricsExporter::exportToJSON(const std::string& filename,
                                   const CPUMonitor& cpuMonitor,
                                   const MemoryMonitor& memMonitor,
-                                  const DiskMonitor& diskMonitor,
-                                  const GPUMonitor& gpuMonitor) {
+                                  [[maybe_unused]] const DiskMonitor& diskMonitor,
+                                  [[maybe_unused]] const GPUMonitor& gpuMonitor) {
     std::ofstream file(filename);
     if (!file.is_open()) {
         return false;

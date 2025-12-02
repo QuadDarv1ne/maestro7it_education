@@ -43,7 +43,7 @@ public:
         
         if (!GlobalMemoryStatusEx(&memInfo)) {
             // Handle error
-            MemoryInfo errorInfo = {0};
+            MemoryInfo errorInfo = {0, 0, 0, 0, 0, 0};
             std::cerr << "Ошибка получения информации о памяти" << std::endl;
             return errorInfo;
         }

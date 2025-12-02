@@ -135,7 +135,7 @@ public:
      * 
      * @param drive Буква диска для мониторинга (по умолчанию "C:")
      */
-    void getDiskPerformance(const char* drive = "C:") {
+    void getDiskPerformance([[maybe_unused]] const char* drive = "C:") {
         std::string counterPath = "\\PhysicalDisk(0 C:)\\Disk Bytes/sec";
         PDH_HQUERY query;
         PDH_HCOUNTER counter;
