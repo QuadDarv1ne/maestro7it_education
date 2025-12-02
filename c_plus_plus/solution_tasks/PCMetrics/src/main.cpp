@@ -322,6 +322,7 @@ void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
     
     bool paused = false;
     int updateInterval = 1000; // 1 second
+    bool showDetailedInfo = false; // Toggle for detailed vs. compact view
     
     while (true) {
         if (_kbhit()) {
@@ -329,6 +330,22 @@ void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
             if (ch == 'q' || ch == 'Q') {
                 Logger::getInstance().info("Выход из режима непрерывного мониторинга");
                 break; // Exit continuous monitoring mode
+            } else if (ch == 'd' || ch == 'D') {
+                // Toggle detailed view
+                showDetailedInfo = !showDetailedInfo;
+                if (showDetailedInfo) {
+                    Logger::getInstance().info("Включение детального режима просмотра");
+                } else {
+                    Logger::getInstance().info("Включение компактного режима просмотра");
+                }
+            } else if (ch == '+' || ch == '=') {
+                // Increase update interval (slower updates)
+                updateInterval = std::min(updateInterval + 500, 10000); // Max 10 seconds
+                Logger::getInstance().info("Интервал обновления увеличен до " + std::to_string(updateInterval) + " мс");
+            } else if (ch == '-' || ch == '_') {
+                // Decrease update interval (faster updates)
+                updateInterval = std::max(updateInterval - 500, 500); // Min 0.5 seconds
+                Logger::getInstance().info("Интервал обновления уменьшен до " + std::to_string(updateInterval) + " мс");
             } else {
                 paused = !paused;
                 if (paused) {
@@ -348,40 +365,80 @@ void continuousMonitoringMode(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
             // Print header
             printHeader();
             
-            // CPU monitoring
-            std::cout << "\n=== Загрузка процессора ===" << std::endl;
-            double cpuUsage = cpuMonitor.getCPUUsage();
-            std::cout << "CPU загрузка: " << std::fixed << std::setprecision(2) 
-                      << cpuUsage << "%" << std::endl;
+            // Show control instructions
+            std::cout << "\n=== Управление ===" << std::endl;
+            std::cout << "q/Q: Выход | Space: Пауза/Продолжить | d/D: Детальный/Компактный вид" << std::endl;
+            std::cout << "+/-: Увеличить/Уменьшить частоту обновления | Текущая: " << (updateInterval/1000.0) << " сек" << std::endl;
             
-            // Memory monitoring
-            std::cout << "\n=== Использование памяти ===" << std::endl;
-            auto memInfo = memMonitor.getMemoryInfo();
-            std::cout << "Использование RAM: " << memInfo.memoryLoad << "%" << std::endl;
-            std::cout << "Доступно: " << (memInfo.availPhys / (1024*1024*1024)) << " ГБ из " 
-                      << (memInfo.totalPhys / (1024*1024*1024)) << " ГБ" << std::endl;
-            
-            // Disk monitoring (show only C: drive for brevity)
-            std::cout << "\n=== Использование диска C: ===" << std::endl;
-            auto disks = diskMonitor.getDiskInfo();
-            for (const auto& disk : disks) {
-                if (disk.drive.find(L"C:") != std::wstring::npos) {
-                    std::wcout << L"Диск C: использовано " << std::fixed << std::setprecision(2) 
-                              << disk.usagePercent << L"%" << std::endl;
-                    break;
+            if (showDetailedInfo) {
+                // Detailed view
+                // CPU monitoring
+                std::cout << "\n=== Загрузка процессора ===" << std::endl;
+                double cpuUsage = cpuMonitor.getCPUUsage();
+                std::cout << "CPU загрузка: " << std::fixed << std::setprecision(2) 
+                          << cpuUsage << "%" << std::endl;
+                
+                // Memory monitoring
+                std::cout << "\n=== Использование памяти ===" << std::endl;
+                auto memInfo = memMonitor.getMemoryInfo();
+                std::cout << "Использование RAM: " << memInfo.memoryLoad << "%" << std::endl;
+                std::cout << "Доступно: " << (memInfo.availPhys / (1024*1024*1024)) << " ГБ из " 
+                          << (memInfo.totalPhys / (1024*1024*1024)) << " ГБ" << std::endl;
+                
+                // Disk monitoring (show all drives)
+                std::cout << "\n=== Использование дисков ===" << std::endl;
+                auto disks = diskMonitor.getDiskInfo();
+                for (const auto& disk : disks) {
+                    // Convert wide string to narrow string for output
+                    std::string driveStr;
+                    if (!disk.drive.empty()) {
+                        int size_needed = WideCharToMultiByte(CP_UTF8, 0, &disk.drive[0], (int)disk.drive.size(), NULL, 0, NULL, NULL);
+                        driveStr.resize(size_needed);
+                        WideCharToMultiByte(CP_UTF8, 0, &disk.drive[0], (int)disk.drive.size(), &driveStr[0], size_needed, NULL, NULL);
+                    }
+                    
+                    std::cout << driveStr << ": " << std::fixed << std::setprecision(2) 
+                              << disk.usagePercent << "% занято" << std::endl;
                 }
+                
+                // GPU monitoring
+                std::cout << "\n=== Загрузка GPU ===" << std::endl;
+#ifdef ENABLE_NVML
+                gpuMonitor.getNVIDIAGPUUsage();
+#else
+                std::cout << "GPU мониторинг недоступен (не включена поддержка NVML)" << std::endl;
+                std::cout << "Для включения используйте флаг компиляции -DENABLE_NVML" << std::endl;
+#endif
+            } else {
+                // Compact view - show only critical information
+                std::cout << "\n=== Краткая сводка ===" << std::endl;
+                
+                // CPU and Memory in one line
+                double cpuUsage = cpuMonitor.getCPUUsage();
+                auto memInfo = memMonitor.getMemoryInfo();
+                std::cout << "CPU: " << std::fixed << std::setprecision(1) << cpuUsage << "% | "
+                          << "RAM: " << memInfo.memoryLoad << "% | ";
+                
+                // Disk usage (C: drive)
+                auto disks = diskMonitor.getDiskInfo();
+                for (const auto& disk : disks) {
+                    if (disk.drive.find(L"C:") != std::wstring::npos) {
+                        std::cout << "C: " << std::fixed << std::setprecision(1) 
+                                  << disk.usagePercent << "%";
+                        break;
+                    }
+                }
+                std::cout << std::endl;
+                
+                // GPU if available
+#ifdef ENABLE_NVML
+                // Just show a simple GPU usage indicator if NVML is available
+                // This would require a simpler GPU query method
+#endif
             }
             
-            // GPU monitoring
-            std::cout << "\n=== Загрузка GPU ===" << std::endl;
-#ifdef ENABLE_NVML
-            gpuMonitor.getNVIDIAGPUUsage();
-#else
-            std::cout << "GPU мониторинг недоступен (не включена поддержка NVML)" << std::endl;
-#endif
-            
-            std::cout << "\nОбновление каждые " << (updateInterval/1000) << " секунд..." << std::endl;
-            std::cout << "Нажмите 'q' для выхода, любую другую клавишу для паузы" << std::endl;
+            std::cout << "\nОбновление каждые " << (updateInterval/1000.0) << " секунд..." << std::endl;
+            std::cout << "Нажмите 'q' для выхода, 'd' для переключения режима отображения" << std::endl;
         }
         
         Sleep(updateInterval);
