@@ -77,6 +77,28 @@ public:
      * @return bool true если монитор успешно инициализирован, false в противном случае
      */
     bool isInitialized() const;
+    
+    /**
+     * @brief Получает текущую частоту процессора
+     * 
+     * @return unsigned long Частота процессора в МГц, или 0 в случае ошибки
+     */
+    unsigned long getCPUFrequency();
+    
+    /**
+     * @brief Получает информацию о кэше процессора
+     * 
+     * @param level Уровень кэша (1, 2, или 3)
+     * @return std::string Размер кэша в читаемом формате
+     */
+    std::string getCacheSize(int level);
+    
+    /**
+     * @brief Получает название процессора
+     * 
+     * @return std::string Название модели процессора
+     */
+    std::string getCPUName();
 };
 
 #endif // CPU_MONITOR_H

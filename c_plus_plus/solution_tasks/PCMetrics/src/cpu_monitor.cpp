@@ -10,6 +10,8 @@
 #include <pdh.h>
 #include <windows.h>
 #include <iomanip>
+#include <vector>
+#include <string>
 #include "../include/logger.h"
 
 /**
@@ -140,4 +142,99 @@ int CPUMonitor::getProcessorCount() {
  */
 bool CPUMonitor::isInitialized() const {
     return initialized;
+}
+
+/**
+ * @brief Получает текущую частоту процессора
+ * 
+ * @return unsigned long Частота процессора в МГц
+ */
+unsigned long CPUMonitor::getCPUFrequency() {
+    HKEY hKey;
+    unsigned long frequency = 0;
+    
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, 
+        "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+        0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        
+        DWORD mhz = 0;
+        DWORD size = sizeof(DWORD);
+        
+        if (RegQueryValueExA(hKey, "~MHz", NULL, NULL, 
+            (LPBYTE)&mhz, &size) == ERROR_SUCCESS) {
+            frequency = mhz;
+        }
+        
+        RegCloseKey(hKey);
+    }
+    
+    Logger::getInstance().debug("Частота CPU: " + std::to_string(frequency) + " МГц");
+    return frequency;
+}
+
+/**
+ * @brief Получает название процессора
+ * 
+ * @return std::string Название модели процессора
+ */
+std::string CPUMonitor::getCPUName() {
+    HKEY hKey;
+    char buffer[256] = {0};
+    DWORD size = sizeof(buffer);
+    
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+        "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+        0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        
+        if (RegQueryValueExA(hKey, "ProcessorNameString", NULL, NULL,
+            (LPBYTE)buffer, &size) == ERROR_SUCCESS) {
+            RegCloseKey(hKey);
+            
+            // Убираем лишние пробелы
+            std::string name(buffer);
+            size_t start = name.find_first_not_of(" \t");
+            size_t end = name.find_last_not_of(" \t");
+            return (start != std::string::npos) ? name.substr(start, end - start + 1) : name;
+        }
+        
+        RegCloseKey(hKey);
+    }
+    
+    return "Unknown CPU";
+}
+
+/**
+ * @brief Получает информацию о кэше процессора
+ * 
+ * @param level Уровень кэша
+ * @return std::string Размер кэша в читаемом формате
+ */
+std::string CPUMonitor::getCacheSize(int level) {
+    DWORD length = 0;
+    GetLogicalProcessorInformation(NULL, &length);
+    
+    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+        return "N/A";
+    }
+    
+    std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> buffer(length / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
+    
+    if (!GetLogicalProcessorInformation(&buffer[0], &length)) {
+        return "N/A";
+    }
+    
+    for (const auto& info : buffer) {
+        if (info.Relationship == RelationCache) {
+            if (info.Cache.Level == level) {
+                double sizeKB = info.Cache.Size / 1024.0;
+                if (sizeKB >= 1024) {
+                    return std::to_string(static_cast<int>(sizeKB / 1024)) + " MB";
+                } else {
+                    return std::to_string(static_cast<int>(sizeKB)) + " KB";
+                }
+            }
+        }
+    }
+    
+    return "N/A";
 }

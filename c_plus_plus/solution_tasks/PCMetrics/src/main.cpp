@@ -17,6 +17,7 @@
 #include "../include/gpu_monitor.h"
 #include "../include/metrics_exporter.h"
 #include "../include/logger.h"
+#include "../include/network_monitor.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -115,7 +116,30 @@ int main() {
     Logger::getInstance().info("Инициализация монитора CPU");
     CPUMonitor cpuMonitor;
     std::cout << "=== Информация о процессоре ===" << std::endl;
+    
+    // Детальная информация о CPU
+    std::string cpuName = cpuMonitor.getCPUName();
+    unsigned long cpuFreq = cpuMonitor.getCPUFrequency();
+    
+    std::cout << "Модель: " << cpuName << std::endl;
+    if (cpuFreq > 0) {
+        std::cout << "Частота: " << cpuFreq << " МГц (" 
+                  << std::fixed << std::setprecision(2) << (cpuFreq / 1000.0) << " ГГц)" << std::endl;
+    }
+    
     cpuMonitor.getCPUInfo();
+    
+    // Информация о кэше
+    std::string l1Cache = cpuMonitor.getCacheSize(1);
+    std::string l2Cache = cpuMonitor.getCacheSize(2);
+    std::string l3Cache = cpuMonitor.getCacheSize(3);
+    
+    if (l1Cache != "N/A" || l2Cache != "N/A" || l3Cache != "N/A") {
+        std::cout << "\nКэш процессора:" << std::endl;
+        if (l1Cache != "N/A") std::cout << "  L1: " << l1Cache << std::endl;
+        if (l2Cache != "N/A") std::cout << "  L2: " << l2Cache << std::endl;
+        if (l3Cache != "N/A") std::cout << "  L3: " << l3Cache << std::endl;
+    }
     
     std::cout << "\nМониторинг загрузки CPU (5 секунд)..." << std::endl;
     Logger::getInstance().info("Начало мониторинга загрузки CPU");
@@ -128,17 +152,28 @@ int main() {
     }
     Logger::getInstance().info("Завершение мониторинга загрузки CPU");
     
-    // Память
+    // Память и системная информация
     printSeparator();
     Logger::getInstance().info("Инициализация монитора памяти");
     MemoryMonitor memMonitor;
+    
+    // Время работы системы
+    std::cout << "\n=== Системная информация ===" << std::endl;
+    std::cout << "Время работы системы: " << memMonitor.getSystemUptime() << std::endl;
+    
     memMonitor.printMemoryInfo();
     
-    // Диски
+    // Диск
     printSeparator();
     Logger::getInstance().info("Инициализация монитора дисков");
     DiskMonitor diskMonitor;
     diskMonitor.printDiskInfo();
+    
+    // Сеть
+    printSeparator();
+    Logger::getInstance().info("Инициализация монитора сети");
+    NetworkMonitor netMonitor;
+    netMonitor.printNetworkInfo();
     
     // GPU (базовая информация)
     printSeparator();

@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <iostream>
+#include <sstream>
 
 /**
  * @class MemoryMonitor
@@ -100,6 +101,28 @@ public:
      */
     bool isValidMemoryInfo(const MemoryInfo& info) const {
         return info.totalPhys > 0 && info.memoryLoad <= 100;
+    }
+    
+    /**
+     * @brief Получает время работы системы
+     * 
+     * @return std::string Время работы в формате "X days, Y hours, Z minutes"
+     */
+    std::string getSystemUptime() const {
+        ULONGLONG uptime = GetTickCount64() / 1000; // секунды
+        
+        unsigned long days = uptime / 86400;
+        unsigned long hours = (uptime % 86400) / 3600;
+        unsigned long minutes = (uptime % 3600) / 60;
+        unsigned long seconds = uptime % 60;
+        
+        std::ostringstream oss;
+        if (days > 0) {
+            oss << days << " д. ";
+        }
+        oss << hours << " ч. " << minutes << " мин. " << seconds << " сек.";
+        
+        return oss.str();
     }
 };
 

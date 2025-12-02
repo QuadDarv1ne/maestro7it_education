@@ -49,8 +49,8 @@ add_executable(pcmetrics ${SOURCES})
 
 # Линковка библиотек Windows
 if(WIN32)
-    target_link_libraries(pcmetrics PRIVATE pdh)
-    message(STATUS "Linking Windows PDH library")
+    target_link_libraries(pcmetrics PRIVATE pdh iphlpapi)
+    message(STATUS "Linking Windows PDH and IPHLPAPI libraries")
 endif()
 
 # Опции сборки
@@ -116,8 +116,9 @@ add_executable(pcmetrics_test
     ${PROJECT_SOURCE_DIR}/src/memory_monitor.cpp
     ${PROJECT_SOURCE_DIR}/src/cpu_monitor.cpp
     ${PROJECT_SOURCE_DIR}/src/disk_monitor.cpp
+    ${PROJECT_SOURCE_DIR}/src/network_monitor.cpp
 )
-target_link_libraries(pcmetrics_test PRIVATE pdh)
+target_link_libraries(pcmetrics_test PRIVATE pdh iphlpapi)
 
 # Копируем заголовочные файлы тестового фреймворка
 target_include_directories(pcmetrics_test PRIVATE ${PROJECT_SOURCE_DIR}/tests)
