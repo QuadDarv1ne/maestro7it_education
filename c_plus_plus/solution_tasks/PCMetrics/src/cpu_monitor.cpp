@@ -24,6 +24,12 @@
 bool CPUMonitor::initialize() {
     Logger::getInstance().debug("Инициализация монитора CPU");
     
+    // Проверяем, не инициализирован ли уже монитор
+    if (initialized) {
+        Logger::getInstance().warning("Монитор CPU уже инициализирован");
+        return true;
+    }
+    
     PDH_STATUS status = PdhOpenQuery(NULL, 0, &query);
     if (status != ERROR_SUCCESS) {
         Logger::getInstance().error("Ошибка инициализации PDH query: " + std::to_string(status));
@@ -37,12 +43,16 @@ bool CPUMonitor::initialize() {
         Logger::getInstance().error("Ошибка добавления счетчика PDH: " + std::to_string(status));
         std::cerr << "Ошибка добавления счетчика PDH: " << status << std::endl;
         PdhCloseQuery(query);
+        query = NULL;
         initialized = false;
         return false;
     }
     
     // Первый сбор данных для инициализации
-    PdhCollectQueryData(query);
+    status = PdhCollectQueryData(query);
+    if (status != ERROR_SUCCESS) {
+        Logger::getInstance().warning("Предупреждение при первом сборе данных CPU: " + std::to_string(status));
+    }
     
     initialized = true;
     Logger::getInstance().info("Монитор CPU успешно инициализирован");
@@ -81,10 +91,14 @@ double CPUMonitor::getCPUUsage() const {
     }
     
     // Ensure value is within reasonable bounds
-    if (value.doubleValue < 0.0 || value.doubleValue > 100.0) {
-        Logger::getInstance().warning("Получено некорректное значение загрузки CPU: " + std::to_string(value.doubleValue));
-        std::cerr << "Получено некорректное значение загрузки CPU: " << value.doubleValue << std::endl;
-        return -1.0;
+    if (value.doubleValue < 0.0) {
+        Logger::getInstance().warning("Получено отрицательное значение загрузки CPU: " + std::to_string(value.doubleValue));
+        return 0.0;
+    }
+    
+    if (value.doubleValue > 100.0) {
+        Logger::getInstance().warning("Получено значение загрузки CPU больше 100%: " + std::to_string(value.doubleValue));
+        return 100.0;
     }
     
     Logger::getInstance().debug("Загрузка CPU: " + std::to_string(value.doubleValue) + "%");
@@ -115,6 +129,32 @@ void CPUMonitor::getCPUInfo() {
             break;
         default:
             std::cout << "Unknown" << std::endl;
+    }
+    
+    // Дополнительная информация о процессоре
+    std::string cpuName = getCPUName();
+    if (cpuName != "Unknown CPU") {
+        std::cout << "Название процессора: " << cpuName << std::endl;
+    }
+    
+    unsigned long frequency = getCPUFrequency();
+    if (frequency > 0) {
+        std::cout << "Частота процессора: " << frequency << " МГц" << std::endl;
+    }
+    
+    // Информация о кэше
+    std::string l1Cache = getCacheSize(1);
+    std::string l2Cache = getCacheSize(2);
+    std::string l3Cache = getCacheSize(3);
+    
+    if (l1Cache != "N/A") {
+        std::cout << "L1 кэш: " << l1Cache << std::endl;
+    }
+    if (l2Cache != "N/A") {
+        std::cout << "L2 кэш: " << l2Cache << std::endl;
+    }
+    if (l3Cache != "N/A") {
+        std::cout << "L3 кэш: " << l3Cache << std::endl;
     }
     
     Logger::getInstance().info("Информация о процессоре получена");
@@ -153,21 +193,28 @@ unsigned long CPUMonitor::getCPUFrequency() {
     HKEY hKey;
     unsigned long frequency = 0;
     
-    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, 
+    LONG result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, 
         "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-        0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        0, KEY_READ, &hKey);
         
-        DWORD mhz = 0;
-        DWORD size = sizeof(DWORD);
-        
-        if (RegQueryValueExA(hKey, "~MHz", NULL, NULL, 
-            (LPBYTE)&mhz, &size) == ERROR_SUCCESS) {
-            frequency = mhz;
-        }
-        
-        RegCloseKey(hKey);
+    if (result != ERROR_SUCCESS) {
+        Logger::getInstance().warning("Не удалось открыть реестр для получения частоты CPU: " + std::to_string(result));
+        return 0;
     }
     
+    DWORD mhz = 0;
+    DWORD size = sizeof(DWORD);
+    
+    result = RegQueryValueExA(hKey, "~MHz", NULL, NULL, 
+        (LPBYTE)&mhz, &size);
+        
+    if (result == ERROR_SUCCESS) {
+        frequency = mhz;
+    } else {
+        Logger::getInstance().warning("Не удалось получить частоту CPU из реестра: " + std::to_string(result));
+    }
+    
+    RegCloseKey(hKey);
     Logger::getInstance().debug("Частота CPU: " + std::to_string(frequency) + " МГц");
     return frequency;
 }
@@ -182,25 +229,33 @@ std::string CPUMonitor::getCPUName() {
     char buffer[256] = {0};
     DWORD size = sizeof(buffer);
     
-    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+    LONG result = RegOpenKeyExA(HKEY_LOCAL_MACHINE,
         "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-        0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        0, KEY_READ, &hKey);
         
-        if (RegQueryValueExA(hKey, "ProcessorNameString", NULL, NULL,
-            (LPBYTE)buffer, &size) == ERROR_SUCCESS) {
-            RegCloseKey(hKey);
-            
-            // Убираем лишние пробелы
-            std::string name(buffer);
-            size_t start = name.find_first_not_of(" \t");
-            size_t end = name.find_last_not_of(" \t");
-            return (start != std::string::npos) ? name.substr(start, end - start + 1) : name;
-        }
-        
-        RegCloseKey(hKey);
+    if (result != ERROR_SUCCESS) {
+        Logger::getInstance().warning("Не удалось открыть реестр для получения названия CPU: " + std::to_string(result));
+        return "Unknown CPU";
     }
     
-    return "Unknown CPU";
+    result = RegQueryValueExA(hKey, "ProcessorNameString", NULL, NULL,
+        (LPBYTE)buffer, &size);
+        
+    RegCloseKey(hKey);
+    
+    if (result == ERROR_SUCCESS) {
+        // Убираем лишние пробелы
+        std::string name(buffer);
+        size_t start = name.find_first_not_of(" \t");
+        if (start == std::string::npos) {
+            return "Unknown CPU";
+        }
+        size_t end = name.find_last_not_of(" \t");
+        return name.substr(start, end - start + 1);
+    } else {
+        Logger::getInstance().warning("Не удалось получить название CPU из реестра: " + std::to_string(result));
+        return "Unknown CPU";
+    }
 }
 
 /**
@@ -210,22 +265,39 @@ std::string CPUMonitor::getCPUName() {
  * @return std::string Размер кэша в читаемом формате
  */
 std::string CPUMonitor::getCacheSize(int level) {
+    if (level < 1 || level > 3) {
+        Logger::getInstance().warning("Недопустимый уровень кэша: " + std::to_string(level));
+        return "N/A";
+    }
+    
     DWORD length = 0;
     GetLogicalProcessorInformation(NULL, &length);
     
     if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+        Logger::getInstance().warning("Ошибка при получении информации о логическом процессоре: " + std::to_string(GetLastError()));
+        return "N/A";
+    }
+    
+    if (length == 0) {
+        Logger::getInstance().warning("Получен нулевой размер буфера для информации о процессоре");
         return "N/A";
     }
     
     std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> buffer(length / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
     
     if (!GetLogicalProcessorInformation(&buffer[0], &length)) {
+        Logger::getInstance().warning("Ошибка при получении информации о логическом процессоре: " + std::to_string(GetLastError()));
         return "N/A";
     }
     
     for (const auto& info : buffer) {
         if (info.Relationship == RelationCache) {
             if (info.Cache.Level == level) {
+                // Проверяем, что размер кэша положительный
+                if (info.Cache.Size == 0) {
+                    continue;
+                }
+                
                 double sizeKB = info.Cache.Size / 1024.0;
                 if (sizeKB >= 1024) {
                     return std::to_string(static_cast<int>(sizeKB / 1024)) + " MB";
@@ -236,5 +308,6 @@ std::string CPUMonitor::getCacheSize(int level) {
         }
     }
     
+    Logger::getInstance().debug("Информация о кэше уровня " + std::to_string(level) + " не найдена");
     return "N/A";
 }

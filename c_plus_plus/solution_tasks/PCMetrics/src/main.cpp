@@ -94,9 +94,17 @@ void showExportMenu(CPUMonitor& cpuMonitor, MemoryMonitor& memMonitor,
  * Выполняет инициализацию всех мониторов, собирает информацию о системе,
  * предоставляет пользователю опции для экспорта данных и непрерывного мониторинга.
  * 
+ * @param argc Количество аргументов командной строки
+ * @param argv Массив аргументов командной строки
  * @return int Код возврата программы (0 при успешном завершении)
  */
-int main() {
+int main(int argc, char* argv[]) {
+    // Проверка режима автозавершения (для неинтерактивных запусков)
+    bool autoMode = false;
+    if (argc > 1 && (std::string(argv[1]) == "--auto" || std::string(argv[1]) == "-a")) {
+        autoMode = true;
+    }
+    
     // Инициализация логгера
     Logger::getInstance().initialize("pcmetrics.log", Logger::LogLevel::INFO_LEVEL, true);
     Logger::getInstance().info("Запуск PCMetrics v1.0.0");
@@ -181,23 +189,26 @@ int main() {
     GPUMonitor gpuMonitor;
     gpuMonitor.printGPUInfo();
     
-    // Export option
-    std::cout << "\nХотите экспортировать метрики? (y/n): ";
-    char exportChoice;
-    std::cin >> exportChoice;
-    
-    if (exportChoice == 'y' || exportChoice == 'Y') {
-        showExportMenu(cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
-    }
-    
-    // Continuous monitoring option
-    std::cout << "\nХотите перейти в режим непрерывного мониторинга? (y/n): ";
-    char choice;
-    std::cin >> choice;
-    
-    if (choice == 'y' || choice == 'Y') {
-        Logger::getInstance().info("Переход в режим непрерывного мониторинга");
-        continuousMonitoringMode(cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
+    // В автоматическом режиме пропускаем интерактивные вопросы
+    if (!autoMode) {
+        // Export option
+        std::cout << "\nХотите экспортировать метрики? (y/n): ";
+        char exportChoice;
+        std::cin >> exportChoice;
+        
+        if (exportChoice == 'y' || exportChoice == 'Y') {
+            showExportMenu(cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
+        }
+        
+        // Continuous monitoring option
+        std::cout << "\nХотите перейти в режим непрерывного мониторинга? (y/n): ";
+        char choice;
+        std::cin >> choice;
+        
+        if (choice == 'y' || choice == 'Y') {
+            Logger::getInstance().info("Переход в режим непрерывного мониторинга");
+            continuousMonitoringMode(cpuMonitor, memMonitor, diskMonitor, gpuMonitor);
+        }
     }
     
     // Завершение
@@ -205,10 +216,12 @@ int main() {
     std::cout << "  Мониторинг завершен успешно!" << std::endl;
     std::cout << "======================================" << std::endl;
     
-    std::cout << "\nНажмите любую клавишу для выхода..." << std::endl;
-    std::cin.get();
-    if (std::cin.peek() == '\n') std::cin.get(); // Handle newline character
-    std::cin.get();
+    if (!autoMode) {
+        std::cout << "\nНажмите любую клавишу для выхода..." << std::endl;
+        std::cin.get();
+        if (std::cin.peek() == '\n') std::cin.get(); // Handle newline character
+        std::cin.get();
+    }
     
     Logger::getInstance().info("Завершение работы PCMetrics");
     return 0;

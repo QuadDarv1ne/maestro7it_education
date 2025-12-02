@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 /**
  * @class MemoryMonitor
@@ -28,6 +29,8 @@ public:
         DWORD memoryLoad;         ///< Процент использования памяти (0-100)
         DWORDLONG totalVirtual;   ///< Общий объем виртуальной памяти в байтах
         DWORDLONG availVirtual;   ///< Доступная виртуальная память в байтах
+        DWORDLONG totalPageFile;  ///< Общий объем файла подкачки в байтах
+        DWORDLONG availPageFile;  ///< Доступный объем файла подкачки в байтах
     };
     
     /**
@@ -44,8 +47,8 @@ public:
         
         if (!GlobalMemoryStatusEx(&memInfo)) {
             // Handle error
-            MemoryInfo errorInfo = {0, 0, 0, 0, 0, 0};
-            std::cerr << "Ошибка получения информации о памяти" << std::endl;
+            MemoryInfo errorInfo = {0, 0, 0, 0, 0, 0, 0, 0};
+            std::cerr << "Ошибка получения информации о памяти: " << GetLastError() << std::endl;
             return errorInfo;
         }
         
@@ -56,6 +59,8 @@ public:
         info.memoryLoad = memInfo.dwMemoryLoad;
         info.totalVirtual = memInfo.ullTotalVirtual;
         info.availVirtual = memInfo.ullAvailVirtual;
+        info.totalPageFile = memInfo.ullTotalPageFile;
+        info.availPageFile = memInfo.ullAvailPageFile;
         
         // Validate data
         if (info.totalPhys == 0) {
@@ -81,16 +86,20 @@ public:
         
         std::cout << "\n=== Информация о памяти ===" << std::endl;
         std::cout << "Всего физической памяти: " 
-                  << (info.totalPhys / (1024*1024*1024)) << " ГБ" << std::endl;
+                  << formatBytes(info.totalPhys) << std::endl;
         std::cout << "Используется физической памяти: " 
-                  << (info.usedPhys / (1024*1024*1024)) << " ГБ" << std::endl;
+                  << formatBytes(info.usedPhys) << std::endl;
         std::cout << "Доступно физической памяти: " 
-                  << (info.availPhys / (1024*1024*1024)) << " ГБ" << std::endl;
+                  << formatBytes(info.availPhys) << std::endl;
         std::cout << "Использование памяти: " << info.memoryLoad << "%" << std::endl;
         std::cout << "Всего виртуальной памяти: " 
-                  << (info.totalVirtual / (1024*1024*1024)) << " ГБ" << std::endl;
+                  << formatBytes(info.totalVirtual) << std::endl;
         std::cout << "Доступно виртуальной памяти: " 
-                  << (info.availVirtual / (1024*1024*1024)) << " ГБ" << std::endl;
+                  << formatBytes(info.availVirtual) << std::endl;
+        std::cout << "Всего файла подкачки: " 
+                  << formatBytes(info.totalPageFile) << std::endl;
+        std::cout << "Доступно файла подкачки: " 
+                  << formatBytes(info.availPageFile) << std::endl;
     }
     
     /**
@@ -100,7 +109,8 @@ public:
      * @return bool true если информация корректна, false в противном случае
      */
     bool isValidMemoryInfo(const MemoryInfo& info) const {
-        return info.totalPhys > 0 && info.memoryLoad <= 100;
+        // Проверяем, что общая память больше нуля и процент использования в допустимом диапазоне
+        return info.totalPhys > 0 && info.memoryLoad <= 100 && info.memoryLoad >= 0;
     }
     
     /**
@@ -122,6 +132,28 @@ public:
         }
         oss << hours << " ч. " << minutes << " мин. " << seconds << " сек.";
         
+        return oss.str();
+    }
+    
+private:
+    /**
+     * @brief Форматирует количество байт в удобочитаемый формат
+     * 
+     * @param bytes Количество байт
+     * @return std::string Отформатированная строка с размером
+     */
+    std::string formatBytes(DWORDLONG bytes) const {
+        const char* units[] = {"Б", "КБ", "МБ", "ГБ", "ТБ"};
+        int unitIndex = 0;
+        double size = static_cast<double>(bytes);
+        
+        while (size >= 1024.0 && unitIndex < 4) {
+            size /= 1024.0;
+            unitIndex++;
+        }
+        
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2) << size << " " << units[unitIndex];
         return oss.str();
     }
 };
