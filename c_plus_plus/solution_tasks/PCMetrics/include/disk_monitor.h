@@ -42,6 +42,9 @@ public:
         ULONGLONG usedSpace;     ///< Используемое место на диске в байтах
         double usagePercent;     ///< Процент использования диска (0.0 - 100.0)
         std::wstring type;       ///< Тип диска (жесткий диск, съемный и т.д.)
+        std::wstring volumeName; ///< Метка тома диска
+        std::wstring fileSystem; ///< Файловая система диска
+        bool isReady;           ///< Готовность диска (true если можно получить доступ)
     };
     
     /**
@@ -57,7 +60,7 @@ public:
         DWORD drives = GetLogicalDrives();
         
         if (drives == 0) {
-            std::cerr << "Ошибка получения списка логических дисков" << std::endl;
+            std::cerr << "Ошибка получения списка логических дисков: " << GetLastError() << std::endl;
             return disks;
         }
         
@@ -67,39 +70,81 @@ public:
                 std::wstring drivePath = std::wstring(1, driveLetter) + L":\\";
                 
                 UINT driveType = GetDriveTypeW(drivePath.c_str());
+                // Обрабатываем только фиксированные и съемные диски
                 if (driveType == DRIVE_FIXED || driveType == DRIVE_REMOVABLE) {
                     DiskInfo info;
                     info.drive = drivePath;
+                    info.isReady = (GetDiskFreeSpaceExW(drivePath.c_str(), NULL, NULL, NULL) != 0);
                     
-                    ULARGE_INTEGER freeBytesAvailable, totalBytes, totalFreeBytes;
-                    if (GetDiskFreeSpaceExW(drivePath.c_str(), &freeBytesAvailable, 
-                                           &totalBytes, &totalFreeBytes)) {
-                        // Check for valid data
-                        if (totalBytes.QuadPart == 0) {
+                    // Получаем информацию о диске только если он готов
+                    if (info.isReady) {
+                        ULARGE_INTEGER freeBytesAvailable, totalBytes, totalFreeBytes;
+                        if (GetDiskFreeSpaceExW(drivePath.c_str(), &freeBytesAvailable, 
+                                               &totalBytes, &totalFreeBytes)) {
+                            // Проверяем корректность данных
+                            if (totalBytes.QuadPart == 0) {
+                                // Convert wide string to narrow string for output
+                                std::string drivePathStr = wstringToString(drivePath);
+                                std::cerr << "Некорректные данные для диска " << drivePathStr << std::endl;
+                                continue;
+                            }
+                            
+                            info.totalSpace = totalBytes.QuadPart;
+                            info.freeSpace = totalFreeBytes.QuadPart;
+                            info.usedSpace = info.totalSpace - info.freeSpace;
+                            info.usagePercent = (double)info.usedSpace / info.totalSpace * 100.0;
+                            
+                            switch(driveType) {
+                                case DRIVE_FIXED: info.type = L"Жесткий диск"; break;
+                                case DRIVE_REMOVABLE: info.type = L"Съемный диск"; break;
+                                default: info.type = L"Другое";
+                            }
+                            
+                            // Получаем метку тома и файловую систему
+                            wchar_t volumeName[MAX_PATH] = L"";
+                            wchar_t fileSystemName[MAX_PATH] = L"";
+                            DWORD serialNumber, maxComponentLength, fileSystemFlags;
+                            
+                            if (GetVolumeInformationW(
+                                    drivePath.c_str(),
+                                    volumeName,
+                                    MAX_PATH,
+                                    &serialNumber,
+                                    &maxComponentLength,
+                                    &fileSystemFlags,
+                                    fileSystemName,
+                                    MAX_PATH)) {
+                                info.volumeName = volumeName;
+                                info.fileSystem = fileSystemName;
+                            } else {
+                                info.volumeName = L"Не определено";
+                                info.fileSystem = L"Не определено";
+                            }
+                            
+                            disks.push_back(info);
+                        } else {
+                            DWORD error = GetLastError();
                             // Convert wide string to narrow string for output
                             std::string drivePathStr = wstringToString(drivePath);
-                            std::cerr << "Некорректные данные для диска " << drivePathStr << std::endl;
-                            continue;
+                            std::cerr << "Ошибка получения информации о диске " << drivePathStr 
+                                      << " (Error code: " << error << ")" << std::endl;
                         }
-                        
-                        info.totalSpace = totalBytes.QuadPart;
-                        info.freeSpace = totalFreeBytes.QuadPart;
-                        info.usedSpace = info.totalSpace - info.freeSpace;
-                        info.usagePercent = (double)info.usedSpace / info.totalSpace * 100.0;
+                    } else {
+                        // Диск не готов (например, CD-ROM без диска)
+                        info.totalSpace = 0;
+                        info.freeSpace = 0;
+                        info.usedSpace = 0;
+                        info.usagePercent = 0.0;
                         
                         switch(driveType) {
-                            case DRIVE_FIXED: info.type = L"Жесткий диск"; break;
-                            case DRIVE_REMOVABLE: info.type = L"Съемный диск"; break;
-                            default: info.type = L"Другое";
+                            case DRIVE_FIXED: info.type = L"Жесткий диск (не готов)"; break;
+                            case DRIVE_REMOVABLE: info.type = L"Съемный диск (не готов)"; break;
+                            default: info.type = L"Другое (не готов)";
                         }
                         
+                        info.volumeName = L"Не готов";
+                        info.fileSystem = L"Не готов";
                         disks.push_back(info);
-                    } else {
-                        DWORD error = GetLastError();
-                        // Convert wide string to narrow string for output
-                        std::string drivePathStr = wstringToString(drivePath);
-                        std::cerr << "Ошибка получения информации о диске " << drivePathStr 
-                                  << " (Error code: " << error << ")" << std::endl;
                     }
                 }
             }
@@ -126,12 +171,29 @@ public:
         
         for (const auto& disk : disks) {
             std::wcout << L"\nДиск: " << disk.drive << std::endl;
-            std::wcout << L"Тип: " << disk.type << std::endl;
-            std::wcout << L"Всего: " << (disk.totalSpace / (1024*1024*1024)) << L" ГБ" << std::endl;
-            std::wcout << L"Свободно: " << (disk.freeSpace / (1024*1024*1024)) << L" ГБ" << std::endl;
-            std::wcout << L"Занято: " << (disk.usedSpace / (1024*1024*1024)) << L" ГБ" << std::endl;
-            std::wcout << L"Использовано: " << std::fixed << std::setprecision(2) 
-                      << disk.usagePercent << L"%" << std::endl;
+            
+            if (disk.isReady) {
+                std::wcout << L"Тип: " << disk.type << std::endl;
+                std::wcout << L"Метка тома: " << disk.volumeName << std::endl;
+                std::wcout << L"Файловая система: " << disk.fileSystem << std::endl;
+                std::wcout << L"Всего: " << formatBytes(disk.totalSpace) << std::endl;
+                std::wcout << L"Свободно: " << formatBytes(disk.freeSpace) << std::endl;
+                std::wcout << L"Занято: " << formatBytes(disk.usedSpace) << std::endl;
+                std::wcout << L"Использовано: " << std::fixed << std::setprecision(2) 
+                          << disk.usagePercent << L"%" << std::endl;
+                          
+                // Предупреждение при высоком использовании диска
+                if (disk.usagePercent > 90.0) {
+                    std::wcout << L"ПРЕДУПРЕЖДЕНИЕ: Диск почти полностью заполнен!" << std::endl;
+                } else if (disk.usagePercent > 80.0) {
+                    std::wcout << L"Внимание: Диск заполнен более чем на 80%" << std::endl;
+                }
+            } else {
+                std::wcout << L"Статус: " << disk.type << std::endl;
+                std::wcout << L"Метка тома: " << disk.volumeName << std::endl;
+                std::wcout << L"Файловая система: " << disk.fileSystem << std::endl;
+                std::wcout << L"Диск не готов к использованию" << std::endl;
+            }
         }
     }
     
@@ -178,8 +240,7 @@ public:
             return;
         }
         
-        std::cout << "Скорость диска: " << (value.doubleValue / (1024*1024)) 
-                  << " МБ/сек" << std::endl;
+        std::cout << "Скорость диска: " << formatBytesPerSecond(value.doubleValue) << std::endl;
         
         PdhCloseQuery(query);
     }
@@ -191,7 +252,55 @@ public:
      * @return bool true если информация корректна, false в противном случае
      */
     bool isValidDiskInfo(const DiskInfo& info) const {
-        return info.totalSpace > 0 && info.usagePercent >= 0.0 && info.usagePercent <= 100.0;
+        // Проверяем корректность только для готовых дисков
+        if (info.isReady) {
+            return info.totalSpace > 0 && info.usagePercent >= 0.0 && info.usagePercent <= 100.0;
+        }
+        // Для неготовых дисков проверяем только логическую структуру
+        return !info.drive.empty();
+    }
+    
+private:
+    /**
+     * @brief Форматирует количество байт в удобочитаемый формат
+     * 
+     * @param bytes Количество байт
+     * @return std::wstring Отформатированная строка с размером
+     */
+    std::wstring formatBytes(ULONGLONG bytes) const {
+        const wchar_t* units[] = {L"Б", L"КБ", L"МБ", L"ГБ", L"ТБ"};
+        int unitIndex = 0;
+        double size = static_cast<double>(bytes);
+        
+        while (size >= 1024.0 && unitIndex < 4) {
+            size /= 1024.0;
+            unitIndex++;
+        }
+        
+        std::wostringstream woss;
+        woss << std::fixed << std::setprecision(2) << size << L" " << units[unitIndex];
+        return woss.str();
+    }
+    
+    /**
+     * @brief Форматирует скорость передачи данных
+     * 
+     * @param bytesPerSecond Скорость в байтах в секунду
+     * @return std::string Отформатированная строка со скоростью
+     */
+    std::string formatBytesPerSecond(double bytesPerSecond) const {
+        const char* units[] = {"Б/с", "КБ/с", "МБ/с", "ГБ/с"};
+        int unitIndex = 0;
+        double speed = bytesPerSecond;
+        
+        while (speed >= 1024.0 && unitIndex < 3) {
+            speed /= 1024.0;
+            unitIndex++;
+        }
+        
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2) << speed << " " << units[unitIndex];
+        return oss.str();
     }
 };
 

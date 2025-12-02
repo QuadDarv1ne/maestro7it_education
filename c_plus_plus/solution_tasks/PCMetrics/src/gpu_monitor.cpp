@@ -11,6 +11,8 @@
 #include "../include/gpu_monitor.h"
 #include <iostream>
 #include <iomanip>
+#include <vector>
+#include <string>
 
 #ifdef ENABLE_NVML
 #include <nvml.h>
@@ -18,10 +20,26 @@
 
 #ifdef ENABLE_ADL
 #include <adl_sdk.h>
+// ADL function pointers
+typedef int (*ADL_MAIN_CONTROL_CREATE)(ADL_MAIN_MALLOC_CALLBACK, int);
+typedef int (*ADL_MAIN_CONTROL_DESTROY)();
+typedef int (*ADL_ADAPTER_NUMBEROFADAPTERS_GET)(int*);
+typedef int (*ADL_ADAPTER_ADAPTERINFO_GET)(LPAdapterInfo, int);
+typedef int (*ADL_OVERDRIVE_CAPS)(int, int*, int*, int*);
+typedef int (*ADL_OVERDRIVE5_CURRENTACTIVITY_GET)(int, ADLPMActivity*);
+
+// Global function pointers
+ADL_MAIN_CONTROL_CREATE          ADL_Main_Control_Create;
+ADL_MAIN_CONTROL_DESTROY         ADL_Main_Control_Destroy;
+ADL_ADAPTER_NUMBEROFADAPTERS_GET ADL_Adapter_NumberOfAdapters_Get;
+ADL_ADAPTER_ADAPTERINFO_GET      ADL_Adapter_AdapterInfo_Get;
+ADL_OVERDRIVE_CAPS              ADL_Overdrive_Caps;
+ADL_OVERDRIVE5_CURRENTACTIVITY_GET ADL_Overdrive5_CurrentActivity_Get;
 #endif
 
 #ifdef ENABLE_INTEL_GPA
-#include <igpa.h>
+// Intel GPA headers would go here
+// For now, we'll use placeholder functionality
 #endif
 
 /**
@@ -38,6 +56,8 @@ bool GPUMonitor::initNVML() {
     if (result == NVML_SUCCESS) {
         nvmlInitialized = true;
         return true;
+    } else {
+        std::cerr << "Ошибка инициализации NVML: " << result << std::endl;
     }
 #endif
     nvmlInitialized = false;
@@ -149,78 +169,126 @@ std::vector<GPUMonitor::GPUInfo> GPUMonitor::getAllGPUInfo() {
 #ifdef ENABLE_NVML
     if (!nvmlInitialized) {
         if (!initNVML()) {
-            return gpus; // Return empty vector if NVML init failed
+            // If NVML init failed, continue to check other libraries
         }
     }
     
-    unsigned int deviceCount = 0;
-    nvmlReturn_t result = nvmlDeviceGetCount(&deviceCount);
+    if (nvmlInitialized) {
+        unsigned int deviceCount = 0;
+        nvmlReturn_t result = nvmlDeviceGetCount(&deviceCount);
+        
+        if (result == NVML_SUCCESS) {
+            for (unsigned int i = 0; i < deviceCount; i++) {
+                nvmlDevice_t device;
+                result = nvmlDeviceGetHandleByIndex(i, &device);
+                
+                if (result == NVML_SUCCESS) {
+                    GPUInfo gpuInfo;
+                    gpuInfo.vendor = "NVIDIA";
+                    
+                    // Get GPU name
+                    char name[NVML_DEVICE_NAME_BUFFER_SIZE];
+                    result = nvmlDeviceGetName(device, name, NVML_DEVICE_NAME_BUFFER_SIZE);
+                    gpuInfo.name = (result == NVML_SUCCESS) ? std::string(name) : "Unknown NVIDIA GPU";
+                    
+                    // Get temperature
+                    unsigned int temperature;
+                    result = nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temperature);
+                    gpuInfo.temperature = (result == NVML_SUCCESS) ? temperature : 0;
+                    
+                    // Get utilization rates
+                    nvmlUtilization_t utilization;
+                    result = nvmlDeviceGetUtilizationRates(device, &utilization);
+                    if (result == NVML_SUCCESS) {
+                        gpuInfo.gpuUtilization = utilization.gpu;
+                        gpuInfo.memoryUtilization = utilization.memory;
+                    } else {
+                        gpuInfo.gpuUtilization = 0;
+                        gpuInfo.memoryUtilization = 0;
+                    }
+                    
+                    // Get memory info
+                    nvmlMemory_t memory;
+                    result = nvmlDeviceGetMemoryInfo(device, &memory);
+                    if (result == NVML_SUCCESS) {
+                        gpuInfo.memoryTotal = memory.total;
+                        gpuInfo.memoryUsed = memory.used;
+                    } else {
+                        gpuInfo.memoryTotal = 0;
+                        gpuInfo.memoryUsed = 0;
+                    }
+                    
+                    // Get fan speed
+                    unsigned int fanSpeed;
+                    result = nvmlDeviceGetFanSpeed(device, &fanSpeed);
+                    gpuInfo.fanSpeed = (result == NVML_SUCCESS) ? fanSpeed : 0;
+                    
+                    gpus.push_back(gpuInfo);
+                }
+            }
+        }
+    }
+#endif
     
-    if (result != NVML_SUCCESS) {
-        return gpus;
+#ifdef ENABLE_ADL
+    if (!adlInitialized) {
+        if (!initADL()) {
+            // If ADL init failed, continue to check other libraries
+        }
     }
     
-    for (unsigned int i = 0; i < deviceCount; i++) {
-        nvmlDevice_t device;
-        result = nvmlDeviceGetHandleByIndex(i, &device);
-        
-        if (result != NVML_SUCCESS) {
-            continue;
-        }
-        
+    if (adlInitialized) {
+        // AMD GPU detection and information gathering code would go here
+        // Placeholder implementation
         GPUInfo gpuInfo;
-        gpuInfo.vendor = "NVIDIA";
-        
-        // Get GPU name
-        char name[NVML_DEVICE_NAME_BUFFER_SIZE];
-        result = nvmlDeviceGetName(device, name, NVML_DEVICE_NAME_BUFFER_SIZE);
-        gpuInfo.name = (result == NVML_SUCCESS) ? std::string(name) : "Unknown";
-        
-        // Get temperature
-        unsigned int temperature;
-        result = nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temperature);
-        gpuInfo.temperature = (result == NVML_SUCCESS) ? temperature : 0;
-        
-        // Get utilization rates
-        nvmlUtilization_t utilization;
-        result = nvmlDeviceGetUtilizationRates(device, &utilization);
-        if (result == NVML_SUCCESS) {
-            gpuInfo.gpuUtilization = utilization.gpu;
-            gpuInfo.memoryUtilization = utilization.memory;
-        } else {
-            gpuInfo.gpuUtilization = 0;
-            gpuInfo.memoryUtilization = 0;
-        }
-        
-        // Get memory info
-        nvmlMemory_t memory;
-        result = nvmlDeviceGetMemoryInfo(device, &memory);
-        if (result == NVML_SUCCESS) {
-            gpuInfo.memoryTotal = memory.total;
-            gpuInfo.memoryUsed = memory.used;
-        } else {
-            gpuInfo.memoryTotal = 0;
-            gpuInfo.memoryUsed = 0;
-        }
-        
-        // Get fan speed
-        unsigned int fanSpeed;
-        result = nvmlDeviceGetFanSpeed(device, &fanSpeed);
-        gpuInfo.fanSpeed = (result == NVML_SUCCESS) ? fanSpeed : 0;
-        
+        gpuInfo.vendor = "AMD";
+        gpuInfo.name = "AMD GPU (ADL support placeholder)";
+        gpuInfo.temperature = 0;
+        gpuInfo.gpuUtilization = 0;
+        gpuInfo.memoryUtilization = 0;
+        gpuInfo.memoryTotal = 0;
+        gpuInfo.memoryUsed = 0;
+        gpuInfo.fanSpeed = 0;
         gpus.push_back(gpuInfo);
     }
 #endif
     
-    // Add AMD GPU support here when ENABLE_ADL is defined
-#ifdef ENABLE_ADL
-    // AMD GPU detection and information gathering code would go here
+#ifdef ENABLE_INTEL_GPA
+    if (!gpaInitialized) {
+        if (!initGPA()) {
+            // If GPA init failed, continue to check other libraries
+        }
+    }
+    
+    if (gpaInitialized) {
+        // Intel GPU detection and information gathering code would go here
+        // Placeholder implementation
+        GPUInfo gpuInfo;
+        gpuInfo.vendor = "Intel";
+        gpuInfo.name = "Intel GPU (GPA support placeholder)";
+        gpuInfo.temperature = 0;
+        gpuInfo.gpuUtilization = 0;
+        gpuInfo.memoryUtilization = 0;
+        gpuInfo.memoryTotal = 0;
+        gpuInfo.memoryUsed = 0;
+        gpuInfo.fanSpeed = 0;
+        gpus.push_back(gpuInfo);
+    }
 #endif
     
-    // Add Intel GPU support here when ENABLE_INTEL_GPA is defined
-#ifdef ENABLE_INTEL_GPA
-    // Intel GPU detection and information gathering code would go here
-#endif
+    // If no GPUs were found, add a generic entry
+    if (gpus.empty()) {
+        GPUInfo genericGPU;
+        genericGPU.vendor = "Unknown";
+        genericGPU.name = "No compatible GPU detected";
+        genericGPU.temperature = 0;
+        genericGPU.gpuUtilization = 0;
+        genericGPU.memoryUtilization = 0;
+        genericGPU.memoryTotal = 0;
+        genericGPU.memoryUsed = 0;
+        genericGPU.fanSpeed = 0;
+        gpus.push_back(genericGPU);
+    }
     
     return gpus;
 }
@@ -279,8 +347,8 @@ void GPUMonitor::getNVIDIAGPUUsage() {
         nvmlMemory_t memory;
         result = nvmlDeviceGetMemoryInfo(device, &memory);
         if (result == NVML_SUCCESS) {
-            std::cout << "  Память GPU: " << (memory.used / (1024*1024)) << " / " 
-                      << (memory.total / (1024*1024)) << " МБ" << std::endl;
+            std::cout << "  Память GPU: " << formatBytes(memory.used) << " / " 
+                      << formatBytes(memory.total) << std::endl;
         }
     }
 #else
@@ -344,27 +412,9 @@ void GPUMonitor::getIntelGPUUsage() {
 void GPUMonitor::printGPUInfo() {
     std::cout << "\n=== Информация о GPU ===" << std::endl;
     
-    bool hasGPUs = false;
-    
-#ifdef ENABLE_NVML
     auto gpus = getAllGPUInfo();
     
-    if (!gpus.empty()) {
-        hasGPUs = true;
-        for (size_t i = 0; i < gpus.size(); i++) {
-            const auto& gpu = gpus[i];
-            std::cout << "\nGPU #" << i << " (" << gpu.vendor << "): " << gpu.name << std::endl;
-            std::cout << "  Загрузка GPU: " << gpu.gpuUtilization << "%" << std::endl;
-            std::cout << "  Загрузка памяти: " << gpu.memoryUtilization << "%" << std::endl;
-            std::cout << "  Температура: " << gpu.temperature << "°C" << std::endl;
-            std::cout << "  Память GPU: " << (gpu.memoryUsed / (1024*1024)) << " / " 
-                      << (gpu.memoryTotal / (1024*1024)) << " МБ" << std::endl;
-            std::cout << "  Скорость вентилятора: " << gpu.fanSpeed << "%" << std::endl;
-        }
-    }
-#endif
-    
-    if (!hasGPUs) {
+    if (gpus.empty() || (gpus.size() == 1 && gpus[0].vendor == "Unknown")) {
         std::cout << "Для мониторинга GPU требуются дополнительные библиотеки:" << std::endl;
         std::cout << "- NVIDIA: NVML (NVIDIA Management Library)" << std::endl;
         std::cout << "- AMD: ADL SDK (AMD Display Library)" << std::endl;
@@ -373,5 +423,55 @@ void GPUMonitor::printGPUInfo() {
         std::cout << "1. Установите соответствующие драйверы GPU" << std::endl;
         std::cout << "2. Скачайте необходимые SDK в директорию libs/" << std::endl;
         std::cout << "3. Соберите с соответствующими флагами (-DENABLE_NVML, -DENABLE_ADL, -DENABLE_INTEL_GPA)" << std::endl;
+        return;
     }
+    
+    bool hasGPUs = false;
+    
+    for (size_t i = 0; i < gpus.size(); i++) {
+        const auto& gpu = gpus[i];
+        
+        // Skip generic unknown entries
+        if (gpu.vendor == "Unknown" && gpu.name == "No compatible GPU detected") {
+            continue;
+        }
+        
+        hasGPUs = true;
+        std::cout << "\nGPU #" << i << " (" << gpu.vendor << "): " << gpu.name << std::endl;
+        std::cout << "  Загрузка GPU: " << gpu.gpuUtilization << "%" << std::endl;
+        std::cout << "  Загрузка памяти: " << gpu.memoryUtilization << "%" << std::endl;
+        std::cout << "  Температура: " << gpu.temperature << "°C" << std::endl;
+        std::cout << "  Память GPU: " << formatBytes(gpu.memoryUsed) << " / " 
+                  << formatBytes(gpu.memoryTotal) << std::endl;
+        std::cout << "  Скорость вентилятора: " << gpu.fanSpeed << "%" << std::endl;
+    }
+    
+    if (!hasGPUs) {
+        std::cout << "Не удалось обнаружить совместимые GPU устройства" << std::endl;
+        std::cout << "\nДля мониторинга GPU требуются дополнительные библиотеки:" << std::endl;
+        std::cout << "- NVIDIA: NVML (NVIDIA Management Library)" << std::endl;
+        std::cout << "- AMD: ADL SDK (AMD Display Library)" << std::endl;
+        std::cout << "- Intel: Intel Graphics Performance Analyzers" << std::endl;
+    }
+}
+
+/**
+ * @brief Форматирует количество байт в удобочитаемый формат
+ * 
+ * @param bytes Количество байт
+ * @return std::string Отформатированная строка с размером
+ */
+std::string GPUMonitor::formatBytes(unsigned long long bytes) {
+    const char* units[] = {"B", "KB", "MB", "GB", "TB"};
+    int unitIndex = 0;
+    double size = static_cast<double>(bytes);
+    
+    while (size >= 1024.0 && unitIndex < 4) {
+        size /= 1024.0;
+        unitIndex++;
+    }
+    
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << size << " " << units[unitIndex];
+    return oss.str();
 }
