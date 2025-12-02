@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <sstream>
 #include <mutex>
+#include <memory>
+#include "color_output.h"
 
 /**
  * @class Logger
@@ -116,6 +118,12 @@ private:
     bool outputToConsole;           ///< Флаг вывода в консоль
     bool initialized;               ///< Флаг инициализации
     std::mutex logMutex;            ///< Мьютекс для потокобезопасности
+
+    // Цвета для разных уровней логов
+    ColorOutput::Color debugColor = ColorOutput::CYAN;
+    ColorOutput::Color infoColor = ColorOutput::GREEN;
+    ColorOutput::Color warningColor = ColorOutput::YELLOW;
+    ColorOutput::Color errorColor = ColorOutput::RED;
 };
 
 #endif // LOGGER_H

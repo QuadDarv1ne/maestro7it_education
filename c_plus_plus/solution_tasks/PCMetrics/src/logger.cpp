@@ -1,18 +1,12 @@
 #include "../include/logger.h"
-#include <iostream>
-#include <chrono>
-#include <iomanip>
-#include <sstream>
-#include <mutex>
-#include <ctime>
+#include "../include/color_output.h"
 
-// Static instance for singleton pattern
 Logger& Logger::getInstance() {
     static Logger instance;
     return instance;
 }
 
-Logger::Logger() : minimumLevel(LogLevel::INFO_LEVEL), outputToConsole(true), initialized(false) {}
+Logger::Logger() : currentLevel(INFO_LEVEL), consoleOutputEnabled(true) {}
 
 Logger::~Logger() {
     if (logFile.is_open()) {
@@ -20,89 +14,56 @@ Logger::~Logger() {
     }
 }
 
-void Logger::initialize(const std::string& filename, LogLevel minLevel, bool consoleOutput) {
-    std::lock_guard<std::mutex> lock(logMutex);
-    
-    if (logFile.is_open()) {
-        logFile.close();
-    }
-    
+void Logger::initialize(const std::string& filename, LogLevel level, bool consoleOutput) {
+    currentLevel = level;
+    consoleOutputEnabled = consoleOutput;
     logFile.open(filename, std::ios::app);
-    minimumLevel = minLevel;
-    outputToConsole = consoleOutput;
-    initialized = true;
-    
-    if (!logFile.is_open()) {
-        std::cerr << "Ошибка открытия файла логов: " << filename << std::endl;
-    }
 }
 
-std::string Logger::getCurrentTimestamp() {
-    auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now.time_since_epoch()) % 1000;
-    
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
-    ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
-    return ss.str();
-}
-
-std::string Logger::levelToString(LogLevel level) {
-    switch (level) {
-        case LogLevel::DEBUG_LEVEL:   return "DEBUG";
-        case LogLevel::INFO_LEVEL:    return "INFO";
-        case LogLevel::WARNING_LEVEL: return "WARN";
-        case LogLevel::ERROR_LEVEL:   return "ERROR";
-        default:                      return "UNKNOWN";
-    }
-}
-
-void Logger::log(LogLevel level, const std::string& message) {
-    if (!initialized || level < minimumLevel) {
-        return;
-    }
-    
-    std::lock_guard<std::mutex> lock(logMutex);
-    
-    std::string timestamp = getCurrentTimestamp();
-    std::string levelStr = levelToString(level);
-    
-    std::string logMessage = "[" + timestamp + "] [" + levelStr + "] " + message;
-    
-    if (logFile.is_open()) {
-        logFile << logMessage << std::endl;
-        logFile.flush();
-    }
-    
-    if (outputToConsole) {
-        switch (level) {
-            case LogLevel::ERROR_LEVEL:
-                std::cerr << logMessage << std::endl;
-                break;
-            case LogLevel::WARNING_LEVEL:
-                std::cout << logMessage << std::endl;
-                break;
-            default:
-                std::cout << logMessage << std::endl;
-                break;
+void Logger::debug(const std::string& message) {
+    if (currentLevel <= DEBUG_LEVEL) {
+        if (consoleOutputEnabled) {
+            ColorOutput::print("[DEBUG] ", debugColor);
+            std::cout << message << std::endl;
+        }
+        if (logFile.is_open()) {
+            logFile << "[DEBUG] " << message << std::endl;
         }
     }
 }
 
-void Logger::debug(const std::string& message) {
-    log(LogLevel::DEBUG_LEVEL, message);
-}
-
 void Logger::info(const std::string& message) {
-    log(LogLevel::INFO_LEVEL, message);
+    if (currentLevel <= INFO_LEVEL) {
+        if (consoleOutputEnabled) {
+            ColorOutput::print("[INFO] ", infoColor);
+            std::cout << message << std::endl;
+        }
+        if (logFile.is_open()) {
+            logFile << "[INFO] " << message << std::endl;
+        }
+    }
 }
 
 void Logger::warning(const std::string& message) {
-    log(LogLevel::WARNING_LEVEL, message);
+    if (currentLevel <= WARNING_LEVEL) {
+        if (consoleOutputEnabled) {
+            ColorOutput::print("[WARNING] ", warningColor);
+            std::cout << message << std::endl;
+        }
+        if (logFile.is_open()) {
+            logFile << "[WARNING] " << message << std::endl;
+        }
+    }
 }
 
 void Logger::error(const std::string& message) {
-    log(LogLevel::ERROR_LEVEL, message);
+    if (currentLevel <= ERROR_LEVEL) {
+        if (consoleOutputEnabled) {
+            ColorOutput::print("[ERROR] ", errorColor);
+            std::cout << message << std::endl;
+        }
+        if (logFile.is_open()) {
+            logFile << "[ERROR] " << message << std::endl;
+        }
+    }
 }
