@@ -27,6 +27,47 @@ from instance.config import Config
 # Set up logging
 logger = logging.getLogger(__name__)
 
+
+def _setup_logging(app: Flask) -> None:
+    """
+    Configure logging for the Flask application.
+
+    Args:
+        app: Flask application instance.
+    """
+    if not app.debug and not app.testing:
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+
+        file_handler = RotatingFileHandler(
+            'logs/simple_hr.log',
+            maxBytes=10240000,
+            backupCount=10
+        )
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('Simple HR startup')
+
+
+def _setup_database_pragmas() -> None:
+    """
+    Configure SQLAlchemy pragmas for better database performance.
+    """
+    @event.listens_for(Pool, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        """Enable foreign keys for SQLite."""
+        try:
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+        except Exception:
+            pass  # Not SQLite, ignore
+
+
 # Initialize Flask extensions
 db = SQLAlchemy()
 migrate = Migrate()
