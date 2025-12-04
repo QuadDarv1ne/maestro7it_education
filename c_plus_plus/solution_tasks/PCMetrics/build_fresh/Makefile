@@ -59,7 +59,7 @@ EQUALS = =
 CMAKE_SOURCE_DIR = C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_new
+CMAKE_BINARY_DIR = C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_fresh
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -131,9 +131,9 @@ install/strip/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_new\CMakeFiles C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_new\\CMakeFiles\progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_fresh\CMakeFiles C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_fresh\\CMakeFiles\progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_new\CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\maksi\OneDrive\Documents\GitHub\maestro7it_education\c_plus_plus\solution_tasks\PCMetrics\build_fresh\CMakeFiles 0
 .PHONY : all
 
 # The main clean target
