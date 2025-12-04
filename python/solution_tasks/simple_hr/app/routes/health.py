@@ -399,34 +399,3 @@ def check_memory():
             'status': 'unknown',
             'message': f'Memory check failed: {str(e)}'
         }
-
-
-@health_bp.route('/health/metrics', methods=['GET'])
-def metrics():
-    """
-    Метрики приложения для мониторинга.
-    Возвращает информацию о процессе, памяти, диске.
-    """
-    try:
-        process = psutil.Process()
-        
-        return jsonify({
-            'timestamp': datetime.utcnow().isoformat(),
-            'process': {
-                'pid': process.pid,
-                'cpu_percent': process.cpu_percent(interval=0.1),
-                'memory_mb': round(process.memory_info().rss / 1024 / 1024, 2),
-                'threads': process.num_threads(),
-                'uptime_seconds': (datetime.now() - datetime.fromtimestamp(process.create_time())).total_seconds()
-            },
-            'system': {
-                'cpu_percent': psutil.cpu_percent(interval=0.1),
-                'memory_percent': psutil.virtual_memory().percent,
-                'disk_percent': psutil.disk_usage('/').percent
-            }
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'error': 'Failed to collect metrics',
-            'message': str(e)
-        }), 500
