@@ -47,12 +47,12 @@ def color_text(text, color="WHITE"):
 
 def countdown():
     clear_screen()
-    print(color_text("\n\n     🎄 Приготовьтесь к старту 🎄\n", "GREEN"))
-    print(color_text("          Положи пальцы на Enter...\n\n", "YELLOW"))
+    print(color_text("\n\n     🎄 Готовься к старту 🎄\n", "GREEN"))
+    print(color_text("       Положи палец на ПРОБЕЛ (Space)\n\n", "YELLOW"))
     
     for i in range(5, 0, -1):
         clear_screen()
-        print(color_text("\n\n     🎄 Приготовьтесь к старту 🎄\n", "GREEN"))
+        print(color_text("\n\n     🎄 Готовься к старту 🎄\n", "GREEN"))
         print(color_text(f"               {i}  ", "RED" if i <= 3 else "YELLOW"))
         beep(600 + i*100, 300)
         time.sleep(1)
@@ -70,13 +70,12 @@ def draw_track(positions, events=None, elapsed="0.0"):
   \\__ \\ _` | ' \\/ _` | ' \\ || | |) / _` / _ \\ '_ \\
   |___/__,_|_||_\\__,_|_|_|_| |___/\\__,_\\___/_.__/
 
-          🎅🦌 🏁 SANTA DASH 2025 🏁 🦌🎅
+          🎅🦌🏁 SANTA DASH 2025 🏁🦌🎅
 """, "RED"))
     print(color_text(f"                Время: {elapsed}s\n", "BLUE"))
 
     for i, name in enumerate(RUNNERS):
         pos = min(positions[i], TRACK_LENGTH)
-        # Пробел в начале трассы — бегуны появляются только после старта
         runner = SYMBOLS[i] if pos > 0 else " "
         track = " " * pos + runner + "—" * (TRACK_LENGTH - pos) + "🎄"
         progress = f"{pos}/{TRACK_LENGTH}"
@@ -89,22 +88,23 @@ def draw_track(positions, events=None, elapsed="0.0"):
             print(f"   → {e}")
 
     bonus = player_spam_count // 3
-    print(color_text(f"\n🔥 Спам Enter ... Бонус к ходу: +{bonus}  (нажато: {player_spam_count})", "GREEN"))
+    print(color_text(f"\n🚀 Спамь ПРОБЕЛ ... Бонус: +{bonus}  (нажато: {player_spam_count})", "GREEN"))
 
 def random_event():
     global victim
     et = random.choice(["none", "snow", "gift", "wolf", "aurora"])
     if et == "snow":
-        return ["❄️ Метель! Все -1..3 шага"], lambda p: [max(0, x - random.randint(1,3)) for x in p]
+        return ["❄️ Метель. Все теряют 1–3 шага"], lambda p: [max(0, x - random.randint(1,3)) for x in p]
     elif et == "gift":
-        return ["🎁 Подарок от Снегурочки ... Ты +5 шагов"], "gift"
+        return ["🎁 Подарок. Ты +5 шагов!"], "gift"
     elif et == "wolf":
         victim = random.randint(1, len(RUNNERS)-1)
-        return [f"🐺 Волк! {RUNNERS[victim]} теряет 5 шагов"], "wolf"
+        return [f"🐺 Волк атакует {RUNNERS[victim]}. -5 шагов"], "wolf"
     elif et == "aurora":
-        return ["🌟 Северное сияние ... ИИ ускоряются (+3)"], "aurora"
+        return ["🌟 Северное сияние. ИИ +3 шага"], "aurora"
     return ["Всё спокойно..."], None
 
+# Спам ПРОБЕЛА (Space)
 def spam_thread():
     global player_spam_count, running
     while running:
@@ -112,17 +112,17 @@ def spam_thread():
             import msvcrt
             if msvcrt.kbhit():
                 key = msvcrt.getch()
-                if key in (b'\r', b'\n'):
+                if key == b' ':  # Пробел
                     with lock:
                         player_spam_count += 1
         else:
             import select
             if select.select([sys.stdin], [], [], 0.01) == ([sys.stdin], [], []):
                 key = sys.stdin.read(1)
-                if key in ('\r', '\n'):
+                if key == ' ':
                     with lock:
                         player_spam_count += 1
-        time.sleep(0.008)  # Оптимально: быстро реагирует, не жрёт CPU
+        time.sleep(0.008)
 
 def race():
     global player_spam_count, running, DIFFICULTY, victim
@@ -130,7 +130,7 @@ def race():
     positions = [0] * len(RUNNERS)
 
     clear_screen()
-    print(color_text("🎄 SANTA DASH — Новогодняя гонка оленей 🎄\n", "GREEN"))
+    print(color_text("🎄 SANTA DASH — Новогодняя спам-гонка 🎄\n", "GREEN"))
     print("Сложность:\n1 — Легко\n2 — Нормально\n3 — Хардкор")
     try:
         ch = input(color_text("\nВыбор [1-3, Enter = 2]: ", "YELLOW")).strip()
@@ -138,14 +138,13 @@ def race():
     except:
         DIFFICULTY = 2
 
-    countdown()  # 5 секунд + отсчёт
+    countdown()
 
     player_spam_count = 0
     running = True
     threading.Thread(target=spam_thread, daemon=True).start()
 
     start_time = time.time()
-    turn = 0
 
     while max(positions) < TRACK_LENGTH:
         elapsed = f"{time.time() - start_time:.1f}"
@@ -162,8 +161,7 @@ def race():
             ai_move = random.randint(2, 4 + DIFFICULTY)
             positions[i] = min(positions[i] + ai_move, TRACK_LENGTH)
 
-        turn += 1
-        if random.random() < 0.22:  # ~каждые 4-5 ходов
+        if random.random() < 0.22:
             events, effect = random_event()
             draw_track(positions, events, f"{time.time() - start_time:.1f}")
             time.sleep(1.5)
@@ -180,7 +178,7 @@ def race():
     final_time = time.time() - start_time
     beep(1200, 200); time.sleep(0.1); beep(1400, 300)
 
-    draw_track(positions, [f"Гонка окончена за {final_time:.1f} секунд!"], f"{final_time:.1f}")
+    draw_track(positions, [f"Финиш за {final_time:.1f} секунд!"], f"{final_time:.1f}")
 
     winner = max(range(len(positions)), key=lambda i: positions[i])
     if winner == 0:
@@ -188,9 +186,9 @@ def race():
         print(color_text("   Король спама и повелитель оленей 🏆✨", "YELLOW"))
     else:
         print(color_text(f"\n🏆 Победил: {RUNNERS[winner]}", "RED"))
-        print(color_text(f"   Твоё время: {final_time:.1f}с — тренируйся", "YELLOW"))
+        print(color_text(f"   Твоё время: {final_time:.1f}с — улучшай рекорд", "YELLOW"))
 
-    print(color_text("\nСыграть ещё? (да / любой ключ — выход): ", "CYAN"), end='')
+    print(color_text("\nЕщё раз? (да / любой ключ — выход): ", "CYAN"), end='')
     try:
         if input().strip().lower().startswith('д'):
             race()
