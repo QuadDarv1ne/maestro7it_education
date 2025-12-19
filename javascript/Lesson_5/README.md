@@ -91,6 +91,37 @@ let keys = Object.keys(person); // ['name', 'age', 'greet']
 let values = Object.values(person); // ['John', 30, function() {...}]
 ```
 
+**Структура типичного Java файла**
+
+```java
+// 1. Пакет (если есть)
+package com.example;
+
+// 2. Импорты
+import java.util.Arrays;
+import java.util.List;
+
+// 3. Класс
+public class ArrayDemo {
+    // 4. Методы
+    public static void main(String[] args) {
+        // 5. Код
+    }
+}
+```
+
+**Изучите основные пакеты Java:**
+
+- `java.lang` - автоматический импорт (String, System, Math)
+
+- `java.util` - коллекции, Arrays, Scanner, Date
+
+- `java.io` - ввод/вывод
+
+- `java.net` - сетевые функции
+
+- `java.sql` - работа с базами данных
+
 ```java
 import java.util.Arrays;      // Импорт для Arrays.toString()
 import java.util.ArrayList;   // Импорт для ArrayList
