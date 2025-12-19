@@ -70,7 +70,7 @@ def draw_track(positions, events=None, elapsed="0.0"):
   \\__ \\ _` | ' \\/ _` | ' \\ || | |) / _` / _ \\ '_ \\
   |___/__,_|_||_\\__,_|_|_|_| |___/\\__,_\\___/_.__/
 
-          🎅🦌🏁 SANTA DASH 2025 🏁🦌🎅
+          🎅🦌 🏁 SANTA DASH 2025 🏁 🦌🎅
 """, "RED"))
     print(color_text(f"                Время: {elapsed}s\n", "BLUE"))
 
