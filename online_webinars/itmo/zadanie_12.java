@@ -23,7 +23,7 @@
 
 // Базовый интерфейс для всех выражений
 interface Expression extends ToMiniString {
-    int evalute(int x);
+    int evaluate(int x);
 }
 
 /**
@@ -44,7 +44,7 @@ interface ToMiniString {
  */
 abstract class AbstractExpression implements Expression {
     @Override
-    public abstract int evalute(int x);
+    public abstract int evaluate(int x);
 
     @Override
     public abstract String toString();
@@ -76,7 +76,7 @@ class Const extends AbstractExpression {
      * @return значение константы
      */
     @Override
-    public int evalute(int x) {
+    public int evaluate(int x) {
         return value;
     }
 
@@ -120,7 +120,7 @@ class Variable extends AbstractExpression {
      * @return значение x
      */
     @Override
-    public int evalute(int x) {
+    public int evaluate(int x) {
         return x;
     }
 
@@ -173,8 +173,8 @@ abstract class BinaryOperation extends AbstractExpression {
     protected abstract boolean isLeftAssociative();
 
     @Override
-    public int evalute(int x) {
-        return apply(left.evalute(x), right.evalute(x));
+    public int evaluate(int x) {
+        return apply(left.evaluate(x), right.evaluate(x));
     }
 
     @Override
@@ -337,6 +337,9 @@ class Divide extends BinaryOperation {
     
     @Override
     protected int apply(int a, int b) {
+        if (b == 0) {
+            throw new ArithmeticException("Division by zero");
+        }
         return a / b;
     }
     
@@ -358,8 +361,8 @@ class Divide extends BinaryOperation {
 
 // Главный класс для тестирования
 public class Main {
-    public static void main (String[] args) {
-        if (atgs.length == 0) {
+    public static void main(String[] args) {
+        if (args.length == 0) {
             System.out.println("Запустите программу с аргументами для тестирования.\nЗапуск: java Main <значение_x>");
             return;
         }
