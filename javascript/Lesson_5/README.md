@@ -91,6 +91,84 @@ let keys = Object.keys(person); // ['name', 'age', 'greet']
 let values = Object.values(person); // ['John', 30, function() {...}]
 ```
 
+**Структура типичного Java файла**
+
+```java
+// 1. Пакет (если есть)
+package com.example;
+
+// 2. Импорты
+import java.util.Arrays;
+import java.util.List;
+
+// 3. Класс
+public class ArrayDemo {
+    // 4. Методы
+    public static void main(String[] args) {
+        // 5. Код
+    }
+}
+```
+
+**Изучите основные пакеты Java:**
+
+- `java.lang` - автоматический импорт (String, System, Math)
+
+- `java.util` - коллекции, Arrays, Scanner, Date
+
+- `java.io` - ввод/вывод
+
+- `java.net` - сетевые функции
+
+- `java.sql` - работа с базами данных
+
+```java
+import java.util.Arrays;      // Импорт для Arrays.toString()
+import java.util.ArrayList;   // Импорт для ArrayList
+import java.util.List;        // Импорт для интерфейса List
+
+public class ArrayDemo {
+    public static void main(String[] args) {
+        // 1. Литерал массива
+        String[] fruits = {"apple", "banana", "cherry"};
+        System.out.println("Фрукты: " + Arrays.toString(fruits));
+        
+        // 2. Через new с инициализацией
+        int[] numbers = new int[]{1, 2, 3, 4};
+        System.out.println("Числа: " + Arrays.toString(numbers));
+        
+        // 3. Создание пустого массива
+        double[] prices = new double[3];
+        prices[0] = 12.5;
+        prices[1] = 7.99;
+        prices[2] = 3.49;
+        System.out.println("Цены: " + Arrays.toString(prices));
+        
+        // 4. Многомерный массив
+        int[][] matrix = {
+            {1, 2, 3},
+            {4, 5, 6},
+            {7, 8, 9}
+        };
+        System.out.println("Матрица 3x3:");
+        for (int[] row : matrix) {
+            System.out.println(Arrays.toString(row));
+        }
+        
+        // 5. ArrayList (динамический массив)
+        List<String> fruitList = new ArrayList<>();
+        fruitList.add("apple");
+        fruitList.add("banana");
+        fruitList.add("cherry");
+        System.out.println("ArrayList: " + fruitList);
+        
+        // Удаление элемента (в обычном массиве невозможно)
+        fruitList.remove("cherry");
+        System.out.println("После удаления: " + fruitList);
+    }
+}
+```
+
 ---
 
 **Автор:** Дуплей Максим Игоревич
