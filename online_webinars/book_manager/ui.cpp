@@ -38,6 +38,25 @@ std::string UI::getStringInput(const char* prompt) {
     return "";
 }
 
+Genre UI::getGenreInput(const char* prompt) {
+    printf("%s\n", prompt);
+    printf("1. Художественная литература\n");
+    printf("2. Нон-фикшн\n");
+    printf("3. Наука\n");
+    printf("4. История\n");
+    printf("5. Другое\n");
+    
+    int choice = getIntInput("Выберите жанр (1-5): ");
+    switch (choice) {
+        case 1: return Genre::FICTION;
+        case 2: return Genre::NON_FICTION;
+        case 3: return Genre::SCIENCE;
+        case 4: return Genre::HISTORY;
+        case 5: return Genre::OTHER;
+        default: printf("Неверный выбор, выбрано 'Другое'.\n"); return Genre::OTHER;
+    }
+}
+
 void UI::addBookMenu() {
     printf("\n=== ДОБАВЛЕНИЕ НОВОЙ КНИГИ ===\n");
     
