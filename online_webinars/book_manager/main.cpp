@@ -3,6 +3,8 @@
 #include <locale.h>
 #include <clocale>
 
+using namespase std;
+
 #ifdef _WIN32
     #include <windows.h>
 #endif
