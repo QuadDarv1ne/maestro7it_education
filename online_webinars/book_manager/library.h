@@ -3,6 +3,7 @@
 
 #include "book.h"
 #include <vector>
+#include <unordered_map>
 
 /**
  * @brief Класс для управления библиотекой книг.
@@ -11,6 +12,9 @@
 class Library {
 private:
     std::vector<Book> books;  ///< Вектор книг (замена на std::vector для автоматического управления памятью)
+    std::unordered_map<std::string, size_t> titleIndex;  ///< Индекс для быстрого поиска по названию
+    
+    void updateIndex();  ///< Обновляет индекс после изменений
     
 public:
     Library();

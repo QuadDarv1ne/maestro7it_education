@@ -13,11 +13,22 @@
 Library::Library() {}
 
 /**
+ * @brief Обновляет индекс для быстрого поиска.
+ */
+void Library::updateIndex() {
+    titleIndex.clear();
+    for (size_t i = 0; i < books.size(); ++i) {
+        titleIndex[books[i].title] = i;
+    }
+}
+
+/**
  * @brief Добавляет книгу в библиотеку.
  * @param book Книга для добавления.
  */
 void Library::addBook(const Book& book) {
     books.push_back(book);
+    updateIndex();
     printf("Книга \"%s\" успешно добавлена.\n", book.title.c_str());
 }
 
@@ -26,15 +37,15 @@ void Library::addBook(const Book& book) {
  * @param title Название книги для удаления.
  */
 void Library::removeBook(const std::string& title) {
-    auto it = std::find_if(books.begin(), books.end(), 
-                           [&title](const Book& b) { return b.title == title; });
-    
-    if (it == books.end()) {
+    auto it = titleIndex.find(title);
+    if (it == titleIndex.end()) {
         printf("Книга с названием \"%s\" не найдена.\n", title.c_str());
         return;
     }
     
-    books.erase(it);
+    size_t index = it->second;
+    books.erase(books.begin() + index);
+    updateIndex();
     printf("Книга \"%s\" успешно удалена.\n", title.c_str());
 }
 
@@ -44,14 +55,16 @@ void Library::removeBook(const std::string& title) {
  * @param newBook Новые данные книги.
  */
 void Library::updateBook(const std::string& title, const Book& newBook) {
-    for (auto& book : books) {
-        if (book.title == title) {
-            book = newBook;
-            printf("Книга \"%s\" успешно обновлена.\n", title.c_str());
-            return;
-        }
+    auto it = titleIndex.find(title);
+    if (it == titleIndex.end()) {
+        printf("Книга с названием \"%s\" не найдена.\n", title.c_str());
+        return;
     }
-    printf("Книга с названием \"%s\" не найдена.\n", title.c_str());
+    
+    size_t index = it->second;
+    books[index] = newBook;
+    updateIndex();  // Обновляем индекс, если название изменилось
+    printf("Книга \"%s\" успешно обновлена.\n", title.c_str());
 }
 
 /**
@@ -157,7 +170,7 @@ void Library::searchByTitle(const std::string& title) const {
             printf("Название: %s\n", book.title.c_str());
             printf("Автор: %s\n", book.author.c_str());
             printf("Год: %d\n", book.year);
-            printf("Жанр: %s\n", book.genre.c_str());
+            printf("Жанр: %s\n", genreToString(book.genre).c_str());
             printf("Описание: %s\n", book.description.c_str());
             printf("ISBN: %s\n", book.isbn.c_str());
             found = true;
@@ -184,7 +197,7 @@ void Library::searchByAuthor(const std::string& author) const {
             printf("Название: %s\n", book.title.c_str());
             printf("Автор: %s\n", book.author.c_str());
             printf("Год: %d\n", book.year);
-            printf("Жанр: %s\n", book.genre.c_str());
+            printf("Жанр: %s\n", genreToString(book.genre).c_str());
             printf("Описание: %s\n", book.description.c_str());
             printf("ISBN: %s\n", book.isbn.c_str());
             found = true;
@@ -306,6 +319,7 @@ void Library::loadFromFile(const std::string& filename) {
         books.push_back(book);
     }
     
+    updateIndex();
     fclose(file);
     printf("Библиотека успешно загружена из файла \"%s\" (%zu книг).\n", filename.c_str(), books.size());
 }
@@ -316,14 +330,14 @@ void Library::findBooksByAuthorAndGenre(const std::string& author, const std::st
     
     for (const auto& book : books) {
         bool matchAuthor = author.empty() || book.author.find(author) != std::string::npos;
-        bool matchGenre = genre.empty() || book.genre.find(genre) != std::string::npos;
+        bool matchGenre = genre.empty() || genreToString(book.genre).find(genre) != std::string::npos;
         
         if (matchAuthor && matchGenre) {
             printf("\n--- Найдена книга ---\n");
             printf("Название: %s\n", book.title.c_str());
             printf("Автор: %s\n", book.author.c_str());
             printf("Год: %d\n", book.year);
-            printf("Жанр: %s\n", book.genre.c_str());
+            printf("Жанр: %s\n", genreToString(book.genre).c_str());
             printf("Описание: %s\n", book.description.c_str());
             printf("ISBN: %s\n", book.isbn.c_str());
             found = true;
@@ -356,7 +370,7 @@ void Library::findOldestBookAfterYear(int year) const {
     printf("Название: %s\n", oldest->title.c_str());
     printf("Автор: %s\n", oldest->author.c_str());
     printf("Год: %d\n", oldest->year);
-    printf("Жанр: %s\n", oldest->genre.c_str());
+    printf("Жанр: %s\n", genreToString(oldest->genre).c_str());
     printf("Описание: %s\n", oldest->description.c_str());
     printf("ISBN: %s\n\n", oldest->isbn.c_str());
 }
@@ -369,7 +383,7 @@ void Library::findMostPopularGenre() const {
     
     std::map<std::string, int> genreCount;
     for (const auto& book : books) {
-        genreCount[book.genre]++;
+        genreCount[genreToString(book.genre)]++;
     }
     
     std::string mostPopular;

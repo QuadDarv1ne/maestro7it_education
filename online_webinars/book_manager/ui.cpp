@@ -29,13 +29,19 @@ int UI::getIntInput(const char* prompt) {
 }
 
 std::string UI::getStringInput(const char* prompt) {
-    char buffer[1024];
-    printf("%s", prompt);
-    if (fgets(buffer, sizeof(buffer), stdin)) {
-        buffer[strcspn(buffer, "\n")] = 0;
-        return std::string(buffer);
-    }
-    return "";
+    std::string input;
+    do {
+        char buffer[1024];
+        printf("%s", prompt);
+        if (fgets(buffer, sizeof(buffer), stdin)) {
+            buffer[strcspn(buffer, "\n")] = 0;
+            input = buffer;
+        }
+        if (input.empty()) {
+            printf("Ошибка: строка не может быть пустой.\n");
+        }
+    } while (input.empty());
+    return input;
 }
 
 Genre UI::getGenreInput(const char* prompt) {
@@ -64,7 +70,7 @@ void UI::addBookMenu() {
     book.title = getStringInput("Название книги: ");
     book.author = getStringInput("Автор: ");
     book.year = getIntInput("Год издания: ");
-    book.genre = getStringInput("Жанр: ");
+    book.genre = getGenreInput("Выберите жанр:");
     book.description = getStringInput("Краткое описание: ");
     book.isbn = getStringInput("ISBN: ");
     
@@ -87,7 +93,7 @@ void UI::updateBookMenu() {
     newBook.title = getStringInput("Новое название: ");
     newBook.author = getStringInput("Новый автор: ");
     newBook.year = getIntInput("Новый год издания: ");
-    newBook.genre = getStringInput("Новый жанр: ");
+    newBook.genre = getGenreInput("Выберите новый жанр:");
     newBook.description = getStringInput("Новое описание: ");
     newBook.isbn = getStringInput("Новый ISBN: ");
     
