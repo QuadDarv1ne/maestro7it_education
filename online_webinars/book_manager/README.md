@@ -48,7 +48,11 @@ g++ -o library main.cpp library.cpp ui.cpp -std=c++11
 ```bash
 g++ -o library.exe main.cpp library.cpp ui.cpp -std=c++11
 ```
-
+### Тестирование
+```bash
+g++ -o test_library test_library.cpp library.cpp book.cpp -std=c++11
+./test_library
+```
 **Windows (MSVC):**
 ```bash
 cl /EHsc /Fe:library.exe main.cpp library.cpp ui.cpp
