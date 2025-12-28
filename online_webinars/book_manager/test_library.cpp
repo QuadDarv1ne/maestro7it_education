@@ -1,12 +1,27 @@
 #include "library.h"
 #include <cassert>
 #include <iostream>
+#include <locale.h>
+#include <clocale>
+
+#ifdef _WIN32
+    #include <windows.h>
+#endif
 
 /**
  * @brief Простые юнит-тесты для класса Library.
  * Запускаются вручную для проверки функциональности.
  */
 void testLibrary() {
+    // Установка локали для поддержки кириллицы
+    setlocale(LC_ALL, "ru_RU.UTF-8");
+    
+    #ifdef _WIN32
+    // Для Windows: установка кодовой страницы UTF-8
+    SetConsoleCP(65001);
+    SetConsoleOutputCP(65001);
+    #endif
+    
     Library lib;
 
     // Тест добавления книги
