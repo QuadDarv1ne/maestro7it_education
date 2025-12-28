@@ -11,7 +11,6 @@ private:
     void clearInputBuffer();
     int getIntInput(const char* prompt);
     std::string getStringInput(const char* prompt);
-    Genre getGenreInput(const char* prompt);
     
     void addBookMenu();
     void removeBookMenu();

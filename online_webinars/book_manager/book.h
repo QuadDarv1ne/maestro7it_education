@@ -1,43 +1,42 @@
+// Подавление предупреждения MSVC о небезопасных функциях
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#pragma warning(disable: 4996)
+#endif
+
 #ifndef BOOK_H
 #define BOOK_H
 
 #include <string>
 
-/**
- * @brief Перечисление жанров книг.
- */
+// Перечисление жанров книг
 enum class Genre {
-    FICTION,      ///< Художественная литература
-    NON_FICTION,  ///< Нон-фикшн
-    SCIENCE,      ///< Наука
-    HISTORY,      ///< История
-    OTHER         ///< Другое
+    ROMAN,              // Роман
+    POVEST,             // Повесть
+    ROMAN_EPOPEYA,      // Роман-эпопея
+    ROMAN_V_STIHAH,     // Роман в стихах
+    FANTASTIKA,         // Фантастика
+    DETEKTIV,           // Детектив
+    DRAMA,              // Драма
+    KOMEDIYA,           // Комедия
+    POEZIYA,            // Поэзия
+    PROZA,              // Проза
+    OTHER               // Другое
 };
 
-/**
- * @brief Преобразует enum Genre в строку.
- * @param genre Жанр.
- * @return Строковое представление.
- */
-std::string genreToString(Genre genre);
-
-/**
- * @brief Преобразует строку в enum Genre.
- * @param str Строка.
- * @return Жанр или OTHER если не распознано.
- */
-Genre stringToGenre(const std::string& str);
-
-/**
- * @brief Структура, представляющая книгу в библиотеке.
- */
+// Структура для хранения информации о книге
 struct Book {
-    std::string title;      ///< Название книги
-    std::string author;     ///< Автор книги
-    int year;               ///< Год издания
-    Genre genre;            ///< Жанр книги (enum)
-    std::string description;///< Описание книги
-    std::string isbn;       ///< ISBN книги (новое поле)
+    std::string title;          // Название
+    std::string author;         // Автор
+    int year;                   // Год издания
+    Genre genre;                // Жанр
+    std::string description;    // Описание
+    std::string isbn;           // ISBN
 };
+
+// Функции для работы с жанрами
+std::string genreToString(Genre genre);
+Genre stringToGenre(const std::string& str);
+void printAllGenres();
 
 #endif

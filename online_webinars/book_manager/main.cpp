@@ -2,8 +2,7 @@
 #include "ui.h"
 #include <locale.h>
 #include <clocale>
-
-using namespase std;
+#include <iostream>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -17,6 +16,12 @@ int main() {
     // Для Windows: установка кодовой страницы UTF-8
     SetConsoleCP(65001);
     SetConsoleOutputCP(65001);
+    
+    // Дополнительная настройка для Visual Studio
+    #ifdef _MSC_VER
+    system("chcp 65001 > nul");
+    std::locale::global(std::locale("ru_RU.UTF-8"));
+    #endif
     #endif
     
     Library library;

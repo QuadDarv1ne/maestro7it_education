@@ -1,137 +1,66 @@
+// Подавление предупреждения MSVC о небезопасных функциях
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#pragma warning(disable: 4996)
+#endif
+
 #ifndef LIBRARY_H
 #define LIBRARY_H
 
 #include "book.h"
-#include <vector>
-#include <unordered_map>
 
-/**
- * @brief Класс для управления библиотекой книг.
- * Поддерживает добавление, удаление, обновление, сортировку, поиск и сохранение книг.
- */
+// Класс для управления библиотекой книг
 class Library {
 private:
-    std::vector<Book> books;  ///< Вектор книг (замена на std::vector для автоматического управления памятью)
-    std::unordered_map<std::string, size_t> titleIndex;  ///< Индекс для быстрого поиска по названию
+    Book* books;        // Динамический массив книг
+    int size;           // Текущее количество книг
+    int capacity;       // Выделенная ёмкость
     
-    void updateIndex();  ///< Обновляет индекс после изменений
+    // Внутренние функции управления памятью
+    void resize();      // Увеличение массива
+    void shrink();      // Уменьшение массива
     
 public:
+    // Конструктор и деструктор
     Library();
-    ~Library() = default;  // Деструктор по умолчанию, так как vector сам управляет памятью
+    ~Library();
     
-    /**
-     * @brief Добавляет книгу в библиотеку.
-     * @param book Книга для добавления.
-     */
+    // CRUD операции
     void addBook(const Book& book);
-    
-    /**
-     * @brief Удаляет книгу по названию.
-     * @param title Название книги для удаления.
-     */
     void removeBook(const std::string& title);
-    
-    /**
-     * @brief Обновляет книгу по названию.
-     * @param title Название книги для обновления.
-     * @param newBook Новые данные книги.
-     */
     void updateBook(const std::string& title, const Book& newBook);
-    
-    /**
-     * @brief Выводит все книги в библиотеке.
-     */
     void printLibrary() const;
     
-    /**
-     * @brief Сортирует книги по названию.
-     * @param ascending true для сортировки по возрастанию, false - по убыванию.
-     */
+    // Сортировка
     void sortByTitle(bool ascending = true);
-    
-    /**
-     * @brief Сортирует книги по автору.
-     * @param ascending true для сортировки по возрастанию, false - по убыванию.
-     */
     void sortByAuthor(bool ascending = true);
-    
-    /**
-     * @brief Сортирует книги по году.
-     * @param ascending true для сортировки по возрастанию, false - по убыванию.
-     */
     void sortByYear(bool ascending = true);
-    
-    /**
-     * @brief Сортирует книги по жанру.
-     * @param ascending true для сортировки по возрастанию, false - по убыванию.
-     */
     void sortByGenre(bool ascending = true);
     
-    /**
-     * @brief Ищет книги по названию (с частичным совпадением).
-     * @param title Строка для поиска.
-     */
+    // Поиск
     void searchByTitle(const std::string& title) const;
-    
-    /**
-     * @brief Ищет книги по автору (с частичным совпадением).
-     * @param author Строка для поиска.
-     */
     void searchByAuthor(const std::string& author) const;
-    
-    /**
-     * @brief Ищет книги по жанру (с частичным совпадением строкового представления).
-     * @param genre Строка для поиска.
-     */
     void searchByGenre(const std::string& genre) const;
+    void searchByISBN(const std::string& isbn) const;
     
-    /**
-     * @brief Сохраняет библиотеку в файл.
-     * @param filename Имя файла.
-     */
+    // Работа с файлами
     void saveToFile(const std::string& filename) const;
-    
-    /**
-     * @brief Загружает библиотеку из файла.
-     * @param filename Имя файла.
-     */
     void loadFromFile(const std::string& filename);
     
-    // Дополнительные функции (задание 5)
-    /**
-     * @brief Находит книги по автору и жанру.
-     * @param author Автор.
-     * @param genre Жанр (строка).
-     */
+    // Специальные функции (задание 5)
     void findBooksByAuthorAndGenre(const std::string& author, const std::string& genre) const;
-    
-    /**
-     * @brief Находит самую старую книгу после заданного года.
-     * @param year Год.
-     */
     void findOldestBookAfterYear(int year) const;
-    
-    /**
-     * @brief Находит самый популярный жанр.
-     */
     void findMostPopularGenre() const;
-    
-    /**
-     * @brief Вычисляет статистику по годам.
-     */
     void calculateYearStatistics() const;
-    
-    /**
-     * @brief Находит книги с экстремальными названиями (самое длинное/короткое).
-     */
     void findBooksWithExtremeTitles() const;
     
-    /**
-     * @brief Возвращает количество книг в библиотеке.
-     * @return Размер библиотеки.
-     */
-    int getSize() const { return static_cast<int>(books.size()); }
+    // Дополнительные улучшения
+    void printBooksByGenre() const;             // Группировка по жанрам
+    void printRecentBooks(int years) const;     // Книги за последние N лет
+    
+    // Геттер
+    int getSize() const { return size; }
+    bool isEmpty() const { return size == 0; }
 };
 
 #endif
