@@ -72,7 +72,7 @@ void Library::printLibrary() const {
         printf("Название: %s\n", book.title.c_str());
         printf("Автор: %s\n", book.author.c_str());
         printf("Год: %d\n", book.year);
-        printf("Жанр: %s\n", book.genre.c_str());
+        printf("Жанр: %s\n", genreToString(book.genre).c_str());
         printf("Описание: %s\n", book.description.c_str());
         printf("ISBN: %s\n\n", book.isbn.c_str());
     }
@@ -206,12 +206,12 @@ void Library::searchByGenre(const std::string& genre) const {
     printf("\n=== Результаты поиска по жанру: \"%s\" ===\n", genre.c_str());
     
     for (const auto& book : books) {
-        if (book.genre.find(genre) != std::string::npos) {
+        if (genreToString(book.genre).find(genre) != std::string::npos) {
             printf("\n--- Найдена книга ---\n");
             printf("Название: %s\n", book.title.c_str());
             printf("Автор: %s\n", book.author.c_str());
             printf("Год: %d\n", book.year);
-            printf("Жанр: %s\n", book.genre.c_str());
+            printf("Жанр: %s\n", genreToString(book.genre).c_str());
             printf("Описание: %s\n", book.description.c_str());
             printf("ISBN: %s\n", book.isbn.c_str());
             found = true;
@@ -240,7 +240,7 @@ void Library::saveToFile(const std::string& filename) const {
         fprintf(file, "%s\n", book.title.c_str());
         fprintf(file, "%s\n", book.author.c_str());
         fprintf(file, "%d\n", book.year);
-        fprintf(file, "%s\n", book.genre.c_str());
+        fprintf(file, "%s\n", genreToString(book.genre).c_str());
         fprintf(file, "%s\n", book.description.c_str());
         fprintf(file, "%s\n", book.isbn.c_str());
     }
@@ -290,7 +290,7 @@ void Library::loadFromFile(const std::string& filename) {
         
         if (fgets(buffer, sizeof(buffer), file)) {
             buffer[strcspn(buffer, "\n")] = 0;
-            book.genre = buffer;
+            book.genre = stringToGenre(buffer);
         }
         
         if (fgets(buffer, sizeof(buffer), file)) {

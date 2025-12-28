@@ -77,7 +77,7 @@ public:
     void searchByAuthor(const std::string& author) const;
     
     /**
-     * @brief Ищет книги по жанру (с частичным совпадением).
+     * @brief Ищет книги по жанру (с частичным совпадением строкового представления).
      * @param genre Строка для поиска.
      */
     void searchByGenre(const std::string& genre) const;
@@ -98,7 +98,7 @@ public:
     /**
      * @brief Находит книги по автору и жанру.
      * @param author Автор.
-     * @param genre Жанр.
+     * @param genre Жанр (строка).
      */
     void findBooksByAuthorAndGenre(const std::string& author, const std::string& genre) const;
     
