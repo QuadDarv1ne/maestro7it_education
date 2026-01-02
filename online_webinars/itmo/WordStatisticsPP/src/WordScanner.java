@@ -1,14 +1,15 @@
 /**
- * Сканер для извлечения слов из текстовых полей (поток данных).
+ * Сканер для извлечения слов из текстового потока.
  * 
  * <p>Определение слова соответствует спецификации:
  * - Непрерывная последовательность символов
  * - Допустимые символы:
- *   1. Буквы (Unicode)
+ *   1. Буквы (Unicode category Letter)
  *   2. Апострофы (')
- *   3. Дефисы (Unicode)
+ *   3. Дефисы (Unicode category Dash_Punctuation)
  * 
- * <p>Сканер работает с потоками в кодировке UTF-8 и обеспечивает линейное время обработки O(n) по количеству символов.
+ * <p>Сканер работает с потоками в кодировке UTF-8 и обеспечивает
+ * линейное время обработки O(n) по количеству символов.
  * 
  * <p>Пример использования:
  * <pre>
@@ -20,7 +21,6 @@
  * scanner.close();
  * </pre>
  */
-
 import java.io.*;
 
 public class WordScanner {
@@ -28,20 +28,20 @@ public class WordScanner {
     private final StringBuilder currentWord = new StringBuilder();
     private int currentChar = -1;
     private boolean streamClosed = false;
-
+    
     /**
-     * Создаём новый сканер для указанного входного потока данных
+     * Создает новый сканер для указанного входного потока.
      * 
      * @param inputStream входной поток в кодировке UTF-8
-     * @throws NullPointerExeption если inputStream равен null
+     * @throws NullPointerException если inputStream равен null
      */
     public WordScanner(InputStream inputStream) {
-        if(inputStream == null) {
-            throw new NullPointerExeption("Входной файл не может быть равенн null");
+        if (inputStream == null) {
+            throw new NullPointerException("Входной поток не может быть null");
         }
         this.inputStream = inputStream;
     }
-
+    
     /**
      * Извлекает следующее слово из входного потока.
      * 
@@ -97,37 +97,37 @@ public class WordScanner {
             }
         }
     }
-
+    
     /**
-     * Проверяем, является ли символ частью слова
+     * Проверяет, является ли символ частью слова.
      * 
-     * <p>Cимвол считается часть слова, если:
-     * - Если буква (Unicode)
-     * - Апостроф (')
-     * - Дефис ( _ )
+     * <p>Символ считается частью слова, если он:
+     * 1. Является буквой (Unicode Letter)
+     * 2. Является апострофом (')
+     * 3. Принадлежит к категории Dash_Punctuation (дефисы)
      * 
      * @param ch проверяемый символ
-     * @return true если символ допустим в слове, false если это не так
+     * @return true если символ допустим в слове, false в противном случае
      */
     public static boolean isWordCharacter(char ch) {
         // Буквы
         if (Character.isLetter(ch)) {
             return true;
         }
-
+        
         // Апостроф
         if (ch == '\'') {
             return true;
         }
-
+        
         // Дефисы (Unicode категория Dash_Punctuation)
         if (Character.getType(ch) == Character.DASH_PUNCTUATION) {
             return true;
         }
-
+        
         return false;
     }
-
+    
     /**
      * Закрывает сканер и освобождает ресурсы.
      * 
@@ -140,7 +140,7 @@ public class WordScanner {
         streamClosed = true;
         inputStream.close();
     }
-
+    
     /**
      * Проверяет, закрыт ли сканер.
      * 
@@ -149,7 +149,7 @@ public class WordScanner {
     public boolean isClosed() {
         return streamClosed;
     }
-
+    
     /**
      * Возвращает строковое представление сканера.
      * 

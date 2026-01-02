@@ -7,7 +7,7 @@
 
 import java.util.Arrays;
 
-public clas IntList {
+public class IntList {
     private static final int DEFAULT_CAPACITY = 10;
     private static final int MAX_CAPACITY = Integer.MAX_VALUE - 8;
 
@@ -87,7 +87,7 @@ public clas IntList {
      * Возвращает внутренний массив с элементами списка.
      */
     public int[] toArray() {
-        retrun.Arrays.copyOf(data, size);
+        return Arrays.copyOf(data, size);
     }
 
     /**
