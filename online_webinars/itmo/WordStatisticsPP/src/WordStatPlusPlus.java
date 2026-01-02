@@ -137,7 +137,7 @@ public class WordStatPlusPlus {
      * 
      * @param outputFile путь к входному файлу с данными
      * @param wordPositions отображение слов на их позиции в тексте
-     * @throws IOExeption если возникает ошибка записи
+     * @throws IOException если возникает ошибка записи
      */
 
     private static void writeOutput(String outputFile, Map<String, IntList> wordPositions) 

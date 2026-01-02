@@ -68,7 +68,7 @@ public class IntList {
     }
 
     /**
-     * Возвращает колличество элементов в списке.
+     * Возвращает количество элементов в списке.
      * 
      * @return текущий размер списка
      */
@@ -123,7 +123,7 @@ public class IntList {
         if (index < 0 || index >= size) {
             throw new IndexOutOfBoundsException(
                 String.format("Индекс: %d, Размер: %d", index, size)
-            )
+            );
         }
     }
 
