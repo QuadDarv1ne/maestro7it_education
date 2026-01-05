@@ -1,6 +1,7 @@
 import tasks.ReverseTask;
 import tasks.WordStatTask;
 import tasks.WordStatPlusTask;
+import tasks.TextStatTask;
 import analyzer.statistics.TextStatistics;
 import java.io.*;
 import java.nio.file.*;
@@ -54,6 +55,15 @@ public class TestRunner {
                 System.out.println("✓ Тест TextStatistics пройден");
             } else {
                 System.out.println("✗ Тест TextStatistics не пройден");
+            }
+            
+            // Тест 5: TextStatTask
+            total++;
+            if (testTextStatTask()) {
+                passed++;
+                System.out.println("✓ Тест TextStatTask пройден");
+            } else {
+                System.out.println("✗ Тест TextStatTask не пройден");
             }
             
         } catch (Exception e) {
@@ -136,6 +146,23 @@ public class TestRunner {
         TextStatistics stats = new TextStatistics();
         stats.analyzeFile(inputFile);
         stats.exportToFile(outputFile);
+        
+        // Проверяем, что файл создан и не пустой
+        File file = new File(outputFile);
+        return file.exists() && file.length() > 0;
+    }
+    
+    private static boolean testTextStatTask() throws IOException {
+        String inputFile = "test/input/text_stats.txt";
+        String outputFile = "test/actual/text_stat_task_output.txt";
+        
+        // Создаем тестовый файл, если его нет
+        if (!Files.exists(Paths.get(inputFile))) {
+            createTestTextStatsFile(inputFile);
+        }
+        
+        // Запускаем задачу
+        TextStatTask.processFile(inputFile, outputFile);
         
         // Проверяем, что файл создан и не пустой
         File file = new File(outputFile);
