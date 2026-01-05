@@ -26,6 +26,10 @@ public class Main {
                             System.err.println("Ошибка: Входной файл не найден: " + args[1]);
                             return;
                         }
+                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
+                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
+                            return;
+                        }
                         ReverseTask.main(new String[]{args[1], args[2]});
                     } else {
                         printUsage();
@@ -39,10 +43,18 @@ public class Main {
                             System.err.println("Ошибка: Входной файл не найден: " + args[1]);
                             return;
                         }
+                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
+                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
+                            return;
+                        }
                         WordStatPlusTask.main(new String[]{args[1], args[2]});
                     } else {
                         printUsage();
                     }
+                    break;
+                    
+                case "config":
+                    AppConfig.printConfig();
                     break;
                     
                 case "help":
@@ -105,8 +117,13 @@ public class Main {
         System.out.print("Входной файл: ");
         String inputFile = consoleScanner.nextLine().trim();
         
-        if (!new java.io.File(inputFile).exists()) {
+        java.io.File file = new java.io.File(inputFile);
+        if (!file.exists()) {
             System.err.println("✗ Ошибка: Входной файл не найден: " + inputFile);
+            return;
+        }
+        if (file.length() > AppConfig.MAX_FILE_SIZE) {
+            System.err.println("✗ Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
             return;
         }
         
@@ -127,8 +144,13 @@ public class Main {
         System.out.print("Входной файл: ");
         String inputFile = consoleScanner.nextLine().trim();
         
-        if (!new java.io.File(inputFile).exists()) {
+        java.io.File file = new java.io.File(inputFile);
+        if (!file.exists()) {
             System.err.println("✗ Ошибка: Входной файл не найден: " + inputFile);
+            return;
+        }
+        if (file.length() > AppConfig.MAX_FILE_SIZE) {
+            System.err.println("✗ Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
             return;
         }
         
@@ -151,11 +173,13 @@ public class Main {
         System.err.println("Команды:");
         System.err.println("  reverse     - задача 'Реверс'");
         System.err.println("  wordstat    - задача 'Статистика слов++'");
+        System.err.println("  config      - показать конфигурацию");
         System.err.println("  help        - показать эту справку");
         System.err.println();
         System.err.println("Примеры:");
         System.err.println("  java Main reverse input.txt output.txt");
         System.err.println("  java Main wordstat text.txt stats.txt");
+        System.err.println("  java Main config");
     }
     
     private static void printHelp() {
