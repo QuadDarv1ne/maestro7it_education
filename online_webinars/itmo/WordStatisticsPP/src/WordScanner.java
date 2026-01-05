@@ -22,12 +22,15 @@
  * </pre>
  */
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+import java.util.*;
 
 public class WordScanner {
-    private final InputStream inputStream;
-    private final StringBuilder currentWord = new StringBuilder();
+    private final BufferedReader reader;
+    private final StringBuilder worldBuilder = new StringBuilder();
     private int currentChar = -1;
-    private boolean streamClosed = false;
+    private boolean closed = false; /* Stream Closed*/
     
     /**
      * Создает новый сканер для указанного входного потока.
@@ -36,10 +39,17 @@ public class WordScanner {
      * @throws NullPointerException если inputStream равен null
      */
     public WordScanner(InputStream inputStream) {
-        if (inputStream == null) {
-            throw new NullPointerException("Входной поток не может быть null");
-        }
-        this.inputStream = inputStream;
+        // if (inputStream == null) {
+        //     throw new NullPointerException("Входной поток не может быть null");
+        // }
+        // this.inputStream = inputStream;
+        this.reader = new BufferedReader(new InputStreamReader(
+                Objects.requireNonNull(inputStream, "Входной поток не может быть null"), 
+                StandardCharsets.UTF_8));
+    }
+
+    public WordScanner(Reader reader) {
+        this.reader = new BufferedReader(Objects.requireNonNull(reader, "Reader не может быть null"));
     }
     
     /**
@@ -56,44 +66,36 @@ public class WordScanner {
      * @throws IllegalStateException если сканер закрыт
      */
     public String nextWord() throws IOException {
-        if (streamClosed) {
+        if (closed) {
             throw new IllegalStateException("Сканер закрыт");
         }
-        
-        currentWord.setLength(0); // Очищаем StringBuilder
-        boolean inWord = false;
+
+        worldBuilder.setLength(0); // Очищаем StringBuilder
+        boolean readingWord = false;
         
         while (true) {
             // Читаем следующий символ, если нужно
             if (currentChar == -1) {
-                currentChar = inputStream.read();
-                if (currentChar == -1) {
-                    // Конец потока
-                    if (inWord) {
-                        return currentWord.toString();
-                    }
-                    return null;
-                }
+                currentChar = reader.read();
+            }
+            
+            if (currentChar == -1) {
+                return readingWord ? worldBuilder.toString() : null;
             }
             
             char ch = (char) currentChar;
             
             if (isWordCharacter(ch)) {
-                // Ситуация 1: допустимый символ слова
-                currentWord.append(ch);
-                inWord = true;
-                currentChar = -1; // Помечаем символ как обработанный
+                worldBuilder.append(ch);
+                readingWord = true;
+                currentChar = -1; // Сбрасываем для чтения следующего символа
             } else {
-                // Ситуация 2: не-словесный символ
-                if (inWord) {
-                    // Завершаем слово и возвращаем его
-                    String word = currentWord.toString();
-                    currentChar = -1; // Оставляем текущий символ для следующего вызова
-                    return word;
-                } else {
-                    // Пропускаем не-словесный символ
-                    currentChar = -1;
+                if (readingWord) {
+                    String result = worldBuilder.toString();
+                    currentChar = -1; // Сбрасываем для чтения следующего символа
+                    return result;
                 }
+                currentChar = -1; // Сбрасываем для чтения следующего символа
             }
         }
     }
@@ -110,22 +112,8 @@ public class WordScanner {
      * @return true если символ допустим в слове, false в противном случае
      */
     public static boolean isWordCharacter(char ch) {
-        // Буквы
-        if (Character.isLetter(ch)) {
-            return true;
-        }
-        
-        // Апостроф
-        if (ch == '\'') {
-            return true;
-        }
-        
-        // Дефисы (Unicode категория Dash_Punctuation)
-        if (Character.getType(ch) == Character.DASH_PUNCTUATION) {
-            return true;
-        }
-        
-        return false;
+        return Character.isLetter(ch) || ch == '\'' || 
+               Character.getType(ch) == Character.DASH_PUNCTUATION;
     }
     
     /**
@@ -137,8 +125,10 @@ public class WordScanner {
      * @throws IOException если возникает ошибка при закрытии потока
      */
     public void close() throws IOException {
-        streamClosed = true;
-        inputStream.close();
+        if (!closed) {
+            closed = true;
+            reader.close();
+        }
     }
     
     /**
@@ -147,7 +137,7 @@ public class WordScanner {
      * @return true если сканер закрыт, false в противном случае
      */
     public boolean isClosed() {
-        return streamClosed;
+        return closed;
     }
     
     /**
@@ -158,6 +148,6 @@ public class WordScanner {
     @Override
     public String toString() {
         return String.format("WordScanner{closed=%s, bufferSize=%d}", 
-                streamClosed, currentWord.length());
+                closed, worldBuilder.length());
     }
 }
