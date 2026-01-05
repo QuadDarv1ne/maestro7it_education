@@ -56,3 +56,131 @@ dist/
 build/
 *.egg-info/
 .eggs/
+
+# C++
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.slo
+*.lo
+*.gch
+*.pch
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# JavaScript/Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+.nyc_output
+.coverage
+*.lcov
+.eslintcache
+.cache
+.parcel-cache
+.next
+.nuxt
+dist/
+build/
+.cache/
+public
+.out
+.storybook-out
+tmp/
+temp/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+
+# C#
+*.user
+*.suo
+*.cache
+bin/
+obj/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Rust
+target/
+Cargo.lock
+
+# PHP
+vendor/
+composer.lock
+
+# Ruby
+.bundle/
+.bundler/
+vendor/bundle/
+
+# Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Lua
+*.luac
+
+# Assembly
+*.o
+*.obj
+*.exe
+
+# SQL
+*.bak
+
+# Web projects
+node_modules/
+dist/
+build/
+.cache/
+
+# Colab
+.ipynb_checkpoints
+
+# SonarQube
+.scannerwork/
+
+# General
+*.swp
+*.swo
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
