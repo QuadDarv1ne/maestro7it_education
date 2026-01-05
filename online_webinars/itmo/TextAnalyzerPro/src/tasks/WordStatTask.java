@@ -58,7 +58,7 @@ public class WordStatTask {
     public static Map<String, Integer> processText(String text) throws IOException {
         Map<String, Integer> wordFrequency = new LinkedHashMap<>();
         
-        try (Scanner scanner = new Scanner(new StringReader(text))) {
+        try (TextScanner scanner = new TextScanner(new StringReader(text))) {
             String word;
             while ((word = scanner.nextWord()) != null) {
                 word = normalizeWord(word);

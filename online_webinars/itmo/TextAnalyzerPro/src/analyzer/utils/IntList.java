@@ -178,4 +178,15 @@ public class IntList {
         }
         return result;
     }
+    
+    /**
+     * Возвращает сумму всех элементов
+     */
+    public long sum() {
+        long total = 0;
+        for (int i = 0; i < size; i++) {
+            total += data[i];
+        }
+        return total;
+    }
 }

@@ -199,8 +199,8 @@ public class TestRunner {
             return false;
         }
         
-        String actual = new String(Files.readAllBytes(Paths.get(actualFile)), "UTF-8").trim();
-        String expected = new String(Files.readAllBytes(Paths.get(expectedFile)), "UTF-8").trim();
+        String actual = new String(Files.readAllBytes(Paths.get(actualFile)), "UTF-8").trim().replace("\r\n", "\n").replace("\r", "\n");
+        String expected = new String(Files.readAllBytes(Paths.get(expectedFile)), "UTF-8").trim().replace("\r\n", "\n").replace("\r", "\n");
         
         return actual.equals(expected);
     }

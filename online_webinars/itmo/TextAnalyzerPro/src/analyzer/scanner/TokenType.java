@@ -9,6 +9,7 @@ public enum TokenType {
     INTEGER("Целое число", Category.LITERAL),
     FLOAT("Десятичное число", Category.LITERAL),
     STRING("Строка", Category.LITERAL),
+    PUNCTUATION("Знак препинания", Category.PUNCTUATION),
     
     // === ПРОБЕЛЬНЫЕ СИМВОЛЫ ===
     SPACE("Пробел", Category.WHITESPACE),
@@ -283,7 +284,6 @@ public enum TokenType {
             case '!': return EXCLAMATION;
             case '?': return QUESTION;
             case '-': return HYPHEN;
-            case '/': return SLASH;
             case '\\': return BACKSLASH;
             case '|': return VERTICAL_BAR;
             case '(': return LEFT_PAREN;
@@ -298,7 +298,6 @@ public enum TokenType {
             case '\'': return QUOTE_SINGLE;
             case '`': return QUOTE_BACKTICK;
             case '+': return PLUS;
-            case '-': return MINUS;
             case '*': return ASTERISK;
             case '/': return SLASH;
             case '%': return PERCENT;

@@ -11,24 +11,15 @@ public class Main {
         System.out.println("TextAnalyzerPro v" + AppConfig.VERSION);
         System.out.println();
         
+        if (args.length == 0) {
+            runInteractiveMode();
+            return;
+        }
+        
         String command = args[0].toLowerCase();
         
         try {
             switch (command) {
-                case "reverse":
-                    if (args.length == 3) {
-                        if (!new java.io.File(args[1]).exists()) {
-                            System.err.println("Ошибка: Входной файл не найден: " + args[1]);
-                            return;
-                        }
-                        ReverseTask.main(new String[]{args[1], args[2]});
-                    } else {
-                        printUsage();
-                    }
-                    break;
-                    
-                case "wordstat":
-                case "wordstatplus":
                     if (args.length == 3) {
                         if (!new java.io.File(args[1]).exists()) {
                             System.err.println("Ошибка: Входной файл не найден: " + args[1]);

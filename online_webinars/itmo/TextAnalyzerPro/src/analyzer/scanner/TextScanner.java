@@ -68,12 +68,12 @@ public class TextScanner implements AutoCloseable {
         
         if (bufferPos >= bufferSize) {
             if (!fillBuffer()) {
-                return new Token(TokenType.EOF, "", currentPosition, currentLine, currentColumn);
+                return new Token(TokenType.EOF, "", null, currentPosition, currentLine, currentColumn);
             }
         }
         
         if (bufferPos >= bufferSize) {
-            return new Token(TokenType.EOF, "", currentPosition, currentLine, currentColumn);
+            return new Token(TokenType.EOF, "", null, currentPosition, currentLine, currentColumn);
         }
         
         char firstChar = buffer[bufferPos];
@@ -88,7 +88,7 @@ public class TextScanner implements AutoCloseable {
             currentLine++;
             currentColumn = 1;
             lastCharWasNewline = true;
-            return new Token(TokenType.NEWLINE, "\n", startPos, startLine, startColumn);
+            return new Token(TokenType.NEWLINE, "\n", "\n", startPos, startLine, startColumn);
         }
         
         Predicate<Character> predicate;
@@ -99,13 +99,13 @@ public class TextScanner implements AutoCloseable {
             type = TokenType.WORD;
         } else if (NUMBER_PREDICATE.test(firstChar)) {
             predicate = NUMBER_PREDICATE;
-            type = TokenType.NUMBER;
+            type = TokenType.INTEGER;
         } else {
             // Знак препинания или другой символ
             bufferPos++;
             currentPosition++;
             currentColumn++;
-            return new Token(TokenType.PUNCTUATION, String.valueOf(firstChar), 
+            return new Token(TokenType.PUNCTUATION, String.valueOf(firstChar), String.valueOf(firstChar), 
                            startPos, startLine, startColumn);
         }
         
@@ -156,7 +156,7 @@ public class TextScanner implements AutoCloseable {
         String tokenValue = tokenBuilder.toString();
         
         // Проверка корректности числа
-        if (type == TokenType.NUMBER) {
+        if (type == TokenType.INTEGER) {
             if (!isValidNumber(tokenValue)) {
                 // Если токен не является корректным числом, пробуем прочитать следующий
                 resetToPosition(startPos, startLine, startColumn);
@@ -164,7 +164,7 @@ public class TextScanner implements AutoCloseable {
             }
         }
         
-        return new Token(type, tokenValue, startPos, startLine, startColumn);
+        return new Token(type, tokenValue, tokenValue, startPos, startLine, startColumn);
     }
     
     /**
@@ -177,7 +177,7 @@ public class TextScanner implements AutoCloseable {
                 return null;
             }
             if (token.getType() == TokenType.WORD) {
-                return token.getValue();
+                return (String) token.getValue();
             }
         }
     }
@@ -191,9 +191,9 @@ public class TextScanner implements AutoCloseable {
             if (token.getType() == TokenType.EOF) {
                 return null;
             }
-            if (token.getType() == TokenType.NUMBER) {
+            if (token.getType() == TokenType.INTEGER) {
                 try {
-                    return Integer.parseInt(token.getValue());
+                    return Integer.parseInt((String) token.getValue());
                 } catch (NumberFormatException e) {
                     // Пропускаем некорректное число
                     continue;
