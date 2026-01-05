@@ -8,8 +8,12 @@
  *   2. Апострофы (')
  *   3. Дефисы (Unicode category Dash_Punctuation)
  * 
- * <p>Сканер работает с потоками в кодировке UTF-8 и обеспечивает
- * линейное время обработки O(n) по количеству символов.
+ * <p>Сканер работает с потоками в кодировке UTF-8 и обеспечивает линейное время обработки O(n) по количеству символов.
+ * 
+ * ~ BufferedReader — это класс в Java, который предоставляет буферизованное чтение текста из потока ввода символов.
+ * 
+ * BufferedReader - используется для эффективного чтения символов из входного потока.
+ * StringBuilder - используется для динамического построения слов по мере чтения символов.
  * 
  * <p>Пример использования:
  * <pre>
@@ -39,15 +43,15 @@ public class WordScanner {
      * @throws NullPointerException если inputStream равен null
      */
     public WordScanner(InputStream inputStream) {
-        // if (inputStream == null) {
-        //     throw new NullPointerException("Входной поток не может быть null");
-        // }
-        // this.inputStream = inputStream;
+        // InputStreamReader конвертирует байты в символы с указанной кодировкой
         this.reader = new BufferedReader(new InputStreamReader(
                 Objects.requireNonNull(inputStream, "Входной поток не может быть null"), 
                 StandardCharsets.UTF_8));
     }
 
+    /**
+     * Создает сканер из Reader (например, для тестов)
+     */
     public WordScanner(Reader reader) {
         this.reader = new BufferedReader(Objects.requireNonNull(reader, "Reader не может быть null"));
     }
