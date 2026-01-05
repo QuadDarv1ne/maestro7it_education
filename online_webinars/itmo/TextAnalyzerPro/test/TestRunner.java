@@ -3,6 +3,7 @@ import tasks.WordStatTask;
 import tasks.WordStatPlusTask;
 import tasks.TextStatTask;
 import tasks.TopWordsTask;
+import tasks.WordLengthTask;
 import analyzer.statistics.TextStatistics;
 import java.io.*;
 import java.nio.file.*;
@@ -73,8 +74,15 @@ public class TestRunner {
                 System.out.println("✓ Тест TopWordsTask пройден");
             } else {                System.out.println("✗ Тест TextStatTask не пройден");
             }
-            
-        } catch (Exception e) {
+                        // Тест 7: WordLengthTask
+            total++;
+            if (testWordLengthTask()) {
+                passed++;
+                System.out.println("✓ Тест WordLengthTask пройден");
+            } else {
+                System.out.println("✗ Тест WordLengthTask не пройден");
+            }
+                    } catch (Exception e) {
             System.err.println("Ошибка при выполнении тестов: " + e.getMessage());
             e.printStackTrace();
         }
@@ -192,6 +200,23 @@ public class TestRunner {
         
         // Сравниваем с ожидаемым результатом
         return compareFiles(outputFile, expectedFile);
+    }
+    
+    private static boolean testWordLengthTask() throws IOException {
+        String inputFile = "test/input/words.txt";
+        String outputFile = "test/actual/word_length_output.txt";
+        
+        // Создаем тестовый файл, если его нет
+        if (!Files.exists(Paths.get(inputFile))) {
+            createTestWordStatFile(inputFile);
+        }
+        
+        // Запускаем задачу
+        WordLengthTask.processFile(inputFile, outputFile);
+        
+        // Проверяем, что файл создан и не пустой
+        File file = new File(outputFile);
+        return file.exists() && file.length() > 0;
     }
     
     private static void createTestReverseFile(String filePath) throws IOException {
