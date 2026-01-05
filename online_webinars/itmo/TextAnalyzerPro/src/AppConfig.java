@@ -24,7 +24,7 @@ public class AppConfig {
     public static final String LOG_FILE = "text_analyzer.log";
     
     // Настройки производительности
-    public static final boolean USE_PARALLEL_PROCESSING = false;
+    public static final boolean USE_PARALLEL_PROCESSING = true;
     public static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
     
     // Лимиты для предотвращения OOM

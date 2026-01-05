@@ -1,5 +1,6 @@
 import tasks.ReverseTask;
 import tasks.WordStatPlusTask;
+import tasks.TextStatTask;
 import java.util.Scanner;
 
 /**
@@ -53,6 +54,22 @@ public class Main {
                     }
                     break;
                     
+                case "textstat":
+                    if (args.length == 3) {
+                        if (!new java.io.File(args[1]).exists()) {
+                            System.err.println("Ошибка: Входной файл не найден: " + args[1]);
+                            return;
+                        }
+                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
+                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
+                            return;
+                        }
+                        TextStatTask.main(new String[]{args[1], args[2]});
+                    } else {
+                        printUsage();
+                    }
+                    break;
+                    
                 case "config":
                     AppConfig.printConfig();
                     break;
@@ -82,11 +99,12 @@ public class Main {
         System.out.println("Доступные задачи:");
         System.out.println("1. Реверс (обратный порядок чисел)");
         System.out.println("2. Статистика слов++ (частоты и позиции)");
-        System.out.println("3. Выход");
+        System.out.println("3. Комплексная статистика текста");
+        System.out.println("4. Выход");
         System.out.println();
         
         while (true) {
-            System.out.print("Выберите задачу (1-3): ");
+            System.out.print("Выберите задачу (1-4): ");
             String choice = consoleScanner.nextLine().trim();
             
             switch (choice) {
@@ -99,6 +117,10 @@ public class Main {
                     break;
                     
                 case "3":
+                    runTextStatTask(consoleScanner);
+                    break;
+                    
+                case "4":
                     System.out.println("Выход из программы...");
                     consoleScanner.close();
                     return;
@@ -166,6 +188,33 @@ public class Main {
         }
     }
     
+    private static void runTextStatTask(Scanner consoleScanner) {
+        System.out.println("\n=== Задача 'Комплексная статистика текста' ===");
+        System.out.print("Входной файл: ");
+        String inputFile = consoleScanner.nextLine().trim();
+        
+        java.io.File file = new java.io.File(inputFile);
+        if (!file.exists()) {
+            System.err.println("✗ Ошибка: Входной файл не найден: " + inputFile);
+            return;
+        }
+        if (file.length() > AppConfig.MAX_FILE_SIZE) {
+            System.err.println("✗ Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
+            return;
+        }
+        
+        System.out.print("Выходной файл: ");
+        String outputFile = consoleScanner.nextLine().trim();
+        
+        try {
+            TextStatTask.processFile(inputFile, outputFile);
+            System.out.println("✓ Задача успешно выполнена!");
+            System.out.println("Отчёт сохранён в: " + outputFile);
+        } catch (Exception e) {
+            System.err.println("✗ Ошибка: " + e.getMessage());
+        }
+    }
+    
     private static void printUsage() {
         System.err.println("Использование:");
         System.err.println("  java Main <команда> <входной-файл> <выходной-файл>");
@@ -173,12 +222,14 @@ public class Main {
         System.err.println("Команды:");
         System.err.println("  reverse     - задача 'Реверс'");
         System.err.println("  wordstat    - задача 'Статистика слов++'");
+        System.err.println("  textstat    - комплексная статистика текста");
         System.err.println("  config      - показать конфигурацию");
         System.err.println("  help        - показать эту справку");
         System.err.println();
         System.err.println("Примеры:");
         System.err.println("  java Main reverse input.txt output.txt");
         System.err.println("  java Main wordstat text.txt stats.txt");
+        System.err.println("  java Main textstat text.txt report.txt");
         System.err.println("  java Main config");
     }
     
@@ -194,6 +245,11 @@ public class Main {
         System.out.println("   Подсчитывает частоту каждого слова в тексте");
         System.out.println("   и выводит слова в порядке их первого появления");
         System.out.println("   с указанием количества и позиций каждого слова");
+        System.out.println();
+        System.out.println("3. Комплексная статистика текста:");
+        System.out.println("   Выполняет полный анализ текста: подсчёт символов,");
+        System.out.println("   слов, предложений, строк, распределение длин слов,");
+        System.out.println("   самые частые и длинные слова и др.");
         System.out.println();
         System.out.println("Формат вывода для Статистики слов++:");
         System.out.println("   слово количество позиция1 позиция2 ...");
