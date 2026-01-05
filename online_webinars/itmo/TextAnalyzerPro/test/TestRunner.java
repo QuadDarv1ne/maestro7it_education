@@ -212,7 +212,7 @@ public class TestRunner {
                         "Hello world, hello Java!";
         Files.write(Paths.get(filePath), content.getBytes());
         
-        // Создаем ожидаемый результат
+        // Создаем ожидаемый результат для wordstat
         String expectedContent = "to 2\nbe 2\nor 1\nnot 1\nthat 1\nis 1\nthe 1\n" +
                                 "question 1\nhello 2\nworld 1\njava 1";
         Path expectedDir = Paths.get("test/expected");
@@ -220,6 +220,10 @@ public class TestRunner {
             Files.createDirectories(expectedDir);
         }
         Files.write(expectedDir.resolve("wordstat_output.txt"), expectedContent.getBytes());
+        
+        // Создаем ожидаемый результат для topwords (топ 5)
+        String topWordsExpected = "be 2\nhello 2\nto 2\nnot 1\nor 1";
+        Files.write(expectedDir.resolve("top_words_output.txt"), topWordsExpected.getBytes());
     }
     
     private static void createTestWordStatPlusFile(String filePath) throws IOException {
