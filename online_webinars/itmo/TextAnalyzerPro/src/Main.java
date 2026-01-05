@@ -1,6 +1,7 @@
 import tasks.ReverseTask;
 import tasks.WordStatPlusTask;
 import tasks.TextStatTask;
+import tasks.TopWordsTask;
 import java.util.Scanner;
 
 /**
@@ -70,6 +71,22 @@ public class Main {
                     }
                     break;
                     
+                case "topwords":
+                    if (args.length == 4) {
+                        if (!new java.io.File(args[1]).exists()) {
+                            System.err.println("Ошибка: Входной файл не найден: " + args[1]);
+                            return;
+                        }
+                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
+                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
+                            return;
+                        }
+                        TopWordsTask.main(new String[]{args[1], args[2], args[3]});
+                    } else {
+                        printUsage();
+                    }
+                    break;
+                    
                 case "config":
                     AppConfig.printConfig();
                     break;
@@ -100,11 +117,12 @@ public class Main {
         System.out.println("1. Реверс (обратный порядок чисел)");
         System.out.println("2. Статистика слов++ (частоты и позиции)");
         System.out.println("3. Комплексная статистика текста");
-        System.out.println("4. Выход");
+        System.out.println("4. Топ слов (наиболее частые слова)");
+        System.out.println("5. Выход");
         System.out.println();
         
         while (true) {
-            System.out.print("Выберите задачу (1-4): ");
+            System.out.print("Выберите задачу (1-5): ");
             String choice = consoleScanner.nextLine().trim();
             
             switch (choice) {
@@ -121,6 +139,10 @@ public class Main {
                     break;
                     
                 case "4":
+                    runTopWordsTask(consoleScanner);
+                    break;
+                    
+                case "5":
                     System.out.println("Выход из программы...");
                     consoleScanner.close();
                     return;
@@ -215,14 +237,56 @@ public class Main {
         }
     }
     
+    private static void runTopWordsTask(Scanner consoleScanner) {
+        System.out.println("\n=== Задача 'Топ слов' ===");
+        System.out.print("Входной файл: ");
+        String inputFile = consoleScanner.nextLine().trim();
+        
+        java.io.File file = new java.io.File(inputFile);
+        if (!file.exists()) {
+            System.err.println("✗ Ошибка: Входной файл не найден: " + inputFile);
+            return;
+        }
+        if (file.length() > AppConfig.MAX_FILE_SIZE) {
+            System.err.println("✗ Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
+            return;
+        }
+        
+        System.out.print("Выходной файл: ");
+        String outputFile = consoleScanner.nextLine().trim();
+        
+        System.out.print("Количество топ слов: ");
+        String topNStr = consoleScanner.nextLine().trim();
+        int topN;
+        try {
+            topN = Integer.parseInt(topNStr);
+            if (topN <= 0) {
+                System.err.println("✗ Ошибка: Количество должно быть положительным числом");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("✗ Ошибка: Неверный формат числа: " + topNStr);
+            return;
+        }
+        
+        try {
+            TopWordsTask.processFile(inputFile, outputFile, topN);
+            System.out.println("✓ Задача успешно выполнена!");
+            System.out.println("Топ " + topN + " слов сохранён в: " + outputFile);
+        } catch (Exception e) {
+            System.err.println("✗ Ошибка: " + e.getMessage());
+        }
+    }
+    
     private static void printUsage() {
         System.err.println("Использование:");
-        System.err.println("  java Main <команда> <входной-файл> <выходной-файл>");
+        System.err.println("  java Main <команда> <входной-файл> <выходной-файл> [параметры]");
         System.err.println();
         System.err.println("Команды:");
         System.err.println("  reverse     - задача 'Реверс'");
         System.err.println("  wordstat    - задача 'Статистика слов++'");
         System.err.println("  textstat    - комплексная статистика текста");
+        System.err.println("  topwords    - топ наиболее частых слов (требует <топ-N>)");
         System.err.println("  config      - показать конфигурацию");
         System.err.println("  help        - показать эту справку");
         System.err.println();
@@ -230,6 +294,7 @@ public class Main {
         System.err.println("  java Main reverse input.txt output.txt");
         System.err.println("  java Main wordstat text.txt stats.txt");
         System.err.println("  java Main textstat text.txt report.txt");
+        System.err.println("  java Main topwords text.txt top.txt 10");
         System.err.println("  java Main config");
     }
     
@@ -251,8 +316,15 @@ public class Main {
         System.out.println("   слов, предложений, строк, распределение длин слов,");
         System.out.println("   самые частые и длинные слова и др.");
         System.out.println();
+        System.out.println("4. Топ слов:");
+        System.out.println("   Выводит топ N наиболее частых слов в тексте");
+        System.out.println("   отсортированных по частоте (убывание) и алфавиту");
+        System.out.println();
         System.out.println("Формат вывода для Статистики слов++:");
         System.out.println("   слово количество позиция1 позиция2 ...");
+        System.out.println();
+        System.out.println("Формат вывода для Топ слов:");
+        System.out.println("   слово частота");
         System.out.println();
         System.out.println("Поддерживаемые кодировки: UTF-8");
         System.out.println("Поддержка Unicode: полная (кириллица, эмодзи и др.)");

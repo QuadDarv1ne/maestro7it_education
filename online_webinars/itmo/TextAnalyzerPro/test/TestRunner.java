@@ -2,6 +2,7 @@ import tasks.ReverseTask;
 import tasks.WordStatTask;
 import tasks.WordStatPlusTask;
 import tasks.TextStatTask;
+import tasks.TopWordsTask;
 import analyzer.statistics.TextStatistics;
 import java.io.*;
 import java.nio.file.*;
@@ -62,8 +63,15 @@ public class TestRunner {
             if (testTextStatTask()) {
                 passed++;
                 System.out.println("✓ Тест TextStatTask пройден");
-            } else {
-                System.out.println("✗ Тест TextStatTask не пройден");
+            } else {                System.out.println("✗ Тест TextStatTask не пройден");
+            }
+            
+            // Тест 6: TopWordsTask
+            total++;
+            if (testTopWordsTask()) {
+                passed++;
+                System.out.println("✓ Тест TopWordsTask пройден");
+            } else {                System.out.println("✗ Тест TextStatTask не пройден");
             }
             
         } catch (Exception e) {
@@ -167,6 +175,23 @@ public class TestRunner {
         // Проверяем, что файл создан и не пустой
         File file = new File(outputFile);
         return file.exists() && file.length() > 0;
+    }
+    
+    private static boolean testTopWordsTask() throws IOException {
+        String inputFile = "test/input/words.txt";
+        String outputFile = "test/actual/top_words_output.txt";
+        String expectedFile = "test/expected/top_words_output.txt";
+        
+        // Создаем тестовый файл, если его нет
+        if (!Files.exists(Paths.get(inputFile))) {
+            createTestWordStatFile(inputFile);
+        }
+        
+        // Запускаем задачу (топ 5 слов)
+        TopWordsTask.processFile(inputFile, outputFile, 5);
+        
+        // Сравниваем с ожидаемым результатом
+        return compareFiles(outputFile, expectedFile);
     }
     
     private static void createTestReverseFile(String filePath) throws IOException {
