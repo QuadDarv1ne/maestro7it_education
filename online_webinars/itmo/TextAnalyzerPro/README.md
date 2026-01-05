@@ -101,7 +101,8 @@ java -cp bin Main
 В интерактивном режиме доступны следующие задачи:
 1. Реверс (обратный порядок чисел)
 2. Статистика слов++ (частоты и позиции)
-3. Выход
+3. Комплексная статистика текста
+4. Выход
 
 ### Командная строка
 
@@ -111,6 +112,9 @@ java -cp bin Main reverse input.txt output.txt
 
 # Задача "Статистика слов++"
 java -cp bin Main wordstat input.txt output.txt
+
+# Комплексная статистика текста
+java -cp bin Main textstat input.txt output.txt
 
 # Показать конфигурацию
 java -cp bin Main config
@@ -157,6 +161,30 @@ java -cp bin Main wordstat text.txt stats.txt
 hello 2 1 3
 world 2 2 5
 java 1 4
+```
+
+#### Комплексная статистика текста
+Входной файл `text.txt`:
+```
+Hello world!
+This is a test.
+```
+
+Команда:
+```bash
+java -cp bin Main textstat text.txt report.txt
+```
+
+Выходной файл `report.txt`:
+```
+=== ТЕКСТОВАЯ СТАТИСТИКА ===
+
+ОБЩАЯ СТАТИСТИКА:
+  Символы: 28
+  Буквы: 21
+  Цифры: 0
+  Пробелы: 5
+  ...
 ```
 
 ## Форматы входных/выходных данных
