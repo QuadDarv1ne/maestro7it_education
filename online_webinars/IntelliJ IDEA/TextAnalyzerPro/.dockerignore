@@ -1,0 +1,12 @@
+target/
+*.log
+.idea/
+*.iml
+.git/
+.gitignore
+README.md
+pom.xml
+src/
+scripts/
+test/
+archive/

@@ -1,16 +1,9 @@
 @echo off
-echo Запуск TextAnalyzerPro...
+echo Запуск TextAnalyzerPro с Maven...
 echo.
 
-REM Проверяем, скомпилирован ли проект
-if not exist bin\Main.class (
-    echo Проект не скомпилирован. Запустите build.bat
-    pause
-    exit /b 1
-)
-
-REM Запускаем приложение
-java -cp bin Main %*
+REM Запускаем приложение через Maven
+mvn exec:java -Dexec.mainClass="Main" -Dexec.args="%*"
 
 if %errorlevel% neq 0 (
     echo.

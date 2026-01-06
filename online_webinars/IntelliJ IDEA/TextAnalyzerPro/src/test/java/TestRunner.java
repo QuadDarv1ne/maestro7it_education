@@ -8,23 +8,25 @@ import java.nio.file.Paths;
  * Тестовый запускатор для проверки корректности реализации
  */
 public class TestRunner {
-    
+
     public static void main(String[] args) {
         System.out.println("=== Тестирование TextAnalyzerPro ===\n");
-        
+
         // Создаем директорию для фактических результатов
-        new File("test/actual").mkdirs();
-        
+        new File("target/test-actual").mkdirs();
+
         boolean allTestsPassed = true;
-        
+
         // Тест 1: Задача "Реверс"
         System.out.println("Тест 1: Задача 'Реверс'");
         try {
-            ReverseTask.processFile("test/input/reverse.txt", "test/actual/reverse_output.txt");
-            
-            String expected = readFile("test/expected/reverse_output.txt");
-            String actual = readFile("test/actual/reverse_output.txt");
-            
+            String inputPath = getResourcePath("test/input/reverse.txt");
+            String outputPath = "target/test-actual/reverse_output.txt";
+            ReverseTask.processFile(inputPath, outputPath);
+
+            String expected = readFile(getResourcePath("test/expected/reverse_output.txt"));
+            String actual = readFile(outputPath);
+
             if (expected.equals(actual)) {
                 System.out.println("✓ Тест пройден");
             } else {
@@ -43,13 +45,12 @@ public class TestRunner {
         // Тест 2: Задача "Статистика слов++"
         System.out.println("Тест 2: Задача 'Статистика слов++'");
         try {
-            WordStatPlusTask.processFile("test/input/wordstat_plus.txt", "test/actual/wordstat_plus_output.txt");
-            
-            String expected = readFile("test/expected/wordstat_plus_output.txt");
-            String actual = readFile("test/actual/wordstat_plus_output.txt");
-            
-            if (expected.equals(actual)) {
-                System.out.println("✓ Тест пройден");
+            String inputPath = getResourcePath("test/input/wordstat_plus.txt");
+            String outputPath = "target/test-actual/wordstat_plus_output.txt";
+            WordStatPlusTask.processFile(inputPath, outputPath);
+
+            String expected = readFile(getResourcePath("test/expected/wordstat_plus_output.txt"));
+            String actual = readFile(outputPath);
             } else {
                 System.out.println("✗ Тест не пройден");
                 System.out.println("Ожидалось:\n" + expected);
@@ -75,5 +76,10 @@ public class TestRunner {
     private static String readFile(String filePath) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(filePath));
         return new String(bytes, "UTF-8");
+    }
+
+    private static String getResourcePath(String resourceName) {
+        ClassLoader classLoader = TestRunner.class.getClassLoader();
+        return classLoader.getResource(resourceName).getPath();
     }
 }

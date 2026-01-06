@@ -1,18 +1,9 @@
 @echo off
-echo Сборка проекта TextAnalyzerPro...
+echo Сборка проекта TextAnalyzerPro с Maven...
 echo.
 
-REM Создаем директорию для скомпилированных классов
-if not exist bin mkdir bin
-
-REM Компилируем исходный код с кодировкой UTF-8
-echo Компиляция исходного кода...
-javac -encoding UTF-8 -d bin ^
-    src/analyzer/scanner/*.java ^
-    src/analyzer/statistics/*.java ^
-    src/analyzer/utils/*.java ^
-    src/tasks/*.java ^
-    src/*.java
+REM Компилируем проект с Maven
+mvn clean compile
 
 if %errorlevel% neq 0 (
     echo Ошибка компиляции
@@ -23,19 +14,8 @@ if %errorlevel% neq 0 (
 echo ✓ Компиляция успешно завершена
 echo.
 
-REM Копируем ресурсы (если есть)
-if exist src/resources (
-    xcopy /E /Y src/resources bin\resources
-)
-
 REM Создаем JAR-файл
-echo Создание JAR-файла...
-cd bin
-jar cfe ../TextAnalyzerPro.jar Main ^
-    analyzer/ ^
-    tasks/ ^
-    *.class
-cd ..
+mvn package -DskipTests
 
 if %errorlevel% neq 0 (
     echo Ошибка при создании JAR-файла
@@ -43,7 +23,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo ✓ JAR-файл создан: TextAnalyzerPro.jar
+echo ✓ JAR-файл создан: target/TextAnalyzerPro-1.0.0.jar
 echo.
 
 echo === Сборка завершена успешно ===
