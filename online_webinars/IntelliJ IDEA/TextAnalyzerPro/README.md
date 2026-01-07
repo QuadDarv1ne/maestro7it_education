@@ -17,46 +17,45 @@
 
 ## Требования
 
-- Java 11 или выше
-- Maven 3.6 или выше (для сборки)
-- Docker (опционально, для контейнеризации)
+- Java 8 или выше
+- Maven 3.6 или выше (или используйте Maven Wrapper `./mvnw`)
 
 ## Сборка и запуск
 
 ### Сборка проекта
 
 ```bash
-mvn clean compile
+./mvnw clean compile
 ```
 
 ### Создание JAR-файла
 
 ```bash
-mvn package
+./mvnw package
 ```
 
 ### Запуск приложения
 
 ```bash
-mvn exec:java
+./mvnw exec:java
 ```
 
 Или с аргументами:
 
 ```bash
-mvn exec:java -Dexec.args="reverse input.txt output.txt"
+./mvnw exec:java -Dexec.args="reverse input.txt output.txt"
 ```
 
 ### Запуск тестов
 
 ```bash
-mvn test
+./mvnw test
 ```
 
 ### Генерация отчета о покрытии кода
 
 ```bash
-mvn test jacoco:report
+./mvnw test jacoco:report
 ```
 
 Отчет будет доступен в `target/site/jacoco/index.html`
@@ -66,7 +65,7 @@ mvn test jacoco:report
 ### Сборка Docker образа
 
 ```bash
-mvn package
+./mvnw package
 docker build -t textanalyzerpro .
 ```
 

@@ -29,6 +29,11 @@ public class IntList {
         this.size = 0;
     }
 
+    public IntList(IntList other) {
+        this.data = Arrays.copyOf(other.data, other.size);
+        this.size = other.size;
+    }
+
     public void add(int value) {
         ensureCapacity(size + 1);
         data[size++] = value;

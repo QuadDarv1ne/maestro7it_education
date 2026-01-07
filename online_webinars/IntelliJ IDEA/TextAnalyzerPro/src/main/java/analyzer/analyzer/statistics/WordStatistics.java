@@ -59,7 +59,7 @@ public class WordStatistics {
      * Нормализует слово: приводит к нижнему регистру и обрезает
      */
     private String normalizeWord(String word) {
-        return word.toLowerCase().trim();
+        return word.toLowerCase().trim().intern();
     }
 
     /**
@@ -91,7 +91,7 @@ public class WordStatistics {
     public IntList getPositions(String word) {
         String normalized = normalizeWord(word);
         IntList positions = wordPositions.get(normalized);
-        return positions != null ? new IntList() : positions; // Возвращаем копию или пустой список
+        return positions != null ? new IntList(positions) : new IntList(); // Возвращаем копию или пустой список
     }
 
     /**
