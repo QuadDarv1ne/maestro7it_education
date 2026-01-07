@@ -28,6 +28,7 @@ public class AppConfig {
     // Настройки производительности
     public static final boolean USE_PARALLEL_PROCESSING = true;
     public static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
+    public static final boolean USE_STRING_INTERN = true;
 
     // Лимиты для предотвращения OOM
     public static final long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -45,6 +46,7 @@ public class AppConfig {
         System.out.println("Logging Enabled: " + LOGGING_ENABLED);
         System.out.println("Parallel Processing: " + USE_PARALLEL_PROCESSING);
         System.out.println("Available Processors: " + MAX_THREADS);
+        System.out.println("String Interning: " + USE_STRING_INTERN);
         System.out.println("Max File Size: " + MAX_FILE_SIZE / (1024 * 1024) + "MB");
         System.out.println("Max Unique Words: " + MAX_WORDS);
     }

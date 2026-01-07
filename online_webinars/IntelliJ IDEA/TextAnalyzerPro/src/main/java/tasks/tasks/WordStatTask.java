@@ -2,6 +2,7 @@ package tasks;
 
 import analyzer.scanner.TextScanner;
 import analyzer.utils.FileUtils;
+import analyzer.AppConfig;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -33,7 +34,8 @@ public class WordStatTask {
      * Нормализует слово (приводит к нижнему регистру)
      */
     private static String normalizeWord(String word) {
-        return word.toLowerCase();
+        String normalized = word.toLowerCase().trim();
+        return analyzer.AppConfig.USE_STRING_INTERN ? normalized.intern() : normalized;
     }
 
     /**

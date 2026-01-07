@@ -128,8 +128,10 @@ public class Main {
         Scanner consoleScanner = new Scanner(System.in, "UTF-8");
 
         System.out.println("╔════════════════════════════════════╗");
-        System.out.println("║      TextAnalyzerPro v1.0          ║");
+        System.out.println("║      TextAnalyzerPro v" + AppConfig.VERSION + "      ║");
         System.out.println("╚════════════════════════════════════╝");
+        System.out.println();
+        AppConfig.printConfig();
         System.out.println();
         System.out.println("Доступные задачи:");
         System.out.println("1. Реверс (обратный порядок чисел)");

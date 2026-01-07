@@ -59,7 +59,8 @@ public class WordStatistics {
      * Нормализует слово: приводит к нижнему регистру и обрезает
      */
     private String normalizeWord(String word) {
-        return word.toLowerCase().trim().intern();
+        String normalized = word.toLowerCase().trim();
+        return AppConfig.USE_STRING_INTERN ? normalized.intern() : normalized;
     }
 
     /**
