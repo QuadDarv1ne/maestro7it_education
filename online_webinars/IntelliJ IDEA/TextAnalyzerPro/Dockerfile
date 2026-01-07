@@ -1,5 +1,5 @@
 # Multi-stage build: compile with Maven, run with JRE
-FROM openjdk:8-jdk AS build
+FROM openjdk:11-jdk AS build
 
 # Set working directory
 WORKDIR /app
@@ -15,13 +15,13 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Runtime stage
-FROM openjdk:8-jre-slim
+FROM openjdk:11-jre-slim
 
 # Set working directory
 WORKDIR /app
 
 # Copy the JAR from build stage
-COPY --from=build /app/target/TextAnalyzerPro-1.0.0.jar app.jar
+COPY --from=build /app/target/textanalyzerpro-1.0.0.jar app.jar
 
 # Create directories for input/output
 RUN mkdir -p input output

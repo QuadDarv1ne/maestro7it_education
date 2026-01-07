@@ -26,14 +26,7 @@ public class Main {
             switch (command) {
                 case "reverse":
                     if (args.length == 3) {
-                        if (!new java.io.File(args[1]).exists()) {
-                            System.err.println("Ошибка: Входной файл не найден: " + args[1]);
-                            return;
-                        }
-                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
-                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
-                            return;
-                        }
+                        if (!validateInputFile(args[1])) return;
                         ReverseTask.main(new String[]{args[1], args[2]});
                     } else {
                         printUsage();
@@ -43,14 +36,7 @@ public class Main {
                 case "wordstat":
                 case "wordstatplus":
                     if (args.length == 3) {
-                        if (!new java.io.File(args[1]).exists()) {
-                            System.err.println("Ошибка: Входной файл не найден: " + args[1]);
-                            return;
-                        }
-                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
-                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
-                            return;
-                        }
+                        if (!validateInputFile(args[1])) return;
                         WordStatPlusTask.main(new String[]{args[1], args[2]});
                     } else {
                         printUsage();
@@ -59,14 +45,7 @@ public class Main {
 
                 case "textstat":
                     if (args.length == 3) {
-                        if (!new java.io.File(args[1]).exists()) {
-                            System.err.println("Ошибка: Входной файл не найден: " + args[1]);
-                            return;
-                        }
-                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
-                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
-                            return;
-                        }
+                        if (!validateInputFile(args[1])) return;
                         TextStatTask.main(new String[]{args[1], args[2]});
                     } else {
                         printUsage();
@@ -91,14 +70,7 @@ public class Main {
 
                 case "wordlength":
                     if (args.length == 3) {
-                        if (!new java.io.File(args[1]).exists()) {
-                            System.err.println("Ошибка: Входной файл не найден: " + args[1]);
-                            return;
-                        }
-                        if (new java.io.File(args[1]).length() > AppConfig.MAX_FILE_SIZE) {
-                            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
-                            return;
-                        }
+                        if (!validateInputFile(args[1])) return;
                         WordLengthTask.main(new String[]{args[1], args[2]});
                     } else {
                         printUsage();
@@ -122,6 +94,19 @@ public class Main {
             System.err.println("Ошибка: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private static boolean validateInputFile(String filePath) {
+        java.io.File file = new java.io.File(filePath);
+        if (!file.exists()) {
+            System.err.println("Ошибка: Входной файл не найден: " + filePath);
+            return false;
+        }
+        if (file.length() > AppConfig.MAX_FILE_SIZE) {
+            System.err.println("Ошибка: Файл слишком большой (макс. " + AppConfig.MAX_FILE_SIZE / (1024 * 1024) + "MB)");
+            return false;
+        }
+        return true;
     }
 
     private static void runInteractiveMode() {
