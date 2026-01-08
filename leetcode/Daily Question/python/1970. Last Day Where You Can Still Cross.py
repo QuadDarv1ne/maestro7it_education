@@ -25,11 +25,11 @@ GitHub: https://github.com/QuadDarv1ne/
 """
 
 from collections import deque
-from typing import List
+# from typing import List
 
 class Solution:
-    def latestDayToCross(self, row: int, col: int, cells: List[List[int]]) -> int:
-        def can_cross(day: int) -> bool:
+    def latestDayToCross(self, row, col, cells):
+        def can_cross(day):
             grid = [[0] * col for _ in range(row)]
             
             for i in range(day):
