@@ -9,8 +9,11 @@
  * @date 2026
  */
 
+//#include<stdafx.h>
+#include"math.h"
 #include <iostream>
 #include <string>
+
 using namespace std;
 
 /**
