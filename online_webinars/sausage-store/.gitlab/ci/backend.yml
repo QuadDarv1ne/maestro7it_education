@@ -1,0 +1,231 @@
+stages:
+  - build
+  - test
+  - release
+  - notify
+
+variables:
+  VERSION: 0.0.${CI_PIPELINE_ID}
+  BACKEND_DIR: backend
+  MAVEN_REPO_PATH: ${CI_PROJECT_DIR}/.m2/repository
+  MAVEN_CLI_OPTS: "-Dmaven.repo.local=${MAVEN_REPO_PATH}"
+  ARTIFACT_NAME: sausage-store-${VERSION}.jar
+
+# Кэширование Maven зависимостей для ускорения сборки
+cache:
+  key: ${CI_COMMIT_REF_SLUG}-backend
+  paths:
+    - ${MAVEN_REPO_PATH}
+
+build-backend-code-job:
+  stage: build
+  image: maven:3.8-openjdk-16
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+      - .gitlab/ci/backend.yml
+  before_script:
+    - cd ${BACKEND_DIR}
+  script:
+    - echo "🔨 Сборка backend приложения..."
+    - mvn clean package -DskipTests ${MAVEN_CLI_OPTS}
+    - echo "BUILD_VERSION=${CI_JOB_ID}" >> ${CI_PROJECT_DIR}/build.env
+    - echo "BUILD_TIME=$(date -Iseconds)" >> ${CI_PROJECT_DIR}/build.env
+    - echo "COMMIT_SHA=${CI_COMMIT_SHORT_SHA}" >> ${CI_PROJECT_DIR}/build.env
+    - echo "JAR_FILE=$(ls target/*.jar | head -n1 | xargs basename)" >> ${CI_PROJECT_DIR}/build.env
+  artifacts:
+    paths:
+      - ${BACKEND_DIR}/target/*.jar
+    reports:
+      dotenv: build.env
+    expire_in: 1 week
+  tags:
+    - docker
+
+semgrep-sast:
+  stage: test
+  image: returntocorp/semgrep:latest
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+      - .gitlab/ci/backend.yml
+    refs:
+      - main
+      - master
+      - dev
+  variables:
+    COMPILE: "false"
+    SAST_JAVA_VERSION: "17"
+    SEMGREP_RULES: >-
+      p/security-audit
+      p/java
+      p/owasp-top-ten
+  before_script:
+    - cd ${BACKEND_DIR}
+  script:
+    - |
+      echo "🔍 Запуск SAST анализа с Semgrep..."
+      semgrep scan --config=${SEMGREP_RULES} \
+        --json --output=semgrep-report.json || true
+      
+      # Показываем краткую статистику
+      if [ -f semgrep-report.json ]; then
+        echo "📊 Результаты анализа:"
+        cat semgrep-report.json | jq '.results | length' || echo "Отчет создан"
+      fi
+  artifacts:
+    paths:
+      - ${BACKEND_DIR}/semgrep-report.json
+    expire_in: 1 week
+    when: always
+  needs:
+    - job: build-backend-code-job
+      artifacts: true
+  allow_failure: true
+  tags:
+    - docker
+
+sonarqube-backend-sast:
+  stage: test
+  image: maven:3.8-openjdk-16
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+      - .gitlab/ci/backend.yml
+  before_script:
+    - cd ${BACKEND_DIR}
+  script:
+    - |
+      echo "🔍 Запуск SonarQube анализа..."
+      mvn verify sonar:sonar ${MAVEN_CLI_OPTS} \
+        -Dsonar.projectKey=${SONAR_PROJECT_KEY_BACK} \
+        -Dsonar.host.url=${SONARQUBE_URL} \
+        -Dsonar.login=${SONAR_LOGIN_BACK} \
+        -Dsonar.projectName=${SONAR_PROJECT_NAME_BACK} \
+        -Dsonar.projectVersion=${VERSION} \
+        -Dsonar.qualitygate.wait=true
+  needs:
+    - job: build-backend-code-job
+      artifacts: true
+  allow_failure: true
+  tags:
+    - docker
+
+upload-backend-release:
+  stage: release
+  image: maven:3.8-openjdk-16
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+      - .gitlab/ci/backend.yml
+    refs:
+      - main
+      - master
+      - dev
+      - tags
+  variables:
+    FULL_URL: ${NEXUS_REPO_URL}/repository/${NEXUS_REPO_BACKEND_NAME}
+  before_script:
+    - cd ${BACKEND_DIR}
+  script:
+    - |
+      echo "📦 Подготовка к загрузке в Nexus..."
+      echo "Repository URL: ${FULL_URL}"
+      echo "Version: ${VERSION}"
+      
+      # Очистка и пересборка с правильной версией
+      mvn clean package -DskipTests ${MAVEN_CLI_OPTS}
+      
+      # Загрузка в Nexus
+      echo "⬆️ Загрузка артефакта в Nexus..."
+      mvn deploy -DskipTests ${MAVEN_CLI_OPTS} \
+        -s settings.xml \
+        -Dversion.application=${VERSION} \
+        -DaltDeploymentRepository=nexus::default::${FULL_URL}
+      
+      if [ $? -eq 0 ]; then
+        echo "✅ Артефакт успешно загружен в Nexus"
+      else
+        echo "❌ Ошибка загрузки артефакта в Nexus"
+        exit 1
+      fi
+  needs:
+    - job: build-backend-code-job
+      artifacts: true
+    - job: sonarqube-backend-sast
+      artifacts: false
+  artifacts:
+    when: on_failure
+    paths:
+      - ${BACKEND_DIR}/target/*.jar
+    expire_in: 1 hour
+  tags:
+    - docker
+
+telegram-notification-backend:
+  stage: notify
+  image: alpine:latest
+  only:
+    changes:
+      - backend/**/*
+      - .gitlab-ci.yml
+      - .gitlab/ci/backend.yml
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - |
+      # Определение статуса pipeline
+      if [ "${CI_JOB_STATUS}" = "success" ]; then
+        STATUS_EMOJI="✅"
+        STATUS_TEXT="успешно собран"
+      else
+        STATUS_EMOJI="❌"
+        STATUS_TEXT="завершился с ошибкой"
+      fi
+      
+      # Формирование сообщения
+      MESSAGE="
+${STATUS_EMOJI} <b>Backend Sausage Store ${STATUS_TEXT}</b>
+
+👤 <b>Автор:</b> ${GITLAB_USER_NAME}
+📦 <b>Версия:</b> ${VERSION}
+🔖 <b>Коммит:</b> <code>${CI_COMMIT_SHORT_SHA}</code>
+🌿 <b>Ветка:</b> ${CI_COMMIT_REF_NAME}
+⏱ <b>Время сборки:</b> ${BUILD_TIME}
+📄 <b>JAR файл:</b> ${JAR_FILE}
+
+📥 <a href=\"${CI_PROJECT_URL}/-/jobs/${BUILD_VERSION}/artifacts/download\">Скачать артефакт</a>
+🔗 <a href=\"${CI_PIPELINE_URL}\">Открыть Pipeline</a>
+"
+      
+      # Экранирование для JSON
+      MESSAGE_ESCAPED=$(echo "$MESSAGE" | jq -Rs .)
+      
+      # Отправка уведомления в Telegram
+      RESPONSE=$(curl -s -X POST \
+        -H 'Content-Type: application/json' \
+        -d "{
+          \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+          \"text\": ${MESSAGE_ESCAPED},
+          \"parse_mode\": \"HTML\",
+          \"disable_web_page_preview\": true
+        }" \
+        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage")
+      
+      # Проверка успешности отправки
+      if echo "$RESPONSE" | jq -e '.ok' > /dev/null; then
+        echo "✅ Уведомление успешно отправлено в Telegram"
+      else
+        echo "⚠️ Ошибка отправки уведомления: $RESPONSE"
+      fi
+  needs:
+    - job: build-backend-code-job
+      artifacts: true
+  when: always
+  allow_failure: true
+  tags:
+    - docker

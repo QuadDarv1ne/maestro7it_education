@@ -1,0 +1,164 @@
+stages:
+  - build
+  - test
+  - release
+  - notify
+
+variables:
+  VERSION: 0.0.${CI_PIPELINE_ID}
+  MAVEN_REPO_PATH: ${CI_PROJECT_DIR}/.m2/repository
+  FRONTEND_DIR: frontend
+  ARTIFACT_NAME: sausage-store-${VERSION}.tar.gz
+
+# Кэширование зависимостей для ускорения сборки
+cache:
+  key: ${CI_COMMIT_REF_SLUG}-frontend
+  paths:
+    - ${FRONTEND_DIR}/node_modules/
+
+build-frontend-code-job:
+  stage: build
+  image: node:16-alpine
+  only:
+    changes:
+      - frontend/**/*
+      - .gitlab-ci.yml
+  before_script:
+    - cd ${FRONTEND_DIR}
+  script:
+    - npm ci --prefer-offline --no-audit
+    - npm run build
+    - echo "BUILD_VERSION=${CI_JOB_ID}" >> ../build.env
+    - echo "BUILD_TIME=$(date -Iseconds)" >> ../build.env
+    - echo "COMMIT_SHA=${CI_COMMIT_SHORT_SHA}" >> ../build.env
+  artifacts:
+    paths:
+      - ${FRONTEND_DIR}/dist/frontend
+    reports:
+      dotenv: build.env
+    expire_in: 1 week
+  tags:
+    - docker
+
+sonarqube-frontend-sast:
+  stage: test
+  image: sonarsource/sonar-scanner-cli:latest
+  only:
+    changes:
+      - frontend/**/*
+      - .gitlab-ci.yml
+  before_script:
+    - cd ${FRONTEND_DIR}
+  script:
+    - |
+      sonar-scanner \
+        -Dsonar.projectKey=${SONAR_PROJECT_KEY_FRONT} \
+        -Dsonar.sources=. \
+        -Dsonar.host.url=${SONARQUBE_URL} \
+        -Dsonar.login=${SONAR_LOGIN_FRONT} \
+        -Dsonar.projectName=${SONAR_PROJECT_NAME_FRONT} \
+        -Dsonar.projectVersion=${VERSION}
+  needs:
+    - job: build-frontend-code-job
+      artifacts: true
+  allow_failure: true
+  tags:
+    - docker
+
+upload-frontend-release:
+  stage: release
+  image: alpine:latest
+  only:
+    changes:
+      - frontend/**/*
+      - .gitlab-ci.yml
+    refs:
+      - main
+      - master
+      - tags
+  before_script:
+    - apk add --no-cache curl tar
+  script:
+    - cd ${FRONTEND_DIR}/dist
+    - tar czvf ${ARTIFACT_NAME} frontend
+    - |
+      echo "Загрузка артефакта ${ARTIFACT_NAME} в Nexus..."
+      HTTP_CODE=$(curl -w "%{http_code}" -o /dev/null -s -u "${NEXUS_REPO_USER}:${NEXUS_REPO_PASS}" \
+        --upload-file ${ARTIFACT_NAME} \
+        ${NEXUS_REPO_URL}/${NEXUS_REPO_FRONTEND_NAME}/${VERSION}/${ARTIFACT_NAME})
+      
+      if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+        echo "✓ Артефакт успешно загружен (HTTP ${HTTP_CODE})"
+      else
+        echo "✗ Ошибка загрузки артефакта (HTTP ${HTTP_CODE})"
+        exit 1
+      fi
+  needs:
+    - job: build-frontend-code-job
+      artifacts: true
+    - job: sonarqube-frontend-sast
+      artifacts: false
+  tags:
+    - docker
+
+telegram-notification-frontend:
+  stage: notify
+  image: alpine:latest
+  only:
+    changes:
+      - frontend/**/*
+      - .gitlab-ci.yml
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - |
+      # Определение статуса pipeline
+      if [ "$CI_JOB_STATUS" = "success" ]; then
+        STATUS_EMOJI="✅"
+        STATUS_TEXT="успешно собран"
+      else
+        STATUS_EMOJI="❌"
+        STATUS_TEXT="упал с ошибкой"
+      fi
+      
+      # Формирование сообщения
+      MESSAGE="${STATUS_EMOJI} Frontend ${STATUS_TEXT}
+      
+      👤 Автор: ${GITLAB_USER_NAME}
+      📦 Версия: ${VERSION}
+      🔖 Коммит: ${CI_COMMIT_SHORT_SHA}
+      🌿 Ветка: ${CI_COMMIT_REF_NAME}
+      
+      📥 Артефакт: ${CI_PROJECT_URL}/-/jobs/${BUILD_VERSION}/artifacts/download
+      🔗 Pipeline: ${CI_PIPELINE_URL}"
+      
+      # Экранирование специальных символов для JSON
+      MESSAGE_ESCAPED=$(echo "$MESSAGE" | jq -Rs .)
+      
+      # Отправка в Telegram
+      curl -X POST \
+        -H 'Content-Type: application/json' \
+        -d "{\"chat_id\": \"${TELEGRAM_CHAT_ID}\", \"text\": ${MESSAGE_ESCAPED}, \"parse_mode\": \"HTML\"}" \
+        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
+  needs:
+    - job: build-frontend-code-job
+      artifacts: true
+  when: always
+  allow_failure: true
+  tags:
+    - docker
+
+# Дополнительная джоба для очистки старых артефактов
+cleanup-old-artifacts:
+  stage: notify
+  image: alpine:latest
+  only:
+    refs:
+      - schedules
+  script:
+    - |
+      echo "Очистка артефактов старше 30 дней..."
+      # Здесь можно добавить скрипт очистки Nexus
+  when: manual
+  tags:
+    - docker

@@ -1,0 +1,15 @@
+# Главный файл CI/CD конфигурации
+# Включает отдельные pipeline для каждого компонента
+
+include:
+  - local: '.gitlab/ci/frontend.yml'
+  # - local: '.gitlab/ci/backend.yml'    # раскомментируйте когда создадите
+  # - local: '.gitlab/ci/variables.yml'  # для общих переменных
+
+# Глобальные настройки по умолчанию
+default:
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
