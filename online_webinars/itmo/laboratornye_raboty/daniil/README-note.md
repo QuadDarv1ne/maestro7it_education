@@ -198,9 +198,31 @@ $$\text{Результат} = [11E] \vee ([109] \wedge (-[11D] - [11B]))$$
 
 **Преподаватель:** Дуплей Максим Игоревич
 
+---
+
 <!-- Profi.ru widget start -->
-    <div class="profi-widget" data-id="505b4b5893b76e189653da1a48cac826" data-type="300x100">
-        Powered by <a href="https://profi.ru/profile/DupleyMI">Profi.ru</a>
-    </div>
-    <script src="https://profi.ru/jqs/widget/widget.js"></script>
-  <!-- Profi.ru widget end -->
+<div class="profi-widget" data-id="505b4b5893b76e189653da1a48cac826" data-type="300x100">
+    Powered by <a href="https://profi.ru/profile/DupleyMI">Profi.ru</a>
+</div>
+<script src="https://profi.ru/jqs/widget/widget.js"></script>
+<!-- Profi.ru widget end -->
+
+---
+
+## 📚 Услуги обучения
+
+[![Обучение технологиям и языкам программирования на Kwork](https://img.shields.io/badge/Kwork-Обучение%20Программированию-blue?style=for-the-badge&logo=kwork)](https://kwork.ru/usability-testing/42465951/obuchenie-tekhnologiyam-i-yazykam-programmirovaniya)
+
+> Профессиональное обучение технологиям и языкам программирования. Персональные консультации и курсы от опытного преподавателя.
+
+---
+
+## 🏫 О школе
+
+### Maestro7IT — Школа программирования
+
+[![Website](https://img.shields.io/badge/Maestro7IT-school--maestro7it.ru-darkgreen?style=for-the-badge)](https://school-maestro7it.ru/)
+
+**Москва** | 📅 **2026**
+
+> Инновационная школа программирования, специализирующаяся на подготовке специалистов в области современных технологий и языков программирования.
