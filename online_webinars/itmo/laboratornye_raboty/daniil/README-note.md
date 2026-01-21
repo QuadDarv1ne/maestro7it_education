@@ -216,12 +216,9 @@ $$\text{Результат} = [11E] \vee ([109] \wedge (-[11D] - [11B]))$$
 
 [![Profi.ru Profile](https://img.shields.io/badge/Profi.ru-Дуплей%20М.И.-FF6B35?style=for-the-badge)](https://profi.ru/profile/DupleyMI)
 
-<!-- Profi.ru widget start -->
-<div class="profi-widget" data-id="505b4b5893b76e189653da1a48cac826" data-type="300x100">
-> Консультации и услуги программирования на <b>платформе Powered by</b> <a href="https://profi.ru/profile/DupleyMI">Profi.ru</a>
-</div>
-<script src="https://profi.ru/jqs/widget/widget.js"></script>
-<!-- Profi.ru widget end -->
+> Консультации и услуги программирования на платформе Profi.ru
+
+[![Dupley Maxim Igorevich - Profi.ru Profile](image-3.png)](https://profi.ru/profile/DupleyMI)
 
 ---
 
