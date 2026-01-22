@@ -20,6 +20,7 @@ private:
     void fileMenu();
     void specialFunctionsMenu();
     void undoMenu();
+    void loggingMenu();
     
 public:
     UI(Library& lib);

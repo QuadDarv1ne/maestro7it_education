@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <map>
 #include <cmath>
+#include <ctime>
 
 // Структура для хранения удаленных книг (для отмены)
 struct DeletedBook {
@@ -20,9 +21,19 @@ struct DeletedBook {
 // ==================== КОНСТРУКТОР И ДЕСТРУКТОР ====================
 
 Library::Library() : books(nullptr), size(0), capacity(0), 
-                     undoStack(nullptr), undoSize(0), undoCapacity(0), maxUndoOperations(10) {}
+                     undoStack(nullptr), undoSize(0), undoCapacity(0), maxUndoOperations(10),
+                     logFileName(""), maxHistorySize(50) {}
 
 Library::~Library() {
+    // Закрываем файл лога при уничтожении объекта
+    if (logFile.is_open()) {
+        time_t now = time(0);
+        char* timeStr = ctime(&now);
+        if (timeStr) timeStr[strlen(timeStr)-1] = 0; // Удаляем символ новой строки
+        logFile << "[" << (timeStr ? timeStr : "") << "] Завершено логирование действий в библиотеке" << std::endl;
+        logFile.close();
+    }
+    
     delete[] books;
     delete[] undoStack;
 }
@@ -97,6 +108,9 @@ void Library::addBook(const Book& book) {
         resize();
     }
     books[size++] = book;
+    
+    std::string action = "Добавлена книга: \"" + book.title + "\" (Автор: " + book.author + ", Год: " + std::to_string(book.year) + ")";
+    logAction(action);
 }
 
 void Library::removeBook(const std::string& title) {
@@ -110,6 +124,8 @@ void Library::removeBook(const std::string& title) {
     
     if (index == -1) {
         printf("Книга с названием \"%s\" не найдена.\n", title.c_str());
+        std::string action = "Попытка удаления несуществующей книги: \"" + title + "\"";
+        logAction(action);
         return;
     }
     
@@ -123,6 +139,9 @@ void Library::removeBook(const std::string& title) {
     shrink();
     
     printf("Книга \"%s\" успешно удалена. (Можно отменить последнее удаление)\n", title.c_str());
+    
+    std::string action = "Удалена книга: \"" + title + "\"";
+    logAction(action);
 }
 
 void Library::updateBook(const std::string& title, const Book& newBook) {
@@ -130,10 +149,17 @@ void Library::updateBook(const std::string& title, const Book& newBook) {
         if (books[i].title == title) {
             books[i] = newBook;
             printf("Книга \"%s\" успешно обновлена.\n", title.c_str());
+            
+            std::string action = "Обновлена информация о книге: \"" + title + "\" (Новый автор: " + newBook.author + ", Год: " + std::to_string(newBook.year) + ")";
+            logAction(action);
+            
             return;
         }
     }
     printf("Книга с названием \"%s\" не найдена.\n", title.c_str());
+    
+    std::string action = "Попытка обновления несуществующей книги: \"" + title + "\"";
+    logAction(action);
 }
 
 void Library::printLibrary() const {
@@ -827,4 +853,90 @@ void Library::clearUndoHistory() {
 
 int Library::getUndoStackSize() const {
     return undoSize;
+}
+
+// ==================== ИСТОРИЯ ДЕЙСТВИЙ ====================
+
+void Library::enableActionLogging(const std::string& filename) {
+    if (logFile.is_open()) {
+        logFile.close();
+    }
+    logFile.open(filename, std::ios::app);
+    logFileName = filename;
+    if (logFile.is_open()) {
+        time_t now = time(0);
+        char* timeStr = ctime(&now);
+        // Удаляем символ новой строки из времени
+        timeStr[strlen(timeStr)-1] = 0;
+        logFile << "[" << timeStr << "] Начата запись действий в библиотеке\n";
+        logFile.flush();
+        printf("✓ Логирование действий включено. Файл: %s\n", filename.c_str());
+    } else {
+        printf("✗ Ошибка: не удалось открыть файл лога %s\n", filename.c_str());
+    }
+}
+
+void Library::logAction(const std::string& action) {
+    time_t now = time(0);
+    char* timeStr = ctime(&now);
+    // Удаляем символ новой строки из времени
+    if (timeStr) timeStr[strlen(timeStr)-1] = 0;
+    
+    std::string logEntry = "[" + std::string(timeStr ? timeStr : "") + "] " + action;
+    
+    addToHistory(logEntry);
+    
+    if (!logFileName.empty() && logFile.is_open()) {
+        logFile << logEntry << std::endl;
+        logFile.flush();
+    }
+}
+
+void Library::addToHistory(const std::string& action) {
+    actionHistory.push_back(action);
+    
+    // Ограничиваем размер истории
+    if (static_cast<int>(actionHistory.size()) > maxHistorySize) {
+        actionHistory.pop_front();
+    }
+}
+
+void Library::setMaxHistorySize(int maxSize) {
+    if (maxSize > 0) {
+        maxHistorySize = maxSize;
+        // Обрезаем историю, если она превышает новый максимальный размер
+        while (static_cast<int>(actionHistory.size()) > maxHistorySize) {
+            actionHistory.pop_front();
+        }
+        printf("✓ Максимальный размер истории действий установлен: %d\n", maxSize);
+    } else {
+        printf("✗ Ошибка: размер истории должен быть положительным числом.\n");
+    }
+}
+
+void Library::printActionHistory() const {
+    if (actionHistory.empty()) {
+        printf("\n╔════════════════════════════════════════╗\n");
+        printf("║      ИСТОРИЯ ДЕЙСТВИЙ ПУСТА            ║\n");
+        printf("╚════════════════════════════════════════╝\n\n");
+        return;
+    }
+    
+    printf("\n╔════════════════════════════════════════╗\n");
+    printf("║        ИСТОРИЯ ДЕЙСТВИЙ               ║\n");
+    printf("╚════════════════════════════════════════╝\n\n");
+    
+    int count = 1;
+    for (const auto& entry : actionHistory) {
+        printf("%2d. %s\n", count++, entry.c_str());
+    }
+    printf("\nВсего записей: %zu\n\n", actionHistory.size());
+}
+
+std::vector<std::string> Library::getActionHistory() const {
+    std::vector<std::string> result;
+    for (const auto& entry : actionHistory) {
+        result.push_back(entry);
+    }
+    return result;
 }

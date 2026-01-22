@@ -8,6 +8,10 @@
 #define LIBRARY_H
 
 #include "book.h"
+#include <fstream>
+#include <deque>
+#include <string>
+#include <vector>
 
 // Класс для управления библиотекой книг
 class Library {
@@ -21,6 +25,12 @@ private:
     int undoSize;
     int undoCapacity;
     int maxUndoOperations;  // Максимальное количество операций для отмены
+    
+    // История действий
+    std::ofstream logFile;
+    std::string logFileName;
+    std::deque<std::string> actionHistory;  // Хранит последние действия
+    int maxHistorySize;
     
     // Внутренние функции управления памятью
     void resize();      // Увеличение массива
@@ -74,6 +84,13 @@ public:
     void clearUndoHistory();
     int getUndoStackSize() const;
     
+    // История действий
+    void enableActionLogging(const std::string& filename = "library_actions.log");
+    void logAction(const std::string& action);
+    void setMaxHistorySize(int maxSize);
+    void printActionHistory() const;
+    std::vector<std::string> getActionHistory() const;
+    
     // Геттер
     int getSize() const { return size; }
     bool isEmpty() const { return size == 0; }
@@ -82,6 +99,9 @@ private:
     // Вспомогательные методы для undo
     void resizeUndoStack();
     void addToDeleteStack(const Book& book, int position);
+    
+    // Вспомогательные методы для истории действий
+    void addToHistory(const std::string& action);
 };
 
 #endif
