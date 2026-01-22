@@ -168,28 +168,72 @@ void UI::sortMenu() {
     printf("  2. По автору\n");
     printf("  3. По году издания\n");
     printf("  4. По жанру\n");
+    printf("  5. По автору и названию\n");
+    printf("  6. По году и жанру\n");
     printf("  0. ← Назад\n");
     
     int choice = getIntInput("\n📊 Выберите поле для сортировки: ");
     
-    if (choice < 1 || choice > 4) {
+    if (choice < 1 || choice > 6) {
         if (choice != 0) printf("✗ Неверный выбор.\n");
         return;
     }
     
-    printf("\n  1. По возрастанию (A→Z, 0→9)\n");
-    printf("  2. По убыванию (Z→A, 9→0)\n");
-    int order = getIntInput("Выберите порядок: ");
-    
-    bool ascending = (order == 1);
-    
-    printf("\n");
-    switch (choice) {
-        case 1: library.sortByTitle(ascending); break;
-        case 2: library.sortByAuthor(ascending); break;
-        case 3: library.sortByYear(ascending); break;
-        case 4: library.sortByGenre(ascending); break;
+    if (choice >= 1 && choice <= 4) {
+        // Одиночная сортировка
+        printf("\n  1. По возрастанию (A→Z, 0→9)\n");
+        printf("  2. По убыванию (Z→A, 9→0)\n");
+        int order = getIntInput("Выберите порядок: ");
+        
+        bool ascending = (order == 1);
+        
+        printf("\n");
+        switch (choice) {
+            case 1: library.sortByTitle(ascending); break;
+            case 2: library.sortByAuthor(ascending); break;
+            case 3: library.sortByYear(ascending); break;
+            case 4: library.sortByGenre(ascending); break;
+        }
+    } else if (choice == 5) {
+        // Сортировка по автору и названию
+        printf("\nСортировка по автору и названию:\n");
+        printf("  1. Автор (A→Z), затем название (A→Z)\n");
+        printf("  2. Автор (A→Z), затем название (Z→A)\n");
+        printf("  3. Автор (Z→A), затем название (A→Z)\n");
+        printf("  4. Автор (Z→A), затем название (Z→A)\n");
+        
+        int subChoice = getIntInput("\nВыберите вариант: ");
+        
+        bool authorAsc = (subChoice == 1 || subChoice == 2);
+        bool titleAsc = (subChoice == 1 || subChoice == 3);
+        
+        if (subChoice >= 1 && subChoice <= 4) {
+            printf("\n");
+            library.sortByAuthorAndTitle(authorAsc, titleAsc);
+        } else {
+            printf("✗ Неверный выбор.\n");
+        }
+    } else if (choice == 6) {
+        // Сортировка по году и жанру
+        printf("\nСортировка по году и жанру:\n");
+        printf("  1. Год (старые→новые), затем жанр (A→Z)\n");
+        printf("  2. Год (старые→новые), затем жанр (Z→A)\n");
+        printf("  3. Год (новые→старые), затем жанр (A→Z)\n");
+        printf("  4. Год (новые→старые), затем жанр (Z→A)\n");
+        
+        int subChoice = getIntInput("\nВыберите вариант: ");
+        
+        bool yearAsc = (subChoice == 1 || subChoice == 2);
+        bool genreAsc = (subChoice == 1 || subChoice == 3);
+        
+        if (subChoice >= 1 && subChoice <= 4) {
+            printf("\n");
+            library.sortByYearAndGenre(yearAsc, genreAsc);
+        } else {
+            printf("✗ Неверный выбор.\n");
+        }
     }
+    
     printf("\n");
 }
 
@@ -318,6 +362,56 @@ void UI::specialFunctionsMenu() {
     }
 }
 
+void UI::undoMenu() {
+    printf("\n╔════════════════════════════════════════╗\n");
+    printf("║       ОТМЕНА ОПЕРАЦИЙ                  ║\n");
+    printf("╚════════════════════════════════════════╝\n");
+    
+    int undoStackSize = library.getUndoStackSize();
+    printf("  Текущий размер истории отмен: %d\n\n", undoStackSize);
+    
+    printf("  1. ↶ Отменить последние k операций удаления\n");
+    printf("  2. ⚙️  Установить максимальное количество операций отмены\n");
+    printf("  3. 🗑️  Очистить историю операций\n");
+    printf("  0. ← Назад\n");
+    
+    int choice = getIntInput("\n↩️  Выберите действие: ");
+    
+    switch (choice) {
+        case 1: {
+            if (undoStackSize == 0) {
+                printf("\n✗ Нет операций для отмены.\n\n");
+                break;
+            }
+            
+            int k = getIntInput("\nВведите количество операций для отмены: ");
+            library.undoLastOperations(k);
+            break;
+        }
+        case 2: {
+            int maxOps = getIntInput("\nВведите максимальное количество операций отмены: ");
+            library.setMaxUndoOperations(maxOps);
+            break;
+        }
+        case 3: {
+            printf("\n⚠️  Внимание: Это удалит всю историю операций отмены!\n");
+            printf("Вы уверены? (1 - да, 0 - нет): ");
+            int confirm = getIntInput("");
+            if (confirm == 1) {
+                library.clearUndoHistory();
+            } else {
+                printf("Отменено.\n");
+            }
+            break;
+        }
+        case 0:
+            break;
+        default:
+            printf("✗ Неверный выбор.\n");
+    }
+    printf("\n");
+}
+
 // ==================== ГЛАВНЫЙ ЦИКЛ ====================
 
 void UI::run() {
@@ -343,6 +437,7 @@ void UI::run() {
         printf("║  6. 🔍 Поиск книг                                 ║\n");
         printf("║  7. 💾 Работа с файлами                           ║\n");
         printf("║  8. ⚡ Специальные функции                        ║\n");
+        printf("║  9. ↶ Отмена операций                             ║\n");
         printf("║  0. 🚪 Выход из программы                         ║\n");
         printf("╚═══════════════════════════════════════════════════╝\n");
         
@@ -372,6 +467,9 @@ void UI::run() {
                 break;
             case 8:
                 specialFunctionsMenu();
+                break;
+            case 9:
+                undoMenu();
                 break;
             case 0:
                 printf("\n╔═══════════════════════════════════════════════════╗\n");

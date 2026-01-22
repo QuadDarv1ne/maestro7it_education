@@ -11,12 +11,20 @@
 #include <map>
 #include <cmath>
 
+// Структура для хранения удаленных книг (для отмены)
+struct DeletedBook {
+    Book book;
+    int position;  // Позиция, откуда была удалена книга
+};
+
 // ==================== КОНСТРУКТОР И ДЕСТРУКТОР ====================
 
-Library::Library() : books(nullptr), size(0), capacity(0) {}
+Library::Library() : books(nullptr), size(0), capacity(0), 
+                     undoStack(nullptr), undoSize(0), undoCapacity(0), maxUndoOperations(10) {}
 
 Library::~Library() {
     delete[] books;
+    delete[] undoStack;
 }
 
 // ==================== УПРАВЛЕНИЕ ПАМЯТЬЮ ====================
@@ -49,6 +57,39 @@ void Library::shrink() {
     }
 }
 
+// ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ UNDO ====================
+
+void Library::resizeUndoStack() {
+    int newCapacity = (undoCapacity == 0) ? 4 : static_cast<int>(undoCapacity * 1.5);
+    struct DeletedBook* newUndoStack = new struct DeletedBook[newCapacity];
+    
+    for (int i = 0; i < undoSize; i++) {
+        newUndoStack[i] = undoStack[i];
+    }
+    
+    delete[] undoStack;
+    undoStack = newUndoStack;
+    undoCapacity = newCapacity;
+}
+
+void Library::addToDeleteStack(const Book& book, int position) {
+    if (undoSize >= maxUndoOperations) {
+        // Сдвигаем стек влево, удаляя самую старую операцию
+        for (int i = 0; i < undoSize - 1; i++) {
+            undoStack[i] = undoStack[i + 1];
+        }
+        undoSize--;
+    }
+    
+    if (undoSize >= undoCapacity) {
+        resizeUndoStack();
+    }
+    
+    undoStack[undoSize].book = book;
+    undoStack[undoSize].position = position;
+    undoSize++;
+}
+
 // ==================== CRUD ОПЕРАЦИИ ====================
 
 void Library::addBook(const Book& book) {
@@ -72,13 +113,16 @@ void Library::removeBook(const std::string& title) {
         return;
     }
     
+    // Сохраняем книгу для возможности отмены
+    addToDeleteStack(books[index], index);
+    
     for (int i = index; i < size - 1; i++) {
         books[i] = books[i + 1];
     }
     size--;
     shrink();
     
-    printf("Книга \"%s\" успешно удалена.\n", title.c_str());
+    printf("Книга \"%s\" успешно удалена. (Можно отменить последнее удаление)\n", title.c_str());
 }
 
 void Library::updateBook(const std::string& title, const Book& newBook) {
@@ -197,6 +241,96 @@ void Library::sortByGenre(bool ascending) {
     }
     printf("✓ Библиотека отсортирована по жанру (%s).\n", 
            ascending ? "А→Я" : "Я→А");
+}
+
+// ==================== МНОГОПОЛЬНАЯ СОРТИРОВКА ====================
+
+void Library::sortByAuthorAndTitle(bool authorAsc, bool titleAsc) {
+    // Пузырьковая сортировка по автору, затем по названию
+    for (int i = 0; i < size - 1; i++) {
+        for (int j = 0; j < size - i - 1; j++) {
+            bool shouldSwap = false;
+            
+            // Сначала сравниваем по автору
+            if (authorAsc) {
+                if (books[j].author > books[j + 1].author) {
+                    shouldSwap = true;
+                } else if (books[j].author == books[j + 1].author) {
+                    // Если авторы равны, сравниваем по названию
+                    if (titleAsc) {
+                        shouldSwap = books[j].title > books[j + 1].title;
+                    } else {
+                        shouldSwap = books[j].title < books[j + 1].title;
+                    }
+                }
+            } else {
+                if (books[j].author < books[j + 1].author) {
+                    shouldSwap = true;
+                } else if (books[j].author == books[j + 1].author) {
+                    // Если авторы равны, сравниваем по названию
+                    if (titleAsc) {
+                        shouldSwap = books[j].title > books[j + 1].title;
+                    } else {
+                        shouldSwap = books[j].title < books[j + 1].title;
+                    }
+                }
+            }
+            
+            if (shouldSwap) {
+                Book temp = books[j];
+                books[j] = books[j + 1];
+                books[j + 1] = temp;
+            }
+        }
+    }
+    
+    printf("✓ Библиотека отсортирована по автору (%s), затем по названию (%s).\n", 
+           authorAsc ? "А→Я" : "Я→А",
+           titleAsc ? "А→Я" : "Я→А");
+}
+
+void Library::sortByYearAndGenre(bool yearAsc, bool genreAsc) {
+    // Пузырьковая сортировка по году, затем по жанру
+    for (int i = 0; i < size - 1; i++) {
+        for (int j = 0; j < size - i - 1; j++) {
+            bool shouldSwap = false;
+            
+            // Сначала сравниваем по году
+            if (yearAsc) {
+                if (books[j].year > books[j + 1].year) {
+                    shouldSwap = true;
+                } else if (books[j].year == books[j + 1].year) {
+                    // Если годы равны, сравниваем по жанру
+                    if (genreAsc) {
+                        shouldSwap = books[j].genre > books[j + 1].genre;
+                    } else {
+                        shouldSwap = books[j].genre < books[j + 1].genre;
+                    }
+                }
+            } else {
+                if (books[j].year < books[j + 1].year) {
+                    shouldSwap = true;
+                } else if (books[j].year == books[j + 1].year) {
+                    // Если годы равны, сравниваем по жанру
+                    if (genreAsc) {
+                        shouldSwap = books[j].genre > books[j + 1].genre;
+                    } else {
+                        shouldSwap = books[j].genre < books[j + 1].genre;
+                    }
+                }
+            }
+            
+            if (shouldSwap) {
+                Book temp = books[j];
+                books[j] = books[j + 1];
+                books[j + 1] = temp;
+            }
+        }
+    }
+    
+    printf("✓ Библиотека отсортирована по году (%s), затем по жанру (%s).\n", 
+           yearAsc ? "старые→новые" : "новые→старые",
+           genreAsc ? "А→Я" : "Я→А");
 }
 
 // ==================== ПОИСК ====================
@@ -614,4 +748,83 @@ void Library::printRecentBooks(int years) const {
         printf("\n  Всего найдено: %d книг\n", count);
     }
     printf("\n");
+}
+
+// ==================== UNDO ФУНКЦИОНАЛЬНОСТЬ ====================
+
+void Library::setMaxUndoOperations(int maxOps) {
+    if (maxOps > 0) {
+        maxUndoOperations = maxOps;
+        // Если текущий размер стека больше нового максимума, обрезаем его
+        if (undoSize > maxOps) {
+            undoSize = maxOps;
+        }
+        printf("✓ Максимальное количество операций отмены установлено: %d\n", maxOps);
+    } else {
+        printf("✗ Ошибка: количество операций должно быть положительным.\n");
+    }
+}
+
+void Library::undoLastOperations(int k) {
+    if (k <= 0) {
+        printf("✗ Ошибка: количество операций для отмены должно быть положительным.\n");
+        return;
+    }
+    
+    if (undoSize == 0) {
+        printf("✗ Нет операций для отмены.\n");
+        return;
+    }
+    
+    int operationsToUndo = (k < undoSize) ? k : undoSize;
+    int restoredCount = 0;
+    
+    printf("\n╔════════════════════════════════════════╗\n");
+    printf("║      ОТМЕНА ПОСЛЕДНИХ ОПЕРАЦИЙ         ║\n");
+    printf("╚════════════════════════════════════════╝\n\n");
+    
+    for (int i = 0; i < operationsToUndo; i++) {
+        // Берем последнюю операцию (LIFO)
+        int lastIndex = undoSize - 1;
+        DeletedBook lastOperation = undoStack[lastIndex];
+        
+        // Проверяем, что позиция все еще валидна
+        if (lastOperation.position <= size) {
+            // Увеличиваем массив если нужно
+            if (size >= capacity) {
+                resize();
+            }
+            
+            // Сдвигаем элементы вправо чтобы освободить место
+            for (int j = size; j > lastOperation.position; j--) {
+                books[j] = books[j - 1];
+            }
+            
+            // Восстанавливаем книгу
+            books[lastOperation.position] = lastOperation.book;
+            size++;
+            restoredCount++;
+            
+            printf("✓ Восстановлена книга: \"%s\" на позицию #%d\n", 
+                   lastOperation.book.title.c_str(), lastOperation.position + 1);
+        } else {
+            printf("⚠️  Пропущена операция: позиция #%d больше размера библиотеки\n", 
+                   lastOperation.position + 1);
+        }
+        
+        // Удаляем операцию из стека
+        undoSize--;
+    }
+    
+    printf("\n✓ Успешно отменено %d операций. Восстановлено %d книг.\n\n", 
+           operationsToUndo, restoredCount);
+}
+
+void Library::clearUndoHistory() {
+    undoSize = 0;
+    printf("✓ История операций очищена.\n");
+}
+
+int Library::getUndoStackSize() const {
+    return undoSize;
 }

@@ -19,6 +19,7 @@ private:
     void searchMenu();
     void fileMenu();
     void specialFunctionsMenu();
+    void undoMenu();
     
 public:
     UI(Library& lib);

@@ -16,6 +16,12 @@ private:
     int size;           // Текущее количество книг
     int capacity;       // Выделенная ёмкость
     
+    // Стек для отмены операций удаления (динамический массив)
+    struct DeletedBook* undoStack;
+    int undoSize;
+    int undoCapacity;
+    int maxUndoOperations;  // Максимальное количество операций для отмены
+    
     // Внутренние функции управления памятью
     void resize();      // Увеличение массива
     void shrink();      // Уменьшение массива
@@ -36,6 +42,10 @@ public:
     void sortByAuthor(bool ascending = true);
     void sortByYear(bool ascending = true);
     void sortByGenre(bool ascending = true);
+    
+    // Многопольная сортировка
+    void sortByAuthorAndTitle(bool authorAsc = true, bool titleAsc = true);
+    void sortByYearAndGenre(bool yearAsc = true, bool genreAsc = true);
     
     // Поиск
     void searchByTitle(const std::string& title) const;
@@ -58,9 +68,20 @@ public:
     void printBooksByGenre() const;             // Группировка по жанрам
     void printRecentBooks(int years) const;     // Книги за последние N лет
     
+    // Undo функциональность
+    void setMaxUndoOperations(int maxOps);
+    void undoLastOperations(int k);
+    void clearUndoHistory();
+    int getUndoStackSize() const;
+    
     // Геттер
     int getSize() const { return size; }
     bool isEmpty() const { return size == 0; }
+    
+private:
+    // Вспомогательные методы для undo
+    void resizeUndoStack();
+    void addToDeleteStack(const Book& book, int position);
 };
 
 #endif
