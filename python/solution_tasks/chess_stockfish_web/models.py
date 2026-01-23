@@ -160,3 +160,44 @@ def get_games_by_result(user_id, result, limit=20):
     ).order_by(
         Game.start_time.desc()
     ).limit(limit).all()
+
+def create_puzzle(fen, solution, difficulty, category="tactics"):
+    """Создание новой головоломки"""
+    puzzle = Puzzle(
+        fen=fen,
+        solution=solution,
+        difficulty=difficulty,
+        category=category
+    )
+    db.session.add(puzzle)
+    db.session.commit()
+    return puzzle
+
+def get_random_puzzle(difficulty=None, category=None):
+    """Получение случайной головоломки с фильтрацией"""
+    query = Puzzle.query
+    
+    if difficulty is not None:
+        query = query.filter(Puzzle.difficulty == difficulty)
+    if category is not None:
+        query = query.filter(Puzzle.category == category)
+    
+    # Get a random puzzle
+    import random
+    count = query.count()
+    if count == 0:
+        return None
+    
+    random_offset = random.randint(0, count - 1)
+    return query.offset(random_offset).first()
+
+def increment_puzzle_stats(puzzle_id, solved=True):
+    """Увеличение счетчиков решений/неудач головоломки"""
+    puzzle = Puzzle.query.get(puzzle_id)
+    if puzzle:
+        if solved:
+            puzzle.times_solved += 1
+        else:
+            puzzle.times_failed += 1
+        db.session.commit()
+    return puzzle

@@ -40,7 +40,8 @@ from typing import Optional
 try:
     from models import (
         db, init_db, User, Game, Puzzle, create_user,
-        get_recent_games_optimized, get_games_by_result
+        get_recent_games_optimized, get_games_by_result,
+        create_puzzle, get_random_puzzle, increment_puzzle_stats
     )
     DATABASE_ENABLED = True
 except ImportError as e:
@@ -1951,6 +1952,102 @@ def pool_stats():
             'status': 'error',
             'error': str(e)
         }, 500
+
+
+@app.route('/api/puzzles/random', methods=['GET'])
+@handle_chess_errors(context="get_random_puzzle")
+def get_random_puzzle_api():
+    """Получение случайной головоломки"""
+    try:
+        # Get query parameters
+        difficulty = request.args.get('difficulty', type=int)
+        category = request.args.get('category', type=str)
+        
+        if DATABASE_ENABLED and Puzzle is not None:
+            puzzle = get_random_puzzle(difficulty=difficulty, category=category)
+            
+            if puzzle:
+                return jsonify({
+                    'success': True,
+                    'puzzle': {
+                        'id': puzzle.id,
+                        'fen': puzzle.fen,
+                        'difficulty': puzzle.difficulty,
+                        'category': puzzle.category,
+                        'times_solved': puzzle.times_solved,
+                        'times_failed': puzzle.times_failed
+                    }
+                })
+            else:
+                return jsonify({'success': False, 'message': 'No puzzles found matching criteria'}), 404
+        else:
+            return jsonify({'success': False, 'message': 'Database not enabled'}), 500
+    except Exception as e:
+        logger.error(f"Error getting random puzzle: {e}")
+        return jsonify({'success': False, 'message': 'Failed to get puzzle'}), 500
+
+
+@app.route('/api/puzzles/solve', methods=['POST'])
+@handle_chess_errors(context="solve_puzzle")
+def solve_puzzle():
+    """Отправка решения головоломки"""
+    try:
+        if not DATABASE_ENABLED or Puzzle is None:
+            return jsonify({'success': False, 'message': 'Database not enabled'}), 500
+        
+        data = request.get_json()
+        puzzle_id = data.get('puzzle_id')
+        user_solution = data.get('solution')  # Array of moves
+        is_correct = data.get('is_correct', False)
+        
+        if not puzzle_id:
+            return jsonify({'success': False, 'message': 'Puzzle ID is required'}), 400
+        
+        # Update puzzle statistics
+        increment_puzzle_stats(puzzle_id, solved=is_correct)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Solution recorded successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error recording puzzle solution: {e}")
+        return jsonify({'success': False, 'message': 'Failed to record solution'}), 500
+
+
+@app.route('/api/puzzles', methods=['POST'])
+@handle_chess_errors(context="create_puzzle")
+@limiter.limit("5 per minute")
+def create_puzzle_api():
+    """Создание новой головоломки (административная функция)"""
+    try:
+        if not DATABASE_ENABLED or Puzzle is None:
+            return jsonify({'success': False, 'message': 'Database not enabled'}), 500
+        
+        # In a real app, you'd want to restrict this to admin users
+        data = request.get_json()
+        fen = data.get('fen')
+        solution = data.get('solution')
+        difficulty = data.get('difficulty', 1)
+        category = data.get('category', 'tactics')
+        
+        if not fen or not solution:
+            return jsonify({'success': False, 'message': 'FEN and solution are required'}), 400
+        
+        puzzle = create_puzzle(fen, solution, difficulty, category)
+        
+        return jsonify({
+            'success': True,
+            'puzzle': {
+                'id': puzzle.id,
+                'fen': puzzle.fen,
+                'difficulty': puzzle.difficulty,
+                'category': puzzle.category
+            }
+        }), 201
+    except Exception as e:
+        logger.error(f"Error creating puzzle: {e}")
+        return jsonify({'success': False, 'message': 'Failed to create puzzle'}), 500
 
 @app.route('/metrics')
 @handle_chess_errors(context="metrics")
