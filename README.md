@@ -60,28 +60,36 @@ Python славится своей простотой и читаемостью,
 
 📅 **Дата:** 07.09.2024
 
-▶️ **Версия 1.0**
+▶️ **Версия 3.0**
 
 ```textline
 ※ Предложения по сотрудничеству можете присылать на почту ※
 📧 maksimqwe42@mail.ru
 ```
 
-**Преподаватель:** Дуплей Максим Игоревич
+---
+
+#### ♟️ Maksim Dupley | Chess Profile
+
+> **FIDE ID:** [540098680](https://ratings.fide.com/profile/540098680)  
+**Федерация:** Россия  
+**Год рождения:** 1999  
+**Титул FIDE:** `Arena FIDE Master (AFM)`
+
+*   [Официальный профиль ФИДЕ](https://ratings.fide.com/profile/540098680)
+*   [Профиль на World Chess](https://worldchess.com/profile/1094367)
 
 ---
 
-## 💼 Профиль на Profi.ru
+### 💼 Профиль на Profi.ru
 
 [![Profi.ru Profile](https://img.shields.io/badge/Profi.ru-Дуплей%20М.И.-FF6B35?style=for-the-badge)](https://profi.ru/profile/DupleyMI)
 
 > Консультации и услуги программирования на платформе Profi.ru
 
-[![Dupley Maxim Igorevich - Profi.ru Profile](image-3.png)](https://profi.ru/profile/DupleyMI)
-
 ---
 
-## 📚 Услуги обучения
+### 📚 Услуги обучения
 
 [![Обучение технологиям и языкам программирования на Kwork](https://img.shields.io/badge/Kwork-Обучение%20Программированию-blue?style=for-the-badge&logo=kwork)](https://kwork.ru/usability-testing/42465951/obuchenie-tekhnologiyam-i-yazykam-programmirovaniya)
 
@@ -89,9 +97,7 @@ Python славится своей простотой и читаемостью,
 
 ---
 
-## 🏫 О школе
-
-### Maestro7IT — Школа программирования
+### 🏫 О школе
 
 [![Website](https://img.shields.io/badge/Maestro7IT-school--maestro7it.ru-darkgreen?style=for-the-badge)](https://school-maestro7it.ru/)
 
