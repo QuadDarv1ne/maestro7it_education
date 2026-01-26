@@ -13,13 +13,14 @@
 9. [Работа с объектами и переменными](#работа-с-объектами-и-переменными)
 10. [Скрипты и функции](#скрипты-и-функции)
 11. [Практические примеры](#практические-примеры)
-12. [Лучшие практики](#лучшие-практики)
+12. [Работа с winget](#работа-с-winget)
+13. [Лучшие практики](#лучшие-практики)
 
 ## Введение в PowerShell
 
-**PowerShell** — это мощная среда задач и конфигурации, разработанная Microsoft. Это командная строка и скриптовый язык, ориентированный на задачи автоматизации и управление конфигурациями.
+PowerShell — это мощная среда задач и конфигурации, разработанная Microsoft. Это командная строка и скриптовый язык, ориентированный на задачи автоматизации и управление конфигурациями.
 
-`PowerShell` работает на основе объектов, а не текста, что делает его особенно мощным для автоматизации систем.
+PowerShell работает на основе объектов, а не текста, что делает его особенно мощным для автоматизации систем.
 
 **Основные особенности PowerShell:**
 
@@ -176,9 +177,9 @@ Import-Module posh-git -ErrorAction SilentlyContinue
 
 ### Основные концепции:
 
-- **Cmdlets** - команды PowerShell в формате Verb-Noun (Get-Process, Set-Location)
+- **Cmdlets** - команды `PowerShell` в формате `Verb-Noun` (`Get-Process`, `Set-Location`)
 - **Пайплайн** - передача объектов между командами (|)
-- **Объекты** - PowerShell работает с объектами, а не с текстом
+- **Объекты** - `PowerShell` работает с объектами, а не с текстом
 - **Проводник (PowerShell ISE)** - графическая среда для разработки скриптов
 
 ### Основные команды:
@@ -270,10 +271,10 @@ Import-Module -Name ModuleName
 
 ### Популярные модули:
 
-- **Az** - Azure PowerShell модуль
+- **Az** - `Azure PowerShell` модуль
 - **Pester** - модуль для тестирования
 - **PSScriptAnalyzer** - анализатор скриптов
-- **posh-git** - интеграция с Git
+- **posh-git** - интеграция с `Git`
 - **PowerShellGet** - управление пакетами
 
 ## Основные команды и cmdlets
@@ -590,6 +591,242 @@ function Invoke-ApiCall {
 # Использование
 $data = Invoke-ApiCall -Uri "https://jsonplaceholder.typicode.com/posts/1"
 $data | ConvertTo-Json -Depth 3
+```
+
+## Работа с winget
+
+**Winget** — это официальный менеджер пакетов для `Windows`, разработанный `Microsoft`
+
+Он позволяет легко устанавливать, обновлять и управлять приложениями из командной строки.
+
+### Основные команды winget:
+
+```powershell
+# Проверка установленной версии winget
+winget --version
+
+# Проверка состояния winget
+winget --info
+```
+
+### Поиск приложений:
+
+```powershell
+# Поиск приложения по имени
+winget search Google.Chrome
+winget search --name "Visual Studio Code"
+winget search --id Microsoft.WindowsTerminal
+
+# Поиск по тегам или магазину
+winget search --tag "development"
+winget search --source winget
+
+# Показать все доступные приложения
+winget search
+```
+
+### Установка приложений:
+
+```powershell
+# Установка приложения по ID
+winget install --id Google.Chrome
+winget install --id Microsoft.VisualStudioCode
+
+# Установка без интерактивных запросов
+winget install --id Google.Chrome -h
+
+# Установка конкретной версии
+winget install --id Google.Chrome --version 119.0.6045.105
+
+# Установка с конкретного источника
+winget install --id Google.Chrome --source winget
+
+# Установка без подтверждения (автоматическое принятие лицензии)
+winget install --id Google.Chrome --silent
+```
+
+### Обновление приложений:
+
+```powershell
+# Обновление конкретного приложения
+winget upgrade --id Google.Chrome
+
+# Обновление всех приложений
+winget upgrade --all
+
+# Проверка доступных обновлений
+winget upgrade
+
+# Обновление до конкретной версии
+winget upgrade --id Google.Chrome --version 119.0.6045.105
+```
+
+### Управление установленными приложениями:
+
+```powershell
+# Список установленных приложений
+winget list
+
+# Список установленных приложений с фильтрацией
+winget list --name "Google"
+winget list --id Microsoft.VisualStudioCode
+
+# Проверка конкретного установленного приложения
+winget list --name "Mozilla Firefox"
+
+# Удаление приложения
+winget uninstall --id Google.Chrome
+winget uninstall --name "Google Chrome"
+
+# Сброс приложения к исходному состоянию
+winget reset --id Spotify.Spotify
+```
+
+### Работа с источниками (sources):
+
+```powershell
+# Просмотр списка источников
+winget source list
+
+# Добавление нового источника
+winget source add --name msstore https://storeedgefd.dsx.mp.microsoft.com/v9.0
+
+# Обновление списка источников
+winget source update
+winget source update --name winget
+
+# Удаление источника
+winget source remove --name msstore
+```
+
+### Просмотр информации о приложении:
+
+```powershell
+# Показать информацию о приложении
+winget show --id Google.Chrome
+
+# Показать все доступные версии приложения
+winget show --id Google.Chrome --versions
+
+# Показать зависимости приложения
+winget show --id Google.Chrome --dependencies
+
+# Экспорт информации в JSON
+winget show --id Google.Chrome --json
+```
+
+### Импорт и экспорт списка приложений:
+
+```powershell
+# Экспорт установленных приложений в файл
+winget export .\installed-apps.json
+
+# Импорт списка приложений из файла
+winget import -f .\installed-apps.json --accept-package-agreements --accept-source-agreements
+
+# Пример файла импорта (export.json)
+@"
+{
+  \"$schema\": \"https://aka.ms/winget-packages.schema.2.0.json\",
+  \"CreationDate\": \"2023-01-01T00:00:00.000\",
+  \"Sources\": [
+    {
+      \"Packages\": [
+        {
+          \"PackageIdentifier\": \"Microsoft.VisualStudioCode\"
+        },
+        {
+          \"PackageIdentifier\": \"Google.Chrome\"
+        }
+      ],
+      \"SourceDetails\": {
+        \"Argument\": \"https://cdn.winget.microsoft.com/cache\",
+        \"Identifier\": \"Microsoft.Winget.Source_8wekyb3d8bbwe\",
+        \"Name\": \"winget\",
+        \"Type\": \"Microsoft.PreIndexed.Package\"
+      }
+    }
+  ],
+  \"WinGetVersion\": \"1.0.0\"
+}
+"@ | Out-File -FilePath .\winget-export.json
+```
+
+### Настройка winget:
+
+```powershell
+# Проверка конфигурации
+winget settings
+
+# Установка настроек через командную строку (если поддерживается)
+# Настройки хранятся в JSON файле, который открывается в редакторе
+winget settings
+```
+
+### Практический скрипт для управления приложениями через winget:
+
+```powershell
+# winget-manager.ps1
+function Manage-Applications {
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateSet("Install", "Uninstall", "Upgrade", "List")]
+        [string]$Action,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$AppName,
+        
+        [Parameter(Mandatory=$false)]
+        [switch]$All
+    )
+    
+    switch ($Action) {
+        "Install" {
+            if ($AppName) {
+                Write-Host "Установка $AppName..." -ForegroundColor Cyan
+                winget install --id $AppName -h
+            } else {
+                Write-Warning "Укажите имя приложения для установки"
+            }
+        }
+        
+        "Uninstall" {
+            if ($AppName) {
+                Write-Host "Удаление $AppName..." -ForegroundColor Yellow
+                winget uninstall --id $AppName -h
+            } else {
+                Write-Warning "Укажите имя приложения для удаления"
+            }
+        }
+        
+        "Upgrade" {
+            if ($AppName) {
+                Write-Host "Обновление $AppName..." -ForegroundColor Green
+                winget upgrade --id $AppName
+            } elseif ($All) {
+                Write-Host "Обновление всех приложений..." -ForegroundColor Green
+                winget upgrade --all
+            } else {
+                Write-Host "Доступные обновления:" -ForegroundColor Green
+                winget upgrade
+            }
+        }
+        
+        "List" {
+            Write-Host "Список установленных приложений:" -ForegroundColor White
+            if ($AppName) {
+                winget list --name $AppName
+            } else {
+                winget list
+            }
+        }
+    }
+}
+
+# Примеры использования
+Manage-Applications -Action Install -AppName "Microsoft.PowerToys"
+Manage-Applications -Action Upgrade -All
+Manage-Applications -Action List -AppName "Google"
 ```
 
 ## Лучшие практики
