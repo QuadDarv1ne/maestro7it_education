@@ -5,80 +5,86 @@
 #include <vector>
 #include <string>
 
-// Position on the board (0-63, where 0 is a1, 63 is h8)
+// Позиция на доске (0-63, где 0 - a1, 63 - h8)
 typedef int Square;
 
+/**
+ * @brief Класс, представляющий шахматную доску
+ * 
+ * Управляет состоянием шахматной доски, фигурами, текущим игроком,
+ * правилами рокировки, взятием на проходе и историей ходов
+ */
 class Board {
 private:
-    std::vector<Piece> squares_;  // 64 squares (8x8 board)
-    Color currentPlayer_;
-    int moveCount_;
+    std::vector<Piece> squares_;  ///< 64 клетки доски (8x8)
+    Color currentPlayer_;         ///< Текущий игрок, чей ход
+    int moveCount_;               ///< Счетчик ходов
     
-    // Castling rights
-    bool whiteKingSideCastle_;
-    bool whiteQueenSideCastle_;
-    bool blackKingSideCastle_;
-    bool blackQueenSideCastle_;
+    // Права на рокировку
+    bool whiteKingSideCastle_;   ///< Право белых на короткую рокировку
+    bool whiteQueenSideCastle_;  ///< Право белых на длинную рокировку
+    bool blackKingSideCastle_;   ///< Право черных на короткую рокировку
+    bool blackQueenSideCastle_;  ///< Право черных на длинную рокировку
     
-    // En passant square
-    Square enPassantSquare_;
+    // Клетка для взятия на проходе
+    Square enPassantSquare_;     ///< Клетка, где возможно взятие на проходе
     
-    // Halfmove clock for 50-move rule
-    int halfMoveClock_;
+    // Счетчик полуходов для правила 50 ходов
+    int halfMoveClock_;          ///< Счетчик полуходов без взятия и движения пешек
     
 public:
-    // Constructor
+    // Конструктор
     Board();
     
-    // Setup methods
-    void setupStartPosition();
-    void setupFromFEN(const std::string& fen);
+    // Методы настройки
+    void setupStartPosition();              ///< Устанавливает начальную позицию
+    void setupFromFEN(const std::string& fen);  ///< Загружает позицию из FEN-нотации
     
-    // Getters
-    const Piece& getPiece(Square square) const;
-    Color getCurrentPlayer() const;
-    int getMoveCount() const;
-    bool canCastleKingSide(Color color) const;
-    bool canCastleQueenSide(Color color) const;
-    Square getEnPassantSquare() const;
-    int getHalfMoveClock() const;
+    // Геттеры
+    const Piece& getPiece(Square square) const;  ///< Возвращает фигуру на указанной клетке
+    Color getCurrentPlayer() const;              ///< Возвращает текущего игрока
+    int getMoveCount() const;                    ///< Возвращает счетчик ходов
+    bool canCastleKingSide(Color color) const;   ///< Проверяет право на короткую рокировку
+    bool canCastleQueenSide(Color color) const;  ///< Проверяет право на длинную рокировку
+    Square getEnPassantSquare() const;           ///< Возвращает клетку для взятия на проходе
+    int getHalfMoveClock() const;                ///< Возвращает счетчик полуходов
     
-    // Setters
-    void setPiece(Square square, const Piece& piece);
-    void setCurrentPlayer(Color color);
+    // Сеттеры
+    void setPiece(Square square, const Piece& piece);  ///< Устанавливает фигуру на клетку
+    void setCurrentPlayer(Color color);                ///< Устанавливает текущего игрока
     void setCastlingRights(bool whiteKingSide, bool whiteQueenSide, 
-                          bool blackKingSide, bool blackQueenSide);
-    void setEnPassantSquare(Square square);
-    void setHalfMoveClock(int clock);
+                          bool blackKingSide, bool blackQueenSide);  ///< Устанавливает права на рокировку
+    void setEnPassantSquare(Square square);            ///< Устанавливает клетку для взятия на проходе
+    void setHalfMoveClock(int clock);                  ///< Устанавливает счетчик полуходов
     
-    // Board operations
-    void makeMove(Square from, Square to);
-    void makeMove(const std::string& algebraicNotation);
-    bool isValidMove(Square from, Square to) const;
+    // Операции с доской
+    void makeMove(Square from, Square to);             ///< Выполняет ход с одной клетки на другую
+    void makeMove(const std::string& algebraicNotation);  ///< Выполняет ход в алгебраической нотации
+    bool isValidMove(Square from, Square to) const;    ///< Проверяет корректность хода
     
-    // Utility methods
-    Square algebraicToSquare(const std::string& algebraic) const;
-    std::string squareToAlgebraic(Square square) const;
-    void printBoard() const;
-    std::string getFEN() const;
+    // Вспомогательные методы
+    Square algebraicToSquare(const std::string& algebraic) const;  ///< Преобразует алгебраическую нотацию в клетку
+    std::string squareToAlgebraic(Square square) const;           ///< Преобразует клетку в алгебраическую нотацию
+    void printBoard() const;                                      ///< Выводит доску в консоль
+    std::string getFEN() const;                                   ///< Возвращает FEN-нотацию текущей позиции
     
-    // Game state
-    bool isCheck(Color color) const;
-    bool isCheckmate(Color color) const;
-    bool isStalemate(Color color) const;
-    bool isGameOver() const;
+    // Состояние игры
+    bool isCheck(Color color) const;      ///< Проверяет, находится ли король под шахом
+    bool isCheckmate(Color color) const;  ///< Проверяет, является ли позиция матом
+    bool isStalemate(Color color) const;  ///< Проверяет, является ли позиция патом
+    bool isGameOver() const;              ///< Проверяет, завершена ли игра
     
-public:
-    // Helper methods
-    void initializeEmptyBoard();
-    bool isInBounds(Square square) const;
-    int rank(Square square) const;  // 0-7 (rank 1-8)
-    int file(Square square) const;  // 0-7 (file a-h)
-    Square square(int file, int rank) const;
+private:
+    // Вспомогательные методы
+    void initializeEmptyBoard();          ///< Инициализирует пустую доску
+    bool isInBounds(Square square) const; ///< Проверяет, находится ли клетка в пределах доски
+    int rank(Square square) const;        ///< Возвращает горизонталь (0-7, где 0 - первая горизонталь)
+    int file(Square square) const;        ///< Возвращает вертикаль (0-7, где 0 - вертикаль 'a')
+    Square square(int file, int rank) const;  ///< Создает клетку из вертикали и горизонтали
 };
 
-// Constants
-const int BOARD_SIZE = 8;
-const Square INVALID_SQUARE = -1;
+// Константы
+const int BOARD_SIZE = 8;      ///< Размер доски (8x8)
+const Square INVALID_SQUARE = -1;  ///< Неверная клетка
 
 #endif // BOARD_HPP

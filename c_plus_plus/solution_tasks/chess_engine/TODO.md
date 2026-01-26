@@ -2,61 +2,61 @@
 
 ## ✅ Завершено
 
-- [x] Project structure and directory layout
-- [x] CMakeLists.txt configuration
-- [x] Basic header files structure
-- [x] Piece class definition and implementation
-- [x] Board class definition and basic implementation
-- [x] Move struct and MoveGenerator class definition
-- [x] GameRules class definition
-- [x] Minimax algorithm class definition
-- [x] PositionEvaluator class definition
-- [x] ConsoleUI class definition
-- [x] Main.cpp entry point
-- [x] Build scripts (Windows/Linux)
-- [x] LICENSE file
-- [x] Improved README.md formatting
+- [x] Структура проекта и организация директорий
+- [x] Конфигурация CMakeLists.txt
+- [x] Базовая структура заголовочных файлов
+- [x] Определение и реализация класса Piece
+- [x] Определение класса Board и базовая реализация
+- [x] Структура Move и определение класса MoveGenerator
+- [x] Определение класса GameRules
+- [x] Определение класса Minimax
+- [x] Определение класса PositionEvaluator
+- [x] Определение класса ConsoleUI
+- [x] Точка входа Main.cpp
+- [x] Скрипты сборки (Windows/Linux)
+- [x] Файл LICENSE
+- [x] Улучшенное форматирование README.md
 
 ## 🔧 В процессе
 
-- [x] MoveGenerator implementation (basic)
-- [x] GameRules implementation (basic)
-- [x] ConsoleUI implementation (basic)
-- [x] Test file creation
-- [x] Comprehensive test creation
-- [x] Documentation in Russian (notes folder)
-- [x] Russian TODO list
-- [ ] GameRules implementation
-- [ ] PositionEvaluator implementation
-- [ ] Minimax algorithm implementation
-- [ ] ConsoleUI implementation
+- [x] Реализация MoveGenerator (базовая)
+- [x] Реализация GameRules (базовая)
+- [x] Реализация ConsoleUI (базовая)
+- [x] Создание тестового файла
+- [x] Создание комплексного теста
+- [x] Документация на русском языке (папка notes)
+- [x] Список задач на русском языке
+- [ ] Реализация GameRules
+- [ ] Реализация PositionEvaluator
+- [ ] Реализация алгоритма Minimax
+- [ ] Реализация ConsoleUI
 
 ## 📋 Ожидают реализации
 
-- [x] Move parsing and validation logic (частично)
-- [ ] Castling implementation
-- [ ] En passant implementation
-- [x] Pawn promotion implementation (частично)
-- [ ] Check/checkmate/stalemate detection
-- [ ] FEN notation support
-- [ ] Algebraic notation parsing (частично)
-- [ ] Move history and undo functionality
-- [ ] Time control features
-- [x] Unit tests (test_chess.cpp и comprehensive_test.cpp созданы)
-- [ ] Performance optimization
-- [x] Documentation updates (тестирование.md добавлен)
+- [x] Логика разбора и валидации ходов (частично)
+- [ ] Реализация рокировки
+- [ ] Реализация взятия на проходе
+- [x] Реализация превращения пешек (частично)
+- [ ] Обнаружение шаха/мата/патовой ситуации
+- [ ] Поддержка нотации FEN
+- [ ] Разбор алгебраической нотации (частично)
+- [ ] История ходов и функция отмены
+- [ ] Функции контроля времени
+- [x] Модульные тесты (созданы test_chess.cpp и comprehensive_test.cpp)
+- [ ] Оптимизация производительности
+- [x] Обновления документации (добавлен testing_functionality.md)
 
 ## Будущие улучшения
 
-- [ ] Graphical interface (SFML/SDL)
-- [ ] Network play support
-- [ ] PGN file export/import
-- [ ] Chess engine protocol (UCI/XBoard)
-- [ ] Multi-threading support
-- [ ] Machine learning integration
-- [ ] Mobile platform ports
+- [ ] Графический интерфейс (SFML/SDL)
+- [ ] Поддержка сетевой игры
+- [ ] Импорт/экспорт файлов PGN
+- [ ] Протокол шахматного движка (UCI/XBoard)
+- [ ] Поддержка многопоточности
+- [ ] Интеграция машинного обучения
+- [ ] Порты для мобильных платформ
 
 ## Известные проблемы
 
-- [ ] Linter warnings about missing includes (will resolve when files are compiled)
-- [ ] Cross-platform compatibility testing needed
+- [ ] Предупреждения линтера о недостающих заголовках (будут решены при компиляции файлов)
+- [ ] Необходимо тестирование кроссплатформенной совместимости

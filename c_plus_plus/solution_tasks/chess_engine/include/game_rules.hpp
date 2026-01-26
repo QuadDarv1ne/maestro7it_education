@@ -5,44 +5,50 @@
 #include "move_generator.hpp"
 #include <string>
 
+/**
+ * @brief Класс, реализующий правила игры в шахматы
+ * 
+ * Отвечает за проверку корректности ходов, определение состояния игры,
+ * выполнение ходов и проверку условий окончания игры
+ */
 class GameRules {
 private:
-    Board& board_;
+    Board& board_;  ///< Ссылка на текущую игровую доску
     
 public:
     GameRules(Board& board);
     
-    // Move validation
-    bool isValidMove(const Move& move) const;
-    bool isValidMove(const std::string& algebraicNotation) const;
+    // Проверка ходов
+    bool isValidMove(const Move& move) const;  ///< Проверяет корректность хода
+    bool isValidMove(const std::string& algebraicNotation) const;  ///< Проверяет корректность хода в алгебраической нотации
     
-    // Game state checks
-    bool isCheck(Color color) const;
-    bool isCheckmate(Color color) const;
-    bool isStalemate(Color color) const;
-    bool isDrawByRepetition() const;
-    bool isDrawByFiftyMoveRule() const;
-    bool isInsufficientMaterial() const;
+    // Проверка состояния игры
+    bool isCheck(Color color) const;        ///< Проверяет, находится ли король под шахом
+    bool isCheckmate(Color color) const;    ///< Проверяет, является ли позиция матом
+    bool isStalemate(Color color) const;    ///< Проверяет, является ли позиция патом
+    bool isDrawByRepetition() const;        ///< Проверяет ничью по троекратному повторению
+    bool isDrawByFiftyMoveRule() const;     ///< Проверяет ничью по правилу 50 ходов
+    bool isInsufficientMaterial() const;    ///< Проверяет ничью из-за недостатка материала
     
-    // Move execution
-    bool makeMove(const Move& move);
-    bool makeMove(const std::string& algebraicNotation);
+    // Выполнение ходов
+    bool makeMove(const Move& move);  ///< Выполняет ход, если он корректен
+    bool makeMove(const std::string& algebraicNotation);  ///< Выполняет ход из алгебраической нотации
     
-    // Game termination
-    bool isGameOver() const;
-    std::string getGameResult() const;
+    // Завершение игры
+    bool isGameOver() const;           ///< Проверяет, завершена ли игра
+    std::string getGameResult() const; ///< Возвращает результат игры в виде строки
     
-    // Utility methods
-    Color getWinner() const;
-    bool isDraw() const;
+    // Вспомогательные методы
+    Color getWinner() const;  ///< Возвращает победителя (если игра завершена)
+    bool isDraw() const;      ///< Проверяет, завершилась ли игра ничьей
     
 private:
-    // Helper methods
-    bool wouldLeaveKingInCheck(const Move& move) const;
-    void updateGameStateAfterMove(const Move& move);
-    bool hasLegalMoves(Color color) const;
-    int countPieces(Color color) const;
-    bool onlyKingsRemain() const;
+    // Вспомогательные методы
+    bool wouldLeaveKingInCheck(const Move& move) const;  ///< Проверяет, оставляет ли ход короля под шахом
+    void updateGameStateAfterMove(const Move& move);     ///< Обновляет состояние игры после хода
+    bool hasLegalMoves(Color color) const;               ///< Проверяет наличие легальных ходов
+    int countPieces(Color color) const;                  ///< Подсчитывает количество фигур
+    bool onlyKingsRemain() const;                        ///< Проверяет, остались ли на доске только короли
 };
 
 #endif // GAME_RULES_HPP

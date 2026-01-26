@@ -7,43 +7,49 @@
 #include <limits>
 #include <chrono>
 
+/**
+ * @brief Класс, реализующий алгоритм минимакс с альфа-бета отсечением
+ * 
+ * Использует алгоритм минимакс с альфа-бета отсечением для поиска оптимальных ходов в шахматах,
+ * с поддержкой ограничения по времени и улучшенным упорядочиванием ходов
+ */
 class Minimax {
 private:
-    Board& board_;
-    PositionEvaluator evaluator_;
-    int maxDepth_;
-    std::chrono::milliseconds timeLimit_;
+    Board& board_;                    ///< Ссылка на текущую игровую доску
+    PositionEvaluator evaluator_;     ///< Оценщик позиции
+    int maxDepth_;                    ///< Максимальная глубина поиска
+    std::chrono::milliseconds timeLimit_;  ///< Ограничение времени на поиск
     
 public:
     Minimax(Board& board, int maxDepth = 4);
     
-    // Main search methods
-    Move findBestMove(Color color);
-    Move findBestMoveWithTimeLimit(Color color, std::chrono::milliseconds timeLimit);
+    // Основные методы поиска
+    Move findBestMove(Color color);                                                    ///< Находит лучший ход для указанного цвета
+    Move findBestMoveWithTimeLimit(Color color, std::chrono::milliseconds timeLimit);  ///< Находит лучший ход с ограничением времени
     
-    // Search with alpha-beta pruning
-    int minimax(int depth, int alpha, int beta, Color maximizingPlayer);
+    // Поиск с альфа-бета отсечением
+    int minimax(int depth, int alpha, int beta, Color maximizingPlayer);  ///< Алгоритм минимакс с альфа-бета отсечением
     int minimaxWithTimeLimit(int depth, int alpha, int beta, Color maximizingPlayer, 
-                            std::chrono::steady_clock::time_point startTime);
+                            std::chrono::steady_clock::time_start startTime);  ///< Минимакс с контролем времени
     
-    // Settings
-    void setMaxDepth(int depth);
-    void setTimeLimit(std::chrono::milliseconds limit);
-    int getMaxDepth() const;
+    // Настройки
+    void setMaxDepth(int depth);                         ///< Устанавливает максимальную глубину поиска
+    void setTimeLimit(std::chrono::milliseconds limit);  ///< Устанавливает ограничение времени
+    int getMaxDepth() const;                             ///< Возвращает текущую максимальную глубину поиска
     
-    // Move ordering for better pruning
-    std::vector<Move> orderMoves(const std::vector<Move>& moves) const;
+    // Упорядочивание ходов для лучшего отсечения
+    std::vector<Move> orderMoves(const std::vector<Move>& moves) const;  ///< Упорядочивает ходы для повышения эффективности отсечения
     
 private:
-    // Helper methods
-    int evaluatePosition() const;
-    bool isTimeUp(std::chrono::steady_clock::time_point startTime) const;
-    int quiescenceSearch(int alpha, int beta, int depth);
+    // Вспомогательные методы
+    int evaluatePosition() const;                                          ///< Оценивает текущую позицию на доске
+    bool isTimeUp(std::chrono::steady_clock::time_start startTime) const;  ///< Проверяет, истекло ли отведенное время
+    int quiescenceSearch(int alpha, int beta, int depth);                  ///< Выполняет поиск в "тихих" позициях для избежания горизонтального эффекта
 };
 
-// Constants for search
-const int INF = std::numeric_limits<int>::max();
-const int MATE_SCORE = 100000;
-const int MAX_QUIESCENCE_DEPTH = 4;
+// Константы для поиска
+const int INF = std::numeric_limits<int>::max();  ///< Значение бесконечности для алгоритма
+const int MATE_SCORE = 100000;                    ///< Оценка мата
+const int MAX_QUIESCENCE_DEPTH = 4;               ///< Максимальная глубина для поиска в "тихих" позициях
 
 #endif // MINIMAX_HPP

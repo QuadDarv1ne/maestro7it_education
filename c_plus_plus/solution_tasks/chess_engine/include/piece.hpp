@@ -4,55 +4,67 @@
 #include <iostream>
 #include <string>
 
+/**
+ * Типы шахматных фигур
+ */
 enum class PieceType {
-    EMPTY = 0,
-    PAWN = 1,
-    KNIGHT = 2,
-    BISHOP = 3,
-    ROOK = 4,
-    QUEEN = 5,
-    KING = 6
+    EMPTY = 0,   ///< Пустая клетка
+    PAWN = 1,    ///< Пешка
+    KNIGHT = 2,  ///< Конь
+    BISHOP = 3,  ///< Слон
+    ROOK = 4,    ///< Ладья
+    QUEEN = 5,   ///< Ферзь
+    KING = 6     ///< Король
 };
 
+/**
+ * Цвет фигур
+ */
 enum class Color {
-    WHITE = 0,
-    BLACK = 1
+    WHITE = 0,  ///< Белые
+    BLACK = 1   ///< Черные
 };
 
+/**
+ * @brief Класс, представляющий шахматную фигуру
+ * 
+ * Хранит тип и цвет фигуры, предоставляет методы для получения
+ * символа, названия и стоимости фигуры
+ */
 class Piece {
 private:
-    PieceType type_;
-    Color color_;
+    PieceType type_;  ///< Тип фигуры
+    Color color_;     ///< Цвет фигуры
 
 public:
-    // Constructors
+    // Конструкторы
     Piece();
     Piece(PieceType type, Color color);
     
-    // Getters
-    PieceType getType() const;
-    Color getColor() const;
-    bool isEmpty() const;
+    // Геттеры
+    PieceType getType() const;  ///< Возвращает тип фигуры
+    Color getColor() const;     ///< Возвращает цвет фигуры
+    bool isEmpty() const;       ///< Проверяет, является ли клетка пустой
     
-    // Setters
-    void setType(PieceType type);
-    void setColor(Color color);
+    // Сеттеры
+    void setType(PieceType type);  ///< Устанавливает тип фигуры
+    void setColor(Color color);    ///< Устанавливает цвет фигуры
     
-    // Utility methods
-    char getSymbol() const;
-    std::string getName() const;
-    int getValue() const;
+    // Вспомогательные методы
+    char getSymbol() const;        ///< Возвращает символ фигуры (например, 'K' для короля)
+    std::string getName() const;   ///< Возвращает полное название фигуры на русском
+    int getValue() const;          ///< Возвращает оценочную стоимость фигуры
     
-    // Operators
-    bool operator==(const Piece& other) const;
-    bool operator!=(const Piece& other) const;
+    // Операторы
+    bool operator==(const Piece& other) const;  ///< Сравнение двух фигур на равенство
+    bool operator!=(const Piece& other) const;  ///< Сравнение двух фигур на неравенство
     
-    // Static utility methods
-    static Piece createPiece(char symbol);
-    static Color oppositeColor(Color color);
+    // Статические методы
+    static Piece createPiece(char symbol);              ///< Создает фигуру по символу
+    static Color oppositeColor(Color color);           ///< Возвращает противоположный цвет
 };
 
-// Helper functions
-std::ostream& operator<<(std::ostream& os, const Piece& piece);
+// Вспомогательные функции
+std::ostream& operator<<(std::ostream& os, const Piece& piece);  ///< Вывод фигуры в поток
 
 #endif // PIECE_HPP
