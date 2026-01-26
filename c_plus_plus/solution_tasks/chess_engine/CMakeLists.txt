@@ -38,7 +38,8 @@ set(HEADERS
 
 # Create executables
 add_executable(chess_engine ${SOURCES} ${HEADERS})
-add_executable(test_chess src/test_chess.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp ${HEADERS})
+add_executable(test_chess src/test_chess.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp src/ui/console_ui.cpp ${HEADERS})
+add_executable(comprehensive_test src/comprehensive_test.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
 
 # Include directories
 target_include_directories(chess_engine PRIVATE include)

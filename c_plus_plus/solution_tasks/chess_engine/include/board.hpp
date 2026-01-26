@@ -68,7 +68,7 @@ public:
     bool isStalemate(Color color) const;
     bool isGameOver() const;
     
-private:
+public:
     // Helper methods
     void initializeEmptyBoard();
     bool isInBounds(Square square) const;
