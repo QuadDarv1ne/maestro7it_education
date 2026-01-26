@@ -2,12 +2,31 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <locale>
+#include <codecvt>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+// Function to set console encoding
+void setConsoleEncoding() {
+#ifdef _WIN32
+    // Set console to UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+}
 
 ConsoleUI::ConsoleUI() : board_(), rules_(board_), aiEngine_(board_, 3), 
                          gameMode_(GameMode::HUMAN_VS_HUMAN),
                          whitePlayer_(PlayerType::HUMAN),
                          blackPlayer_(PlayerType::HUMAN),
-                         aiDifficulty_(3) {}
+                         aiDifficulty_(3) {
+    setConsoleEncoding();
+}
+
+// Rest of the implementation remains the same
 
 void ConsoleUI::run() {
     showMainMenu();

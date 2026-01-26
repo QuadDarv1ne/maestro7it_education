@@ -2,11 +2,30 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <locale>
+#include <codecvt>
+#include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+// Function to set console encoding
+void setupConsoleEncoding() {
+#ifdef _WIN32
+    // Set console to UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+}
 
 int main() {
     try {
+        // Setup console encoding
+        setupConsoleEncoding();
+        
         // Seed random number generator
-        std::srand(static_cast<unsigned int>(std::time(nullptr)));
+        std::srand(static_cast<unsigned int>(std::time(nullptr())));
         
         std::cout << "========================================\n";
         std::cout << "           CHESS ENGINE v1.0            \n";

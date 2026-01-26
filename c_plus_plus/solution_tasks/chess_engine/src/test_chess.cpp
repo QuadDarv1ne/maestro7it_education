@@ -1,5 +1,5 @@
-#include "board.hpp"
-#include "move_generator.hpp"
+#include "../include/board.hpp"
+#include "../include/move_generator.hpp"
 #include <iostream>
 
 int main() {

@@ -10,6 +10,13 @@ if(MSVC)
     add_compile_options(/W4)
 else()
     add_compile_options(-Wall -Wextra -pedantic)
+    # Add UTF-8 encoding support
+    add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
+endif()
+
+# Add Windows-specific definitions for encoding
+if(WIN32)
+    add_definitions(-DUNICODE -D_UNICODE)
 endif()
 
 # Source files
@@ -37,6 +44,7 @@ set(HEADERS
 
 # Create executables
 add_executable(chess_engine ${SOURCES} ${HEADERS})
+add_executable(encoding_test src/encoding_test.cpp)
 add_executable(test_chess src/test_chess.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp src/ui/console_ui.cpp ${HEADERS})
 add_executable(comprehensive_test src/comprehensive_test.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
 
