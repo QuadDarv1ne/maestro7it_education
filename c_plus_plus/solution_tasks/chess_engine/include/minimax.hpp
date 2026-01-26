@@ -6,6 +6,9 @@
 #include "position_evaluator.hpp"
 #include <limits>
 #include <chrono>
+#include <unordered_map>
+#include <cstdint>
+#include <vector>
 
 /**
  * @brief Класс, реализующий алгоритм минимакс с альфа-бета отсечением
@@ -19,6 +22,21 @@ private:
     PositionEvaluator evaluator_;     ///< Оценщик позиции
     int maxDepth_;                    ///< Максимальная глубина поиска
     std::chrono::milliseconds timeLimit_;  ///< Ограничение времени на поиск
+    
+    // Transposition table for caching evaluations
+    struct TTEntry {
+        uint64_t hash;
+        int depth;
+        int score;
+        Move bestMove;
+        char flag; // 'EXACT', 'LOWER', 'UPPER'
+        
+        TTEntry() : hash(0), depth(0), score(0), flag(0) {}
+        TTEntry(uint64_t h, int d, int s, Move bm, char f) : hash(h), depth(d), score(s), bestMove(bm), flag(f) {}
+    };
+    
+    static const size_t HASH_TABLE_SIZE = 100000;  // Size of the hash table
+    std::vector<TTEntry> transpositionTable;
     
 public:
     Minimax(Board& board, int maxDepth = 4);
@@ -45,6 +63,13 @@ private:
     int evaluatePosition() const;                                          ///< Оценивает текущую позицию на доске
     bool isTimeUp(std::chrono::steady_clock::time_start startTime) const;  ///< Проверяет, истекло ли отведенное время
     int quiescenceSearch(int alpha, int beta, int depth);                  ///< Выполняет поиск в "тихих" позициях для избежания горизонтального эффекта
+    
+    // Методы для оптимизации
+    uint64_t hashPosition() const;                                         ///< Генерирует хеш позиции для транспозиционной таблицы
+    void storeInTT(uint64_t hash, int depth, int score, Move bestMove, char flag);  ///< Сохраняет в транспозиционную таблицу
+    TTEntry* probeTT(uint64_t hash);                                       ///< Ищет запись в транспозиционной таблице
+    int minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlayer);     ///< Минимакс с использованием транспозиционной таблицы
+    int getMovePriority(const Move& move) const;                           ///< Определяет приоритет хода для упорядочивания
 };
 
 // Константы для поиска
