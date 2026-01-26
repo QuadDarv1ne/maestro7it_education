@@ -15,13 +15,14 @@ endif()
 # Source files
 set(SOURCES
     src/main.cpp
+    src/test_chess.cpp
     src/board/board.cpp
     src/board/piece.cpp
     src/logic/move_generator.cpp
-    src/logic/game_rules.cpp
-    src/engine/minimax.cpp
-    src/engine/position_evaluator.cpp
-    src/ui/console_ui.cpp
+    # src/logic/game_rules.cpp
+    # src/engine/minimax.cpp
+    # src/engine/position_evaluator.cpp
+    # src/ui/console_ui.cpp
 )
 
 # Header files
@@ -35,8 +36,9 @@ set(HEADERS
     include/console_ui.hpp
 )
 
-# Create executable
+# Create executables
 add_executable(chess_engine ${SOURCES} ${HEADERS})
+add_executable(test_chess src/test_chess.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp ${HEADERS})
 
 # Include directories
 target_include_directories(chess_engine PRIVATE include)

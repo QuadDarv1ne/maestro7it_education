@@ -8,7 +8,7 @@
 struct Move {
     Square from;
     Square to;
-    PieceType promotion;  // For pawn promotion
+    PieceType promotion;  // Для pawn promotion
     bool isCapture;
     bool isCheck;
     
@@ -20,6 +20,16 @@ struct Move {
                                    isCapture(false), isCheck(false) {}
     
     std::string toString() const;
+};
+
+// Реализация метода toString для Move
+inline std::string Move::toString() const {
+    if (from == INVALID_SQUARE || to == INVALID_SQUARE) {
+        return "Invalid move";
+    }
+    
+    // TODO: реализовать преобразование в алгебраическую нотацию
+    return "Move from " + std::to_string(from) + " to " + std::to_string(to);
 };
 
 class MoveGenerator {

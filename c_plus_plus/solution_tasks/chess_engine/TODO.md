@@ -1,6 +1,7 @@
-# Chess Engine - Implementation TODO List
+# Шахматный движок - Список задач для реализации
 
-## ✅ Completed
+## ✅ Завершено
+
 - [x] Project structure and directory layout
 - [x] CMakeLists.txt configuration
 - [x] Basic header files structure
@@ -16,14 +17,16 @@
 - [x] LICENSE file
 - [x] Improved README.md formatting
 
-## 🔧 In Progress
+## 🔧 В процессе
+
 - [ ] MoveGenerator implementation
 - [ ] GameRules implementation
 - [ ] PositionEvaluator implementation
 - [ ] Minimax algorithm implementation
 - [ ] ConsoleUI implementation
 
-## 📋 Pending Implementation
+## 📋 Ожидают реализации
+
 - [ ] Move parsing and validation logic
 - [ ] Castling implementation
 - [ ] En passant implementation
@@ -39,7 +42,8 @@
 - [ ] Performance optimization
 - [ ] Documentation updates
 
-## 🎯 Future Enhancements
+## Будущие улучшения
+
 - [ ] Graphical interface (SFML/SDL)
 - [ ] Network play support
 - [ ] PGN file export/import
@@ -48,6 +52,7 @@
 - [ ] Machine learning integration
 - [ ] Mobile platform ports
 
-## 🐛 Known Issues
+## Известные проблемы
+
 - [ ] Linter warnings about missing includes (will resolve when files are compiled)
 - [ ] Cross-platform compatibility testing needed
