@@ -14,8 +14,8 @@
 void setupConsoleEncoding() {
 #ifdef _WIN32
     // Set console to UTF-8
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
 #endif
 }
 
@@ -25,7 +25,7 @@ int main() {
         setupConsoleEncoding();
         
         // Seed random number generator
-        std::srand(static_cast<unsigned int>(std::time(nullptr())));
+        std::srand(static_cast<unsigned int>(std::time(nullptr)));
         
         std::cout << "========================================\n";
         std::cout << "           CHESS ENGINE v1.0            \n";
