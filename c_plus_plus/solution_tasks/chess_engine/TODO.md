@@ -19,7 +19,10 @@
 
 ## 🔧 В процессе
 
-- [ ] MoveGenerator implementation
+- [x] MoveGenerator implementation (basic)
+- [x] Test file creation
+- [x] Documentation in Russian (notes folder)
+- [x] Russian TODO list
 - [ ] GameRules implementation
 - [ ] PositionEvaluator implementation
 - [ ] Minimax algorithm implementation
@@ -27,10 +30,10 @@
 
 ## 📋 Ожидают реализации
 
-- [ ] Move parsing and validation logic
+- [x] Move parsing and validation logic (частично)
 - [ ] Castling implementation
 - [ ] En passant implementation
-- [ ] Pawn promotion implementation
+- [ ] Pawn promotion implementation (частично)
 - [ ] Check/checkmate/stalemate detection
 - [ ] FEN notation support
 - [ ] Algebraic notation parsing
@@ -38,9 +41,9 @@
 - [ ] Time control features
 - [ ] Opening book integration
 - [ ] Endgame tablebase support
-- [ ] Unit tests
+- [x] Unit tests (test_chess.cpp создан)
 - [ ] Performance optimization
-- [ ] Documentation updates
+- [x] Documentation updates (тестирование.md добавлен)
 
 ## Будущие улучшения
 
