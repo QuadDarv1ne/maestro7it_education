@@ -19,10 +19,10 @@ set(SOURCES
     src/board/board.cpp
     src/board/piece.cpp
     src/logic/move_generator.cpp
-    # src/logic/game_rules.cpp
+    src/logic/game_rules.cpp
     # src/engine/minimax.cpp
     # src/engine/position_evaluator.cpp
-    # src/ui/console_ui.cpp
+    src/ui/console_ui.cpp
 )
 
 # Header files
