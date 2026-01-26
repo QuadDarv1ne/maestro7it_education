@@ -54,6 +54,15 @@ private:
     bool isPassedPawn(Square square) const;     ///< Проверяет, является ли пешка проходной
     bool isIsolatedPawn(Square square) const;   ///< Проверяет, является ли пешка изолированной
     int flipSquare(Square square) const;        ///< Переворачивает квадрат для черных фигур
+    
+    // Новые вспомогательные методы
+    int evaluateKingSafety(Square kingSquare, Color color) const;  ///< Оценивает безопасность короля
+    int evaluatePawnStructure(Color color) const;                  ///< Оценивает структуру пешек
+    int countDefenders(Square square, Color color) const;          ///< Подсчитывает защитников
+    int countAttackers(Square square, Color color) const;          ///< Подсчитывает атакующих
+    int getDistanceToCenter(Square square) const;                  ///< Расстояние до центра
+    bool isConnectedPawn(Square square) const;                     ///< Проверяет связанные пешки
+    bool isProtectedPawn(Square square) const;                     ///< Проверяет защищенные пешки
 };
 
 #endif // POSITION_EVALUATOR_HPP

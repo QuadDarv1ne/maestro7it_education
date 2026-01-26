@@ -50,12 +50,12 @@ std::string Piece::getName() const {
 int Piece::getValue() const {
     switch (type_) {
         case PieceType::EMPTY: return 0;
-        case PieceType::PAWN: return 1;
-        case PieceType::KNIGHT: return 3;
-        case PieceType::BISHOP: return 3;
-        case PieceType::ROOK: return 5;
-        case PieceType::QUEEN: return 9;
-        case PieceType::KING: return 1000; // King has infinite value (game ender)
+        case PieceType::PAWN: return 100;      // 1.0 pawns
+        case PieceType::KNIGHT: return 320;    // 3.2 pawns
+        case PieceType::BISHOP: return 330;    // 3.3 pawns
+        case PieceType::ROOK: return 500;      // 5.0 pawns
+        case PieceType::QUEEN: return 900;     // 9.0 pawns
+        case PieceType::KING: return 20000;    // King has infinite value (game ender)
         default: return 0;
     }
 }

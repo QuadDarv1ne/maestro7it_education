@@ -108,7 +108,7 @@ int PositionEvaluator::materialEvaluation() const {
     for (int square = 0; square < 64; square++) {
         Piece piece = board_.getPiece(square);
         if (!piece.isEmpty()) {
-            int value = piece.getValue() * 100; // Масштабируем для согласования с другими оценками
+            int value = piece.getValue(); // Уже масштабировано в Piece::getValue()
             
             // Учитываем цвет
             if (piece.getColor() == Color::WHITE) {
@@ -143,23 +143,71 @@ int PositionEvaluator::positionalEvaluation() const {
 
 int PositionEvaluator::mobilityEvaluation() const {
     // Оцениваем количество доступных ходов для каждой стороны
-    MoveGenerator whiteGen(board_);
-    MoveGenerator blackGen(board_);
+    int whiteMobility = 0;
+    int blackMobility = 0;
     
-    // Устанавливаем временно цвет для генераторов
-    // Это упрощенная реализация - в реальности потребуется более точный подход
-    // TODO: реализовать точную оценку мобильности
-    return 0;
+    // Создаем временные доски для оценки мобильности
+    Board tempBoard = board_;
+    
+    // Оцениваем мобильность белых
+    tempBoard.setCurrentPlayer(Color::WHITE);
+    MoveGenerator whiteGen(tempBoard);
+    auto whiteMoves = whiteGen.generateLegalMoves();
+    whiteMobility = static_cast<int>(whiteMoves.size());
+    
+    // Оцениваем мобильность черных
+    tempBoard.setCurrentPlayer(Color::BLACK);
+    MoveGenerator blackGen(tempBoard);
+    auto blackMoves = blackGen.generateLegalMoves();
+    blackMobility = static_cast<int>(blackMoves.size());
+    
+    // Мобильность стоит 10 пунктов за каждый возможный ход
+    return (whiteMobility - blackMobility) * 10;
 }
 
 int PositionEvaluator::kingSafetyEvaluation() const {
-    // TODO: реализовать оценку безопасности короля
-    return 0;
+    int score = 0;
+    
+    // Найдем позиции королей
+    Square whiteKingPos = -1;
+    Square blackKingPos = -1;
+    
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() == PieceType::KING) {
+            if (piece.getColor() == Color::WHITE) {
+                whiteKingPos = square;
+            } else {
+                blackKingPos = square;
+            }
+        }
+    }
+    
+    // Оцениваем безопасность белого короля
+    if (whiteKingPos != -1) {
+        int whiteSafety = evaluateKingSafety(whiteKingPos, Color::WHITE);
+        score += whiteSafety;
+    }
+    
+    // Оцениваем безопасность черного короля
+    if (blackKingPos != -1) {
+        int blackSafety = evaluateKingSafety(blackKingPos, Color::BLACK);
+        score -= blackSafety; // Для черных со знаком минус
+    }
+    
+    return score;
 }
 
 int PositionEvaluator::pawnStructureEvaluation() const {
-    // TODO: реализовать оценку структуры пешек
-    return 0;
+    int score = 0;
+    
+    // Оцениваем пешечную структуру для белых
+    score += evaluatePawnStructure(Color::WHITE);
+    
+    // Оцениваем пешечную структуру для черных (со знаком минус)
+    score -= evaluatePawnStructure(Color::BLACK);
+    
+    return score;
 }
 
 bool PositionEvaluator::isEndGame() const {
@@ -274,5 +322,102 @@ bool PositionEvaluator::isPassedPawn(Square square) const {
 
 bool PositionEvaluator::isIsolatedPawn(Square square) const {
     // TODO: реализовать проверку изолированной пешки
+    return false;
+}
+
+// Вспомогательные функции для оценки безопасности короля
+int PositionEvaluator::evaluateKingSafety(Square kingSquare, Color color) const {
+    int safetyScore = 0;
+    
+    // Проверяем, сколько фигур защищает короля
+    int defenders = countDefenders(kingSquare, color);
+    safetyScore += defenders * 15; // 15 пунктов за каждого защитника
+    
+    // Проверяем, есть ли открытые линии к королю
+    int attackers = countAttackers(kingSquare, color);
+    safetyScore -= attackers * 25; // 25 пунктов за каждого атакующего
+    
+    // Бонус за центральные позиции в эндшпиле
+    if (isEndGame()) {
+        int centerDistance = getDistanceToCenter(kingSquare);
+        safetyScore -= centerDistance * 5; // Чем ближе к центру, тем лучше
+    }
+    
+    return safetyScore;
+}
+
+// Вспомогательные функции для оценки пешечной структуры
+int PositionEvaluator::evaluatePawnStructure(Color color) const {
+    int structureScore = 0;
+    
+    // Ищем пешки нужного цвета
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() == PieceType::PAWN && piece.getColor() == color) {
+            // Бонус за связанные пешки
+            if (isConnectedPawn(square)) {
+                structureScore += 10;
+            }
+            
+            // Штраф за изолированные пешки
+            if (isIsolatedPawn(square)) {
+                structureScore -= 15;
+            }
+            
+            // Бонус за проходные пешки
+            if (isPassedPawn(square)) {
+                structureScore += 25;
+            }
+            
+            // Бонус за защищенные пешки
+            if (isProtectedPawn(square)) {
+                structureScore += 5;
+            }
+        }
+    }
+    
+    return structureScore;
+}
+
+// Вспомогательные функции
+int PositionEvaluator::countDefenders(Square square, Color color) const {
+    // TODO: реализовать подсчет защитников
+    return 0;
+}
+
+int PositionEvaluator::countAttackers(Square square, Color color) const {
+    // TODO: реализовать подсчет атакующих фигур
+    return 0;
+}
+
+int PositionEvaluator::getDistanceToCenter(Square square) const {
+    int file = board_.file(square);
+    int rank = board_.rank(square);
+    
+    // Расстояние до центра (e4, d4, e5, d5)
+    int centerFiles[] = {3, 4};
+    int centerRanks[] = {3, 4};
+    
+    int minDistance = 14; // Максимальное расстояние
+    
+    for (int cf : centerFiles) {
+        for (int cr : centerRanks) {
+            int distance = abs(file - cf) + abs(rank - cr);
+            if (distance < minDistance) {
+                minDistance = distance;
+            }
+        }
+    }
+    
+    return minDistance;
+}
+
+bool PositionEvaluator::isConnectedPawn(Square square) const {
+    // TODO: реализовать проверку связанных пешек
+    return false;
+}
+
+bool PositionEvaluator::isProtectedPawn(Square square) const {
+    // TODO: реализовать проверку защищенных пешек
     return false;
 }
