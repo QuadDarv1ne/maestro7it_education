@@ -12,26 +12,36 @@ Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board),
 }
 
 Move Minimax::findBestMove(Color color) {
-    std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
+    Move bestMove;
+    int bestValue;
     
-    if (moves.empty()) {
-        return Move(); // Нет доступных ходов
-    }
-    
-    Move bestMove = moves[0];
-    int bestValue = (color == Color::WHITE) ? INT_MIN : INT_MAX;
-    
-    for (const Move& move : moves) {
-        // Выполнить ход на временной доске
-        // TODO: реализовать выполнение хода и откат
+    // Итеративное углубление: начинаем с малой глубины и постепенно увеличиваем
+    for (int depth = 1; depth <= maxDepth_; depth++) {
+        std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
         
-        int value = minimax(maxDepth_, INT_MIN, INT_MAX, color);
-        
-        if ((color == Color::WHITE && value > bestValue) || 
-            (color == Color::BLACK && value < bestValue)) {
-            bestValue = value;
-            bestMove = move;
+        if (moves.empty()) {
+            return Move(); // Нет доступных ходов
         }
+        
+        Move currentBestMove = moves[0];
+        int currentValue = (color == Color::WHITE) ? INT_MIN : INT_MAX;
+        
+        for (const Move& move : moves) {
+            // Выполнить ход на временной доске
+            // TODO: реализовать выполнение хода и откат
+            
+            int value = minimax(depth, INT_MIN, INT_MAX, color);
+            
+            if ((color == Color::WHITE && value > currentValue) || 
+                (color == Color::BLACK && value < currentValue)) {
+                currentValue = value;
+                currentBestMove = move;
+            }
+        }
+        
+        // Обновляем лучший ход и значение
+        bestMove = currentBestMove;
+        bestValue = currentValue;
     }
     
     return bestMove;
