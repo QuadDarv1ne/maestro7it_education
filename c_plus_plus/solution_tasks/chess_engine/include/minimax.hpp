@@ -70,6 +70,7 @@ private:
     TTEntry* probeTT(uint64_t hash);                                       ///< Ищет запись в транспозиционной таблице
     int minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlayer);     ///< Минимакс с использованием транспозиционной таблицы
     int getMovePriority(const Move& move) const;                           ///< Определяет приоритет хода для упорядочивания
+    bool isInCheck(Color color) const;                                     ///< Проверяет, находится ли король под шахом
 };
 
 // Константы для поиска

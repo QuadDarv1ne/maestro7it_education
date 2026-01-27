@@ -217,6 +217,22 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
         return score;
     }
     
+    // Null-move pruning
+    if (depth >= 3 && !isInCheck(maximizingPlayer)) {
+        // Make null move (pass the turn)
+        Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
+        board_.setCurrentPlayer(opponent);
+        
+        int nullScore = -minimaxWithTT(depth - 1 - 2, -beta, -beta + 1, opponent);
+        
+        // Restore player
+        board_.setCurrentPlayer(maximizingPlayer);
+        
+        if (nullScore >= beta) {
+            return beta; // Prune the subtree
+        }
+    }
+    
     std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
     
     int bestScore;
@@ -225,9 +241,11 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
     
     if (maximizingPlayer == Color::WHITE) {
         int maxValue = INT_MIN;
-        for (const Move& move : moves) {
+        for (size_t i = 0; i < moves.size(); i++) {
+            const Move& move = moves[i];
             // TODO: выполнить ход
-            int eval = minimaxWithTT(depth - 1, alpha, beta, Color::BLACK);
+            int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Late move reduction
+            int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::BLACK);
             // TODO: откатить ход
             
             if (eval > maxValue) {
@@ -244,9 +262,11 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
         bestScore = maxValue;
     } else {
         int minValue = INT_MAX;
-        for (const Move& move : moves) {
+        for (size_t i = 0; i < moves.size(); i++) {
+            const Move& move = moves[i];
             // TODO: выполнить ход
-            int eval = minimaxWithTT(depth - 1, alpha, beta, Color::WHITE);
+            int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Late move reduction
+            int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::WHITE);
             // TODO: откатить ход
             
             if (eval < minValue) {
