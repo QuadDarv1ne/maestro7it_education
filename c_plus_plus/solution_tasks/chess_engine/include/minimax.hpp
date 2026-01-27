@@ -43,6 +43,10 @@ private:
     static const int MAX_PLY = 100;
     std::vector<std::vector<Move>> killerMoves;
     
+    // History heuristic for move ordering
+    static const int HISTORY_SIZE = 64 * 64; // From-To square combinations
+    std::vector<int> historyTable;
+    
 public:
     Minimax(Board& board, int maxDepth = 4);
     
@@ -79,6 +83,9 @@ private:
     void addKillerMove(const Move& move, int ply);                         ///< Добавляет killer move
     bool isKillerMove(const Move& move, int ply) const;                    ///< Проверяет, является ли ход killer move
     int aspirationSearch(int depth, int previousScore, Color maximizingPlayer); ///< Поиск с aspiration windows
+    void updateHistory(const Move& move, int depth);                           ///< Обновляет историю ходов
+    int getHistoryScore(const Move& move) const;                               ///< Возвращает счет истории для хода
+    bool isFutile(int depth, int alpha, int staticEval) const;                 ///< Проверяет, стоит ли применять futility pruning
 };
 
 // Константы для поиска

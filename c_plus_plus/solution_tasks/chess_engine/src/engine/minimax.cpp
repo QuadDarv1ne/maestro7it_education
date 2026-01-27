@@ -4,7 +4,7 @@
 #include <random>
 #include <functional>
 
-Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)) {
+Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)), historyTable(HISTORY_SIZE, 0) {
     // Initialize the transposition table
     for(size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
         transpositionTable[i] = TTEntry();
@@ -15,6 +15,11 @@ Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board),
         for (int k = 0; k < MAX_KILLER_MOVES; k++) {
             killerMoves[ply][k] = Move();
         }
+    }
+    
+    // Initialize history table
+    for (int i = 0; i < HISTORY_SIZE; i++) {
+        historyTable[i] = 0;
     }
 }
 
@@ -126,6 +131,12 @@ int Minimax::getMovePriority(const Move& move, int ply = 0) const {
         return 1000 + mvvLva;
     }
     
+    // Приоритет для истории ходов
+    int historyScore = getHistoryScore(move);
+    if (historyScore > 0) {
+        return 800 + historyScore / 100; // Масштабируем для согласования
+    }
+    
     // Приоритет для ходов пешки вперед
     if (movingPiece.getType() == PieceType::PAWN) {
         // Продвижение пешки
@@ -215,6 +226,47 @@ int Minimax::aspirationSearch(int depth, int previousScore, Color maximizingPlay
     }
     
     return score;
+}
+
+void Minimax::updateHistory(const Move& move, int depth) {
+    // Don't update history for captures or promotions
+    Piece capturedPiece = board_.getPiece(move.to);
+    if (!capturedPiece.isEmpty() || move.promotion != PieceType::EMPTY) {
+        return;
+    }
+    
+    // Calculate index in history table
+    int index = move.from * 64 + move.to;
+    if (index >= 0 && index < HISTORY_SIZE) {
+        // Increase history score, but prevent overflow
+        historyTable[index] += depth * depth;
+        if (historyTable[index] > 10000) {
+            // Scale down all history scores to prevent overflow
+            for (int i = 0; i < HISTORY_SIZE; i++) {
+                historyTable[i] /= 2;
+            }
+        }
+    }
+}
+
+int Minimax::getHistoryScore(const Move& move) const {
+    int index = move.from * 64 + move.to;
+    if (index >= 0 && index < HISTORY_SIZE) {
+        return historyTable[index];
+    }
+    return 0;
+}
+
+bool Minimax::isFutile(int depth, int alpha, int staticEval) const {
+    // Futility pruning constants (in centipawns)
+    static const int FUTILITY_MARGIN[] = {0, 100, 300, 500, 900};
+    
+    if (depth >= 4) return false; // Only apply for shallow depths
+    if (depth <= 0 || depth >= 5) return false;
+    
+    // Check if the static evaluation plus margin is still below alpha
+    int margin = (depth < 5) ? FUTILITY_MARGIN[depth] : 900;
+    return (staticEval + margin) <= alpha;
 }
 
 int Minimax::evaluatePosition() const {
