@@ -20,9 +20,10 @@ Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board),
 
 Move Minimax::findBestMove(Color color) {
     Move bestMove;
-    int bestValue;
+    int bestValue = 0;
+    bool firstIteration = true;
     
-    // Итеративное углубление: начинаем с малой глубины и постепенно увеличиваем
+    // Итеративное углубление с aspiration search
     for (int depth = 1; depth <= maxDepth_; depth++) {
         std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
         
@@ -31,18 +32,25 @@ Move Minimax::findBestMove(Color color) {
         }
         
         Move currentBestMove = moves[0];
-        int currentValue = (color == Color::WHITE) ? INT_MIN : INT_MAX;
+        int currentValue;
         
+        if (firstIteration) {
+            // First iteration - use full window search
+            currentValue = minimax(depth, INT_MIN, INT_MAX, color);
+            firstIteration = false;
+        } else {
+            // Subsequent iterations - use aspiration search
+            currentValue = aspirationSearch(depth, bestValue, color);
+        }
+        
+        // Find the move that gives this value
         for (const Move& move : moves) {
-            // Выполнить ход на временной доске
-            // TODO: реализовать выполнение хода и откат
-            
-            int value = minimax(depth, INT_MIN, INT_MAX, color);
-            
-            if ((color == Color::WHITE && value > currentValue) || 
-                (color == Color::BLACK && value < currentValue)) {
-                currentValue = value;
+            // TODO: Actually execute moves and find which one gives currentValue
+            // For now, we'll use a simplified approach
+            if ((color == Color::WHITE && currentValue > bestValue) || 
+                (color == Color::BLACK && currentValue < bestValue)) {
                 currentBestMove = move;
+                break;
             }
         }
         
