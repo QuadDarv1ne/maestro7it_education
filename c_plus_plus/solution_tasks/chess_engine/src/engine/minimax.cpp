@@ -269,6 +269,18 @@ bool Minimax::isFutile(int depth, int alpha, int staticEval) const {
     return (staticEval + margin) <= alpha;
 }
 
+bool Minimax::isRazoringApplicable(int depth, int beta, int staticEval) const {
+    // Razoring constants (in centipawns)
+    static const int RAZOR_MARGIN[] = {0, 300, 400, 600, 800};
+    
+    if (depth >= 4) return false; // Only apply for shallow depths
+    if (depth <= 0 || depth >= 5) return false;
+    
+    // Check if the static evaluation minus margin is still above beta
+    int margin = (depth < 5) ? RAZOR_MARGIN[depth] : 800;
+    return (staticEval - margin) >= beta;
+}
+
 int Minimax::evaluatePosition() const {
     return evaluator_.evaluate();
 }

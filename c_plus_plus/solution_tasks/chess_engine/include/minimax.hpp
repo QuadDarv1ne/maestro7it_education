@@ -86,6 +86,7 @@ private:
     void updateHistory(const Move& move, int depth);                           ///< Обновляет историю ходов
     int getHistoryScore(const Move& move) const;                               ///< Возвращает счет истории для хода
     bool isFutile(int depth, int alpha, int staticEval) const;                 ///< Проверяет, стоит ли применять futility pruning
+    bool isRazoringApplicable(int depth, int beta, int staticEval) const;      ///< Проверяет, применимо ли razoring
 };
 
 // Константы для поиска
