@@ -78,6 +78,7 @@ private:
     bool isInCheck(Color color) const;                                     ///< Проверяет, находится ли король под шахом
     void addKillerMove(const Move& move, int ply);                         ///< Добавляет killer move
     bool isKillerMove(const Move& move, int ply) const;                    ///< Проверяет, является ли ход killer move
+    int aspirationSearch(int depth, int previousScore, Color maximizingPlayer); ///< Поиск с aspiration windows
 };
 
 // Константы для поиска

@@ -193,6 +193,22 @@ bool Minimax::isKillerMove(const Move& move, int ply) const {
     return false;
 }
 
+int Minimax::aspirationSearch(int depth, int previousScore, Color maximizingPlayer) {
+    const int ASPIRATION_WINDOW = 50; // Window size around previous score
+    
+    int alpha = previousScore - ASPIRATION_WINDOW;
+    int beta = previousScore + ASPIRATION_WINDOW;
+    
+    int score = minimaxWithTT(depth, alpha, beta, maximizingPlayer);
+    
+    // If we failed high or low, search with full window
+    if (score <= alpha || score >= beta) {
+        score = minimaxWithTT(depth, INT_MIN, INT_MAX, maximizingPlayer);
+    }
+    
+    return score;
+}
+
 int Minimax::evaluatePosition() const {
     return evaluator_.evaluate();
 }
