@@ -281,8 +281,166 @@ bool Minimax::isRazoringApplicable(int depth, int beta, int staticEval) const {
     return (staticEval - margin) >= beta;
 }
 
+int Minimax::multiCutPruning(int depth, int alpha, int beta, Color maximizingPlayer, int cutNumber) {
+    // Multi-cut pruning - try to prove multiple cuts in one search
+    if (depth <= 2 || cutNumber <= 0) {
+        return minimaxWithTT(depth, alpha, beta, maximizingPlayer);
+    }
+    
+    // Try to find multiple good moves that would cause beta cutoffs
+    std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
+    if (moves.empty()) {
+        return evaluatePosition();
+    }
+    
+    int bestValue = (maximizingPlayer == Color::WHITE) ? INT_MIN : INT_MAX;
+    int cutsFound = 0;
+    const int CUT_THRESHOLD = 2; // Number of cuts needed to trigger multi-cut
+    
+    for (size_t i = 0; i < moves.size() && cutsFound < CUT_THRESHOLD; i++) {
+        const Move& move = moves[i];
+        
+        // Execute move
+        Piece capturedPiece = board_.getPiece(move.to);
+        Piece movingPiece = board_.getPiece(move.from);
+        board_.setPiece(move.to, movingPiece);
+        board_.setPiece(move.from, Piece());
+        
+        Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
+        board_.setCurrentPlayer(opponent);
+        
+        // Reduced depth search to test for cuts
+        int reducedDepth = depth - 2;
+        int eval = -minimaxWithTT(reducedDepth, -beta, -alpha, opponent);
+        
+        // Restore board
+        board_.setPiece(move.from, movingPiece);
+        board_.setPiece(move.to, capturedPiece);
+        board_.setCurrentPlayer(maximizingPlayer);
+        
+        // Check if this move causes a cut
+        if ((maximizingPlayer == Color::WHITE && eval >= beta) ||
+            (maximizingPlayer == Color::BLACK && eval <= alpha)) {
+            cutsFound++;
+        }
+        
+        // Update best value
+        if (maximizingPlayer == Color::WHITE) {
+            bestValue = std::max(bestValue, eval);
+            alpha = std::max(alpha, eval);
+        } else {
+            bestValue = std::min(bestValue, eval);
+            beta = std::min(beta, eval);
+        }
+        
+        // Early termination if we found enough cuts
+        if (cutsFound >= CUT_THRESHOLD) {
+            return bestValue;
+        }
+    }
+    
+    // If we didn't find enough cuts, do normal search
+    return minimaxWithTT(depth, alpha, beta, maximizingPlayer);
+}
+
 int Minimax::evaluatePosition() const {
     return evaluator_.evaluate();
+}
+
+std::vector<Move> Minimax::orderCaptures(const std::vector<Move>& captures) const {
+    std::vector<Move> orderedCaptures = captures;
+    
+    // Order captures by MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
+    std::sort(orderedCaptures.begin(), orderedCaptures.end(), [this](const Move& a, const Move& b) {
+        Piece victimA = board_.getPiece(a.to);
+        Piece attackerA = board_.getPiece(a.from);
+        Piece victimB = board_.getPiece(b.to);
+        Piece attackerB = board_.getPiece(b.from);
+        
+        // MVV-LVA scoring: higher value for more valuable victims and less valuable attackers
+        int scoreA = victimA.getValue() * 10 - attackerA.getValue();
+        int scoreB = victimB.getValue() * 10 - attackerB.getValue();
+        
+        return scoreA > scoreB;
+    });
+    
+    return orderedCaptures;
+}
+
+int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int ply) {
+    // Stand pat evaluation
+    int standPat = evaluatePosition();
+    
+    // Beta cutoff
+    if (standPat >= beta) {
+        return beta;
+    }
+    
+    // Alpha update
+    if (standPat > alpha) {
+        alpha = standPat;
+    }
+    
+    // Generate only captures and checks
+    MoveGenerator generator(board_);
+    std::vector<Move> captures = generator.generateCaptureMoves();
+    std::vector<Move> checks = generator.generateCheckMoves();
+    
+    // Combine captures and checks
+    std::vector<Move> tacticalMoves = captures;
+    tacticalMoves.insert(tacticalMoves.end(), checks.begin(), checks.end());
+    
+    // Order tactical moves
+    tacticalMoves = orderCaptures(tacticalMoves);
+    
+    // Limit quiescence depth to prevent explosion
+    const int MAX_QUIESCENCE_DEPTH = 8;
+    if (ply >= MAX_QUIESCENCE_DEPTH) {
+        return standPat;
+    }
+    
+    int bestValue = standPat;
+    
+    for (const Move& move : tacticalMoves) {
+        // Delta pruning - if capture gain + positional bonus doesn't beat alpha, skip
+        Piece captured = board_.getPiece(move.to);
+        if (!captured.isEmpty()) {
+            int delta = captured.getValue() + 200; // Positional bonus
+            if (standPat + delta < alpha) {
+                continue; // Skip this capture
+            }
+        }
+        
+        // Execute move
+        Piece capturedPiece = board_.getPiece(move.to);
+        Piece movingPiece = board_.getPiece(move.from);
+        board_.setPiece(move.to, movingPiece);
+        board_.setPiece(move.from, Piece());
+        
+        Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
+        board_.setCurrentPlayer(opponent);
+        
+        // Recursive quiescence search
+        int score = -quiescenceSearch(-beta, -alpha, opponent, ply + 1);
+        
+        // Restore board
+        board_.setPiece(move.from, movingPiece);
+        board_.setPiece(move.to, capturedPiece);
+        board_.setCurrentPlayer(maximizingPlayer);
+        
+        // Update best value and bounds
+        if (score > bestValue) {
+            bestValue = score;
+            if (score > alpha) {
+                alpha = score;
+                if (score >= beta) {
+                    break; // Beta cutoff
+                }
+            }
+        }
+    }
+    
+    return bestValue;
 }
 
 bool Minimax::isTimeUp(std::chrono::steady_clock::time_point startTime) const {
@@ -447,4 +605,99 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
     storeInTT(hash, depth, bestScore, hasBestMove ? bestMove : Move(), flag);
     
     return bestScore;
+}
+
+int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maximizingPlayer, bool isPVNode) {
+    // Base case: leaf node
+    if (depth <= 0) {
+        return quiescenceSearch(alpha, beta, maximizingPlayer);
+    }
+    
+    // Check transposition table
+    uint64_t hash = hashPosition();
+    TTEntry* entry = probeTT(hash);
+    
+    if (entry && entry->depth >= depth) {
+        if (entry->flag == 'E') return entry->score; // Exact score
+        if (entry->flag == 'L' && entry->score >= beta) return beta; // Lower bound
+        if (entry->flag == 'U' && entry->score <= alpha) return alpha; // Upper bound
+    }
+    
+    std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
+    if (moves.empty()) {
+        return evaluatePosition();
+    }
+    
+    int bestValue = (maximizingPlayer == Color::WHITE) ? INT_MIN : INT_MAX;
+    Move bestMove;
+    bool firstMove = true;
+    
+    for (const Move& move : moves) {
+        // Execute move
+        Piece capturedPiece = board_.getPiece(move.to);
+        Piece movingPiece = board_.getPiece(move.from);
+        board_.setPiece(move.to, movingPiece);
+        board_.setPiece(move.from, Piece());
+        
+        Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
+        board_.setCurrentPlayer(opponent);
+        
+        int eval;
+        if (firstMove) {
+            // First move gets full window search
+            eval = -principalVariationSearch(depth - 1, -beta, -alpha, opponent, isPVNode);
+            firstMove = false;
+        } else {
+            // Subsequent moves get null-window search
+            eval = -principalVariationSearch(depth - 1, -alpha - 1, -alpha, opponent, false);
+            
+            // If the null-window search suggests improvement, do full re-search
+            if (eval > alpha && eval < beta) {
+                eval = -principalVariationSearch(depth - 1, -beta, -alpha, opponent, isPVNode);
+            }
+        }
+        
+        // Restore board
+        board_.setPiece(move.from, movingPiece);
+        board_.setPiece(move.to, capturedPiece);
+        board_.setCurrentPlayer(maximizingPlayer);
+        
+        // Update best value and bounds
+        if (maximizingPlayer == Color::WHITE) {
+            if (eval > bestValue) {
+                bestValue = eval;
+                bestMove = move;
+                if (eval > alpha) {
+                    alpha = eval;
+                    if (eval >= beta) {
+                        // Beta cutoff - add killer move
+                        addKillerMove(move, depth);
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (eval < bestValue) {
+                bestValue = eval;
+                bestMove = move;
+                if (eval < beta) {
+                    beta = eval;
+                    if (eval <= alpha) {
+                        // Alpha cutoff - add killer move
+                        addKillerMove(move, depth);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Store in transposition table
+    char flag = 'E'; // Exact
+    if (bestValue <= alpha) flag = 'U'; // Upper bound
+    if (bestValue >= beta) flag = 'L';  // Lower bound
+    
+    storeInTT(hash, depth, bestValue, bestMove, flag);
+    
+    return bestValue;
 }
