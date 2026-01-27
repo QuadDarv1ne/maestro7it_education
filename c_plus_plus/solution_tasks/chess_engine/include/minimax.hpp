@@ -93,6 +93,7 @@ private:
     int principalVariationSearch(int depth, int alpha, int beta, Color maximizingPlayer, bool isPVNode = true); ///< Principal Variation Search
     int calculateExtension(const Move& move, Color maximizingPlayer, int depth) const;                          ///< Рассчитывает расширение для хода
     bool isCriticalPosition() const;                                                                            ///< Проверяет, является ли позиция критической
+    bool probCut(int depth, int beta, Color maximizingPlayer, int threshold = 100);                            ///< ProbCut pruning technique
 };
 
 // Константы для поиска

@@ -443,6 +443,54 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
     return bestValue;
 }
 
+bool Minimax::probCut(int depth, int beta, Color maximizingPlayer, int threshold) {
+    // ProbCut - probabilistic cutoff based on shallow search
+    if (depth < 3) return false; // Only apply for sufficient depth
+    
+    // Perform a shallow search with reduced depth
+    int shallowDepth = depth - 2;
+    int shallowBeta = beta - threshold;
+    
+    std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
+    if (moves.empty()) return false;
+    
+    // Test the top few moves with shallow search
+    int testMoves = std::min(3, static_cast<int>(moves.size()));
+    
+    for (int i = 0; i < testMoves; i++) {
+        const Move& move = moves[i];
+        
+        // Execute move
+        Piece capturedPiece = board_.getPiece(move.to);
+        Piece movingPiece = board_.getPiece(move.from);
+        board_.setPiece(move.to, movingPiece);
+        board_.setPiece(move.from, Piece());
+        
+        Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
+        board_.setCurrentPlayer(opponent);
+        
+        // Shallow search
+        int shallowScore = -minimaxWithTT(shallowDepth, -shallowBeta - 1, -shallowBeta, opponent);
+        
+        // Restore board
+        board_.setPiece(move.from, movingPiece);
+        board_.setPiece(move.to, capturedPiece);
+        board_.setCurrentPlayer(maximizingPlayer);
+        
+        // If shallow search exceeds threshold, likely to cause cutoff
+        if (shallowScore >= shallowBeta) {
+            // Do a verification search at full depth
+            int verifyScore = -minimaxWithTT(depth - 1, -beta - 1, -beta, opponent);
+            
+            if (verifyScore >= beta) {
+                return true; // Probabilistic cutoff confirmed
+            }
+        }
+    }
+    
+    return false; // No cutoff predicted
+}
+
 int Minimax::calculateExtension(const Move& move, Color maximizingPlayer, int depth) const {
     int extension = 0;
     
