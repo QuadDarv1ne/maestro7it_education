@@ -38,6 +38,11 @@ private:
     static const size_t HASH_TABLE_SIZE = 100000;  // Size of the hash table
     std::vector<TTEntry> transpositionTable;
     
+    // Killer moves for move ordering
+    static const int MAX_KILLER_MOVES = 2;
+    static const int MAX_PLY = 100;
+    std::vector<std::vector<Move>> killerMoves;
+    
 public:
     Minimax(Board& board, int maxDepth = 4);
     
@@ -71,6 +76,8 @@ private:
     int minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlayer);     ///< Минимакс с использованием транспозиционной таблицы
     int getMovePriority(const Move& move) const;                           ///< Определяет приоритет хода для упорядочивания
     bool isInCheck(Color color) const;                                     ///< Проверяет, находится ли король под шахом
+    void addKillerMove(const Move& move, int ply);                         ///< Добавляет killer move
+    bool isKillerMove(const Move& move, int ply) const;                    ///< Проверяет, является ли ход killer move
 };
 
 // Константы для поиска

@@ -4,10 +4,17 @@
 #include <random>
 #include <functional>
 
-Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE) {
+Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)) {
     // Initialize the transposition table
     for(size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
         transpositionTable[i] = TTEntry();
+    }
+    
+    // Initialize killer moves
+    for (int ply = 0; ply < MAX_PLY; ply++) {
+        for (int k = 0; k < MAX_KILLER_MOVES; k++) {
+            killerMoves[ply][k] = Move();
+        }
     }
 }
 
@@ -95,9 +102,14 @@ std::vector<Move> Minimax::orderMoves(const std::vector<Move>& moves) const {
     return orderedMoves;
 }
 
-int Minimax::getMovePriority(const Move& move) const {
+int Minimax::getMovePriority(const Move& move, int ply = 0) const {
     Piece capturedPiece = board_.getPiece(move.to);
     Piece movingPiece = board_.getPiece(move.from);
+    
+    // Приоритет для killer moves
+    if (isKillerMove(move, ply)) {
+        return 2000; // Высокий приоритет для killer moves
+    }
     
     // Приоритет для взятий - MVV (Most Valuable Victim) / LVA (Least Valuable Attacker)
     if (!capturedPiece.isEmpty()) {
@@ -128,6 +140,57 @@ int Minimax::getMovePriority(const Move& move) const {
     
     // Приоритет для других фигур
     return movingPiece.getValue();
+}
+
+bool Minimax::isInCheck(Color color) const {
+    // Найдем короля нужного цвета
+    Square kingSquare = INVALID_SQUARE;
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(static_cast<Square>(square));
+        if (piece.getType() == PieceType::KING && piece.getColor() == color) {
+            kingSquare = static_cast<Square>(square);
+            break;
+        }
+    }
+    
+    if (kingSquare == INVALID_SQUARE) {
+        return false; // Король не найден (теоретически невозможно)
+    }
+    
+    // Проверим, атакован ли король
+    MoveGenerator generator(board_);
+    Color opponentColor = (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    return generator.isSquareAttacked(kingSquare, opponentColor);
+}
+
+void Minimax::addKillerMove(const Move& move, int ply) {
+    if (ply >= MAX_PLY) return;
+    
+    // Не добавляем ходы взятия как killer moves
+    Piece capturedPiece = board_.getPiece(move.to);
+    if (!capturedPiece.isEmpty()) {
+        return;
+    }
+    
+    // Сдвигаем существующие killer moves
+    for (int i = MAX_KILLER_MOVES - 1; i > 0; i--) {
+        killerMoves[ply][i] = killerMoves[ply][i-1];
+    }
+    
+    // Добавляем новый killer move
+    killerMoves[ply][0] = move;
+}
+
+bool Minimax::isKillerMove(const Move& move, int ply) const {
+    if (ply >= MAX_PLY) return false;
+    
+    for (int i = 0; i < MAX_KILLER_MOVES; i++) {
+        if (killerMoves[ply][i].from == move.from && 
+            killerMoves[ply][i].to == move.to) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int Minimax::evaluatePosition() const {
