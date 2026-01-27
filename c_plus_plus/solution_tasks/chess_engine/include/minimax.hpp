@@ -91,6 +91,8 @@ private:
     int quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int ply = 0);               ///< Улучшенный квизенс-поиск
     std::vector<Move> orderCaptures(const std::vector<Move>& captures) const;                     ///< Упорядочивание взятий для квизенса
     int principalVariationSearch(int depth, int alpha, int beta, Color maximizingPlayer, bool isPVNode = true); ///< Principal Variation Search
+    int calculateExtension(const Move& move, Color maximizingPlayer, int depth) const;                          ///< Рассчитывает расширение для хода
+    bool isCriticalPosition() const;                                                                            ///< Проверяет, является ли позиция критической
 };
 
 // Константы для поиска

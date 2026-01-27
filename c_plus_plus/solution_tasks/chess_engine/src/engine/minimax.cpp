@@ -443,6 +443,69 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
     return bestValue;
 }
 
+int Minimax::calculateExtension(const Move& move, Color maximizingPlayer, int depth) const {
+    int extension = 0;
+    
+    // Check extensions
+    if (isInCheck(maximizingPlayer)) {
+        extension += 1; // One ply extension for check positions
+    }
+    
+    // Capture extensions
+    Piece capturedPiece = board_.getPiece(move.to);
+    if (!capturedPiece.isEmpty()) {
+        // Extend for capture of valuable pieces
+        if (capturedPiece.getValue() >= 500) { // Queen or rook
+            extension += 1;
+        } else if (capturedPiece.getValue() >= 300) { // Bishop or knight
+            extension += 0; // No extension for minor pieces
+        }
+    }
+    
+    // Promotion extensions
+    if (move.promotion != PieceType::EMPTY) {
+        extension += 1; // Extend for promotions
+    }
+    
+    // Pawn push extensions near promotion
+    Piece movingPiece = board_.getPiece(move.from);
+    if (movingPiece.getType() == PieceType::PAWN) {
+        int toRank = board_.rank(move.to);
+        if ((movingPiece.getColor() == Color::WHITE && toRank >= 6) ||
+            (movingPiece.getColor() == Color::BLACK && toRank <= 1)) {
+            extension += 1; // Extend pawn pushes to 7th/2nd rank
+        }
+    }
+    
+    // Limit total extension
+    return std::min(extension, 2); // Maximum 2 ply extension
+}
+
+bool Minimax::isCriticalPosition() const {
+    // A position is critical if:
+    // 1. King is in check
+    // 2. Material balance is close (within 200 centipawns)
+    // 3. Position has tactical threats
+    
+    Color currentPlayer = board_.getCurrentPlayer();
+    if (isInCheck(currentPlayer)) {
+        return true;
+    }
+    
+    // Check material balance
+    int materialEval = evaluator_.evaluateMaterial();
+    if (std::abs(materialEval) <= 200) {
+        return true; // Close game
+    }
+    
+    // TODO: Add more sophisticated critical position detection
+    // - Look for hanging pieces
+    - Check for tactical motifs
+    - Analyze pawn structure tension
+    
+    return false;
+}
+
 bool Minimax::isTimeUp(std::chrono::steady_clock::time_point startTime) const {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime);
