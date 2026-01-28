@@ -74,13 +74,14 @@ public:
     bool isStalemate(Color color) const;  ///< Проверяет, является ли позиция патом
     bool isGameOver() const;              ///< Проверяет, завершена ли игра
     
-private:
-    // Вспомогательные методы
+    // Вспомогательные методы (сделаны публичными для доступа из других классов)
     void initializeEmptyBoard();          ///< Инициализирует пустую доску
     bool isInBounds(Square square) const; ///< Проверяет, находится ли клетка в пределах доски
     int rank(Square square) const;        ///< Возвращает горизонталь (0-7, где 0 - первая горизонталь)
     int file(Square square) const;        ///< Возвращает вертикаль (0-7, где 0 - вертикаль 'a')
     Square square(int file, int rank) const;  ///< Создает клетку из вертикали и горизонтали
+    
+private:
 };
 
 // Константы

@@ -57,7 +57,7 @@ public:
     // Поиск с альфа-бета отсечением
     int minimax(int depth, int alpha, int beta, Color maximizingPlayer);  ///< Алгоритм минимакс с альфа-бета отсечением
     int minimaxWithTimeLimit(int depth, int alpha, int beta, Color maximizingPlayer, 
-                            std::chrono::steady_clock::time_start startTime);  ///< Минимакс с контролем времени
+                            std::chrono::steady_clock::time_point startTime);  ///< Минимакс с контролем времени
     
     // Настройки
     void setMaxDepth(int depth);                         ///< Устанавливает максимальную глубину поиска
@@ -70,7 +70,7 @@ public:
 private:
     // Вспомогательные методы
     int evaluatePosition() const;                                          ///< Оценивает текущую позицию на доске
-    bool isTimeUp(std::chrono::steady_clock::time_start startTime) const;  ///< Проверяет, истекло ли отведенное время
+    bool isTimeUp(std::chrono::steady_clock::time_point startTime) const;  ///< Проверяет, истекло ли отведенное время
     int quiescenceSearch(int alpha, int beta, int depth);                  ///< Выполняет поиск в "тихих" позициях для избежания горизонтального эффекта
     
     // Методы для оптимизации
@@ -78,7 +78,7 @@ private:
     void storeInTT(uint64_t hash, int depth, int score, Move bestMove, char flag);  ///< Сохраняет в транспозиционную таблицу
     TTEntry* probeTT(uint64_t hash);                                       ///< Ищет запись в транспозиционной таблице
     int minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlayer);     ///< Минимакс с использованием транспозиционной таблицы
-    int getMovePriority(const Move& move) const;                           ///< Определяет приоритет хода для упорядочивания
+    int getMovePriority(const Move& move, int ply = 0) const;              ///< Определяет приоритет хода для упорядочивания
     bool isInCheck(Color color) const;                                     ///< Проверяет, находится ли король под шахом
     void addKillerMove(const Move& move, int ply);                         ///< Добавляет killer move
     bool isKillerMove(const Move& move, int ply) const;                    ///< Проверяет, является ли ход killer move
