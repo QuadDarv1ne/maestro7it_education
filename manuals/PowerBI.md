@@ -23,21 +23,25 @@
 ### Основные компоненты:
 
 #### 1. Power BI Desktop
+
 - **Описание**: Бесплатное приложение для `Windows`
 - **Назначение**: Создание отчетов и моделей данных
 - **Возможности**: Подключение к источникам данных, моделирование, визуализация
 
 #### 2. Power BI Service (Power BI Online)
+
 - **Описание**: Веб-сервис для публикации и совместной работы
 - **Назначение**: Хостинг отчетов, создание дашбордов, совместная работа
 - **Возможности**: Расписание обновлений, безопасность, мобильный доступ
 
 #### 3. Power BI Mobile
+
 - **Описание**: Мобильные приложения для `iOS`, `Android`, `Windows`
 - **Назначение**: Просмотр отчетов на мобильных устройствах
 - **Возможности**: Push-уведомления, offline-доступ
 
 #### 4. Power BI Report Builder
+
 - **Описание**: Инструмент для создания пагинированных отчетов
 - **Назначение**: Создание традиционных отчетов с фиксированным форматом
 
@@ -68,6 +72,7 @@
 ### Компоненты архитектуры:
 
 #### 1. Источники данных:
+
 - Реляционные базы данных (`SQL Server`, `Oracle`, `MySQL`)
 - Облачные сервисы (`Azure`, `AWS`, `Google Cloud`)
 - Файлы (`Excel`, `CSV`, `JSON`)
@@ -75,11 +80,13 @@
 - `CRM/ERP` системы (`Salesforce`, `SAP`)
 
 #### 2. Модель данных:
+
 - **Факт-таблицы**: Содержат измеримые данные
 - **Измерения**: Содержат описательные атрибуты
 - **Связи**: Определяют отношения между таблицами
 
 #### 3. DAX:
+
 - Язык для создания вычисляемых столбцов
 - Создание мер и `KPI`
 - Расширенная аналитика
@@ -91,6 +98,7 @@
 ### Системные требования:
 
 **Power BI Desktop:**
+
 - Windows 10/11 (64-bit)
 - 4 GB RAM (рекомендуется 8+ GB)
 - 1 GB свободного места
@@ -109,17 +117,20 @@ Start-Process "ms-windows-store://pdp/?productid=9NTXR16HNW1T"
 ### Базовая настройка:
 
 #### 1. Настройка региональных параметров:
+
 ```
 File → Options and settings → Options → Current File → Regional Settings
 ```
 
 #### 2. Настройка безопасности:
+
 ```
 File → Options and settings → Options → Security → 
 Enable/Disable data sources
 ```
 
 #### 3. Настройка обновлений:
+
 ```
 File → Options and settings → Options → Updates
 ```
@@ -131,6 +142,7 @@ File → Options and settings → Options → Updates
 ### Типы источников данных:
 
 #### 1. Файлы:
+
 ```powerbi
 # Excel
 Get Data → File → Excel Workbook
@@ -143,6 +155,7 @@ Get Data → File → JSON
 ```
 
 #### 2. Базы данных:
+
 ```powerbi
 # SQL Server
 Get Data → Database → SQL Server Database
@@ -155,6 +168,7 @@ Get Data → Database → MySQL Database
 ```
 
 #### 3. Облачные сервисы:
+
 ```powerbi
 # Azure SQL Database
 Get Data → Azure → Azure SQL Database
@@ -223,6 +237,7 @@ in
 ### Создание связей:
 
 #### 1. Один ко многим (1:N):
+
 ```powerbi
 DIM_Customers[CustomerID] → FACT_Sales[CustomerID]
 DIM_Products[ProductID] → FACT_Sales[ProductID]
@@ -230,6 +245,7 @@ DIM_Dates[DateKey] → FACT_Sales[DateKey]
 ```
 
 #### 2. Многие ко многим (N:M):
+
 ```powerbi
 # Через промежуточную таблицу фактов
 DIM_Regions[RegionID] → BRIDGE_RegionSales[RegionID]
@@ -277,11 +293,13 @@ Profit_Margin = (Sales[Revenue] - Sales[Cost]) / Sales[Revenue]
 ### Основы DAX:
 
 #### 1. Синтаксис:
+
 ```dax
 Measure_Name = CALCULATION(FUNCTION(TABLE[COLUMN]), FILTERS)
 ```
 
 #### 2. Типы вычислений:
+
 - **Меры (Measures)**: Агрегированные значения
 - **Вычисляемые столбцы**: Значения для каждой строки
 - **Вычисляемые таблицы**: Новые таблицы на основе расчетов
@@ -289,6 +307,7 @@ Measure_Name = CALCULATION(FUNCTION(TABLE[COLUMN]), FILTERS)
 ### Основные функции DAX:
 
 #### Агрегатные функции:
+
 ```dax
 Total_Sales = SUM(Sales[Amount])
 
@@ -302,6 +321,7 @@ Min_Value = MIN(Table[Value])
 ```
 
 #### Функции фильтрации:
+
 ```dax
 # CALCULATE - изменение контекста фильтрации
 Current_Year_Sales = 
@@ -322,6 +342,7 @@ CALCULATE(
 ```
 
 #### Временные функции:
+
 ```dax
 # TOTALYTD - сумма с начала года
 YTD_Sales = TOTALYTD(SUM(Sales[Amount]), Dates[Date])
@@ -346,6 +367,7 @@ CALCULATE(
 ```
 
 #### Логические функции:
+
 ```dax
 # IF - условное выражение
 Sales_Category = 
@@ -367,6 +389,7 @@ SWITCH(
 ```
 
 #### Таблицевые функции:
+
 ```dax
 # SUMMARIZE - группировка данных
 Monthly_Sales_Summary = 
@@ -390,6 +413,7 @@ ADDCOLUMNS(
 ### Продвинутые техники DAX:
 
 #### 1. Переменные (VAR):
+
 ```dax
 Customer_Analysis = 
 VAR TotalCustomers = COUNTROWS(Customers)
@@ -404,6 +428,7 @@ RETURN
 ```
 
 #### 2. Итерационные функции:
+
 ```dax
 # SUMX - суммирование с итерацией
 Weighted_Average_Price = 
@@ -421,6 +446,7 @@ AVERAGEX(
 ```
 
 #### 3. Контекст в DAX:
+
 ```dax
 # Row Context - контекст строки
 Calculated_Column = Sales[Quantity] * Sales[UnitPrice]
@@ -440,6 +466,7 @@ CALCULATE(
 ### Типы визуализаций:
 
 #### 1. Диаграммы:
+
 ```powerbi
 # Столбчатая диаграмма
 Axis: Product_Category
@@ -456,6 +483,7 @@ Values: Market_Share
 ```
 
 #### 2. Таблицы и матрицы:
+
 ```powerbi
 # Матрица с иерархией
 Rows: Region → City
@@ -464,6 +492,7 @@ Values: Sales, Profit
 ```
 
 #### 3. Картографические визуализации:
+
 ```powerbi
 # Хороплет (Choropleth Map)
 Location: Country/State
@@ -479,6 +508,7 @@ Color: Performance_Category
 ### Настройка визуализаций:
 
 #### 1. Форматирование:
+
 ```powerbi
 # Цветовая схема
 Format → Data colors → Customize colors
@@ -491,6 +521,7 @@ Format → X-axis/Y-axis → Show/Hide, Labels
 ```
 
 #### 2. Взаимодействия:
+
 ```powerbi
 # Фильтрация других визуализаций
 Selection → Edit Interactions → Filter/Highlight/None
@@ -500,6 +531,7 @@ Double-click on visual element to drill down
 ```
 
 #### 3. Закладки:
+
 ```powerbi
 # Создание закладок состояния
 View → Bookmarks → Add
@@ -532,6 +564,7 @@ Formatting:
 ### Создание дашборда:
 
 #### 1. Структура дашборда:
+
 ```powerbi
 # Header Section
 - Company Logo
@@ -554,6 +587,7 @@ Formatting:
 ```
 
 #### 2. Настройка фильтров:
+
 ```powerbi
 # Срезы (Slicers)
 - Date Range Slider
@@ -567,6 +601,7 @@ Format → Edit Interactions → Apply to all visuals
 ### Создание отчета:
 
 #### 1. Страницы отчета:
+
 ```powerbi
 Page 1: Executive Summary
 - High-level KPIs
@@ -582,6 +617,7 @@ Page 3: Product Performance
 ```
 
 #### 2. Навигация:
+
 ```powerbi
 # Вкладки страниц
 Pages pane → Rename pages with clear labels
@@ -596,6 +632,7 @@ Bookmarks → Detail views for each section
 ### Настройка безопасности:
 
 #### 1. Row-level security (RLS):
+
 ```dax
 # Создание ролей
 Modeling → Manage Roles
@@ -609,6 +646,7 @@ Regional Manager Role:
 ```
 
 #### 2. Динамическая безопасность:
+
 ```dax
 # Динамическое ограничение по пользователю
 User_Security = 
@@ -626,6 +664,7 @@ IF(
 ### Публикация в Power BI Service:
 
 #### 1. Подготовка к публикации:
+
 ```powerbi
 # Проверка производительности
 Home → Performance Analyzer
@@ -638,6 +677,7 @@ File → Options and settings → Data source settings
 ```
 
 #### 2. Публикация:
+
 ```powerbi
 Home → Publish → Select workspace
 Enter credentials → Publish
@@ -646,6 +686,7 @@ Enter credentials → Publish
 ### Совместная работа:
 
 #### 1. Рабочие области:
+
 ```powerbi
 # Создание рабочей области
 Workspaces → Create workspace
@@ -658,6 +699,7 @@ Admin, Member, Contributor, Viewer
 ```
 
 #### 2. Совместное редактирование:
+
 ```powerbi
 # Совместная разработка
 Share → Send link to colleagues
@@ -689,6 +731,7 @@ Dataset → Refresh history → View status
 ### 1. Composite Models:
 
 #### Настройка DirectQuery и Import:
+
 ```powerbi
 # Mixed mode modeling
 Table1: Import mode (Historical data)
@@ -701,6 +744,7 @@ Table properties → Storage mode → Select appropriate mode
 ### 2. Aggregations:
 
 #### Создание агрегированных таблиц:
+
 ```dax
 # Агрегированная таблица для производительности
 Sales_Aggregated = 
@@ -717,6 +761,7 @@ SUMMARIZE(
 ### 3. Advanced DAX Patterns:
 
 #### Pattern 1: Running Totals:
+
 ```dax
 Running_Total_Sales = 
 CALCULATE(
@@ -729,6 +774,7 @@ CALCULATE(
 ```
 
 #### Pattern 2: Moving Averages:
+
 ```dax
 Moving_Avg_30Days = 
 CALCULATE(
@@ -738,6 +784,7 @@ CALCULATE(
 ```
 
 #### Pattern 3: Percent of Total:
+
 ```dax
 Percent_of_Total = 
 DIVIDE(
@@ -749,6 +796,7 @@ DIVIDE(
 ### 4. Custom Visuals:
 
 #### Установка пользовательских визуализаций:
+
 ```powerbi
 # Marketplace
 Home → Get more visuals → Browse marketplace
@@ -767,6 +815,7 @@ Home → Get more visuals → Browse marketplace
 ### Пример 1: Аналитика продаж
 
 #### Модель данных:
+
 ```sql
 -- Создание таблиц
 CREATE TABLE DIM_Customers (
@@ -806,6 +855,7 @@ CREATE TABLE FACT_Sales (
 ```
 
 #### Основные меры DAX:
+
 ```dax
 # Общие показатели
 Total_Revenue = SUM(FACT_Sales[Quantity] * FACT_Sales[UnitPrice])
@@ -844,6 +894,7 @@ CALCULATE(
 ```
 
 #### Визуализации дашборда:
+
 ```powerbi
 # KPI Cards
 - Total Revenue (with trend arrow)
@@ -865,6 +916,7 @@ CALCULATE(
 ### Пример 2: HR Аналитика
 
 #### Модель данных:
+
 ```sql
 CREATE TABLE DIM_Employees (
     EmployeeID INT PRIMARY KEY,
@@ -896,6 +948,7 @@ CREATE TABLE FACT_Attendance (
 ```
 
 #### Меры DAX для HR:
+
 ```dax
 # Показатели персонала
 Active_Employees = 
@@ -945,6 +998,7 @@ FORECAST.LINEAR(
 ### Пример 3: Финансовая отчетность
 
 #### Меры для финансового анализа:
+
 ```dax
 # Финансовые коэффициенты
 Gross_Profit = [Total_Revenue] - [Cost_of_Goods_Sold]
@@ -999,12 +1053,14 @@ DIVIDE([Initial_Investment], [Annual_Cash_Flow])
 ### Дальнейшее изучение:
 
 #### Рекомендуемые ресурсы:
+
 - **Microsoft Learn**: Официальные курсы по `Power BI`
 - **Power BI Community**: Форум и поддержка сообщества
 - **YouTube каналы**: `Guy in a Cube`, `SQLBI`
 - **Книги**: `"The Definitive Guide to DAX"`, `"Power BI Cookbook"`
 
 #### Сертификации:
+
 - **PL-300**: `Microsoft Power BI Data Analyst`
 - **DP-500**: `Designing and Implementing Enterprise-Scale Analytics Solutions`
 
@@ -1031,6 +1087,7 @@ DIVIDE([Initial_Investment], [Annual_Cash_Flow])
 ---
 
 ### 💼 Профиль на Profi.ru
+
 [![Profi.ru Profile](https://img.shields.io/badge/Profi.ru-Дуплей%20М.И.-FF6B35?style=for-the-badge)](https://profi.ru/profile/DupleyMI)
 
 > Консультации и услуги программирования на платформе Profi.ru
@@ -1038,6 +1095,7 @@ DIVIDE([Initial_Investment], [Annual_Cash_Flow])
 ---
 
 ### 📚 Услуги обучения
+
 [![Обучение технологиям и языкам программирования на Kwork](https://img.shields.io/badge/Kwork-Обучение%20Программированию-blue?style=for-the-badge&logo=kwork)](https://kwork.ru/usability-testing/42465951/obuchenie-tekhnologiyam-i-yazykam-programmirovaniya)
 
 > Профессиональное обучение технологиям и языкам программирования. Персональные консультации и курсы от опытного преподавателя.
@@ -1045,6 +1103,7 @@ DIVIDE([Initial_Investment], [Annual_Cash_Flow])
 ---
 
 ### 🏫 О школе
+
 [![Website](https://img.shields.io/badge/Maestro7IT-school--maestro7it.ru-darkgreen?style=for-the-badge)](https://school-maestro7it.ru/)
 
 > Инновационная школа программирования, специализирующаяся на подготовке специалистов в области современных технологий и языков программирования.
