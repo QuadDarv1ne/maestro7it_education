@@ -1,0 +1,401 @@
+% !TEX program = xelatex
+% NOTE: Для корректного Unicode используйте XeLaTeX (или LuaLaTeX).
+\documentclass[12pt]{article}
+\usepackage{fontspec}
+\setmainfont{CMU Serif}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{tikz-cd}
+\usepackage{multicol}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+% Настройка заголовков
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Настройка кода
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% Настройка отступов
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1\baselineskip}
+
+\title{Полное руководство по Prism: AI-редактору \LaTeX}
+\author{Дуплей Максим Игоревич}
+\date{26 января 2026 г.}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Введение в Prism}
+
+\subsection{Что такое Prism?}
+
+\textbf{Prism} --- это революционный \LaTeX{}-редактор, созданный OpenAI, который сочетает в себе мощь традиционного научного набора текста с возможностями искусственного интеллекта. Это не просто редактор --- это интеллектуальный помощник для написания научных документов, статей, диссертаций и других академических работ.
+
+\subsection{Основные преимущества}
+
+\begin{itemize}
+    \item \textbf{Интеграция с ChatGPT:} Встроенный доступ к мощным возможностям GPT прямо в редакторе
+    \item \textbf{Реальное время:} Совместная работа с соавторами в режиме реального времени
+    \item \textbf{Интеллектуальные функции:} Автоматическая генерация контента, исправление ошибок, улучшение ясности
+    \item \textbf{Проектный контекст:} ИИ имеет доступ ко всему вашему проекту для более точных ответов
+    \item \textbf{Математическая поддержка:} Отличная поддержка сложных математических выражений
+    \item \textbf{Unicode-совместимость:} Полная поддержка кириллицы и других языков
+\end{itemize}
+
+\section{Начало работы}
+
+\subsection{Доступ к Prism}
+
+Prism доступен по адресу: \url{https://prism.openai.com/}
+
+\subsection{Создание нового проекта}
+
+\begin{enumerate}
+    \item Перейдите на сайт Prism
+    \item Войдите в систему с помощью учетной записи OpenAI
+    \item Нажмите "New Project"
+    \item Выберите шаблон или начните с пустого документа
+    \item Назовите ваш проект
+\end{enumerate}
+
+\subsection{Интерфейс редактора}
+
+\begin{description}
+    \item[Главное окно редактирования:] Центральная область для написания \LaTeX{}-кода
+    \item[Панель ИИ:] Боковая панель для взаимодействия с ChatGPT
+    \item[Предварительный просмотр:] Правая панель для просмотра рендеринга документа
+    \item[Навигация по проекту:] Дерево файлов слева
+    \item[Панель инструментов:] Верхняя панель с основными командами
+\end{description}
+
+\section{Основные возможности}
+
+\subsection{Интеграция с ИИ}
+
+\subsubsection{Базовые команды}
+
+\begin{lstlisting}[language=TeX,caption=Примеры базовых команд ИИ]
+% Добавление математических формул
+"Добавь в введение формулу преобразования Лапласа для $t\cos(at)$."
+
+% Создание таблиц
+"В раздел резюме добавь таблицу 4×4."
+
+% Редактирование текста
+"Вычитай этот текст, отметь ошибки или логические пробелы и предложи, как улучшить ясность раздела."
+
+% Анализ теорем
+"Не пропустил ли я следствия или дальнейшие импликации Теоремы 3.1? Все ли оценки точные, или какие-то можно ослабить?"
+\end{lstlisting}
+
+\subsubsection{Генерация контента}
+
+\begin{lstlisting}[language=TeX,caption=Генерация различных элементов]
+% Аннотация
+"Напиши аннотацию (abstract) на основе остальной части статьи."
+
+% Библиография
+"Добавь библиографию к статье и предложи связанные работы, которые я мог пропустить."
+
+% Визуализации
+"Сгенерируй эту нарисованную от руки схему в \LaTeX{}."
+
+% Резюме
+"Сгенерируй 200-словное резюме для широкой аудитории на немецком."
+
+% Презентации
+"Сгенерируй презентацию Beamer, где каждый слайд находится в отдельном файле."
+\end{lstlisting}
+
+\subsection{Математические возможности}
+
+\subsubsection{Сложные формулы}
+
+\[
+\mathcal{L}\left\{ t \cos(a t) \right\} = \frac{ s^2 - a^2 }{ (s^2 + a^2)^2 }
+\]
+
+\[
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+\]
+
+\[
+\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
+\]
+
+\subsubsection{Матрицы и системы}
+
+\[
+\begin{pmatrix}
+a_{11} & a_{12} & \cdots & a_{1n} \\
+a_{21} & a_{22} & \cdots & a_{2n} \\
+\vdots & \vdots & \ddots & \vdots \\
+a_{m1} & a_{m2} & \cdots & a_{mn}
+\end{pmatrix}
+\]
+
+\[
+\begin{cases}
+x + 2y + 3z = 6 \\
+2x - y + z = 3 \\
+3x + y - 2z = 1
+\end{cases}
+\]
+
+\subsection{Визуализации и диаграммы}
+
+\subsubsection{Коммутативные диаграммы}
+
+\begin{center}
+\resizebox{0.6\linewidth}{!}{$
+\begin{tikzcd}[row sep=2em, column sep=1.5em, ampersand replacement=\&]
+E
+  \arrow[dr, "e"']
+  \arrow[drr, "p_2"]
+  \arrow[ddr, "p_1"']
+\& \& \\
+\& A \times B \arrow[r, "\pi_2"'] \arrow[d, "\pi_1"] \& B \arrow[d, "g"] \\
+\& A \arrow[r, "f"'] \& C
+\end{tikzcd}
+$}
+\end{center}
+
+\subsubsection{Таблицы}
+
+\begin{center}
+\resizebox{0.5\linewidth}{!}{%
+\begin{tabular}{|c|c|c|c|}
+\hline
+1 & 2 & 3 & 4 \\
+\hline
+5 & 6 & 7 & 8 \\
+\hline
+9 & 10 & 11 & 12 \\
+\hline
+13 & 14 & 15 & 16 \\
+\hline
+\end{tabular}%
+}
+\end{center}
+
+\section{Совместная работа}
+
+\subsection{Приглашение соавторов}
+
+\begin{enumerate}
+    \item Откройте проект в Prism
+    \item Нажмите меню "Share" в правом верхнем углу
+    \item Введите email адреса соавторов
+    \item Выберите уровень доступа (просмотр, комментирование, редактирование)
+    \item Отправьте приглашения
+\end{enumerate}
+
+\subsection{Реальное время редактирования}
+
+\begin{itemize}
+    \item Все изменения синхронизируются в реальном времени
+    \item Курсоры других пользователей отображаются разными цветами
+    \item История изменений сохраняется автоматически
+    \item Возможность отката к предыдущим версиям
+\end{itemize}
+
+\subsection{Комментарии и обсуждения}
+
+\begin{enumerate}
+    \item Выделите текст, к которому хотите добавить комментарий
+    \item Нажмите "Leave a comment" или используйте горячие клавиши Ctrl+Alt+M
+    \item Введите ваш комментарий
+    \item Комментарии отображаются в боковой панели
+    \item Соавторы могут отвечать на комментарии
+\end{enumerate}
+
+\section{Продвинутые возможности}
+
+\subsection{Управление проектами}
+
+\subsubsection{Структура проекта}
+
+\begin{lstlisting}[language=TeX,caption=Пример структуры проекта]
+project/
+├── main.tex          % Главный файл
+├── chapters/         % Главы
+│   ├── introduction.tex
+│   ├── methodology.tex
+│   ├── results.tex
+│   └── conclusion.tex
+├── figures/          % Изображения
+│   ├── diagram1.pdf
+│   └── graph.png
+├── bibliography.bib  % Библиография
+└── styles/           % Стили и классы
+    └── custom.sty
+\end{lstlisting}
+
+\subsubsection{Зависимости и компиляция}
+
+\begin{lstlisting}[language=TeX,caption=Управление зависимостями]
+% Prism автоматически отслеживает зависимости
+% и предлагает добавить недостающие пакеты
+
+"Добавь недостающие зависимости по всему проекту."
+\end{lstlisting}
+
+\subsection{Настройка и персонализация}
+
+\subsubsection{Пользовательские шаблоны}
+
+\begin{lstlisting}[language=TeX,caption=Пример пользовательского шаблона]
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% Пользовательские команды
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\title{Мой научный документ}
+\author{Автор}
+\date{\today}
+
+\begin{document}
+\maketitle
+% Содержание документа
+\end{document}
+\end{lstlisting}
+
+\subsubsection{Конфигурация компилятора}
+
+\begin{lstlisting}[language=TeX,caption=Выбор компилятора]
+% !TEX program = xelatex
+% NOTE: Для корректного Unicode используйте XeLaTeX (или LuaLaTeX).
+
+% Альтернативные варианты:
+% !TEX program = pdflatex
+% !TEX program = lualatex
+\end{lstlisting}
+
+\section{Решение проблем}
+
+\subsection{Частые ошибки}
+
+\subsubsection{Проблемы с компиляцией}
+
+\begin{description}
+    \item[Ошибка: "File not found"] Проверьте пути к файлам и зависимости
+    \item[Ошибка: "Undefined control sequence"] Убедитесь, что все необходимые пакеты подключены
+    \item[Ошибка: "Unicode character"] Используйте XeLaTeX или LuaLaTeX для Unicode-содержимого
+\end{description}
+
+\subsubsection{Проблемы с ИИ}
+
+\begin{description}
+    \item[Медленные ответы] Проверьте интернет-соединение
+    \item[Неточности в ответах] Уточните запрос или предоставьте больше контекста
+    \item[Ошибки в коде] Попросите ИИ проверить и исправить код
+\end{description}
+
+\subsection{Оптимизация производительности}
+
+\begin{itemize}
+    \item Используйте относительные пути к файлам
+    \item Оптимизируйте изображения перед включением
+    \item Разбивайте большие документы на части
+    \item Регулярно очищайте временные файлы
+\end{itemize}
+
+\section{Лучшие практики}
+
+\subsection{Организация проекта}
+
+\begin{enumerate}
+    \item Создавайте логическую структуру папок
+    \item Используйте осмысленные имена файлов
+    \item Поддерживайте регулярные резервные копии
+    \item Документируйте сложные части проекта
+\end{enumerate}
+
+\subsection{Совместная работа}
+
+\begin{enumerate}
+    \item Установите четкие правила именования
+    \item Используйте комментарии для объяснения сложных решений
+    \item Регулярно синхронизируйте изменения
+    \item Проводите периодические проверки кода
+\end{enumerate}
+
+\subsection{Использование ИИ}
+
+\begin{enumerate}
+    \item Будьте конкретны в запросах
+    \item Предоставляйте достаточный контекст
+    \item Проверяйте сгенерированный код
+    \item Используйте ИИ для идей, но сохраняйте критическое мышление
+\end{enumerate}
+
+\section{Заключение}
+
+Prism представляет собой мощный инструмент для научного письма, сочетающий традиционные возможности \LaTeX{} с современными технологиями искусственного интеллекта. Его интеграция с ChatGPT, поддержка совместной работы в реальном времени и интеллектуальные функции делают его идеальным выбором для написания сложных научных документов.
+
+\subsection{Дальнейшие ресурсы}
+
+\begin{itemize}
+    \item Официальный сайт: \url{https://prism.openai.com/}
+    \item Документация \LaTeX: \url{https://www.latex-project.org/help/documentation/}
+    \item Математические символы: \url{https://oeis.org/wiki/List_of_LaTeX_mathematical_symbols}
+    \item Сообщество \LaTeX: \url{https://tex.stackexchange.com/}
+\end{itemize}
+
+\subsection{Контактная информация}
+
+\textbf{Автор:} Дуплей Максим Игоревич
+
+\textbf{Telegram:} 
+\begin{itemize}
+    \item @quadd4rv1n7
+    \item @dupley\_maxim\_1999
+\end{itemize}
+
+\textbf{Email:} maksimqwe42@mail.ru
+
+\end{document}
