@@ -320,6 +320,9 @@ def cleanup_stale_games():
             cleanup_count = 0
             for session_id in stale_sessions:
                 try:
+                    # Remove game from AppState first
+                    app_state.remove_game(session_id)
+                    
                     # Always decrement active_game_count when cleaning up, regardless of whether session_id is in games
                     # because app_state tracks all games
                     active_game_count = max(0, active_game_count - 1)
@@ -372,7 +375,13 @@ def cleanup_stale_games():
             # Очистка устаревших записей кэша
             if CACHE_MANAGER_ENABLED:
                 # Менеджер кэша автоматически обрабатывает истечение TTL
-                pass
+                try:
+                    cache_manager.cleanup_expired()
+                except AttributeError:
+                    # If cleanup_expired method doesn't exist, skip
+                    pass
+                except Exception as e:
+                    logger.warning(f"Error during cache cleanup: {e}")
             
             # Обновление статистики ресурсов
             resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
