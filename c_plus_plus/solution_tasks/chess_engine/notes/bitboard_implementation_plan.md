@@ -1,100 +1,100 @@
-# Bitboard Implementation Plan
+# План реализации Bitboard
 
-## Overview
-This document outlines the implementation of bitboard representation for the chess engine, which should provide 3-5x performance improvement over the current array-based implementation.
+## Обзор
+Этот документ описывает реализацию bitboard представления для шахматного движка, которое должно обеспечить 3-5x ускорение по сравнению с текущей реализацией на массивах.
 
-## Architecture
+## Архитектура
 
-### 1. Bitboard Design
-- **12 Bitboards**: 2 colors × 6 piece types (King, Queen, Rook, Bishop, Knight, Pawn)
-- **3 Combined Bitboards**: White pieces, Black pieces, All occupied squares
-- **Additional State**: Side to move, castling rights, en passant square
+### 1. Дизайн Bitboard
+- **12 Bitboards**: 2 цвета × 6 типов фигур (Король, Ферзь, Ладья, Слон, Конь, Пешка)
+- **3 Объединенных Bitboards**: Белые фигуры, Черные фигуры, Все занятые клетки
+- **Дополнительное состояние**: Сторона, которой ходить, права рокировки, клетка взятия на проходе
 
-### 2. Key Advantages
-- **Memory Efficiency**: 12 × 8 bytes = 96 bytes vs 64 × 8 bytes = 512 bytes (81% memory saving)
-- **CPU Cache Friendly**: All data fits in L1 cache
-- **Parallel Operations**: 64 squares processed simultaneously
-- **Fast Bit Operations**: Hardware-accelerated bitwise operations
+### 2. Ключевые преимущества
+- **Эффективность памяти**: 12 × 8 байт = 96 байт против 64 × 8 байт = 512 байт (81% экономия памяти)
+- **Дружелюбность к CPU кэшу**: Все данные помещаются в L1 кэш
+- **Параллельные операции**: 64 клетки обрабатываются одновременно
+- **Быстрые битовые операции**: Аппаратно ускоренные побитовые операции
 
-## Implementation Files
+## Файлы реализации
 
-### Header: `include/bitboard.hpp`
-- Bitboard type definition (uint64_t)
-- Square and direction enums
-- BitboardEngine class declaration
-- Precomputed attack tables
+### Заголовочный файл: `include/bitboard.hpp`
+- Определение типа Bitboard (uint64_t)
+- Перечисления клеток и направлений
+- Объявление класса BitboardEngine
+- Предварительно вычисленные таблицы атак
 
-### Implementation: `src/bitboard/bitboard_engine.cpp`
-- Bitboard operations (set, clear, get pieces)
-- Attack generation functions
-- Utility functions (popcount, lsb, msb)
-- Debug printing functions
+### Реализация: `src/bitboard/bitboard_engine.cpp`
+- Операции с bitboard (установка, очистка, получение фигур)
+- Функции генерации атак
+- Вспомогательные функции (popcount, lsb, msb)
+- Функции отладочной печати
 
-### Test: `src/bitboard_test.cpp`
-- Performance benchmarks
-- Correctness verification
-- Comparison with array-based approach
+### Тест: `src/bitboard_test.cpp`
+- Бенчмарки производительности
+- Проверка корректности
+- Сравнение с массивным подходом
 
-## Performance Targets
+## Цели производительности
 
-### Expected Improvements:
-- **Move Generation**: 3-5x faster
-- **Position Evaluation**: 2-3x faster  
-- **Memory Usage**: 80% reduction
-- **Cache Performance**: Significant improvement
+### Ожидаемые улучшения:
+- **Генерация ходов**: 3-5x быстрее
+- **Оценка позиции**: 2-3x быстрее  
+- **Использование памяти**: 80% снижение
+- **Производительность кэша**: Значительное улучшение
 
-### Benchmark Metrics:
-- Operations per second
-- Memory footprint
-- Cache hit rates
-- Comparison with current implementation
+### Метрики бенчмарка:
+- Операций в секунду
+- Объем используемой памяти
+- Коэффициент попаданий в кэш
+- Сравнение с текущей реализацией
 
-## Integration Plan
+## План интеграции
 
-### Phase 1: Standalone Implementation
-- [x] Create bitboard.hpp header
-- [x] Implement bitboard_engine.cpp
-- [x] Create comprehensive tests
-- [ ] Fix compilation issues
+### Фаза 1: Автономная реализация
+- [x] Создать заголовочный файл bitboard.hpp
+- [x] Реализовать bitboard_engine.cpp
+- [x] Создать комплексные тесты
+- [ ] Исправить проблемы компиляции
 
-### Phase 2: Performance Testing
-- [ ] Run benchmarks on current hardware
-- [ ] Compare with array-based implementation
-- [ ] Optimize critical paths
-- [ ] Document performance gains
+### Фаза 2: Тестирование производительности
+- [ ] Запустить бенчмарки на текущем оборудовании
+- [ ] Сравнить с массивной реализацией
+- [ ] Оптимизировать критические пути
+- [ ] Задокументировать улучшения производительности
 
-### Phase 3: Integration
-- [ ] Create adapter layer
-- [ ] Gradual migration of components
-- [ ] Maintain backward compatibility
-- [ ] Full system testing
+### Фаза 3: Интеграция
+- [ ] Создать адаптерный слой
+- [ ] Постепенная миграция компонентов
+- [ ] Поддержание обратной совместимости
+- [ ] Полное тестирование системы
 
-## Next Steps After Bitboard
+## Следующие шаги после Bitboard
 
-1. **Incremental Evaluation** - Update position scores without full recalculation
-2. **Multithreading** - Parallel search using multiple CPU cores
-3. **UCI Protocol** - Standard chess engine interface
-4. **Opening Book** - Precomputed opening moves
-5. **Endgame Tables** - Perfect play in simplified positions
+1. **Инкрементальная оценка** - Обновление оценок позиции без полного пересчета
+2. **Многопоточность** - Параллельный поиск с использованием нескольких ядер CPU
+3. **Протокол UCI** - Стандартный интерфейс шахматного движка
+4. **Дебютная книга** - Предварительно вычисленные дебютные ходы
+5. **Эндшпильные таблицы** - Идеальная игра в упрощенных позициях
 
-## Technical Details
+## Технические детали
 
-### Bitboard Operations Used:
-- Bitwise AND, OR, XOR for set operations
-- Bit shifts for movement
-- Population count for piece counting
-- Leading/Trailing zero count for square extraction
+### Используемые операции Bitboard:
+- Побитовое И, ИЛИ, XOR для операций с множествами
+- Битовые сдвиги для перемещения
+- Подсчет единичных битов для подсчета фигур
+- Подсчет ведущих/младших нулей для извлечения клеток
 
-### Precomputed Tables:
-- Knight attack patterns (64 squares)
-- King attack patterns (64 squares)
-- Pawn attack patterns (2 colors × 64 squares)
-- Magic bitboards for sliding pieces (future optimization)
+### Предварительно вычисленные таблицы:
+- Шаблоны атак коня (64 клетки)
+- Шаблоны атак короля (64 клетки)
+- Шаблоны атак пешки (2 цвета × 64 клетки)
+- Magic bitboards для скользящих фигур (будущая оптимизация)
 
-## Success Criteria
+## Критерии успеха
 
-- All tests pass without errors
-- 3x+ performance improvement demonstrated
-- Memory usage reduced by 80%+
-- No functional regressions in chess logic
-- Ready for integration into main engine
+- Все тесты проходят без ошибок
+- Продемонстрировано 3x+ улучшение производительности
+- Использование памяти снижено на 80%+
+- Нет функциональных регрессий в шахматной логике
+- Готов к интеграции в основной движок

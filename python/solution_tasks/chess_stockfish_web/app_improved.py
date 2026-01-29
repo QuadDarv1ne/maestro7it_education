@@ -994,6 +994,38 @@ def handle_disconnect():
                 logger.info(f"Active games count: {stats['active_games']}")
             else:
                 logger.warning(f"No game found for session: {session_id}")
+            
+            # Также удаляем из глобального словаря games, если существует
+            if session_id in games:
+                try:
+                    del games[session_id]
+                    logger.info(f"Removed session {session_id} from games dictionary")
+                except Exception as e:
+                    logger.error(f"Error removing game from games dictionary: {e}")
+            
+            # Удаляем историю игры
+            if session_id in game_histories:
+                try:
+                    del game_histories[session_id]
+                    logger.info(f"Removed game history for session {session_id}")
+                except Exception as e:
+                    logger.error(f"Error removing game history: {e}")
+            
+            # Удаляем пользовательские настройки
+            if session_id in user_preferences:
+                try:
+                    del user_preferences[session_id]
+                    logger.info(f"Removed user preferences for session {session_id}")
+                except Exception as e:
+                    logger.error(f"Error removing user preferences: {e}")
+            
+            # Удаляем временную метку
+            if session_id in session_timestamps:
+                try:
+                    del session_timestamps[session_id]
+                    logger.info(f"Removed session timestamp for session: {session_id}")
+                except Exception as e:
+                    logger.error(f"Error removing session timestamp: {e}")
         
         # Отправка подтверждения отключения
         logger.info("Client disconnected successfully")
@@ -1302,15 +1334,25 @@ def handle_init(data):
             return
         
         # Проверка, есть ли у сессии уже активная игра
-        if session_id in games:
+        # Сначала проверяем через AppState, затем через словарь games для полной очистки
+        if app_state.get_game(session_id) or session_id in games:
             logger.info(f"Session {session_id} already has an active game. Cleaning up old game.")
             try:
                 # Remove game from AppState
                 app_state.remove_game(session_id)
-                del games[session_id]
+                # Also remove from games dict if it exists there
+                if session_id in games:
+                    del games[session_id]
+                # Also remove from other tracking dictionaries
+                if session_id in game_histories:
+                    del game_histories[session_id]
+                if session_id in user_preferences:
+                    del user_preferences[session_id]
+                if session_id in session_timestamps:
+                    del session_timestamps[session_id]
                 active_game_count = max(0, active_game_count - 1)
-            except:
-                pass
+            except Exception as e:
+                logger.error(f"Error during game cleanup: {e}")
         
         # Create a new game instance for this session
         game_init_start = time.time()
@@ -1933,6 +1975,11 @@ def handle_load_game(data):
                         
                 # Update session timestamp
                 session_timestamps[session_id] = time.time()
+                
+                # Restore game history if present in saved state
+                if 'game_history' in game_state:
+                    game.move_history = game_state['game_history']
+                    logger.info(f"Restored game history with {len(game.move_history)} moves for session {session_id}")
                 
                 emit('game_loaded', {
                     'fen': game_state['fen'],
