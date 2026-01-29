@@ -86,12 +86,133 @@ except ImportError:
     # Резервный вариант, если модуль utils недоступен
     PERFORMANCE_TRACKING_ENABLED = False
     performance_tracker = None
-    def track_engine_init(func): return func
-    def track_move_validation(func): return func
-    def track_move_execution(func): return func
-    def track_ai_calculation(func): return func
-    def track_game_status_check(func): return func
-    def track_fen_retrieval(func): return func
+    
+    # Реализация простого трекера производительности
+    import time
+    import threading
+    from collections import defaultdict, deque
+    
+    class SimplePerformanceTracker:
+        def __init__(self, max_samples=100):
+            self.max_samples = max_samples
+            self.metrics = defaultdict(lambda: deque(maxlen=max_samples))
+            self.lock = threading.Lock()
+            
+        def track_operation(self, operation_name, duration):
+            with self.lock:
+                self.metrics[operation_name].append({
+                    'duration': duration,
+                    'timestamp': time.time()
+                })
+                
+        def get_metrics_summary(self):
+            with self.lock:
+                summary = {}
+                for op_name, samples in self.metrics.items():
+                    if samples:
+                        durations = [sample['duration'] for sample in samples]
+                        summary[op_name] = {
+                            'count': len(durations),
+                            'avg_time': sum(durations) / len(durations),
+                            'min_time': min(durations),
+                            'max_time': max(durations),
+                            'total_time': sum(durations),
+                            'last_10_samples': [s['duration'] for s in list(samples)[-10:]]
+                        }
+                return summary
+                
+        def get_average_metric(self, operation_name):
+            with self.lock:
+                if operation_name in self.metrics and self.metrics[operation_name]:
+                    durations = [sample['duration'] for sample in self.metrics[operation_name]]
+                    return sum(durations) / len(durations)
+                return 0
+    
+    performance_tracker = SimplePerformanceTracker(max_samples=50)
+    
+    def track_engine_init(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                performance_tracker.track_operation('engine_init', duration)
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                performance_tracker.track_operation('engine_init_error', duration)
+                raise
+        return wrapper
+        
+    def track_move_validation(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                performance_tracker.track_operation('move_validation', duration)
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                performance_tracker.track_operation('move_validation_error', duration)
+                raise
+        return wrapper
+        
+    def track_move_execution(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                performance_tracker.track_operation('move_execution', duration)
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                performance_tracker.track_operation('move_execution_error', duration)
+                raise
+        return wrapper
+        
+    def track_ai_calculation(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                performance_tracker.track_operation('ai_calculation', duration)
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                performance_tracker.track_operation('ai_calculation_error', duration)
+                raise
+        return wrapper
+        
+    def track_game_status_check(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                performance_tracker.track_operation('game_status_check', duration)
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                performance_tracker.track_operation('game_status_check_error', duration)
+                raise
+        return wrapper
+        
+    def track_fen_retrieval(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                performance_tracker.track_operation('fen_retrieval', duration)
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                performance_tracker.track_operation('fen_retrieval_error', duration)
+                raise
+        return wrapper
 
 # Импорт менеджера кэша
 try:
@@ -101,9 +222,72 @@ except ImportError:
     # Резервный вариант, если менеджер кэша недоступен
     CACHE_MANAGER_ENABLED = False
     cache_manager = None
-    def cached(cache_type='generic'): 
+    
+    # Реализация простого кэширования в памяти с ограничением размера
+    import threading
+    from collections import OrderedDict
+    
+    class SimpleCacheManager:
+        def __init__(self, max_size=100):
+            self.max_size = max_size
+            self.cache = OrderedDict()
+            self.lock = threading.Lock()
+            
+        def get(self, key, cache_type='generic'):
+            with self.lock:
+                if key in self.cache:
+                    # Перемещаем элемент в конец для LRU
+                    value = self.cache.pop(key)
+                    self.cache[key] = value
+                    return value
+                return None
+                
+        def set(self, key, value, cache_type='generic', ttl=None):
+            with self.lock:
+                # Удаляем старые записи если превышен лимит
+                if key in self.cache:
+                    del self.cache[key]
+                elif len(self.cache) >= self.max_size:
+                    # Удаляем первую (самую старую) запись
+                    self.cache.popitem(last=False)
+                self.cache[key] = value
+                
+        def cleanup_expired(self):
+            # Простой кэш не имеет TTL, просто возвращаем True
+            pass
+            
+        def get_cache_stats(self):
+            with self.lock:
+                return {
+                    'generic': {
+                        'size': len(self.cache),
+                        'max_size': self.max_size,
+                        'utilization': len(self.cache) / self.max_size if self.max_size > 0 else 0
+                    }
+                }
+    
+    # Создаем глобальный экземпляр простого кэша
+    cache_manager = SimpleCacheManager(max_size=50)
+    
+    def cached(cache_type='generic', ttl=300, max_size=50):  # 5 минут TTL по умолчанию
         def decorator(func):
-            return func
+            cache_key = f"{func.__module__}.{func.__name__}"
+            
+            def wrapper(*args, **kwargs):
+                # Создаем ключ кэша на основе аргументов функции
+                cache_key_full = f"{cache_key}:{hash(str(args) + str(sorted(kwargs.items())))}"
+                
+                # Проверяем наличие значения в кэше
+                cached_value = cache_manager.get(cache_key_full, cache_type)
+                if cached_value is not None:
+                    return cached_value
+                
+                # Вычисляем результат и сохраняем в кэш
+                result = func(*args, **kwargs)
+                cache_manager.set(cache_key_full, result, cache_type, ttl)
+                return result
+            
+            return wrapper
         return decorator
 
 # Импорт обработчика ошибок
@@ -204,11 +388,51 @@ except ImportError:
     # Резервный вариант, если пул соединений недоступен
     CONNECTION_POOLING_ENABLED = False
     stockfish_pool = None
-    def pool_get_stockfish_engine(skill_level=5):
-        # Простой контекстный менеджер, который создает новый движок каждый раз
-        @contextmanager
-        def engine_context_manager():
-            # Создание нового движка
+    
+    # Реализация простого пула соединений в памяти
+    import queue
+    import threading
+    from contextlib import contextmanager
+    
+    class SimpleStockfishPool:
+        def __init__(self, max_size=5):
+            self.max_size = max_size
+            self.pool = queue.Queue(maxsize=max_size)
+            self.current_size = 0
+            self.lock = threading.Lock()
+            self.created_count = 0
+            self.reused_count = 0
+            
+        def get_engine(self, skill_level=5):
+            try:
+                # Попытка получить движок из пула
+                engine = self.pool.get_nowait()
+                self.reused_count += 1
+                # Обновляем уровень сложности
+                engine.set_skill_level(skill_level)
+                return engine
+            except queue.Empty:
+                # Создаем новый движок если пул пуст и не превышено максимальное количество
+                with self.lock:
+                    if self.current_size < self.max_size:
+                        engine = self._create_engine(skill_level)
+                        self.current_size += 1
+                        self.created_count += 1
+                        return engine
+                    else:
+                        # Если пул полон, создаем временный движок
+                        return self._create_engine(skill_level)
+        
+        def return_engine(self, engine):
+            try:
+                self.pool.put_nowait(engine)
+            except queue.Full:
+                # Если пул полон, закрываем движок
+                self._close_engine(engine)
+                with self.lock:
+                    self.current_size -= 1
+        
+        def _create_engine(self, skill_level):
             engine_path = _find_stockfish_executable()
             if not engine_path:
                 raise EngineInitializationError("Stockfish executable not found")
@@ -222,16 +446,37 @@ except ImportError:
                 'Contempt': 0,
                 'Ponder': False
             })
+            return engine
+            
+        def _close_engine(self, engine):
             try:
-                yield engine
-            finally:
-                # Очистка движка
-                try:
-                    # Stockfish не имеет методов quit() или close(), просто позволяем сборщику мусора удалить его
-                    pass
-                except:
-                    pass
-        return engine_context_manager()
+                if hasattr(engine, 'quit'):
+                    engine.quit()
+                elif hasattr(engine, 'stop'):
+                    engine.stop()
+            except:
+                pass
+            
+        def get_stats(self):
+            return {
+                'pool_size': self.pool.qsize(),
+                'max_engines': self.max_size,
+                'active_engines': self.current_size,
+                'total_created': self.created_count,
+                'total_reused': self.reused_count
+            }
+    
+    # Создаем глобальный пул
+    stockfish_pool = SimpleStockfishPool(max_size=3)
+    
+    @contextmanager
+    def pool_get_stockfish_engine(skill_level=5):
+        engine = stockfish_pool.get_engine(skill_level)
+        try:
+            yield engine
+        finally:
+            # Возвращаем движок в пул
+            stockfish_pool.return_engine(engine)
 
 # Настройка логирования с улучшенным форматированием и ротацией
 def setup_logging():
@@ -335,6 +580,8 @@ def cleanup_stale_games():
     while True:
         try:
             time.sleep(CLEANUP_INTERVAL)
+            resource_stats['cleanup_cycles'] += 1
+            
             # Получение устаревших сессий через AppState
             stale_sessions = app_state.get_stale_sessions(GAME_TIMEOUT)
             
@@ -365,6 +612,9 @@ def cleanup_stale_games():
                                 else:
                                     # Для непулованных движков просто удаляем ссылку
                                     game.engine = None
+                                    # Явно вызываем сборщик мусора для освобождения памяти
+                                    import gc
+                                    gc.collect()
                             
                             del games[session_id]
                             logger.info(f"Cleaned up stale game for session: {session_id}")
@@ -408,6 +658,9 @@ def cleanup_stale_games():
             # Обновление статистики ресурсов
             resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
             resource_stats['peak_sessions'] = max(resource_stats['peak_sessions'], len(session_timestamps))
+            
+            # Обновление статистики использования памяти
+            update_memory_stats()
             
             logger.info(f"Cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}, Cleaned up: {cleanup_count}")
             logger.info(f"Resource stats: {resource_stats}")
@@ -725,9 +978,11 @@ class ChessGame:
                         except Exception as e:
                             logger.warning(f"Error closing engine context: {e}")
                     try:
-                        # Stockfish engines are managed by the connection pool or garbage collection
-                        # No explicit process termination needed
-                        pass
+                        # Явное освобождение ресурсов движка
+                        if hasattr(self.engine, 'quit'):
+                            self.engine.quit()
+                        elif hasattr(self.engine, 'stop'):
+                            self.engine.stop()
                     except Exception as e:
                         logger.warning(f"Error during engine cleanup: {e}")
                     finally:
@@ -735,20 +990,26 @@ class ChessGame:
                         self.engine = None
                         self._engine_context = None
                         self.initialized = False
+                        # Явный вызов сборщика мусора для освобождения памяти
+                        import gc
+                        gc.collect()
         except Exception as e:
             logger.error(f"Critical error during engine cleanup: {e}")
             # В случае критической ошибки пытаемся очистить все ссылки
             self.engine = None
             self._engine_context = None
             self.initialized = False
+            # Явный вызов сборщика мусора
+            import gc
+            gc.collect()
     
-    @cached('board_state')
+    @cached('board_state', ttl=2, max_size=10)  # Уменьшен TTL до 2 секунд и размер кэша до 10 для FEN
     @track_fen_retrieval
     @handle_chess_errors(context="fen_retrieval")
     def get_fen(self):
         if self.engine and self.initialized:
             try:
-                # Сначала проверка кэша
+                # Сначала проверка внутреннего кэша
                 current_time = time.time()
                 if (self._fen_cache and 
                     current_time - self._fen_cache_timestamp < self._fen_cache_ttl):
@@ -759,7 +1020,7 @@ class ChessGame:
                     logger.warning("Stockfish returned None for FEN position")
                     return None
                 
-                # Обновление кэша
+                # Обновление внутреннего кэша
                 self._fen_cache = fen
                 self._fen_cache_timestamp = current_time
                 
@@ -798,7 +1059,7 @@ class ChessGame:
             logger.error(f"Error making move {move}: {e}")
             raise GameLogicError(f"Failed to execute move {move}: {str(e)}") from e
     
-    @cached('valid_moves')
+    @cached('valid_moves', ttl=1, max_size=20)  # Быстрое обновление кэша для валидации ходов
     @track_move_validation
     @handle_chess_errors(context="move_validation")
     def is_move_correct(self, move):
@@ -842,7 +1103,7 @@ class ChessGame:
                 logger.error(f"Position comparison method failed: {e}")
                 raise MoveValidationError(f"Failed to validate move {move}: {str(e)}") from e
     
-    @cached('ai_move')
+    @cached('ai_move', ttl=5, max_size=5)  # Кэшируем ходы AI с коротким TTL
     @track_ai_calculation
     @handle_chess_errors(context="ai_move_calculation")
     @retry_on_failure(max_attempts=2, delay=0.5, backoff=1.5)
@@ -859,7 +1120,7 @@ class ChessGame:
             logger.error(f"Error getting best move: {e}")
             raise GameLogicError(f"Failed to get best move: {str(e)}") from e
     
-    @cached('evaluation')
+    @cached('evaluation', ttl=3, max_size=10)  # Кэшируем оценки позиции
     @handle_chess_errors(context="position_evaluation")
     def get_evaluation(self):
         """Получение оценки позиции от Stockfish"""
@@ -872,7 +1133,7 @@ class ChessGame:
             logger.error(f"Error getting evaluation: {e}")
             raise GameLogicError(f"Failed to get position evaluation: {str(e)}") from e
     
-    @cached('valid_moves')
+    @cached('valid_moves', ttl=3, max_size=10)  # Используем тот же тип кэша что и для валидации ходов
     @handle_chess_errors(context="top_moves")
     def get_top_moves(self, limit=5):
         """Получение лучших ходов от Stockfish"""
@@ -885,7 +1146,7 @@ class ChessGame:
             logger.error(f"Error getting top moves: {e}")
             raise GameLogicError(f"Failed to get top moves: {str(e)}") from e
     
-    @cached('game_status')
+    @cached('game_status', ttl=1, max_size=5)  # Статус игры может быстро меняться, короткий TTL
     @track_game_status_check
     @handle_chess_errors(context="game_status_check")
     def get_game_status(self, fen):
@@ -1084,6 +1345,39 @@ def validate_password(password):
     if len(password) > 128:
         return False, "Password must be less than 128 characters"
     return True, None
+
+def update_memory_stats():
+    """Обновление статистики использования памяти"""
+    try:
+        import psutil
+        import os
+        
+        # Получение информации о памяти процесса
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+        current_memory_mb = memory_info.rss / (1024 * 1024)
+        
+        # Обновление статистики
+        resource_stats['current_memory_mb'] = current_memory_mb
+        if current_memory_mb > resource_stats['memory_usage_peak_mb']:
+            resource_stats['memory_usage_peak_mb'] = current_memory_mb
+            
+        # Приблизительная оценка использования памяти для различных структур данных
+        memory_usage['games_dict'] = len(games) * 0.5  # условная оценка в MB
+        memory_usage['game_histories'] = len(game_histories) * 0.3
+        memory_usage['session_timestamps'] = len(session_timestamps) * 0.01
+        memory_usage['user_preferences'] = len(user_preferences) * 0.02
+        memory_usage['total_estimated'] = sum(memory_usage.values())
+        
+    except Exception as e:
+        logger.warning(f"Could not update memory stats: {e}")
+        # В случае ошибки, обновляем хотя бы базовые метрики
+        try:
+            import gc
+            collected = gc.collect()
+            logger.debug(f"Garbage collector: collected {collected} objects")
+        except Exception:
+            pass
 
 # Добавлено после существующих маршрутов и перед endpoint проверки здоровья
 
@@ -2162,8 +2456,19 @@ def metrics_endpoint():
             for operation, data in perf_metrics.items():
                 if isinstance(data, dict):
                     avg_time = data.get('avg_time', 0)
+                    count = data.get('count', 0)
+                    min_time = data.get('min_time', 0)
+                    max_time = data.get('max_time', 0)
+                    total_time = data.get('total_time', 0)
+                    
                     if avg_time:
-                        metrics.append(f'operation_duration_seconds{{operation="{operation}"}} {avg_time:.4f}')
+                        metrics.append(f'operation_duration_seconds{{operation="{operation}",quantile="avg"}} {avg_time:.4f}')
+                    if min_time:
+                        metrics.append(f'operation_duration_seconds{{operation="{operation}",quantile="min"}} {min_time:.4f}')
+                    if max_time:
+                        metrics.append(f'operation_duration_seconds{{operation="{operation}",quantile="max"}} {max_time:.4f}')
+                    metrics.append(f'operation_count{{operation="{operation}"}} {count}')
+                    metrics.append(f'operation_total_duration_seconds{{operation="{operation}"}} {total_time:.4f}')
         
         # Game statistics
         metrics.append(f'active_games_total {active_game_count}')
@@ -2173,6 +2478,14 @@ def metrics_endpoint():
         # Resource statistics
         resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
         metrics.append(f'peak_active_games {resource_stats["peak_active_games"]}')
+        
+        # Memory usage statistics
+        metrics.append(f'memory_current_mb {resource_stats.get("current_memory_mb", 0):.2f}')
+        metrics.append(f'memory_peak_mb {resource_stats.get("memory_usage_peak_mb", 0):.2f}')
+        
+        # Cleanup statistics
+        metrics.append(f'cleanup_cycles_total {resource_stats.get("cleanup_cycles", 0)}')
+        metrics.append(f'games_cleaned_total {resource_stats.get("total_games_cleaned", 0)}')
         
         # Connection pool statistics
         if CONNECTION_POOLING_ENABLED and stockfish_pool:
@@ -2264,6 +2577,82 @@ def resource_stats_endpoint():
 # Запуск потока очистки после определения всех переменных для предотвращения гонок
 cleanup_thread = threading.Thread(target=cleanup_stale_games, daemon=True)
 cleanup_thread.start()
+
+
+def graceful_shutdown():
+    """Функция для корректного завершения работы приложения"""
+    logger.info("Starting graceful shutdown...")
+    
+    # Остановка потока очистки
+    global cleanup_thread
+    try:
+        # Отправляем сигнал остановки потоку очистки (через установку флага или ожидание)
+        logger.info("Stopping cleanup thread...")
+    except Exception as e:
+        logger.error(f"Error stopping cleanup thread: {e}")
+    
+    # Очистка всех активных игр
+    logger.info(f"Cleaning up {len(games)} active games...")
+    for session_id, game in list(games.items()):
+        try:
+            if hasattr(game, 'engine') and game.engine:
+                if CONNECTION_POOLING_ENABLED and hasattr(game, '_engine_context') and game._engine_context:
+                    try:
+                        game._engine_context.__exit__(None, None, None)
+                    except Exception as e:
+                        logger.warning(f"Error returning engine to pool during shutdown for session {session_id}: {e}")
+                else:
+                    # Закрываем движок напрямую
+                    if hasattr(game.engine, 'quit'):
+                        game.engine.quit()
+                    elif hasattr(game.engine, 'stop'):
+                        game.engine.stop()
+            # Удаляем игру из словаря
+            del games[session_id]
+        except Exception as e:
+            logger.error(f"Error cleaning up game for session {session_id} during shutdown: {e}")
+    
+    # Очистка пула соединений, если используется
+    if CONNECTION_POOLING_ENABLED and stockfish_pool:
+        logger.info("Shutting down connection pool...")
+        try:
+            # В зависимости от реализации пула, может потребоваться специальная процедура остановки
+            pass
+        except Exception as e:
+            logger.error(f"Error shutting down connection pool: {e}")
+    
+    # Очистка кэша, если используется
+    if CACHE_MANAGER_ENABLED and cache_manager:
+        logger.info("Clearing cache...")
+        try:
+            # Если у кэша есть метод очистки
+            if hasattr(cache_manager, 'clear'):
+                cache_manager.clear()
+        except Exception as e:
+            logger.error(f"Error clearing cache: {e}")
+    
+    # Сборка мусора для освобождения памяти
+    import gc
+    collected = gc.collect()
+    logger.info(f"Garbage collector: collected {collected} objects during shutdown")
+    
+    logger.info("Graceful shutdown completed")
+
+
+# Обработка сигнала завершения для корректной остановки
+import signal
+import sys
+
+def signal_handler(sig, frame):
+    logger.info(f"Received signal {sig}, initiating graceful shutdown...")
+    graceful_shutdown()
+    sys.exit(0)
+
+# Регистрация обработчиков сигналов
+signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
+
+logger.info("Signal handlers registered for graceful shutdown")
 
 if __name__ == '__main__':
     logger.info("Starting Chess Stockfish Web application...")
