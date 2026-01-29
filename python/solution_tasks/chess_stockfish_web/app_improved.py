@@ -44,6 +44,222 @@ memory_usage = {
     'user_preferences': 0,
     'total_estimated': 0
 }
+
+# Пороги автоматической очистки
+MEMORY_CLEANUP_THRESHOLDS = {
+    'high_memory_mb': 500,           # Высокий порог памяти
+    'critical_memory_mb': 800,       # Критический порог памяти
+    'cleanup_percentage': 0.2,       # Процент очистки при достижении порога
+    'min_cleanup_age': 1800          # Минимальный возраст сессии для очистки (30 минут)
+}
+
+# Флаги для управления автоматической очисткой
+auto_cleanup_enabled = True
+last_auto_cleanup = 0
+
+# Конфигурация продвинутой оптимизации базы данных
+DATABASE_OPTIMIZATION_CONFIG = {
+    'connection_pool_size': 20,
+    'pool_recycle': 3600,
+    'pool_timeout': 30,
+    'max_overflow': 10,
+    'query_cache_size': 1000,
+    'slow_query_threshold': 1.0,  # секунды
+    'index_monitoring_enabled': True,
+    'stats_collection_interval': 300  # секунды
+}
+
+# Метрики производительности базы данных
+db_performance_metrics = {
+    'query_count': 0,
+    'slow_queries': [],
+    'cache_hits': 0,
+    'cache_misses': 0,
+    'connection_pool_stats': {},
+    'last_stats_update': 0
+}
+
+
+def optimize_database_connection():
+    """Оптимизация параметров подключения к базе данных"""
+    if not DATABASE_ENABLED or db is None:
+        return
+    
+    try:
+        # Настройка пула соединений
+        from sqlalchemy import event
+        from sqlalchemy.pool import Pool
+        
+        @event.listens_for(Pool, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            """Настройка SQLite для лучшей производительности"""
+            if hasattr(dbapi_connection, 'execute'):
+                try:
+                    # Включение кэширования запросов
+                    dbapi_connection.execute("PRAGMA cache_size = 10000")
+                    # Оптимизация записи
+                    dbapi_connection.execute("PRAGMA synchronous = NORMAL")
+                    # Включение WAL режима для лучшей конкурентности
+                    dbapi_connection.execute("PRAGMA journal_mode = WAL")
+                    # Оптимизация чтения
+                    dbapi_connection.execute("PRAGMA temp_store = MEMORY")
+                    logger.debug("SQLite pragmas configured for optimization")
+                except Exception as e:
+                    logger.warning(f"Failed to configure SQLite pragmas: {e}")
+        
+        logger.info("Database connection optimization completed")
+    except Exception as e:
+        logger.error(f"Database optimization failed: {e}")
+
+
+class DatabaseQueryCache:
+    """Продвинутый кэш запросов к базе данных"""
+    
+    def __init__(self, max_size=1000):
+        self.max_size = max_size
+        self.cache = OrderedDict()
+        self.hits = 0
+        self.misses = 0
+        self.lock = threading.Lock()
+        
+    def get(self, key):
+        """Получить данные из кэша"""
+        with self.lock:
+            if key in self.cache:
+                # Перемещаем в конец (наиболее свежие)
+                self.cache.move_to_end(key)
+                self.hits += 1
+                db_performance_metrics['cache_hits'] += 1
+                return self.cache[key]['value']
+            self.misses += 1
+            db_performance_metrics['cache_misses'] += 1
+            return None
+    
+    def set(self, key, value, ttl=300):
+        """Добавить данные в кэш"""
+        with self.lock:
+            if len(self.cache) >= self.max_size:
+                # Удаляем самый старый элемент
+                self.cache.popitem(last=False)
+            
+            self.cache[key] = {
+                'value': value,
+                'expires_at': time.time() + ttl
+            }
+            # Перемещаем в конец
+            self.cache.move_to_end(key)
+    
+    def cleanup_expired(self):
+        """Очистка истекших записей кэша"""
+        current_time = time.time()
+        with self.lock:
+            expired_keys = [
+                key for key, data in self.cache.items()
+                if data['expires_at'] < current_time
+            ]
+            for key in expired_keys:
+                del self.cache[key]
+    
+    def get_stats(self):
+        """Получить статистику кэша"""
+        with self.lock:
+            return {
+                'size': len(self.cache),
+                'max_size': self.max_size,
+                'hits': self.hits,
+                'misses': self.misses,
+                'hit_rate': self.hits / (self.hits + self.misses) if (self.hits + self.misses) > 0 else 0
+            }
+
+# Глобальный экземпляр кэша запросов
+db_query_cache = DatabaseQueryCache(max_size=DATABASE_OPTIMIZATION_CONFIG['query_cache_size'])
+
+
+def monitor_slow_queries():
+    """Мониторинг медленных запросов к базе данных"""
+    if not DATABASE_ENABLED or db is None:
+        return
+    
+    try:
+        from sqlalchemy import event
+        from sqlalchemy.engine import Engine
+        import time
+        
+        @event.listens_for(Engine, "before_cursor_execute")
+        def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+            conn.info.setdefault('query_start_time', []).append(time.time())
+        
+        @event.listens_for(Engine, "after_cursor_execute")
+        def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+            total_time = time.time() - conn.info['query_start_time'].pop(-1)
+            db_performance_metrics['query_count'] += 1
+            
+            if total_time > DATABASE_OPTIMIZATION_CONFIG['slow_query_threshold']:
+                slow_query_info = {
+                    'query': statement[:200],  # Первые 200 символов
+                    'duration': total_time,
+                    'timestamp': time.time(),
+                    'parameters': str(parameters)[:100]
+                }
+                db_performance_metrics['slow_queries'].append(slow_query_info)
+                
+                # Ограничиваем размер списка медленных запросов
+                if len(db_performance_metrics['slow_queries']) > 100:
+                    db_performance_metrics['slow_queries'] = db_performance_metrics['slow_queries'][-50:]
+                
+                logger.warning(f"Slow query detected ({total_time:.3f}s): {statement[:100]}...")
+                
+    except Exception as e:
+        logger.error(f"Failed to setup slow query monitoring: {e}")
+
+
+def collect_database_stats():
+    """Сбор статистики использования базы данных"""
+    if not DATABASE_ENABLED or db is None:
+        return {}
+    
+    try:
+        current_time = time.time()
+        if current_time - db_performance_metrics['last_stats_update'] < DATABASE_OPTIMIZATION_CONFIG['stats_collection_interval']:
+            return db_performance_metrics
+        
+        # Обновляем статистику пула соединений
+        if hasattr(db.engine.pool, 'size'):
+            db_performance_metrics['connection_pool_stats'] = {
+                'size': db.engine.pool.size(),
+                'checked_out': db.engine.pool.checkedout(),
+                'overflow': getattr(db.engine.pool, 'overflow', 0)
+            }
+        
+        # Очищаем кэш истекших записей
+        db_query_cache.cleanup_expired()
+        
+        db_performance_metrics['last_stats_update'] = current_time
+        
+        return db_performance_metrics
+    
+    except Exception as e:
+        logger.error(f"Error collecting database stats: {e}")
+        return db_performance_metrics
+
+
+def get_cached_query_result(query_func, cache_key, ttl=300, *args, **kwargs):
+    """Выполнение запроса с кэшированием результатов"""
+    # Проверяем кэш
+    cached_result = db_query_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
+    
+    # Выполняем запрос
+    try:
+        result = query_func(*args, **kwargs)
+        # Сохраняем в кэш
+        db_query_cache.set(cache_key, result, ttl)
+        return result
+    except Exception as e:
+        logger.error(f"Error executing cached query {cache_key}: {e}")
+        raise
+
 import logging
 import json
 import threading
@@ -54,7 +270,7 @@ import functools
 import re
 from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
@@ -662,11 +878,37 @@ def cleanup_stale_games():
             resource_stats['peak_active_games'] = max(resource_stats['peak_active_games'], active_game_count)
             resource_stats['peak_sessions'] = max(resource_stats['peak_sessions'], len(session_timestamps))
             
-            # Обновление статистики использования памяти
+            # Обновление статистики использования памяти с автоматической очисткой
             update_memory_stats()
             
-            logger.info(f"Cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}, Cleaned up: {cleanup_count}")
+            # Автоматическая оптимизация базы данных
+            if DATABASE_ENABLED and db is not None:
+                try:
+                    collect_database_stats()
+                    # Очистка истекших записей кэша
+                    db_query_cache.cleanup_expired()
+                except Exception as e:
+                    logger.warning(f"Error during database optimization: {e}")
+            
+            logger.info(f"Periodic cleanup completed. Active games: {active_game_count}, Tracked sessions: {len(session_timestamps)}, Cleaned up: {cleanup_count}")
             logger.info(f"Resource stats: {resource_stats}")
+            
+            # Дополнительная проверка памяти и принудительная очистка если необходимо
+            try:
+                import psutil
+                import os
+                process = psutil.Process(os.getpid())
+                current_memory_mb = process.memory_info().rss / (1024 * 1024)
+                
+                if current_memory_mb > MEMORY_CLEANUP_THRESHOLDS['high_memory_mb']:
+                    logger.info(f"Memory usage high ({current_memory_mb:.2f}MB), triggering additional cleanup")
+                    # Выполняем дополнительную очистку
+                    import gc
+                    collected = gc.collect()
+                    logger.info(f"Additional garbage collection: collected {collected} objects")
+            except Exception as e:
+                logger.warning(f"Error during additional memory check: {e}")
+                
         except Exception as e:
             logger.error(f"Error in cleanup thread: {e}")
 
@@ -686,6 +928,23 @@ limiter = Limiter(
 # Инициализация базы данных, если включена
 if DATABASE_ENABLED and init_db:
     db = init_db(app)
+    
+    # Продвинутая оптимизация базы данных
+    try:
+        # Настройка оптимизации подключения
+        optimize_database_connection()
+        
+        # Включение мониторинга медленных запросов
+        monitor_slow_queries()
+        
+        # Настройка расширенных параметров пула соединений
+        if hasattr(db.engine, 'pool'):
+            db.engine.pool._pool.maxsize = DATABASE_OPTIMIZATION_CONFIG['connection_pool_size']
+            db.engine.pool._pool.timeout = DATABASE_OPTIMIZATION_CONFIG['pool_timeout']
+            
+        logger.info("Advanced database optimization initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize advanced database optimization: {e}")
 
 socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=30, ping_interval=25)
 
@@ -1349,6 +1608,87 @@ def validate_password(password):
         return False, "Password must be less than 128 characters"
     return True, None
 
+def auto_memory_cleanup(current_memory_mb):
+    """Автоматическая очистка памяти при достижении порогов"""
+    global last_auto_cleanup
+    
+    try:
+        import time
+        current_time = time.time()
+        
+        # Проверка, не было ли недавней очистки
+        if current_time - last_auto_cleanup < 60:  # Не чаще чем раз в минуту
+            return False
+            
+        cleanup_threshold = MEMORY_CLEANUP_THRESHOLDS['high_memory_mb']
+        critical_threshold = MEMORY_CLEANUP_THRESHOLDS['critical_memory_mb']
+        
+        # Определение уровня очистки
+        if current_memory_mb >= critical_threshold:
+            # Критическая очистка - удаляем больше данных
+            cleanup_percentage = 0.4
+            logger.warning(f"Critical memory usage detected: {current_memory_mb:.2f}MB, initiating aggressive cleanup")
+        elif current_memory_mb >= cleanup_threshold:
+            # Обычная очистка
+            cleanup_percentage = MEMORY_CLEANUP_THRESHOLDS['cleanup_percentage']
+            logger.info(f"High memory usage detected: {current_memory_mb:.2f}MB, initiating cleanup")
+        else:
+            return False
+        
+        # Определение сессий для очистки
+        current_time = time.time()
+        min_age = MEMORY_CLEANUP_THRESHOLDS['min_cleanup_age']
+        stale_sessions = []
+        
+        for session_id, timestamp in session_timestamps.items():
+            if current_time - timestamp > min_age:
+                stale_sessions.append(session_id)
+        
+        # Сортировка по давности использования
+        stale_sessions.sort(key=lambda sid: session_timestamps[sid])
+        
+        # Определение количества сессий для очистки
+        sessions_to_clean = max(1, int(len(stale_sessions) * cleanup_percentage))
+        sessions_to_clean = min(sessions_to_clean, len(stale_sessions))
+        
+        # Выполнение очистки
+        cleaned_count = 0
+        for i in range(sessions_to_clean):
+            session_id = stale_sessions[i]
+            try:
+                # Remove game from AppState
+                if app_state.remove_game(session_id):
+                    global active_game_count
+                    active_game_count = max(0, active_game_count - 1)
+                    resource_stats['total_games_cleaned'] += 1
+                    cleaned_count += 1
+                
+                # Remove from other dictionaries
+                if session_id in games:
+                    del games[session_id]
+                if session_id in game_histories:
+                    del game_histories[session_id]
+                if session_id in user_preferences:
+                    del user_preferences[session_id]
+                if session_id in session_timestamps:
+                    del session_timestamps[session_id]
+                    
+            except Exception as e:
+                logger.error(f"Error cleaning session {session_id}: {e}")
+        
+        if cleaned_count > 0:
+            # Принудительная сборка мусора
+            import gc
+            collected = gc.collect()
+            last_auto_cleanup = current_time
+            logger.info(f"Auto cleanup completed: removed {cleaned_count} sessions, collected {collected} objects")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error in auto memory cleanup: {e}")
+    
+    return False
+
 def update_memory_stats():
     """Обновление статистики использования памяти"""
     try:
@@ -1371,6 +1711,10 @@ def update_memory_stats():
         memory_usage['session_timestamps'] = len(session_timestamps) * 0.01
         memory_usage['user_preferences'] = len(user_preferences) * 0.02
         memory_usage['total_estimated'] = sum(memory_usage.values())
+        
+        # Автоматическая очистка при высоком потреблении памяти
+        if auto_cleanup_enabled:
+            auto_memory_cleanup(current_memory_mb)
         
     except Exception as e:
         logger.warning(f"Could not update memory stats: {e}")
@@ -1535,11 +1879,28 @@ def user_profile():
         if get_recent_games_optimized is not None:
             recent_games = get_recent_games_optimized(user_id, limit=10)
         else:
-            recent_games = Game.query.filter_by(user_id=user_id).order_by(Game.start_time.desc()).limit(10).all() if Game is not None else []
+            # Получение последних игр с кэшированием
+            cache_key = f"recent_games_{user_id}"
+            recent_games = get_cached_query_result(
+                lambda: Game.query.filter_by(user_id=user_id).order_by(Game.start_time.desc()).limit(10).all() if Game is not None else [],
+                cache_key,
+                ttl=120  # Cache for 2 minutes
+            )
         
-        # Расчет статистики
-        total_games = user.games_played or 0
-        wins = user.games_won or 0
+        # Расчет статистики с кэшированием
+        cache_key = f"user_stats_calculated_{user_id}"
+        stats = get_cached_query_result(
+            lambda: {
+                'total_games': user.games_played or 0,
+                'wins': user.games_won or 0,
+                'rating': user.rating or 1200
+            },
+            cache_key,
+            ttl=180  # Cache for 3 minutes
+        )
+        
+        total_games = stats['total_games']
+        wins = stats['wins']
         losses = total_games - wins
         win_rate = (wins / total_games * 100) if total_games > 0 else 0
         
@@ -1561,7 +1922,7 @@ def user_profile():
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
-                'rating': user.rating or 1200,
+                'rating': stats['rating'],
                 'games_played': total_games,
                 'wins': wins,
                 'losses': losses,
@@ -1610,6 +1971,29 @@ def health_check():
             'async_ops_pool_submitted': getattr(ASYNC_OPERATIONS_POOL, '_work_queue', None) is not None
         }
         
+        # Получение информации о порогах автоматической очистки
+        memory_management_stats = {
+            'auto_cleanup_enabled': auto_cleanup_enabled,
+            'cleanup_thresholds': MEMORY_CLEANUP_THRESHOLDS,
+            'last_auto_cleanup': last_auto_cleanup
+        }
+        
+        # Получение статистики базы данных, если включена
+        database_stats = {}
+        if DATABASE_ENABLED and db is not None:
+            try:
+                db_stats = collect_database_stats()
+                database_stats = {
+                    'enabled': True,
+                    'query_count': db_performance_metrics.get('query_count', 0),
+                    'cache_hits': db_performance_metrics.get('cache_hits', 0),
+                    'cache_misses': db_performance_metrics.get('cache_misses', 0),
+                    'slow_queries_count': len(db_performance_metrics.get('slow_queries', [])),
+                    'cache_stats': db_query_cache.get_stats()
+                }
+            except Exception as e:
+                database_stats = {'enabled': True, 'error': str(e)}
+        
         return {
             'status': 'healthy',
             'active_games': active_game_count,
@@ -1618,7 +2002,9 @@ def health_check():
             'performance_metrics': perf_metrics,
             'error_stats': error_stats,
             'pool_stats': pool_stats,
-            'thread_pool_stats': thread_pool_stats
+            'thread_pool_stats': thread_pool_stats,
+            'memory_management_stats': memory_management_stats,
+            'database_stats': database_stats
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -1887,8 +2273,13 @@ def handle_move(data):
                 user_id = session.get('user_id')
                 if DATABASE_ENABLED and user_id and Game is not None and db is not None:
                     try:
-                        # Find the game in the database (optimized with index)
-                        db_game = Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first()
+                        # Find the game in the database with caching
+                        cache_key = f"game_in_progress_{user_id}"
+                        db_game = get_cached_query_result(
+                            lambda: Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first(),
+                            cache_key,
+                            ttl=60  # Cache for 1 minute
+                        )
                         if db_game:
                             # Update game result
                             db_game.result = game_status['result']
@@ -1896,8 +2287,13 @@ def handle_move(data):
                             db_game.duration = int((db_game.end_time - db_game.start_time).total_seconds()) if db_game.start_time else 0
                             db_game.move_history = json.dumps(game.move_history) if game.move_history else None
                             
-                            # Update user stats
-                            user = User.query.get(user_id) if User is not None else None
+                            # Update user stats with caching
+                            cache_key = f"user_stats_{user_id}"
+                            user = get_cached_query_result(
+                                lambda: User.query.get(user_id) if User is not None else None,
+                                cache_key,
+                                ttl=300  # Cache for 5 minutes
+                            ) if User is not None else None
                             if user:
                                 # Use a transaction to ensure consistency
                                 user.games_played = (user.games_played or 0) + 1
@@ -1998,8 +2394,13 @@ def handle_move(data):
                     user_id = session.get('user_id')
                     if DATABASE_ENABLED and user_id and Game is not None and db is not None:
                         try:
-                            # Поиск игры в базе данных
-                            db_game = Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first()
+                            # Поиск игры в базе данных с кэшированием
+                            cache_key = f"game_in_progress_{user_id}_second"
+                            db_game = get_cached_query_result(
+                                lambda: Game.query.filter_by(user_id=user_id, result='in_progress').order_by(Game.start_time.desc()).first(),
+                                cache_key,
+                                ttl=60  # Cache for 1 minute
+                            )
                             if db_game:
                                 # Обновление результата игры
                                 db_game.result = game_status['result']
@@ -2007,8 +2408,13 @@ def handle_move(data):
                                 db_game.duration = int((db_game.end_time - db_game.start_time).total_seconds()) if db_game.start_time else 0
                                 db_game.move_history = json.dumps(game.move_history) if game.move_history else None
                                 
-                                # Обновление статистики пользователя
-                                user = User.query.get(user_id) if User is not None else None
+                                # Обновление статистики пользователя с кэшированием
+                                cache_key = f"user_stats_{user_id}_second"
+                                user = get_cached_query_result(
+                                    lambda: User.query.get(user_id) if User is not None else None,
+                                    cache_key,
+                                    ttl=300  # Cache for 5 minutes
+                                ) if User is not None else None
                                 if user and User is not None:
                                     # Использование транзакции для обеспечения согласованности
                                     user.games_played = (user.games_played or 0) + 1
@@ -2522,10 +2928,155 @@ def metrics_endpoint():
         metrics.append(f'thread_pool_ai_move_max_threads {AI_MOVE_THREAD_POOL._max_workers if hasattr(AI_MOVE_THREAD_POOL, "_max_workers") else 0}')
         metrics.append(f'thread_pool_async_ops_max_threads {ASYNC_OPERATIONS_POOL._max_workers if hasattr(ASYNC_OPERATIONS_POOL, "_max_workers") else 0}')
         
+        # Memory management statistics
+        metrics.append(f'memory_high_threshold_mb {MEMORY_CLEANUP_THRESHOLDS["high_memory_mb"]}')
+        metrics.append(f'memory_critical_threshold_mb {MEMORY_CLEANUP_THRESHOLDS["critical_memory_mb"]}')
+        metrics.append(f'memory_cleanup_percentage {MEMORY_CLEANUP_THRESHOLDS["cleanup_percentage"]}')
+        metrics.append(f'auto_cleanup_enabled {1 if auto_cleanup_enabled else 0}')
+        
+        # Database optimization statistics
+        if DATABASE_ENABLED:
+            metrics.append(f'database_enabled 1')
+            metrics.append(f'database_queries_total {db_performance_metrics.get("query_count", 0)}')
+            metrics.append(f'database_cache_hits {db_performance_metrics.get("cache_hits", 0)}')
+            metrics.append(f'database_cache_misses {db_performance_metrics.get("cache_misses", 0)}')
+            metrics.append(f'database_slow_queries {len(db_performance_metrics.get("slow_queries", []))}')
+            metrics.append(f'database_cache_size {len(db_query_cache.cache)}')
+            metrics.append(f'database_cache_max_size {db_query_cache.max_size}')
+            
+            # Connection pool metrics
+            if hasattr(db.engine, 'pool'):
+                metrics.append(f'database_pool_size {db.engine.pool.size()}')
+                metrics.append(f'database_pool_checked_out {db.engine.pool.checkedout()}')
+                metrics.append(f'database_pool_overflow {getattr(db.engine.pool, "overflow", 0)}')
+        
         return '\n'.join(metrics), 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
     except Exception as e:
         logger.error(f"Metrics endpoint failed: {e}")
         return f'# Error generating metrics: {str(e)}', 500, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/db-stats')
+@handle_chess_errors(context="database_stats")
+def database_stats_endpoint():
+    """Endpoint для получения статистики базы данных и оптимизации"""
+    try:
+        if not DATABASE_ENABLED or db is None:
+            return jsonify({
+                'status': 'error',
+                'message': 'Database not enabled'
+            }), 500
+        
+        # Сбор статистики базы данных
+        db_stats = collect_database_stats()
+        
+        # Статистика кэша запросов
+        cache_stats = db_query_cache.get_stats()
+        
+        # Статистика пула соединений
+        pool_stats = {}
+        if hasattr(db.engine, 'pool'):
+            pool_stats = {
+                'size': db.engine.pool.size(),
+                'checked_out': db.engine.pool.checkedout(),
+                'overflow': getattr(db.engine.pool, 'overflow', 0),
+                'recycle': getattr(db.engine.pool, 'recycle', 0)
+            }
+        
+        # Медленные запросы (последние 20)
+        slow_queries = db_performance_metrics.get('slow_queries', [])[-20:]
+        
+        response = {
+            'status': 'success',
+            'timestamp': time.time(),
+            'database_enabled': DATABASE_ENABLED,
+            'configuration': DATABASE_OPTIMIZATION_CONFIG,
+            'statistics': {
+                'query_count': db_performance_metrics.get('query_count', 0),
+                'cache_stats': cache_stats,
+                'pool_stats': pool_stats,
+                'slow_queries': slow_queries,
+                'cache_hits': db_performance_metrics.get('cache_hits', 0),
+                'cache_misses': db_performance_metrics.get('cache_misses', 0)
+            }
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Database stats endpoint failed: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/db-cache-clear')
+@handle_chess_errors(context="clear_database_cache")
+def clear_database_cache():
+    """Endpoint для очистки кэша базы данных"""
+    try:
+        if not DATABASE_ENABLED:
+            return jsonify({
+                'status': 'error',
+                'message': 'Database not enabled'
+            }), 500
+        
+        # Очистка кэша запросов
+        initial_size = len(db_query_cache.cache)
+        db_query_cache.cache.clear()
+        db_query_cache.hits = 0
+        db_query_cache.misses = 0
+        
+        # Сброс метрик
+        db_performance_metrics['cache_hits'] = 0
+        db_performance_metrics['cache_misses'] = 0
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Cleared {initial_size} cached queries',
+            'timestamp': time.time()
+        })
+        
+    except Exception as e:
+        logger.error(f"Clear database cache endpoint failed: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/db-optimize')
+@handle_chess_errors(context="optimize_database")
+def optimize_database_endpoint():
+    """Endpoint для ручной оптимизации базы данных"""
+    try:
+        if not DATABASE_ENABLED or db is None:
+            return jsonify({
+                'status': 'error',
+                'message': 'Database not enabled'
+            }), 500
+        
+        # Выполнение оптимизации
+        optimize_database_connection()
+        
+        # Очистка кэша
+        cache_cleared = len(db_query_cache.cache)
+        db_query_cache.cache.clear()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Database optimization completed',
+            'cache_cleared': cache_cleared,
+            'timestamp': time.time()
+        })
+        
+    except Exception as e:
+        logger.error(f"Database optimization endpoint failed: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
 
 @app.route('/resource-stats')
 def resource_stats_endpoint():
@@ -2583,6 +3134,14 @@ def resource_stats_endpoint():
             'async_ops_pool_waiting_tasks': getattr(ASYNC_OPERATIONS_POOL, '_work_queue', None) is not None
         }
         
+        # Сбор статистики управления памятью
+        memory_management_stats = {
+            'auto_cleanup_enabled': auto_cleanup_enabled,
+            'cleanup_thresholds': MEMORY_CLEANUP_THRESHOLDS,
+            'last_auto_cleanup': last_auto_cleanup,
+            'estimated_memory_usage': memory_usage
+        }
+        
         response = {
             'status': 'success',
             'timestamp': time.time(),
@@ -2596,6 +3155,7 @@ def resource_stats_endpoint():
                 'pool_stats': pool_stats,
                 'performance_metrics': perf_metrics,
                 'thread_pool_stats': thread_pool_stats,
+                'memory_management_stats': memory_management_stats,
                 'recent_errors': app_stats.get('recent_errors', [])
             }
         }
