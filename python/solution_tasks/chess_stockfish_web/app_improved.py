@@ -563,7 +563,10 @@ MAX_CONCURRENT_GAMES = 20  # Увеличено с 10 до 20
 
 # Пул потоков для фоновых задач (расчет ходов AI)
 # Используется небольшой пул, чтобы не перегружать систему
-AI_MOVE_THREAD_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai_move")
+AI_MOVE_THREAD_POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ai_move")  # Уменьшен размер пула для экономии ресурсов
+
+# Пул потоков для других асинхронных операций
+ASYNC_OPERATIONS_POOL = ThreadPoolExecutor(max_workers=3, thread_name_prefix="async_op")
 
 # Интервал очистки в секундах
 CLEANUP_INTERVAL = 300  # 5 минут
@@ -1599,6 +1602,14 @@ def health_check():
         if CONNECTION_POOLING_ENABLED and stockfish_pool:
             pool_stats = stockfish_pool.get_stats()
         
+        # Получение статистики пулов потоков
+        thread_pool_stats = {
+            'ai_move_pool_workers': AI_MOVE_THREAD_POOL._max_workers if hasattr(AI_MOVE_THREAD_POOL, '_max_workers') else 'N/A',
+            'async_ops_pool_workers': ASYNC_OPERATIONS_POOL._max_workers if hasattr(ASYNC_OPERATIONS_POOL, '_max_workers') else 'N/A',
+            'ai_move_pool_submitted': getattr(AI_MOVE_THREAD_POOL, '_work_queue', None) is not None,
+            'async_ops_pool_submitted': getattr(ASYNC_OPERATIONS_POOL, '_work_queue', None) is not None
+        }
+        
         return {
             'status': 'healthy',
             'active_games': active_game_count,
@@ -1606,7 +1617,8 @@ def health_check():
             'cache_stats': cache_stats,
             'performance_metrics': perf_metrics,
             'error_stats': error_stats,
-            'pool_stats': pool_stats
+            'pool_stats': pool_stats,
+            'thread_pool_stats': thread_pool_stats
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -1676,10 +1688,14 @@ def handle_init(data):
         logger.info(f"Game initialization took {game_init_time:.2f} seconds")
         logger.info(f"Game initialization result: {game.initialized}")
         
-        # Initialize engine with timeout
+        # Initialize engine with timeout using thread pool
         engine_init_start = time.time()
         try:
-            if game.init_engine():
+            # Run engine initialization in thread pool to prevent blocking
+            future = ASYNC_OPERATIONS_POOL.submit(game.init_engine)
+            engine_success = future.result(timeout=20)  # 20 second timeout for initialization
+            
+            if engine_success:
                 engine_init_time = time.time() - engine_init_start
                 logger.info(f"Engine initialization took {engine_init_time:.2f} seconds")
                 
@@ -1853,10 +1869,12 @@ def handle_move(data):
             else:
                 session_timestamps[session_id] = time.time()
 
-            # Check game status using improved logic
+            # Check game status using improved logic with thread pool
             game_status_start = time.time()
             try:
-                game_status = game.get_game_status(fen)
+                # Run game status check in thread pool to prevent blocking
+                future = ASYNC_OPERATIONS_POOL.submit(game.get_game_status, fen)
+                game_status = future.result(timeout=5)  # 5 second timeout
                 game_status_time = time.time() - game_status_start
                 logger.info(f"Game status check took {game_status_time:.2f} seconds")
             except Exception as e:
@@ -1914,10 +1932,12 @@ def handle_move(data):
             # Notify client that AI is thinking
             emit('ai_thinking', {'status': 'calculating'})
             
-            # AI move with timeout and retry logic
+            # AI move with timeout and retry logic using thread pool
             ai_move_start = time.time()
             try:
-                ai_move = game.get_best_move()
+                # Execute AI move calculation in thread pool to prevent blocking
+                future = AI_MOVE_THREAD_POOL.submit(game.get_best_move)
+                ai_move = future.result(timeout=15)  # 15 second timeout
                 ai_move_time = time.time() - ai_move_start
                 logger.info(f"AI move calculation took {ai_move_time:.2f} seconds")
                 
@@ -1960,10 +1980,12 @@ def handle_move(data):
                     emit('error', {'message': 'Ошибка получения позиции после хода компьютера'})
                     return
                 
-                # Проверка статуса игры после хода AI
+                # Проверка статуса игры после хода AI using thread pool
                 game_status_start = time.time()
                 try:
-                    game_status = game.get_game_status(fen)
+                    # Run game status check in thread pool to prevent blocking
+                    future = ASYNC_OPERATIONS_POOL.submit(game.get_game_status, fen)
+                    game_status = future.result(timeout=5)  # 5 second timeout
                     game_status_time = time.time() - game_status_start
                     logger.info(f"Post-AI game status check took {game_status_time:.2f} seconds")
                 except Exception as e:
@@ -2496,6 +2518,10 @@ def metrics_endpoint():
             metrics.append(f'engine_pool_total_created {pool_stats.get("total_created", 0)}')
             metrics.append(f'engine_pool_total_reused {pool_stats.get("total_reused", 0)}')
         
+        # Thread pool statistics
+        metrics.append(f'thread_pool_ai_move_max_threads {AI_MOVE_THREAD_POOL._max_workers if hasattr(AI_MOVE_THREAD_POOL, "_max_workers") else 0}')
+        metrics.append(f'thread_pool_async_ops_max_threads {ASYNC_OPERATIONS_POOL._max_workers if hasattr(ASYNC_OPERATIONS_POOL, "_max_workers") else 0}')
+        
         return '\n'.join(metrics), 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
     except Exception as e:
         logger.error(f"Metrics endpoint failed: {e}")
@@ -2549,6 +2575,14 @@ def resource_stats_endpoint():
             except Exception as e:
                 perf_metrics = {'error': str(e)}
         
+        # Сбор статистики пулов потоков
+        thread_pool_stats = {
+            'ai_move_pool_workers': AI_MOVE_THREAD_POOL._max_workers if hasattr(AI_MOVE_THREAD_POOL, '_max_workers') else 'N/A',
+            'async_ops_pool_workers': ASYNC_OPERATIONS_POOL._max_workers if hasattr(ASYNC_OPERATIONS_POOL, '_max_workers') else 'N/A',
+            'ai_move_pool_waiting_tasks': getattr(AI_MOVE_THREAD_POOL, '_work_queue', None) is not None,
+            'async_ops_pool_waiting_tasks': getattr(ASYNC_OPERATIONS_POOL, '_work_queue', None) is not None
+        }
+        
         response = {
             'status': 'success',
             'timestamp': time.time(),
@@ -2561,6 +2595,7 @@ def resource_stats_endpoint():
                 'cache_stats': cache_stats,
                 'pool_stats': pool_stats,
                 'performance_metrics': perf_metrics,
+                'thread_pool_stats': thread_pool_stats,
                 'recent_errors': app_stats.get('recent_errors', [])
             }
         }
@@ -2582,6 +2617,16 @@ cleanup_thread.start()
 def graceful_shutdown():
     """Функция для корректного завершения работы приложения"""
     logger.info("Starting graceful shutdown...")
+    
+    # Остановка потоков пулов
+    global AI_MOVE_THREAD_POOL, ASYNC_OPERATIONS_POOL
+    try:
+        logger.info("Shutting down AI move thread pool...")
+        AI_MOVE_THREAD_POOL.shutdown(wait=True, timeout=5)
+        logger.info("Shutting down async operations thread pool...")
+        ASYNC_OPERATIONS_POOL.shutdown(wait=True, timeout=5)
+    except Exception as e:
+        logger.error(f"Error shutting down thread pools: {e}")
     
     # Остановка потока очистки
     global cleanup_thread
