@@ -17,10 +17,32 @@ stockfish_engine = None
 game_histories = {}
 session_timestamps = {}
 user_preferences = {}
+
+# Статистика ресурсов с улучшенным отслеживанием
 resource_stats = {
     'peak_active_games': 0,
     'peak_sessions': 0,
-    'total_games_cleaned': 0
+    'total_games_cleaned': 0,
+    'memory_usage_peak_mb': 0,
+    'current_memory_mb': 0,
+    'cleanup_cycles': 0
+}
+
+# Статистика производительности
+performance_stats = {
+    'total_requests': 0,
+    'request_errors': 0,
+    'avg_response_time': 0,
+    'total_cpu_time': 0
+}
+
+# Статистика по типам кэша
+memory_usage = {
+    'games_dict': 0,
+    'game_histories': 0,
+    'session_timestamps': 0,
+    'user_preferences': 0,
+    'total_estimated': 0
 }
 import logging
 import json
