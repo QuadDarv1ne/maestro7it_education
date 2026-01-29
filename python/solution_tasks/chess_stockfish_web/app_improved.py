@@ -735,6 +735,7 @@ class ChessGame:
                 fen = self.engine.get_fen_position()
                 if fen is None:
                     logger.warning("Stockfish returned None for FEN position")
+                    return None
                 
                 # Обновление кэша
                 self._fen_cache = fen
@@ -747,7 +748,6 @@ class ChessGame:
         else:
             logger.warning("Engine not initialized when trying to get FEN")
             raise EngineInitializationError("Engine not initialized")
-        return None
     
     @track_move_execution
     @handle_chess_errors(context="move_execution")
@@ -801,13 +801,13 @@ class ChessGame:
             # Возврат к методу сравнения позиций, если встроенная валидация не удалась
             try:
                 # Сохранение текущей позиции
-                fen_before = self.engine.get_fen_position()
+                fen_before = self.get_fen()  # Use our optimized get_fen method
                 
                 # Попытка сделать ход
                 result = self.engine.make_moves_from_current_position([move])
                 
                 # Проверка, изменилась ли позиция
-                fen_after = self.engine.get_fen_position()
+                fen_after = self.get_fen()  # Use our optimized get_fen method
                 move_successful = (result is not False) and (fen_before != fen_after)
                 
                 # Если ход был успешным, отменяем его для сохранения текущего состояния
@@ -902,28 +902,27 @@ class ChessGame:
                 pass
         
         # Возврат к оригинальному FEN-основанному обнаружению
-        try:
-            if '#' in fen:
-                # Проверка мата
+        # Optimization: Direct check for mate marker (#) in FEN
+        if '#' in fen:
+            try:
+                # Determine whose turn it is to decide who won
                 if ' w ' in fen:
-                    # Белые ходят, но в мате
-                    if not any(c.isupper() for c in fen.split()[0] if c.isalpha()):
-                        return {
-                            'game_over': True,
-                            'result': 'checkmate',
-                            'winner': 'black'
-                        }
+                    # White to move but in checkmate
+                    return {
+                        'game_over': True,
+                        'result': 'checkmate',
+                        'winner': 'black'
+                    }
                 else:
-                    # Черные ходят, но в мате
-                    if not any(c.islower() for c in fen.split()[0] if c.isalpha()):
-                        return {
-                            'game_over': True,
-                            'result': 'checkmate',
-                            'winner': 'white'
-                        }
-        except Exception as e:
-            logger.warning(f"FEN-based game status detection failed: {e}")
-            pass
+                    # Black to move but in checkmate
+                    return {
+                        'game_over': True,
+                        'result': 'checkmate',
+                        'winner': 'white'
+                    }
+            except Exception as e:
+                logger.warning(f"FEN-based game status detection failed: {e}")
+                pass
         
         return {'game_over': False}
 
