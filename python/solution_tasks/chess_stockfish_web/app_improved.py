@@ -9,6 +9,19 @@ import os
 import uuid
 import sys
 import time
+import logging
+import json
+import threading
+import weakref
+import pickle
+import base64
+import functools
+import re
+from collections import defaultdict, OrderedDict, deque
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 # Глобальные переменные
 active_game_count = 0
@@ -268,7 +281,7 @@ import pickle
 import base64
 import functools
 import re
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, deque
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -931,18 +944,19 @@ if DATABASE_ENABLED and init_db:
     
     # Продвинутая оптимизация базы данных
     try:
-        # Настройка оптимизации подключения
-        optimize_database_connection()
-        
-        # Включение мониторинга медленных запросов
-        monitor_slow_queries()
-        
-        # Настройка расширенных параметров пула соединений
-        if hasattr(db.engine, 'pool'):
-            db.engine.pool._pool.maxsize = DATABASE_OPTIMIZATION_CONFIG['connection_pool_size']
-            db.engine.pool._pool.timeout = DATABASE_OPTIMIZATION_CONFIG['pool_timeout']
+        with app.app_context():
+            # Настройка оптимизации подключения
+            optimize_database_connection()
             
-        logger.info("Advanced database optimization initialized successfully")
+            # Включение мониторинга медленных запросов
+            monitor_slow_queries()
+            
+            # Настройка расширенных параметров пула соединений
+            if hasattr(db.engine, 'pool'):
+                db.engine.pool._pool.maxsize = DATABASE_OPTIMIZATION_CONFIG['connection_pool_size']
+                db.engine.pool._pool.timeout = DATABASE_OPTIMIZATION_CONFIG['pool_timeout']
+                
+            logger.info("Advanced database optimization initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize advanced database optimization: {e}")
 
@@ -1265,7 +1279,6 @@ class ChessGame:
             import gc
             gc.collect()
     
-    @cached('board_state', ttl=2, max_size=10)  # Уменьшен TTL до 2 секунд и размер кэша до 10 для FEN
     @track_fen_retrieval
     @handle_chess_errors(context="fen_retrieval")
     def get_fen(self):
@@ -1321,7 +1334,6 @@ class ChessGame:
             logger.error(f"Error making move {move}: {e}")
             raise GameLogicError(f"Failed to execute move {move}: {str(e)}") from e
     
-    @cached('valid_moves', ttl=1, max_size=20)  # Быстрое обновление кэша для валидации ходов
     @track_move_validation
     @handle_chess_errors(context="move_validation")
     def is_move_correct(self, move):
@@ -1365,7 +1377,6 @@ class ChessGame:
                 logger.error(f"Position comparison method failed: {e}")
                 raise MoveValidationError(f"Failed to validate move {move}: {str(e)}") from e
     
-    @cached('ai_move', ttl=5, max_size=5)  # Кэшируем ходы AI с коротким TTL
     @track_ai_calculation
     @handle_chess_errors(context="ai_move_calculation")
     @retry_on_failure(max_attempts=2, delay=0.5, backoff=1.5)
@@ -1382,7 +1393,6 @@ class ChessGame:
             logger.error(f"Error getting best move: {e}")
             raise GameLogicError(f"Failed to get best move: {str(e)}") from e
     
-    @cached('evaluation', ttl=3, max_size=10)  # Кэшируем оценки позиции
     @handle_chess_errors(context="position_evaluation")
     def get_evaluation(self):
         """Получение оценки позиции от Stockfish"""
@@ -1395,7 +1405,6 @@ class ChessGame:
             logger.error(f"Error getting evaluation: {e}")
             raise GameLogicError(f"Failed to get position evaluation: {str(e)}") from e
     
-    @cached('valid_moves', ttl=3, max_size=10)  # Используем тот же тип кэша что и для валидации ходов
     @handle_chess_errors(context="top_moves")
     def get_top_moves(self, limit=5):
         """Получение лучших ходов от Stockfish"""
@@ -1408,7 +1417,6 @@ class ChessGame:
             logger.error(f"Error getting top moves: {e}")
             raise GameLogicError(f"Failed to get top moves: {str(e)}") from e
     
-    @cached('game_status', ttl=1, max_size=5)  # Статус игры может быстро меняться, короткий TTL
     @track_game_status_check
     @handle_chess_errors(context="game_status_check")
     def get_game_status(self, fen):
