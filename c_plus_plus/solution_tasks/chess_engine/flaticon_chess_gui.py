@@ -11,8 +11,12 @@ class FlaticonChessGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Шахматы с Flaticon иконками")
-        self.root.geometry("600x500")
-        self.root.resizable(False, False)
+        self.root.geometry("480x400")
+        self.root.resizable(True, True)
+        self.root.minsize(400, 350)
+        
+        # Привязка события изменения размера
+        self.root.bind('<Configure>', self.on_window_resize)
         
         # Загрузка иконок
         self.piece_images = self.load_flaticon_images()
@@ -50,7 +54,7 @@ class FlaticonChessGUI:
                 if os.path.exists(f'icons/{filename}'):
                     # Загрузка и изменение размера
                     image = Image.open(f'icons/{filename}')
-                    image = image.resize((32, 32), Image.Resampling.LANCZOS)
+                    image = image.resize((28, 28), Image.Resampling.LANCZOS)
                     photo = ImageTk.PhotoImage(image)
                     images[piece] = photo
                     print(f"Загружена иконка: {filename}")
@@ -66,20 +70,20 @@ class FlaticonChessGUI:
     def setup_ui(self):
         # Доска
         self.board_frame = ttk.Frame(self.root, borderwidth=2, relief="ridge")
-        self.board_frame.pack(pady=20, padx=20)
+        self.board_frame.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
         
         self.create_board()
         
         # Панель управления
         control_frame = ttk.Frame(self.root)
-        control_frame.pack(pady=10)
+        control_frame.pack(pady=5)
         
-        ttk.Button(control_frame, text="Новая игра", command=self.new_game).pack(side=tk.LEFT, padx=5)
-        ttk.Button(control_frame, text="Выйти", command=self.root.quit).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="Новая игра", command=self.new_game).pack(side=tk.LEFT, padx=3)
+        ttk.Button(control_frame, text="Выйти", command=self.root.quit).pack(side=tk.LEFT, padx=3)
         
         # Статус
         self.status_label = ttk.Label(self.root, text="Готов к игре")
-        self.status_label.pack(pady=5)
+        self.status_label.pack(pady=2)
         
     def create_board(self):
         self.buttons = []
@@ -89,14 +93,19 @@ class FlaticonChessGUI:
                 color = "white" if (row + col) % 2 == 0 else "lightgray"
                 btn = tk.Button(
                     self.board_frame,
-                    width=45,
-                    height=45,
+                    width=35,
+                    height=35,
                     bg=color,
                     command=lambda r=row, c=col: self.on_square_click(r, c)
                 )
-                btn.grid(row=7-row, column=col, padx=1, pady=1)
+                btn.grid(row=7-row, column=col, padx=1, pady=1, sticky="nsew")
                 button_row.append(btn)
             self.buttons.append(button_row)
+        
+        # Настройка равномерного растягивания
+        for i in range(8):
+            self.board_frame.grid_columnconfigure(i, weight=1)
+            self.board_frame.grid_rowconfigure(i, weight=1)
         
         self.update_board_display()
         
@@ -150,6 +159,11 @@ class FlaticonChessGUI:
         self.update_board_display()
         self.status_label.config(text=f"Ход: {piece}")
         
+    def on_window_resize(self, event):
+        # Адаптация размера иконок при изменении окна
+        if hasattr(self, 'piece_images'):
+            self.update_board_display()
+    
     def new_game(self):
         self.current_board = self.get_initial_board()
         self.selected_square = None
