@@ -5,6 +5,7 @@
 #include <locale>
 #include <codecvt>
 #include <string>
+#include "../include/utf8_support.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -23,6 +24,9 @@ int main() {
     try {
         // Setup console encoding
         setupConsoleEncoding();
+        
+        // Initialize UTF-8 support
+        UTF8Support::initialize();
         
         // Seed random number generator
         std::srand(static_cast<unsigned int>(std::time(nullptr)));

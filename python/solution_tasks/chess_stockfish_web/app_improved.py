@@ -92,6 +92,23 @@ db_performance_metrics = {
     'last_stats_update': 0
 }
 
+# Расширенные метрики производительности
+performance_analytics = {
+    'request_latency': [],
+    'move_calculation_time': [],
+    'engine_initialization_time': [],
+    'user_session_duration': {},
+    'peak_concurrent_users': 0,
+    'error_rates': {},
+    'feature_usage': {
+        'games_started': 0,
+        'moves_made': 0,
+        'ai_calculations': 0,
+        'board_flips': 0,
+        'takebacks': 0
+    }
+}
+
 
 def optimize_database_connection():
     """Оптимизация параметров подключения к базе данных"""
@@ -188,6 +205,89 @@ class DatabaseQueryCache:
 db_query_cache = DatabaseQueryCache(max_size=DATABASE_OPTIMIZATION_CONFIG['query_cache_size'])
 
 
+class MultiLevelCache:
+    """Многоуровневая система кэширования"""
+    
+    def __init__(self):
+        self.l1_cache = {}  # In-memory быстрый кэш
+        self.l2_cache = db_query_cache  # Используем существующий кэш как L2
+        self.stats = defaultdict(int)
+        self.lock = threading.Lock()
+        
+    def get(self, key):
+        """Получение значения из многоуровневого кэша"""
+        with self.lock:
+            # L1 кэш (самый быстрый)
+            if key in self.l1_cache:
+                item = self.l1_cache[key]
+                if time.time() < item['expires_at']:
+                    self.stats['l1_hits'] += 1
+                    return item['value']
+                else:
+                    del self.l1_cache[key]
+            
+            # L2 кэш (основной)
+            value = self.l2_cache.get(key)
+            if value is not None:
+                # Продвигаем в L1 для будущих быстрых доступов
+                self.l1_cache[key] = {
+                    'value': value,
+                    'expires_at': time.time() + 60  # Короткий TTL для L1
+                }
+                self.stats['l2_hits'] += 1
+                return value
+            
+            self.stats['misses'] += 1
+            return None
+    
+    def set(self, key, value, ttl=None):
+        """Сохранение значения в многоуровневом кэше"""
+        with self.lock:
+            # Сохраняем в L1 с коротким TTL
+            l1_ttl = min(ttl or 300, 60)
+            self.l1_cache[key] = {
+                'value': value,
+                'expires_at': time.time() + l1_ttl
+            }
+            
+            # Сохраняем в L2 с полным TTL
+            self.l2_cache.set(key, value, ttl)
+            self.stats['sets'] += 1
+    
+    def get_stats(self):
+        """Получение статистики всех уровней кэша"""
+        with self.lock:
+            l2_stats = self.l2_cache.get_stats()
+            total_requests = self.stats['l1_hits'] + self.stats['l2_hits'] + self.stats['misses']
+            
+            return {
+                'l1_cache': {
+                    'size': len(self.l1_cache),
+                    'hits': self.stats['l1_hits'],
+                    'hit_rate': round((self.stats['l1_hits'] / total_requests * 100) if total_requests > 0 else 0, 2)
+                },
+                'l2_cache': l2_stats,
+                'overall': {
+                    'total_requests': total_requests,
+                    'overall_hit_rate': round(((self.stats['l1_hits'] + self.stats['l2_hits']) / total_requests * 100) if total_requests > 0 else 0, 2)
+                }
+            }
+    
+    def cleanup_expired(self):
+        """Очистка просроченных записей"""
+        with self.lock:
+            current_time = time.time()
+            expired_keys = [
+                key for key, item in self.l1_cache.items()
+                if current_time >= item['expires_at']
+            ]
+            for key in expired_keys:
+                del self.l1_cache[key]
+
+# Глобальный экземпляр многоуровневого кэша
+multi_level_cache = MultiLevelCache()
+
+
 def monitor_slow_queries():
     """Мониторинг медленных запросов к базе данных"""
     if not DATABASE_ENABLED or db is None:
@@ -272,6 +372,96 @@ def get_cached_query_result(query_func, cache_key, ttl=300, *args, **kwargs):
     except Exception as e:
         logger.error(f"Error executing cached query {cache_key}: {e}")
         raise
+
+
+class RealTimeAnalytics:
+    """Система реального времени аналитики и мониторинга"""
+    
+    def __init__(self, max_samples=1000):
+        self.max_samples = max_samples
+        self.metrics = defaultdict(lambda: deque(maxlen=max_samples))
+        self.lock = threading.Lock()
+        
+    def record_metric(self, metric_name, value, tags=None):
+        """Запись метрики с тегами"""
+        with self.lock:
+            timestamp = time.time()
+            self.metrics[metric_name].append({
+                'value': value,
+                'timestamp': timestamp,
+                'tags': tags or {}
+            })
+            
+            # Обновляем агрегированные метрики
+            self._update_aggregates(metric_name, value)
+    
+    def _update_aggregates(self, metric_name, value):
+        """Обновление агрегированных метрик"""
+        if metric_name not in performance_analytics:
+            performance_analytics[metric_name] = []
+        
+        performance_analytics[metric_name].append(value)
+        # Ограничиваем размер списков
+        if len(performance_analytics[metric_name]) > 1000:
+            performance_analytics[metric_name] = performance_analytics[metric_name][-500:]
+    
+    def get_metrics_summary(self, metric_name=None, time_window=300):
+        """Получение сводки метрик за временной период"""
+        with self.lock:
+            current_time = time.time()
+            
+            if metric_name:
+                metrics = {metric_name: self.metrics[metric_name]}
+            else:
+                metrics = self.metrics
+            
+            summary = {}
+            for name, samples in metrics.items():
+                # Фильтруем по временному окну
+                recent_samples = [
+                    sample for sample in samples 
+                    if current_time - sample['timestamp'] <= time_window
+                ]
+                
+                if recent_samples:
+                    values = [sample['value'] for sample in recent_samples]
+                    summary[name] = {
+                        'count': len(values),
+                        'avg': sum(values) / len(values),
+                        'min': min(values),
+                        'max': max(values),
+                        'median': sorted(values)[len(values)//2],
+                        'latest': values[-1] if values else None
+                    }
+            
+            return summary
+    
+    def get_trends(self, metric_name, periods=[60, 300, 900]):
+        """Анализ трендов метрики по разным периодам"""
+        trends = {}
+        for period in periods:
+            summary = self.get_metrics_summary(metric_name, period)
+            if metric_name in summary:
+                trends[f'{period}s'] = summary[metric_name]
+        return trends
+    
+    def export_prometheus_format(self):
+        """Экспорт метрик в формате Prometheus"""
+        metrics_lines = []
+        summary = self.get_metrics_summary()
+        
+        for metric_name, data in summary.items():
+            if 'avg' in data:
+                metrics_lines.append(f'{metric_name}_avg {data["avg"]:.4f}')
+            if 'count' in data:
+                metrics_lines.append(f'{metric_name}_count {data["count"]}')
+            if 'latest' in data and data['latest'] is not None:
+                metrics_lines.append(f'{metric_name}_latest {data["latest"]:.4f}')
+        
+        return '\n'.join(metrics_lines)
+
+# Глобальный экземпляр аналитики
+realtime_analytics = RealTimeAnalytics(max_samples=2000)
 
 import logging
 import json
@@ -3266,6 +3456,71 @@ signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
 signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
 logger.info("Signal handlers registered for graceful shutdown")
+
+
+@app.route('/analytics/performance')
+def performance_analytics_endpoint():
+    """Эндпоинт для получения аналитики производительности"""
+    try:
+        time_windows = [60, 300, 900]  # 1min, 5min, 15min
+        analytics_data = {}
+        
+        # Получаем тренды для ключевых метрик
+        key_metrics = ['request_latency', 'move_calculation_time', 'engine_initialization_time']
+        
+        for metric in key_metrics:
+            trends = realtime_analytics.get_trends(metric, time_windows)
+            if trends:
+                analytics_data[metric] = trends
+        
+        # Статистика кэша
+        analytics_data['cache_stats'] = multi_level_cache.get_stats()
+        
+        # Использование функций
+        analytics_data['feature_usage'] = performance_analytics['feature_usage']
+        
+        # Пиковое количество пользователей
+        analytics_data['peak_users'] = performance_analytics['peak_concurrent_users']
+        
+        return jsonify({
+            'status': 'success',
+            'timestamp': time.time(),
+            'analytics': analytics_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in performance analytics endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/analytics/trends/<metric>')
+def metric_trends(metric):
+    """Эндпоинт для получения трендов конкретной метрики"""
+    try:
+        periods = request.args.get('periods', '60,300,900')
+        periods = [int(p) for p in periods.split(',')]
+        
+        trends = realtime_analytics.get_trends(metric, periods)
+        
+        return jsonify({
+            'metric': metric,
+            'trends': trends,
+            'timestamp': time.time()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting metric trends: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/analytics/export/prometheus')
+def analytics_prometheus_export():
+    """Экспорт аналитических метрик в формате Prometheus"""
+    try:
+        return realtime_analytics.export_prometheus_format(), 200, {'Content-Type': 'text/plain; version=0.0.4'}
+    except Exception as e:
+        logger.error(f"Error exporting analytics to Prometheus: {e}")
+        return f"Error: {str(e)}", 500
 
 if __name__ == '__main__':
     logger.info("Starting Chess Stockfish Web application...")

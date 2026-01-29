@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Compiler-specific flags
 if(MSVC)
     add_compile_options(/W4)
+    # Add UTF-8 support for MSVC
+    add_compile_options(/utf-8)
+    add_compile_options(/D_WIN32_WINNT=0x0601)
 else()
     add_compile_options(-Wall -Wextra -pedantic)
     # Add UTF-8 encoding support
@@ -45,6 +48,7 @@ set(HEADERS
 # Create executables
 add_executable(chess_engine ${SOURCES} ${HEADERS})
 add_executable(encoding_test src/encoding_test.cpp)
+add_executable(utf8_test src/utf8_test.cpp)
 add_executable(test_chess src/test_chess.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp src/ui/console_ui.cpp ${HEADERS})
 add_executable(comprehensive_test src/comprehensive_test.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
 
