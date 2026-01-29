@@ -52,7 +52,8 @@ class FlaskAppTestCase(unittest.TestCase):
         """Test that the index page loads correctly"""
         response = self.app.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Chess Stockfish Web', response.data)
+        # Check for key elements in the Russian HTML content
+        self.assertIn(b'\xd0\x98\xd0\xb3\xd1\x80\xd0\xb0\xd1\x82\xd1\x8c \xd1\x81 \xd0\xba\xd0\xbe\xd0\xbc\xd0\xbf\xd1\x8c\xd1\x8e\xd1\x82\xd0\xb5\xd1\x80\xd0\xbe\xd0\xbc', response.data)  # "Играть с компьютером"
     
     def test_health_endpoint(self):
         """Test that the health endpoint works"""

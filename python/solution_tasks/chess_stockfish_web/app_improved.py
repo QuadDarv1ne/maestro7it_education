@@ -1296,6 +1296,8 @@ def handle_init(data):
         if session_id in games:
             logger.info(f"Session {session_id} already has an active game. Cleaning up old game.")
             try:
+                # Remove game from AppState
+                app_state.remove_game(session_id)
                 del games[session_id]
                 active_game_count = max(0, active_game_count - 1)
             except:
@@ -1691,13 +1693,13 @@ def handle_takeback():
     """Обработка запроса на отмену хода"""
     try:
         session_id = session.get('session_id')
-        if not session_id or session_id not in games:
+        if not session_id:
             emit('error', {'message': 'Game not initialized'})
             return
 
-        game = games[session_id]
-        
-        if not game.engine or not game.initialized:
+        # Get game from AppState
+        game = app_state.get_game(session_id)
+        if not game or not game.engine or not game.initialized:
             emit('error', {'message': 'Engine not initialized'})
             return
             
@@ -1743,11 +1745,16 @@ def handle_analysis(data):
     """Анализ текущей позиции и возврат оценки"""
     try:
         session_id = session.get('session_id')
-        if not session_id or session_id not in games:
+        if not session_id:
             emit('error', {'message': 'Game not initialized'})
             return
 
-        game = games[session_id]
+        # Get game from AppState
+        game = app_state.get_game(session_id)
+        if not game:
+            emit('error', {'message': 'Game not initialized'})
+            return
+        
         fen = data.get('fen', game.get_fen())
         
         if game.engine:
@@ -1822,11 +1829,15 @@ def handle_save_game(data):
     """Сохранение текущего состояния игры"""
     try:
         session_id = session.get('session_id')
-        if not session_id or session_id not in games:
+        if not session_id:
             emit('error', {'message': 'Game not initialized'})
             return
 
-        game = games[session_id]
+        # Get game from AppState
+        game = app_state.get_game(session_id)
+        if not game:
+            emit('error', {'message': 'Game not initialized'})
+            return
         
         # Get current FEN
         fen = game.get_fen()
@@ -1840,7 +1851,7 @@ def handle_save_game(data):
             'fen': fen,
             'player_color': game.player_color,
             'skill_level': game.skill_level,
-            'game_history': game_histories.get(session_id, []) if session_id in game_histories else [],
+            'game_history': game.move_history,
             'timestamp': time.time()
         }
         
@@ -1908,9 +1919,9 @@ def handle_load_game(data):
                 game.engine.set_fen_position(game_state['fen'])
                 game.initialized = True
                 
-                # Store game in session
-                games[session_id] = game
-                
+                # Store game in AppState
+                app_state.add_game(session_id, game)
+                        
                 # Update session timestamp
                 session_timestamps[session_id] = time.time()
                 
