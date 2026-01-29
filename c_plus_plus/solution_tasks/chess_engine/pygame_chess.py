@@ -174,6 +174,44 @@ class PygameChessGUI:
             # Справа
             self.screen.blit(text, (self.WIDTH - 20, y - text.get_height()//2))
     
+    def draw_status(self):
+        """Отрисовка статуса игры с индикаторами шаха/мата"""
+        # Проверка текущего состояния
+        king_in_check = self.is_king_in_check(self.white_turn)
+        is_checkmate = self.is_checkmate()
+        is_stalemate = self.is_stalemate()
+        
+        # Основной статус
+        if not self.game_active:
+            if is_checkmate:
+                winner = "Черные" if self.white_turn else "Белые"
+                status_text = f"ШАХ И МАТ. Победили {winner}" 
+                status_color = self.RED
+            elif is_stalemate:
+                status_text = "ПАТ! Ничья" 
+                status_color = self.GRAY
+            else:
+                status_text = "Игра завершена" 
+                status_color = self.BLACK
+        elif king_in_check:
+            status_text = "ШАХ!" 
+            status_color = self.RED
+        else:
+            player_text = "Белые" if self.white_turn else "Черные"
+            status_text = f"Ход: {player_text}" 
+            status_color = self.BLACK
+            
+        # Отображение статуса
+        text = self.big_font.render(status_text, True, status_color)
+        text_rect = text.get_rect(center=(320, 660))
+        self.screen.blit(text, text_rect)
+        
+        # Дополнительная информация
+        if self.move_history:
+            last_move = self.move_history[-1]
+            move_text = self.small_font.render(f"Последний ход: {last_move}", True, self.GRAY)
+            self.screen.blit(move_text, (10, 680))
+    
     def draw_side_panel(self):
         """Отрисовка боковой панели с информацией"""
         panel_rect = pygame.Rect(640, 0, self.SIDE_PANEL_WIDTH, self.HEIGHT)
@@ -184,9 +222,13 @@ class PygameChessGUI:
         title = self.big_font.render("Информация", True, self.BLACK)
         self.screen.blit(title, (650, 20))
         
-        # Текущий игрок
+        # Текущий игрок и статус шаха
         player_text = "Белые" if self.white_turn else "Черные"
-        turn_text = self.font.render(f"Ход: {player_text}", True, self.BLACK)
+        king_in_check = self.is_king_in_check(self.white_turn)
+        status_indicator = " ⚠ ШАХ!" if king_in_check else ""
+        
+        turn_text = self.font.render(f"Ход: {player_text}{status_indicator}", True, 
+                                   self.RED if king_in_check else self.BLACK)
         self.screen.blit(turn_text, (650, 70))
         
         # Режим игры
@@ -805,23 +847,36 @@ class PygameChessGUI:
             self.make_move(from_pos, to_pos)
     
     def run(self):
-        """Основной цикл игры с компьютерным противником"""
+        """Основной цикл игры с улучшенной логикой и визуальными эффектами"""
         running = True
         computer_timer = 0
         COMPUTER_DELAY = 1000  # 1 секунда задержки для хода компьютера
+        flash_timer = 0
+        flash_state = True
         
         while running:
+            delta_time = self.clock.tick(60)
             running = self.handle_events()
+            
+            # Анимация мигания при шахе
+            if self.is_king_in_check(self.white_turn) and self.game_active:
+                flash_timer += delta_time
+                if flash_timer >= 500:  # Мигание каждые 500 мс
+                    flash_timer = 0
+                    flash_state = not flash_state
+            else:
+                flash_state = True
+                flash_timer = 0
+            
             self.draw()
             
             # Ход компьютера с задержкой
-            if not self.white_turn and self.game_active:
-                computer_timer += self.clock.get_time()
+            if (self.game_mode == 'computer' and not self.white_turn and 
+                self.game_active and not self.is_king_in_check(not self.white_turn)):
+                computer_timer += delta_time
                 if computer_timer >= COMPUTER_DELAY:
                     self.computer_move()
                     computer_timer = 0
-            
-            self.clock.tick(60)  # 60 FPS
         
         pygame.quit()
         sys.exit()
