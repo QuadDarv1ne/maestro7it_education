@@ -11,7 +11,8 @@ class FlaticonChessGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Шахматы с Flaticon иконками")
-        self.root.geometry("900x750")
+        self.root.geometry("600x500")
+        self.root.resizable(False, False)
         
         # Загрузка иконок
         self.piece_images = self.load_flaticon_images()
@@ -46,10 +47,10 @@ class FlaticonChessGUI:
         
         for piece, filename in image_files.items():
             try:
-                if os.path.exists(f'flaticon_icons/{filename}'):
+                if os.path.exists(f'icons/{filename}'):
                     # Загрузка и изменение размера
-                    image = Image.open(f'flaticon_icons/{filename}')
-                    image = image.resize((40, 40), Image.Resampling.LANCZOS)
+                    image = Image.open(f'icons/{filename}')
+                    image = image.resize((32, 32), Image.Resampling.LANCZOS)
                     photo = ImageTk.PhotoImage(image)
                     images[piece] = photo
                     print(f"Загружена иконка: {filename}")
@@ -88,8 +89,8 @@ class FlaticonChessGUI:
                 color = "white" if (row + col) % 2 == 0 else "lightgray"
                 btn = tk.Button(
                     self.board_frame,
-                    width=60,
-                    height=60,
+                    width=45,
+                    height=45,
                     bg=color,
                     command=lambda r=row, c=col: self.on_square_click(r, c)
                 )
