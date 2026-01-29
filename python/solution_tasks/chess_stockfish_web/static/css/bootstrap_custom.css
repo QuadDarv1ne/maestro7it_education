@@ -1,0 +1,548 @@
+/* Custom CSS for Bootstrap Chess Interface */
+
+/* Global color theme improvements */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e74c3c;
+    --light-bg: #f8f9fa;
+    --dark-text: #2c3e50;
+    --light-text: #ffffff;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+}
+
+/* Improved contrast and accessibility */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Roboto', sans-serif;
+    color: var(--dark-text);
+}
+
+/* Board styling with better visibility */
+.chess-board {
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    margin: 0 auto;
+    border: 3px solid #2c3e50;
+    background: #f0d9b5;
+}
+
+/* Color selection buttons with improved contrast */
+.color-btn {
+    transition: all 0.3s ease;
+    border: 2px solid #dee2e6;
+}
+
+.color-btn.active {
+    border-width: 4px !important;
+    border-color: var(--primary-color);
+    transform: scale(1.08);
+    box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
+}
+
+.color-btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+
+.color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.color-preview.white {
+    background: linear-gradient(145deg, #ffffff, #f8f8f8);
+    border-color: #cccccc;
+}
+
+.color-preview.black {
+    background: linear-gradient(145deg, #333333, #000000);
+    border-color: #666666;
+}
+
+/* Difficulty slider with enhanced visibility */
+.difficulty-slider {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(to right, #27ae60, #f1c40f, #e67e22, #e74c3c);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+    border: 1px solid #2c3e50;
+}
+
+.difficulty-slider::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #3498db, #2980b9);
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3), 0 0 0 3px rgba(52, 152, 219, 0.2);
+    border: 2px solid #ffffff;
+    transition: all 0.2s ease;
+}
+
+.difficulty-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 4px rgba(52, 152, 219, 0.3);
+}
+
+.difficulty-slider::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #3498db, #2980b9);
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+
+/* Game controls with improved accessibility */
+.card {
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.control-btn {
+    transition: all 0.3s ease;
+    border-radius: 10px;
+    font-weight: 500;
+    padding: 12px 16px;
+}
+
+.control-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+.btn-play {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border: none;
+    padding: 1.2rem 2.5rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn-play:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(52, 152, 219, 0.4);
+    background: linear-gradient(135deg, #2980b9, #1c6ea4);
+}
+
+/* Move history with better contrast */
+.moves-list {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.moves-empty {
+    text-align: center;
+    color: #7f8c8d;
+    font-style: italic;
+    padding: 2rem;
+}
+
+.move-item {
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background: #ffffff;
+    border-left: 4px solid var(--secondary-color);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.move-item:hover {
+    background: #f8f9fa;
+    transform: translateX(5px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.move-number {
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-right: 12px;
+    font-size: 1.1em;
+}
+
+.move-text {
+    color: var(--dark-text);
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+/* Timer styling with improved visibility */
+.timer-display {
+    font-family: 'Courier New', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--dark-text);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+.timer-box {
+    background: linear-gradient(145deg, #ffffff, #f8f9fa);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    border: 2px solid #e9ecef;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+.timer-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Status display improvements */
+#status {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+/* Navigation improvements */
+.navbar {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    backdrop-filter: blur(10px);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.nav-link:hover {
+    transform: translateY(-2px);
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 25%;
+    width: 50%;
+    height: 3px;
+    background: var(--light-text);
+    border-radius: 2px;
+}
+
+/* Responsive adjustments with improved mobile experience */
+@media (max-width: 992px) {
+    .sidebar-left, .sidebar-right {
+        margin-bottom: 2rem;
+    }
+    
+    .game-center {
+        margin-bottom: 2rem;
+    }
+    
+    .chess-board {
+        max-width: 100% !important;
+        border-width: 2px;
+    }
+    
+    .sticky-top {
+        position: static !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .setup-container {
+        padding: 1.5rem !important;
+    }
+    
+    .btn-play {
+        width: 100%;
+        font-size: 1.1rem;
+        padding: 1rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .difficulty-slider {
+        height: 15px;
+    }
+    
+    .difficulty-slider::-webkit-slider-thumb {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .color-preview {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .timer-display {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    body {
+        padding-top: 60px;
+    }
+    
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+    
+    .card {
+        margin: 0.5rem;
+    }
+    
+    .btn-play {
+        font-size: 1rem;
+        padding: 0.8rem;
+    }
+}
+
+/* Animation classes */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Status indicators */
+.status-active {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-thinking {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.status-error {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Analysis panel */
+.analysis-box {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.analysis-content {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Enhanced notification styling */
+.toast {
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border: none;
+    font-weight: 500;
+}
+
+.toast-header {
+    border-radius: 12px 12px 0 0;
+    font-weight: 600;
+}
+
+.toast-body {
+    padding: 1rem 1.25rem;
+}
+
+/* Custom notification classes for inline notifications */
+.notification-inline {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 10px 0;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notification-inline i {
+    font-size: 1.2em;
+}
+
+.bg-success-light {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.bg-danger-light {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.bg-info-light {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.bg-warning-light {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+/* Loading spinner enhancements */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Player info styling */
+.board-player {
+    padding: 10px 15px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-weight: 500;
+}
+
+.player-name {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.player-rating {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+/* Game status indicators */
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-thinking {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Hover effects for interactive elements */
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+/* Smooth transitions */
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+/* Focus states for accessibility */
+.btn:focus, .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}

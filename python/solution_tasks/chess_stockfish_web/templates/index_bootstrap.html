@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шахматы против Stockfish — Maestro7IT</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- Chessboard CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap_custom.css') }}">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♟️</text></svg>">
+</head>
+<body>
+    <!-- Bootstrap Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <span class="fs-3 me-2">♟️</span>
+                <span class="fw-bold">Chess Stockfish</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#"><i class="bi bi-controller me-1"></i> Играть</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-graph-up me-1"></i> Анализ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-bar-chart me-1"></i> Статистика</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-puzzle me-1"></i> Головоломки</a>
+                    </li>
+                </ul>
+                
+                <div class="d-flex align-items-center" id="nav-auth">
+                    <button class="btn btn-outline-light me-2" id="nav-login-btn">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Войти
+                    </button>
+                    <button class="btn btn-success" id="nav-signup-btn">
+                        <i class="bi bi-person-plus me-1"></i> Регистрация
+                    </button>
+                </div>
+                
+                <div class="d-flex align-items-center" id="nav-user" style="display: none;">
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span id="user-name-nav"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="nav-profile-btn"><i class="bi bi-person me-2"></i> Профиль</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Настройки</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="nav-logout-btn"><i class="bi bi-box-arrow-right me-2"></i> Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container-fluid mt-4">
+        <!-- Setup Screen -->
+        <div id="setup" class="setup-screen">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-md-10">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-header bg-primary text-white text-center py-4">
+                            <h1 class="card-title mb-2">
+                                <i class="bi bi-joystick me-2"></i>Играть с компьютером
+                            </h1>
+                            <p class="card-text mb-0 fs-5">Выберите уровень сложности и цвет фигур</p>
+                        </div>
+                        
+                        <div class="card-body p-5">
+                            <div class="row g-4">
+                                <!-- Color Selection Card -->
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-primary">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="bi bi-circle-half me-2"></i>Цвет фигур
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-grid gap-3">
+                                                <button class="btn btn-outline-primary btn-lg color-btn active" data-color="white" id="color-white">
+                                                    <div class="d-flex align-items-center justify-content-center">
+                                                        <div class="bg-white border rounded-circle me-3" style="width: 30px; height: 30px;"></div>
+                                                        <span class="fs-4 fw-bold">Белые</span>
+                                                    </div>
+                                                </button>
+                                                <button class="btn btn-outline-dark btn-lg color-btn" data-color="black" id="color-black">
+                                                    <div class="d-flex align-items-center justify-content-center">
+                                                        <div class="bg-dark border rounded-circle me-3" style="width: 30px; height: 30px;"></div>
+                                                        <span class="fs-4 fw-bold text-white">Чёрные</span>
+                                                    </div>
+                                                </button>
+                                                <input type="hidden" id="color" value="white">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Difficulty Selection Card -->
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-success">
+                                        <div class="card-header bg-success text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="bi bi-speedometer2 me-2"></i>Уровень сложности
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-4">
+                                                <input type="range" id="level-slider" min="0" max="20" value="5" 
+                                                       class="form-range form-control-lg">
+                                                <div class="d-flex justify-content-between small text-muted mt-1">
+                                                    <span>0</span>
+                                                    <span>5</span>
+                                                    <span>10</span>
+                                                    <span>15</span>
+                                                    <span>20</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="text-center p-3 bg-light rounded">
+                                                <div class="display-4 fw-bold text-primary" id="difficulty-level">5</div>
+                                                <div class="fs-4 text-muted" id="difficulty-label">Средний</div>
+                                            </div>
+                                            <input type="number" id="level" min="0" max="20" value="5" class="form-control d-none">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center mt-5">
+                                <button id="start" class="btn btn-primary btn-lg px-5 py-3">
+                                    <i class="bi bi-play-circle-fill me-2 fs-3"></i>
+                                    <span class="fs-3">Начать игру</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-section" class="game-screen" style="display: none;">
+            <div class="row g-4">
+                <!-- Left Sidebar -->
+                <div class="col-lg-3">
+                    <div class="sticky-top" style="top: 80px;">
+                        <!-- Game Info Card -->
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>Информация о партии
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <small class="text-muted">Статус:</small>
+                                    <div class="fw-bold status-badge status-active" id="status">Игра начата</div>
+                                </div>
+                                
+                                <div class="row text-center g-2">
+                                    <div class="col-6">
+                                        <div class="border rounded p-2 bg-light">
+                                            <small class="text-muted">Ваше время</small>
+                                            <div class="fw-bold fs-5" id="player-timer">00:00</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="border rounded p-2 bg-light">
+                                            <small class="text-muted">Время AI</small>
+                                            <div class="fw-bold fs-5" id="ai-timer">00:00</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Controls Card -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-sliders me-2"></i>Управление
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button id="reset" class="btn btn-warning">
+                                        <i class="bi bi-arrow-repeat me-2"></i>Новая игра
+                                    </button>
+                                    <button id="takeback" class="btn btn-outline-primary">
+                                        <i class="bi bi-arrow-counterclockwise me-2"></i>Отменить ход
+                                    </button>
+                                    <button id="analyze" class="btn btn-outline-info">
+                                        <i class="bi bi-search me-2"></i>Анализ
+                                    </button>
+                                    <button id="flip-board" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-down-up me-2"></i>Перевернуть
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Center: Chess Board -->
+                <div class="col-lg-6">
+                    <div class="card shadow-lg">
+                        <div class="card-body p-4">
+                            <div class="text-center mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="text-start board-player hover-lift">
+                                        <div class="player-name fs-5">Вы (Белые)</div>
+                                        <div class="player-rating">Игрок</div>
+                                    </div>
+                                    <div class="text-end board-player hover-lift">
+                                        <div class="player-name fs-5">Stockfish (Чёрные)</div>
+                                        <div class="player-rating">Уровень <span id="current-level">5</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="board" class="chess-board mx-auto" style="max-width: 500px;"></div>
+                            
+                            <div class="text-center mt-3">
+                                <span class="badge bg-primary fs-6">Ход <span id="move-number">1</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Sidebar: Move History -->
+                <div class="col-lg-3">
+                    <div class="sticky-top" style="top: 80px;">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-list-check me-2"></i>История ходов
+                                </h5>
+                                <button id="clear-history" class="btn btn-sm btn-outline-light" title="Очистить">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            <div id="move-list" class="card-body moves-list" style="max-height: 500px; overflow-y: auto;">
+                                <div class="moves-empty">
+                                    <i class="bi bi-clock-history fs-1 d-block mb-3"></i>
+                                    <div class="fs-5">Ходов пока нет</div>
+                                    <small class="text-muted">Сделайте первый ход, чтобы начать партию</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bootstrap Auth Modal -->
+    <div class="modal fade" id="authModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <span id="modal-title-text">Вход в систему</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- Login Form -->
+                    <div id="login-form">
+                        <div class="mb-3">
+                            <label class="form-label">Имя пользователя</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" id="login-username" class="form-control" placeholder="Введите имя пользователя">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Пароль</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input type="password" id="login-password" class="form-control" placeholder="Введите пароль">
+                            </div>
+                        </div>
+                        <button id="login-btn" class="btn btn-primary w-100">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Войти
+                        </button>
+                        <div class="text-center mt-3">
+                            <small>Нет аккаунта? <a href="#" id="show-register-link" class="text-decoration-none">Зарегистрироваться</a></small>
+                        </div>
+                    </div>
+                    
+                    <!-- Register Form -->
+                    <div id="register-form" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Имя пользователя</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person-plus"></i></span>
+                                <input type="text" id="register-username" class="form-control" placeholder="Выберите имя пользователя">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                <input type="email" id="register-email" class="form-control" placeholder="Введите email">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Пароль</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input type="password" id="register-password" class="form-control" placeholder="Создайте пароль">
+                            </div>
+                        </div>
+                        <button id="register-btn" class="btn btn-success w-100">
+                            <i class="bi bi-person-check me-2"></i>Зарегистрироваться
+                        </button>
+                        <div class="text-center mt-3">
+                            <small>Уже есть аккаунт? <a href="#" id="show-login-link" class="text-decoration-none">Войти</a></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <!-- Toasts will be dynamically added here -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
+    <script src="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+    
+    <script>
+        // Auth modal functions using Bootstrap
+        function openAuthModal(form = 'login') {
+            const modal = new bootstrap.Modal(document.getElementById('authModal'));
+            if (form === 'login') {
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('register-form').style.display = 'none';
+                document.getElementById('modal-title-text').textContent = 'Вход в систему';
+            } else {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('register-form').style.display = 'block';
+                document.getElementById('modal-title-text').textContent = 'Регистрация';
+            }
+            modal.show();
+        }
+
+        // Nav auth handlers
+        document.getElementById('nav-login-btn')?.addEventListener('click', () => openAuthModal('login'));
+        document.getElementById('nav-signup-btn')?.addEventListener('click', () => openAuthModal('register'));
+        document.getElementById('show-register-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            openAuthModal('register');
+        });
+        document.getElementById('show-login-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            openAuthModal('login');
+        });
+
+        // Color selector
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('color').value = this.dataset.color;
+            });
+        });
+
+        // Difficulty slider
+        const levelSlider = document.getElementById('level-slider');
+        const levelInput = document.getElementById('level');
+        const difficultyLevel = document.getElementById('difficulty-level');
+        const difficultyLabel = document.getElementById('difficulty-label');
+        
+        const difficultyLabels = [
+            'Легко', 'Легко', 'Легко', 'Легко', 'Легко',
+            'Начинающий', 'Начинающий', 'Начинающий', 'Начинающий',
+            'Средний', 'Средний', 'Средний', 'Средний', 'Средний',
+            'Продвинутый', 'Продвинутый', 'Продвинутый', 'Продвинутый',
+            'Эксперт', 'Эксперт', 'Эксперт', 'Мастер'
+        ];
+        
+        function updateDifficulty(value) {
+            levelInput.value = value;
+            levelSlider.value = value;
+            difficultyLevel.textContent = value;
+            difficultyLabel.textContent = difficultyLabels[parseInt(value)] || 'Средний';
+            document.getElementById('current-level').textContent = value;
+        }
+        
+        levelSlider.addEventListener('input', (e) => updateDifficulty(e.target.value));
+        levelInput.addEventListener('input', (e) => {
+            const val = Math.max(0, Math.min(20, parseInt(e.target.value) || 5));
+            updateDifficulty(val);
+        });
+        
+        updateDifficulty(5);
+
+        // Authentication functions
+        async function loginUser() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!username || !password) {
+                showToast('Введите имя пользователя и пароль', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('nav-auth').style.display = 'none';
+                    document.getElementById('nav-user').style.display = 'flex';
+                    document.getElementById('user-name-nav').textContent = data.username;
+                    bootstrap.Modal.getInstance(document.getElementById('authModal')).hide();
+                    showToast('Вы успешно вошли в систему', 'success');
+                } else {
+                    showToast('Ошибка входа: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                showToast('Ошибка подключения к серверу', 'danger');
+            }
+        }
+        
+        async function registerUser() {
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            if (!username || !email || !password) {
+                showToast('Заполните все поля', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Регистрация успешна! Теперь вы можете войти.', 'success');
+                    openAuthModal('login');
+                } else {
+                    showToast('Ошибка регистрации: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                showToast('Ошибка подключения к серверу', 'danger');
+            }
+        }
+        
+        async function logoutUser() {
+            try {
+                const response = await fetch('/logout');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('nav-user').style.display = 'none';
+                    document.getElementById('nav-auth').style.display = 'flex';
+                    showToast('Вы вышли из системы', 'info');
+                }
+            } catch (error) {
+                showToast('Ошибка подключения к серверу', 'danger');
+            }
+        }
+
+        document.getElementById('login-btn')?.addEventListener('click', loginUser);
+        document.getElementById('register-btn')?.addEventListener('click', registerUser);
+        document.getElementById('nav-logout-btn')?.addEventListener('click', logoutUser);
+        document.getElementById('nav-profile-btn')?.addEventListener('click', () => {
+            window.location.href = '/profile_page';
+        });
+
+        // Bootstrap Toast function
+        function showToast(message, type = 'info') {
+            const toastContainer = document.querySelector('.toast-container');
+            const toastHTML = `
+                <div class="toast align-items-center text-bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            const toastElement = document.createElement('div');
+            toastElement.innerHTML = toastHTML;
+            toastContainer.appendChild(toastElement.firstElementChild);
+            
+            const toast = new bootstrap.Toast(toastElement.firstElementChild, { delay: 3000 });
+            toast.show();
+            
+            toastElement.firstElementChild.addEventListener('hidden.bs.toast', () => {
+                toastElement.firstElementChild.remove();
+            });
+        }
+    </script>
+</body>
+</html>

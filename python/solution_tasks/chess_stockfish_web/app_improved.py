@@ -579,7 +579,7 @@ def _find_stockfish_executable():
         search_paths.insert(0, env_path)
     
     # Проверка конкретного пути к Stockfish, который точно существует
-    specific_stockfish_path = 'C:\\Program Files\\stockfish\\stockfish-windows-x86-64.exe'
+    specific_stockfish_path = 'C:\\Program Files\\stockfish\\stockfish.exe'
     if os.path.exists(specific_stockfish_path):
         return specific_stockfish_path
     
@@ -1485,7 +1485,7 @@ def index():
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
     logger.info(f"HTTP session created with session_id: {session.get('session_id')}")
-    return render_template('index.html')
+    return render_template('index_bootstrap.html')
 
 @app.route('/profile_page')
 def profile_page():
