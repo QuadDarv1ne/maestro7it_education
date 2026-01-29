@@ -13,3 +13,52 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+public class Solution {
+    /// <summary>
+    /// Вычисляет выражение в обратной польской записи.
+    /// </summary>
+    /// <param name="tokens">Массив строк, представляющих токены выражения.</param>
+    /// <returns>Результат вычисления выражения.</returns>
+    /// <remarks>
+    /// Алгоритм:
+    /// 1. Используется стек для хранения операндов.
+    /// 2. Каждый токен обрабатывается:
+    ///    - Если токен является числом, он преобразуется в int и помещается в стек.
+    ///    - Если токен является оператором, из стека извлекаются два операнда,
+    ///      выполняется операция и результат помещается обратно в стек.
+    /// 3. После обработки всех токенов в стеке остается один элемент - результат.
+    /// </remarks>
+    public int EvalRPN(string[] tokens) {
+        Stack<int> stack = new Stack<int>();
+        
+        foreach (string token in tokens) {
+            if (token != "+" && token != "-" && token != "*" && token != "/") {
+                // Токен - число
+                stack.Push(int.Parse(token));
+            } else {
+                // Токен - оператор
+                int b = stack.Pop();
+                int a = stack.Pop();
+                
+                // Выполняем соответствующую операцию
+                switch (token) {
+                    case "+":
+                        stack.Push(a + b);
+                        break;
+                    case "-":
+                        stack.Push(a - b);
+                        break;
+                    case "*":
+                        stack.Push(a * b);
+                        break;
+                    case "/":
+                        // В C# целочисленное деление округляет к нулю
+                        stack.Push(a / b);
+                        break;
+                }
+            }
+        }
+        
+        return stack.Pop();
+    }
+}

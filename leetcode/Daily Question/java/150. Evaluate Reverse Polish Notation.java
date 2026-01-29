@@ -13,3 +13,53 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+    /**
+     * Вычисляет выражение в обратной польской записи.
+     * 
+     * @param tokens Массив строк, представляющих токены выражения
+     * @return Результат вычисления выражения
+     * 
+     * Алгоритм:
+     * 1. Использует стек для хранения операндов
+     * 2. Для каждого токена:
+     *    - Если токен является числом, преобразует его в int и помещает в стек
+     *    - Если токен является оператором, извлекает два операнда из стека,
+     *      выполняет операцию и помещает результат обратно в стек
+     * 3. В стеке остается один элемент - результат вычислений
+     */
+    public int evalRPN(String[] tokens) {
+        Stack<Integer> stack = new Stack<>();
+        
+        for (String token : tokens) {
+            if (!token.equals("+") && !token.equals("-") && 
+                !token.equals("*") && !token.equals("/")) {
+                // Токен - число
+                stack.push(Integer.parseInt(token));
+            } else {
+                // Токен - оператор, извлекаем два операнда
+                int b = stack.pop();
+                int a = stack.pop();
+                
+                // Выполняем операцию в зависимости от оператора
+                switch (token) {
+                    case "+":
+                        stack.push(a + b);
+                        break;
+                    case "-":
+                        stack.push(a - b);
+                        break;
+                    case "*":
+                        stack.push(a * b);
+                        break;
+                    case "/":
+                        // В Java целочисленное деление округляет к нулю
+                        stack.push(a / b);
+                        break;
+                }
+            }
+        }
+        
+        return stack.pop();
+    }
+}
