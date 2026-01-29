@@ -309,7 +309,7 @@ class PygameChessGUI:
         
         for row in range(8):
             for col in range(8):
-                if self.board[row][col] == king_piece:
+                if self.engine.board_state[row][col] == king_piece:
                     king_pos = (row, col)
                     break
             if king_pos:
@@ -323,7 +323,7 @@ class PygameChessGUI:
         
         for row in range(8):
             for col in range(8):
-                piece = self.board[row][col]
+                piece = self.engine.board_state[row][col]
                 if piece != '.' and ((piece.isupper() and not opponent_color) or 
                                    (piece.islower() and opponent_color)):
                     # Временно меняем очередь хода для проверки
@@ -339,22 +339,22 @@ class PygameChessGUI:
     def would_be_in_check(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
         """Проверка, будет ли король под шахом после хода"""
         # Сохраняем текущее состояние
-        original_board = [row[:] for row in self.board]
+        original_board = [row[:] for row in self.engine.board_state]
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         
         # Делаем временный ход
-        piece = self.board[from_row][from_col]
-        captured = self.board[to_row][to_col]
-        self.board[to_row][to_col] = piece
-        self.board[from_row][from_col] = '.'
+        piece = self.engine.board_state[from_row][from_col]
+        captured = self.engine.board_state[to_row][to_col]
+        self.engine.board_state[to_row][to_col] = piece
+        self.engine.board_state[from_row][from_col] = '.'
         
         # Проверяем шах
         king_color = piece.isupper()
         in_check = self.is_king_in_check(king_color)
         
         # Восстанавливаем доску
-        self.board = original_board
+        self.engine.board_state = original_board
         
         return in_check
     
@@ -488,94 +488,38 @@ class PygameChessGUI:
         return True
     
     def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]):
-        """Выполнение хода с учетом всех правил шахмат"""
+        """Выполнение хода через движок"""
+        if not self.engine.make_move(from_pos, to_pos):
+            return False
+            
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         
-        # Сохранение информации о ходе
-        piece = self.board[from_row][from_col]
-        captured = self.board[to_row][to_col]
-        
-        # Обновление прав на рокировку
-        self.update_castling_rights(piece, from_pos)
-        
-        # Запись захваченной фигуры
-        if captured != '.':
-            captured_color = 'white' if captured.isupper() else 'black'
-            self.captured_pieces[captured_color].append(captured.upper())
-            self.halfmove_clock = 0  # Сброс счетчика при взятии
-        else:
-            self.halfmove_clock += 1
-        
-        # Обработка специальных ходов
-        piece_type = piece.lower()
-        
-        # Рокировка
-        if piece_type == 'k' and abs(from_col - to_col) == 2:
-            # Перемещаем ладью
-            if to_col > from_col:  # Короткая рокировка
-                rook_from_col = 7
-                rook_to_col = to_col - 1
-            else:  # Длинная рокировка
-                rook_from_col = 0
-                rook_to_col = to_col + 1
-            
-            rook = self.board[from_row][rook_from_col]
-            self.board[from_row][rook_to_col] = rook
-            self.board[from_row][rook_from_col] = '.'
-        
-        # Взятие на проходе
-        elif piece_type == 'p' and self.en_passant_target and to_pos == self.en_passant_target:
-            captured_row = from_row
-            captured_col = to_col
-            captured_pawn = self.board[captured_row][captured_col]
-            self.board[captured_row][captured_col] = '.'
-            captured_color = 'white' if captured_pawn.isupper() else 'black'
-            self.captured_pieces[captured_color].append(captured_pawn.upper())
-        
-        # Обновление цели взятия на проходе
-        self.en_passant_target = None
-        if piece_type == 'p' and abs(from_row - to_row) == 2:
-            self.en_passant_target = ((from_row + to_row) // 2, from_col)
-        
-        # Превращение пешки
-        if piece_type == 'p' and (to_row == 0 or to_row == 7):
-            piece = 'Q' if piece.isupper() else 'q'  # Автоматическое превращение в ферзя
-        
         # Запись хода в нотации
+        piece = self.engine.board_state[to_row][to_col]
+        captured = self.engine.board_state[from_row][from_col] if self.engine.board_state[from_row][from_col] != '.' else ''
+        
         from_square = chr(ord('a') + from_col) + str(8 - from_row)
         to_square = chr(ord('a') + to_col) + str(8 - to_row)
         piece_symbol = piece.upper() if piece.lower() != 'p' else ''
-        capture_symbol = 'x' if captured != '.' else ''
-        promotion_symbol = '=Q' if piece_type == 'p' and (to_row == 0 or to_row == 7) else ''
+        capture_symbol = 'x' if captured else ''
         
-        move_notation = f"{piece_symbol}{from_square}{capture_symbol}{to_square}{promotion_symbol}"
+        move_notation = f"{piece_symbol}{from_square}{capture_symbol}{to_square}"
         self.move_history.append(move_notation)
         
-        # Выполнение хода
-        self.board[to_row][to_col] = piece
-        self.board[from_row][from_col] = '.'
+        # Обновление захваченных фигур
+        if captured:
+            captured_color = 'white' if captured.isupper() else 'black'
+            self.captured_pieces[captured_color].append(captured.upper())
         
         # Смена хода
         self.white_turn = not self.white_turn
-        if self.white_turn:
-            self.fullmove_number += 1
         
         # Сброс выбора
         self.selected_square = None
         self.valid_moves = []
         
-        # Проверка окончания игры
-        if self.is_checkmate():
-            self.game_active = False
-            winner = "Черные" if self.white_turn else "Белые"
-            print(f"Шах и мат! Победили {winner}")
-        elif self.is_stalemate():
-            self.game_active = False
-            print("Пат! Ничья")
-        elif self.halfmove_clock >= 100:
-            self.game_active = False
-            print("Ничья по правилу 50 ходов")
+        return True
     
     def update_castling_rights(self, piece: str, pos: Tuple[int, int]):
         """Обновление прав на рокировку"""
@@ -672,7 +616,7 @@ class PygameChessGUI:
         
         if self.selected_square is None:
             # Выбор фигуры
-            piece = self.board[row][col]
+            piece = self.engine.board_state[row][col]
             if piece != '.':
                 is_white_piece = piece.isupper()
                 if (is_white_piece and self.white_turn) or (not is_white_piece and not self.white_turn):
@@ -681,14 +625,17 @@ class PygameChessGUI:
         else:
             # Выполнение хода
             if square in self.valid_moves:
-                self.make_move(self.selected_square, square)
+                if self.make_move(self.selected_square, square):
+                    # Ход компьютера если в режиме против ИИ
+                    if self.game_mode == 'computer' and not self.white_turn and self.game_active:
+                        self.computer_move()
             elif self.selected_square == square:
                 # Отмена выбора
                 self.selected_square = None
                 self.valid_moves = []
             else:
                 # Выбор другой фигуры
-                piece = self.board[row][col]
+                piece = self.engine.board_state[row][col]
                 if piece != '.':
                     is_white_piece = piece.isupper()
                     if (is_white_piece and self.white_turn) or (not is_white_piece and not self.white_turn):
