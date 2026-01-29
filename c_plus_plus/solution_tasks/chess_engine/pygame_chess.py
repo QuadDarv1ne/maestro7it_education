@@ -6,6 +6,7 @@ import sys
 import math
 import random
 from typing import Tuple, List
+from chess_engine_wrapper import chess_engine
 
 class PygameChessGUI:
     def __init__(self):
@@ -34,22 +35,16 @@ class PygameChessGUI:
         pygame.display.set_caption("Шахматы на Pygame - Улучшенная версия")
         self.clock = pygame.time.Clock()
         
-        # Игровое состояние
-        self.board = self.get_initial_board()
+        # Игровое состояние - используем С++ движок
+        self.engine = chess_engine
+        self.engine.initialize_engine()
         self.selected_square = None
         self.valid_moves = []
         self.game_active = True
         self.white_turn = True
         self.move_history = []
         self.captured_pieces = {'white': [], 'black': []}
-        self.game_mode = 'computer'  # 'computer' или 'two_players'
-        self.castling_rights = {
-            'K': True, 'Q': True,  # Белые короткая и длинная рокировка
-            'k': True, 'q': True   # Черные короткая и длинная рокировка
-        }
-        self.en_passant_target = None  # Возможность взятия на проходе
-        self.halfmove_clock = 0  # Для правила 50 ходов
-        self.fullmove_number = 1        
+        self.game_mode = 'computer'  # 'computer' или 'two_players'        
         # Шрифты
         self.font = pygame.font.SysFont('Arial', 24)
         self.big_font = pygame.font.SysFont('Arial', 32, bold=True)
@@ -61,16 +56,7 @@ class PygameChessGUI:
         # Анимация
     def get_initial_board(self):
         """Начальная позиция шахматной доски"""
-        return [
-            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-        ]
+        return self.engine.get_initial_board()
     
     def load_piece_images(self):
         """Загрузка реальных иконок фигур"""
@@ -134,7 +120,7 @@ class PygameChessGUI:
                 pygame.draw.rect(self.screen, self.BLACK, rect, 1)
                 
                 # Отрисовка фигуры
-                piece = self.board[row][col]
+                piece = self.engine.board_state[row][col]
                 if piece != '.':
                     if piece in self.piece_images and self.piece_images[piece] is not None:
                         # Использование реальных иконок
@@ -312,104 +298,8 @@ class PygameChessGUI:
         return (row, col) if 0 <= row < 8 and 0 <= col < 8 else None
     
     def is_valid_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Проверка корректности хода с улучшенной логикой"""
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        
-        piece = self.board[from_row][from_col]
-        target_piece = self.board[to_row][to_col]
-        
-        # Проверка цвета фигуры
-        is_white_piece = piece.isupper()
-        if (is_white_piece and not self.white_turn) or (not is_white_piece and self.white_turn):
-            return False
-            
-        # Проверка выхода за границы
-        if not (0 <= to_row < 8 and 0 <= to_col < 8):
-            return False
-            
-        # Проверка на то же поле
-        if from_pos == to_pos:
-            return False
-            
-        # Проверка, что нельзя съесть свою фигуру
-        if target_piece != '.' and ((target_piece.isupper() and is_white_piece) or 
-                                   (target_piece.islower() and not is_white_piece)):
-            return False
-            
-        piece_type = piece.lower()
-        
-        # Логика для пешки
-        if piece_type == 'p':
-            direction = -1 if is_white_piece else 1
-            start_row = 6 if is_white_piece else 1
-            
-            # Ход вперед на одну клетку
-            if from_col == to_col and to_row == from_row + direction and target_piece == '.':
-                return True
-                
-            # Двойной ход с начальной позиции
-            if (from_row == start_row and from_col == to_col and 
-                to_row == from_row + 2 * direction and 
-                target_piece == '.' and self.board[from_row + direction][from_col] == '.'):
-                return True
-                
-            # Взятие по диагонали
-            if (abs(from_col - to_col) == 1 and to_row == from_row + direction and 
-                target_piece != '.' and target_piece.isupper() != is_white_piece):
-                return True
-                
-            # Взятие на проходе (en passant)
-            if (self.en_passant_target and to_pos == self.en_passant_target and 
-                abs(from_col - to_col) == 1 and to_row == from_row + direction):
-                return True
-            
-        # Логика для ладьи
-        elif piece_type == 'r':
-            return self.is_straight_move(from_pos, to_pos)
-            
-        # Логика для слона
-        elif piece_type == 'b':
-            return self.is_diagonal_move(from_pos, to_pos)
-            
-        # Логика для ферзя
-        elif piece_type == 'q':
-            return self.is_straight_move(from_pos, to_pos) or self.is_diagonal_move(from_pos, to_pos)
-            
-        # Логика для короля
-        elif piece_type == 'k':
-            row_diff = abs(to_row - from_row)
-            col_diff = abs(to_col - from_col)
-            
-            # Обычный ход короля
-            if row_diff <= 1 and col_diff <= 1:
-                return not self.would_be_in_check(from_pos, to_pos)
-            
-            # Рокировка
-            if row_diff == 0 and abs(col_diff) == 2 and not self.is_king_in_check(is_white_piece):
-                # Короткая рокировка
-                if col_diff == 2:  # Король идет вправо
-                    if (self.castling_rights['K' if is_white_piece else 'k'] and
-                        self.board[from_row][from_col + 1] == '.' and 
-                        self.board[from_row][from_col + 2] == '.' and
-                        not self.would_be_in_check(from_pos, (from_row, from_col + 1))):
-                        return True
-                # Длинная рокировка
-                elif col_diff == -2:  # Король идет влево
-                    if (self.castling_rights['Q' if is_white_piece else 'q'] and
-                        self.board[from_row][from_col - 1] == '.' and 
-                        self.board[from_row][from_col - 2] == '.' and
-                        self.board[from_row][from_col - 3] == '.' and
-                        not self.would_be_in_check(from_pos, (from_row, from_col - 1))):
-                        return True
-            
-        # Логика для коня
-        elif piece_type == 'n':
-            row_diff = abs(to_row - from_row)
-            col_diff = abs(to_col - from_col)
-            return (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)
-            
-        return False
+        """Проверка корректности хода через движок"""
+        return self.engine.is_valid_move_cpp(from_pos, to_pos)
     
     def is_king_in_check(self, king_color: bool) -> bool:
         """Проверка, находится ли король под шахом"""
