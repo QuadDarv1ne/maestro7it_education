@@ -25,6 +25,7 @@ class EnhancedChessAI:
         self.killer_moves = [[None, None] for _ in range(64)]  # Две killer moves на каждую глубину
         self.nodes_searched = 0
         self.tt_hits = 0
+        self.max_tt_size = 1000000  # Максимум 1 миллион позиций в TT
         
         # Переиспользуем генератор ходов
         from core.optimized_move_generator import BitboardMoveGenerator
@@ -529,6 +530,10 @@ class EnhancedChessAI:
             piece = board[from_pos[0]][from_pos[1]]
             target = board[to_pos[0]][to_pos[1]]
             
+            # Пропускаем некорректные ходы
+            if piece == '.' or piece not in self.piece_values:
+                continue
+            
             # 1. Killer moves - очень высокий приоритет
             if depth < len(self.killer_moves):
                 if move == self.killer_moves[depth][0]:
@@ -537,7 +542,7 @@ class EnhancedChessAI:
                     score += 8900
             
             # 2. MVV-LVA (Самая ценная жертва - Наименее ценный агрессор)
-            if target != '.':
+            if target != '.' and target in self.piece_values:
                 score += 10000 + 10 * abs(self.piece_values[target]) - abs(self.piece_values[piece]) // 10
             
             # 3. Эвристика истории

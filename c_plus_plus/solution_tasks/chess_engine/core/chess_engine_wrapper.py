@@ -544,46 +544,6 @@ class ChessEngineWrapper:
         
         return False
     
-    def is_checkmate(self) -> bool:
-        """Проверка мата"""
-        king_color = self.current_turn
-        if not self.is_king_in_check(king_color):
-            return False
-        
-        # Проверяем, есть ли хоть один допустимый ход
-        for row in range(8):
-            for col in range(8):
-                piece = self.board_state[row][col]
-                if piece != '.' and ((piece.isupper() and king_color) or 
-                                   (piece.islower() and not king_color)):
-                    for to_row in range(8):
-                        for to_col in range(8):
-                            if self.is_valid_move_python((row, col), (to_row, to_col)):
-                                # Проверяем, устраняет ли этот ход шах
-                                if not self.would_still_be_in_check((row, col), (to_row, to_col), king_color):
-                                    return False
-        
-        return True
-    
-    def is_stalemate(self) -> bool:
-        """Проверка пата"""
-        king_color = self.current_turn
-        if self.is_king_in_check(king_color):
-            return False
-        
-        # Проверяем, есть ли хоть один допустимый ход
-        for row in range(8):
-            for col in range(8):
-                piece = self.board_state[row][col]
-                if piece != '.' and ((piece.isupper() and king_color) or 
-                                   (piece.islower() and not king_color)):
-                    for to_row in range(8):
-                        for to_col in range(8):
-                            if self.is_valid_move_python((row, col), (to_row, to_col)):
-                                return False
-        
-        return True
-    
     def would_still_be_in_check(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], king_color: bool) -> bool:
         """Проверка, будет ли король все еще под шахом после хода"""
         # Сохраняем текущее состояние
