@@ -22,12 +22,16 @@ class EnhancedChessAI:
         self.search_depth = search_depth
         self.transposition_table = {}
         self.history_table = {}
+        self.killer_moves = [[None, None] for _ in range(64)]  # Две killer moves на каждую глубину
         self.nodes_searched = 0
         self.tt_hits = 0
         
         # Переиспользуем генератор ходов
         from core.optimized_move_generator import BitboardMoveGenerator
         self.move_gen = BitboardMoveGenerator()
+        
+        # Zobrist hashing для быстрых хэшей позиций
+        self.zobrist_keys = self.initialize_zobrist_keys()
         
         self.initialize_evaluation_weights()
     
