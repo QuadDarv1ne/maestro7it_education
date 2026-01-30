@@ -1,321 +1,459 @@
-#include "../include/incremental_evaluator.hpp"
+#include "../../include/incremental_evaluator.hpp"
 #include <iostream>
-#include <algorithm>
+#include <sstream>
+#include <cmath>
 
-// Определение констант оценки
-namespace EvaluationConstants {
-    // Значения фигур в сантипешках
-    const int PAWN_VALUE = 100;
-    const int KNIGHT_VALUE = 320;
-    const int BISHOP_VALUE = 330;
-    const int ROOK_VALUE = 500;
-    const int QUEEN_VALUE = 900;
-    const int KING_VALUE = 20000;
-    
-    // Бонусы и штрафы
-    const int CENTER_BONUS = 25;
-    const int MOBILITY_BONUS = 10;
-    const int KING_SAFETY_BONUS = 15;
-    const int DOUBLED_PAWN_PENALTY = -15;
-    const int ISOLATED_PAWN_PENALTY = -20;
-    const int PASSED_PAWN_BONUS = 30;
-    
-    // Таблицы Piece-Square для позиционной оценки
-    const int PAWN_PSQT[64] = {
-        0,  0,  0,  0,  0,  0,  0,  0,
-        50, 50, 50, 50, 50, 50, 50, 50,
-        10, 10, 20, 30, 30, 20, 10, 10,
-         5,  5, 10, 25, 25, 10,  5,  5,
-         0,  0,  0, 20, 20,  0,  0,  0,
-         5, -5,-10,  0,  0,-10, -5,  5,
-         5, 10, 10,-20,-20, 10, 10,  5,
-         0,  0,  0,  0,  0,  0,  0,  0
-    };
-    
-    const int KNIGHT_PSQT[64] = {
-        -50,-40,-30,-30,-30,-30,-40,-50,
-        -40,-20,  0,  0,  0,  0,-20,-40,
-        -30,  0, 10, 15, 15, 10,  0,-30,
-        -30,  5, 15, 20, 20, 15,  5,-30,
-        -30,  0, 15, 20, 20, 15,  0,-30,
-        -30,  5, 10, 15, 15, 10,  5,-30,
-        -40,-20,  0,  5,  5,  0,-20,-40,
-        -50,-40,-30,-30,-30,-30,-40,-50
-    };
-    
-    // Упрощенные таблицы для других фигур
-    const int BISHOP_PSQT[64] = {0}; // Будет реализовано позже
-    const int ROOK_PSQT[64] = {0};
-    const int QUEEN_PSQT[64] = {0};
-    const int KING_PSQT[64] = {0};
-}
-
-// Инициализация статических членов
-const int IncrementalEvaluator::PIECE_VALUES[6] = {
-    EvaluationConstants::KING_VALUE,
-    EvaluationConstants::QUEEN_VALUE,
+// Инициализация констант
+const int IncrementalEvaluator::MATERIAL_WEIGHTS[Bitboard::PIECE_TYPE_COUNT] = {
+    EvaluationConstants::PAWN_VALUE,
+    EvaluationConstants::KNIGHT_VALUE,
     EvaluationConstants::BISHOP_VALUE,
     EvaluationConstants::ROOK_VALUE,
-    EvaluationConstants::KNIGHT_VALUE,
-    EvaluationConstants::PAWN_VALUE
+    EvaluationConstants::QUEEN_VALUE,
+    EvaluationConstants::KING_VALUE
 };
 
-const int IncrementalEvaluator::PSQT[6][64] = {
-    {0}, // King - специальная обработка
-    EvaluationConstants::QUEEN_PSQT,
-    EvaluationConstants::BISHOP_PSQT,
-    EvaluationConstants::ROOK_PSQT,
-    EvaluationConstants::KNIGHT_PSQT,
-    EvaluationConstants::PAWN_PSQT
+const int IncrementalEvaluator::POSITIONAL_BONUSES[64] = {
+    // Ранг 1 (черные фигуры)
+    0,  0,  0,  0,  0,  0,  0,  0,
+    // Ранг 2
+    5,  5,  5,  5,  5,  5,  5,  5,
+    // Ранг 3
+    10, 10, 15, 20, 20, 15, 10, 10,
+    // Ранг 4
+    15, 15, 25, 30, 30, 25, 15, 15,
+    // Ранг 5
+    15, 15, 25, 30, 30, 25, 15, 15,
+    // Ранг 6
+    10, 10, 15, 20, 20, 15, 10, 10,
+    // Ранг 7
+    5,  5,  5,  5,  5,  5,  5,  5,
+    // Ранг 8 (белые фигуры)
+    0,  0,  0,  0,  0,  0,  0,  0
 };
 
-IncrementalEvaluator::IncrementalEvaluator(const BitboardEngine& board) 
-    : board_(board) {
-    // Инициализация всех компонентов
-    fullRecalculation();
+const int IncrementalEvaluator::MOBILITY_BONUSES[Bitboard::PIECE_TYPE_COUNT] = {
+    0,  // PAWN - ограниченная мобильность
+    3,  // KNIGHT
+    3,  // BISHOP
+    4,  // ROOK
+    5,  // QUEEN
+    0   // KING - фиксированная позиция
+};
+
+IncrementalEvaluator::IncrementalEvaluator(const Bitboard& board) 
+    : board_(board), material_score_(0), positional_score_(0), 
+      mobility_score_(0), pawn_structure_score_(0), king_safety_score_(0) {
+    initializeSquareValues();
+    initializePawnShieldBonuses();
+    fullRecalculate();
 }
 
-void IncrementalEvaluator::fullRecalculation() {
-    // Полный пересчет всех компонентов
-    for (int color = 0; color < 2; color++) {
-        material_[color] = 0;
-        mobility_[color] = 0;
-        pawnStructure_[color] = 0;
-        kingSafety_[color] = 0;
-        centerControl_[color] = 0;
-    }
-    
-    // Расчет материала
-    for (int piece = 0; piece < 6; piece++) {
-        for (int color = 0; color < 2; color++) {
-            Bitboard pieceBB = board_.getPieceBitboard(color, piece);
-            int count = BitboardEngine::popcount(pieceBB);
-            material_[color] += count * PIECE_VALUES[piece];
-        }
-    }
-    
-    // Расчет мобильности
-    for (int color = 0; color < 2; color++) {
-        mobility_[color] = calculateMobility(color);
-    }
-    
-    // Расчет пешечной структуры
-    for (int color = 0; color < 2; color++) {
-        pawnStructure_[color] = calculatePawnStructure(color);
-    }
-    
-    // Расчет безопасности короля
-    for (int color = 0; color < 2; color++) {
-        int kingSquare = findKing(color);
-        if (kingSquare != -1) {
-            kingSafety_[color] = calculateKingSafety(kingSquare, color);
-        }
-    }
-    
-    // Расчет контроля центра
-    for (int color = 0; color < 2; color++) {
-        centerControl_[color] = calculateCenterControl(color);
-    }
-    
-    // Сброс флагов изменений
-    materialChanged_ = false;
-    mobilityChanged_ = false;
-    pawnStructureChanged_ = false;
-    kingSafetyChanged_ = false;
-    centerControlChanged_ = false;
-}
-
-int IncrementalEvaluator::evaluate() {
-    int totalScore = 0;
-    
-    // Материал (наиболее важный компонент)
-    totalScore += getMaterialScore();
-    
-    // Мобильность
-    if (mobilityChanged_) {
-        mobility_[0] = calculateMobility(0);
-        mobility_[1] = calculateMobility(1);
-        mobilityChanged_ = false;
-    }
-    totalScore += getMobilityScore();
-    
-    // Пешечная структура
-    if (pawnStructureChanged_) {
-        pawnStructure_[0] = calculatePawnStructure(0);
-        pawnStructure_[1] = calculatePawnStructure(1);
-        pawnStructureChanged_ = false;
-    }
-    totalScore += getPawnStructureScore();
-    
-    // Безопасность короля
-    if (kingSafetyChanged_) {
-        for (int color = 0; color < 2; color++) {
-            int kingSquare = findKing(color);
-            if (kingSquare != -1) {
-                kingSafety_[color] = calculateKingSafety(kingSquare, color);
-            }
-        }
-        kingSafetyChanged_ = false;
-    }
-    totalScore += getKingSafetyScore();
-    
-    // Контроль центра
-    if (centerControlChanged_) {
-        centerControl_[0] = calculateCenterControl(0);
-        centerControl_[1] = calculateCenterControl(1);
-        centerControlChanged_ = false;
-    }
-    totalScore += getCenterControlScore();
-    
-    return totalScore;
-}
-
-void IncrementalEvaluator::updateAfterMove(int fromSquare, int toSquare, int pieceType, int color, int capturedPiece) {
-    // Обновление материала
-    if (capturedPiece != -1) {
-        material_[1 - color] -= PIECE_VALUES[capturedPiece];
-        materialChanged_ = true;
+void IncrementalEvaluator::initializeSquareValues() {
+    // Инициализируем таблицу позиционных значений
+    for (int square = 0; square < 64; square++) {
+        int rank = square / 8;
+        int file = square % 8;
         
-        // Если захвачена пешка, пешечная структура противника изменилась
-        if (capturedPiece == 5) {
-            pawnStructureChanged_ = true;
+        // Центральные клетки получают бонус
+        bool is_center = (file >= 2 && file <= 5) && (rank >= 2 && rank <= 5);
+        square_values_[square] = is_center ? EvaluationConstants::CENTER_BONUS : 0;
+        
+        // Добавляем бонусы за развитие (для начальных позиций)
+        if (rank == 1 || rank == 6) {
+            square_values_[square] += EvaluationConstants::DEVELOPMENT_BONUS;
+        }
+    }
+}
+
+void IncrementalEvaluator::initializePawnShieldBonuses() {
+    // Инициализируем бонусы для защиты короля пешками
+    for (int square = 0; square < 64; square++) {
+        int rank = square / 8;
+        int file = square % 8;
+        
+        // Бонусы для клеток рядом с королем
+        if ((file >= 3 && file <= 5) && (rank <= 1 || rank >= 6)) {
+            pawn_shield_bonus_[square] = EvaluationConstants::KING_SHIELD_BONUS;
+        } else {
+            pawn_shield_bonus_[square] = 0;
+        }
+    }
+}
+
+int IncrementalEvaluator::calculateMaterialScore() const {
+    int score = 0;
+    
+    // Подсчитываем материальные значения для белых
+    for (int piece = 0; piece < Bitboard::PIECE_TYPE_COUNT; piece++) {
+        Bitboard::BitboardType pieces = board_.getPieces(Bitboard::WHITE, 
+                                                        static_cast<Bitboard::PieceType>(piece));
+        int count = BitboardUtils::popCount(pieces);
+        score += count * MATERIAL_WEIGHTS[piece];
+    }
+    
+    // Вычитаем материальные значения для черных
+    for (int piece = 0; piece < Bitboard::PIECE_TYPE_COUNT; piece++) {
+        Bitboard::BitboardType pieces = board_.getPieces(Bitboard::BLACK, 
+                                                        static_cast<Bitboard::PieceType>(piece));
+        int count = BitboardUtils::popCount(pieces);
+        score -= count * MATERIAL_WEIGHTS[piece];
+    }
+    
+    return score;
+}
+
+int IncrementalEvaluator::calculatePositionalScore() const {
+    int score = 0;
+    
+    // Позиционная оценка для белых фигур
+    for (int piece = 0; piece < Bitboard::PIECE_TYPE_COUNT; piece++) {
+        Bitboard::BitboardType pieces = board_.getPieces(Bitboard::WHITE, 
+                                                        static_cast<Bitboard::PieceType>(piece));
+        
+        while (pieces) {
+            int square = BitboardUtils::lsb(pieces);
+            score += POSITIONAL_BONUSES[square];
+            pieces &= pieces - 1; // Удаляем младший бит
         }
     }
     
-    // Обновление мобильности (всегда изменяется)
-    mobilityChanged_ = true;
-    
-    // Обновление пешечной структуры (если двигалась пешка)
-    if (pieceType == 5) {
-        pawnStructureChanged_ = true;
-    }
-    
-    // Обновление безопасности короля (если двигался король)
-    if (pieceType == 0) {
-        kingSafetyChanged_ = true;
-    }
-    
-    // Обновление контроля центра (всегда потенциально изменяется)
-    centerControlChanged_ = true;
-}
-
-// Вспомогательные функции
-int IncrementalEvaluator::calculateMobility(int color) const {
-    int totalMobility = 0;
-    Bitboard myPieces = board_.getColorOccupancy(color);
-    Bitboard opponentPieces = board_.getColorOccupancy(1 - color);
-    
-    // Для каждой фигуры рассчитываем мобильность
-    for (int piece = 1; piece < 6; piece++) { // кроме короля
-        Bitboard pieceBB = board_.getPieceBitboard(color, piece);
-        while (pieceBB) {
-            int square = BitboardEngine::lsb(pieceBB);
-            Bitboard attacks = getPieceAttacks(square, piece, color);
-            totalMobility += calculatePieceMobility(attacks, opponentPieces);
-            pieceBB &= pieceBB - 1; // Удалить младший бит
+    // Позиционная оценка для черных фигур (с отрицательным знаком)
+    for (int piece = 0; piece < Bitboard::PIECE_TYPE_COUNT; piece++) {
+        Bitboard::BitboardType pieces = board_.getPieces(Bitboard::BLACK, 
+                                                        static_cast<Bitboard::PieceType>(piece));
+        
+        while (pieces) {
+            int square = BitboardUtils::lsb(pieces);
+            score -= POSITIONAL_BONUSES[square];
+            pieces &= pieces - 1;
         }
     }
     
-    return totalMobility;
+    return score;
 }
 
-int IncrementalEvaluator::calculatePieceMobility(Bitboard attacks, Bitboard opponentPieces) const {
-    // Мобильность = количество доступных ходов
-    int mobility = BitboardEngine::popcount(attacks);
+int IncrementalEvaluator::calculateMobilityScore() const {
+    int score = 0;
     
-    // Бонус за контроль центра
-    Bitboard center = 0x0000001818000000ULL; // d4, d5, e4, e5
-    int centerControl = BitboardEngine::popcount(attacks & center);
-    mobility += centerControl * EvaluationConstants::CENTER_BONUS;
+    // Мобильность белых фигур
+    for (int piece = 1; piece < Bitboard::PIECE_TYPE_COUNT - 1; piece++) { // Исключаем пешки и короля
+        Bitboard::BitboardType pieces = board_.getPieces(Bitboard::WHITE, 
+                                                        static_cast<Bitboard::PieceType>(piece));
+        
+        while (pieces) {
+            int square = BitboardUtils::lsb(pieces);
+            Bitboard::BitboardType attacks = 0;
+            
+            switch (piece) {
+                case Bitboard::KNIGHT:
+                    attacks = board_.getKnightAttacks(square);
+                    break;
+                case Bitboard::BISHOP:
+                    attacks = board_.getBishopAttacks(square, board_.getAllPieces());
+                    break;
+                case Bitboard::ROOK:
+                    attacks = board_.getRookAttacks(square, board_.getAllPieces());
+                    break;
+                case Bitboard::QUEEN:
+                    attacks = board_.getQueenAttacks(square, board_.getAllPieces());
+                    break;
+            }
+            
+            int mobility = BitboardUtils::popCount(attacks & ~board_.getOccupancy(Bitboard::WHITE));
+            score += mobility * MOBILITY_BONUSES[piece];
+            pieces &= pieces - 1;
+        }
+    }
     
-    return mobility * EvaluationConstants::MOBILITY_BONUS;
+    // Мобильность черных фигур
+    for (int piece = 1; piece < Bitboard::PIECE_TYPE_COUNT - 1; piece++) {
+        Bitboard::BitboardType pieces = board_.getPieces(Bitboard::BLACK, 
+                                                        static_cast<Bitboard::PieceType>(piece));
+        
+        while (pieces) {
+            int square = BitboardUtils::lsb(pieces);
+            Bitboard::BitboardType attacks = 0;
+            
+            switch (piece) {
+                case Bitboard::KNIGHT:
+                    attacks = board_.getKnightAttacks(square);
+                    break;
+                case Bitboard::BISHOP:
+                    attacks = board_.getBishopAttacks(square, board_.getAllPieces());
+                    break;
+                case Bitboard::ROOK:
+                    attacks = board_.getRookAttacks(square, board_.getAllPieces());
+                    break;
+                case Bitboard::QUEEN:
+                    attacks = board_.getQueenAttacks(square, board_.getAllPieces());
+                    break;
+            }
+            
+            int mobility = BitboardUtils::popCount(attacks & ~board_.getOccupancy(Bitboard::BLACK));
+            score -= mobility * MOBILITY_BONUSES[piece];
+            pieces &= pieces - 1;
+        }
+    }
+    
+    return score;
 }
 
-int IncrementalEvaluator::calculatePawnStructure(int color) const {
-    int structureScore = 0;
-    Bitboard pawns = board_.getPieceBitboard(color, 5); // Пешки
+int IncrementalEvaluator::calculatePawnStructureScore() const {
+    int score = 0;
     
-    while (pawns) {
-        int square = BitboardEngine::lsb(pawns);
+    // Анализ структуры пешек белых
+    Bitboard::BitboardType white_pawns = board_.getPieces(Bitboard::WHITE, Bitboard::PAWN);
+    Bitboard::BitboardType black_pawns = board_.getPieces(Bitboard::BLACK, Bitboard::PAWN);
+    
+    while (white_pawns) {
+        int square = BitboardUtils::lsb(white_pawns);
         int file = square % 8;
         int rank = square / 8;
         
-        // Проверка на изолированные пешки
-        Bitboard fileMask = 0x0101010101010101ULL << file;
-        if (!(pawns & (fileMask << 1)) && !(pawns & (fileMask >> 1))) {
-            structureScore += EvaluationConstants::ISOLATED_PAWN_PENALTY;
+        // Проверка на удвоенные пешки
+        Bitboard::BitboardType file_pawns = white_pawns & (0x0101010101010101ULL << file);
+        if (BitboardUtils::popCount(file_pawns) > 1) {
+            score += EvaluationConstants::DOUBLED_PAWN_PENALTY;
         }
+        
+        // Проверка на изолированные пешки
+        Bitboard::BitboardType neighbor_files = 0;
+        if (file > 0) neighbor_files |= (0x0101010101010101ULL << (file - 1));
+        if (file < 7) neighbor_files |= (0x0101010101010101ULL << (file + 1));
+        
+        if (!(neighbor_files & white_pawns)) {
+            score += EvaluationConstants::ISOLATED_PAWN_PENALTY;
+        }
+        
+        // Проверка на проходные пешки
+        Bitboard::BitboardType ahead_squares = 0;
+        for (int r = rank + 1; r < 8; r++) {
+            ahead_squares |= (1ULL << (r * 8 + file));
+        }
+        
+        if (!(ahead_squares & black_pawns)) {
+            score += EvaluationConstants::PASSED_PAWN_BONUS + (rank - 1) * 5;
+        }
+        
+        white_pawns &= white_pawns - 1;
+    }
+    
+    // Анализ структуры пешек черных (с отрицательным знаком)
+    while (black_pawns) {
+        int square = BitboardUtils::lsb(black_pawns);
+        int file = square % 8;
+        int rank = square / 8;
         
         // Проверка на удвоенные пешки
-        if (BitboardEngine::popcount(pawns & fileMask) > 1) {
-            structureScore += EvaluationConstants::DOUBLED_PAWN_PENALTY;
+        Bitboard::BitboardType file_pawns = black_pawns & (0x0101010101010101ULL << file);
+        if (BitboardUtils::popCount(file_pawns) > 1) {
+            score -= EvaluationConstants::DOUBLED_PAWN_PENALTY;
         }
         
-        // Бонус за проходные пешки
-        Bitboard promotionPath = (color == 0) ? 
-            (0xFF00000000000000ULL >> (8 * (7 - rank))) : 
-            (0x00000000000000FFULL << (8 * rank));
-        if (!(board_.getPieceBitboard(1 - color, 5) & promotionPath)) {
-            structureScore += EvaluationConstants::PASSED_PAWN_BONUS;
+        // Проверка на изолированные пешки
+        Bitboard::BitboardType neighbor_files = 0;
+        if (file > 0) neighbor_files |= (0x0101010101010101ULL << (file - 1));
+        if (file < 7) neighbor_files |= (0x0101010101010101ULL << (file + 1));
+        
+        if (!(neighbor_files & black_pawns)) {
+            score -= EvaluationConstants::ISOLATED_PAWN_PENALTY;
         }
         
-        pawns &= pawns - 1;
+        // Проверка на проходные пешки
+        Bitboard::BitboardType ahead_squares = 0;
+        for (int r = rank - 1; r >= 0; r--) {
+            ahead_squares |= (1ULL << (r * 8 + file));
+        }
+        
+        if (!(ahead_squares & white_pawns)) {
+            score -= EvaluationConstants::PASSED_PAWN_BONUS + (6 - rank) * 5;
+        }
+        
+        black_pawns &= black_pawns - 1;
     }
     
-    return structureScore;
+    return score;
 }
 
-int IncrementalEvaluator::calculateKingSafety(int kingSquare, int color) const {
-    int safety = 0;
+int IncrementalEvaluator::calculateKingSafetyScore() const {
+    int score = 0;
     
-    // Количество защитников короля
-    Bitboard kingAttacks = board_.generateKingAttacks(kingSquare);
-    Bitboard defenders = board_.getColorOccupancy(color) & kingAttacks;
-    safety += BitboardEngine::popcount(defenders) * EvaluationConstants::KING_SAFETY_BONUS;
-    
-    // Расстояние от центра (король лучше в углу на эндшпиле)
-    int centerDistance = std::max(abs(kingSquare % 8 - 3), abs(kingSquare / 8 - 3));
-    safety += centerDistance * 5; // Небольшой бонус за отход от центра
-    
-    return safety;
-}
-
-int IncrementalEvaluator::calculateCenterControl(int color) const {
-    int control = 0;
-    Bitboard center = 0x0000001818000000ULL; // d4, d5, e4, e5
-    Bitboard myPieces = board_.getColorOccupancy(color);
-    
-    // Контроль центра своими фигурами
-    control += BitboardEngine::popcount(myPieces & center) * 20;
-    
-    // Атака центра
-    Bitboard attacks = 0;
-    for (int piece = 1; piece < 6; piece++) {
-        Bitboard pieceBB = board_.getPieceBitboard(color, piece);
-        while (pieceBB) {
-            int square = BitboardEngine::lsb(pieceBB);
-            attacks |= getPieceAttacks(square, piece, color);
-            pieceBB &= pieceBB - 1;
+    // Безопасность белого короля
+    Bitboard::BitboardType white_king_bb = board_.getPieces(Bitboard::WHITE, Bitboard::KING);
+    if (white_king_bb) {
+        int king_square = BitboardUtils::lsb(white_king_bb);
+        int king_rank = king_square / 8;
+        int king_file = king_square % 8;
+        
+        // Бонус за защиту пешками
+        int shield_bonus = 0;
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int df = -1; df <= 1; df++) {
+                int r = king_rank + dr;
+                int f = king_file + df;
+                if (r >= 0 && r < 8 && f >= 0 && f < 8) {
+                    int sq = r * 8 + f;
+                    if (BitboardUtils::getBit(board_.getPieces(Bitboard::WHITE, Bitboard::PAWN), sq)) {
+                        shield_bonus += pawn_shield_bonus_[sq];
+                    }
+                }
+            }
+        }
+        score += shield_bonus;
+        
+        // Штраф за открытые линии рядом с королем
+        Bitboard::BitboardType rook_attacks = board_.getRookAttacks(king_square, board_.getAllPieces());
+        Bitboard::BitboardType enemy_rooks = board_.getPieces(Bitboard::BLACK, Bitboard::ROOK);
+        if (rook_attacks & enemy_rooks) {
+            score += EvaluationConstants::KING_EXPOSURE_PENALTY;
         }
     }
-    control += BitboardEngine::popcount(attacks & center) * 10;
     
-    return control;
-}
-
-int IncrementalEvaluator::findKing(int color) const {
-    Bitboard kingBB = board_.getPieceBitboard(color, 0);
-    return kingBB ? BitboardEngine::lsb(kingBB) : -1;
-}
-
-Bitboard IncrementalEvaluator::getPieceAttacks(int square, int pieceType, int color) const {
-    switch (pieceType) {
-        case 0: return board_.generateKingAttacks(square);
-        case 1: return board_.generateQueenAttacks(square, board_.getOccupancy());
-        case 2: return board_.generateBishopAttacks(square, board_.getOccupancy());
-        case 3: return board_.generateRookAttacks(square, board_.getOccupancy());
-        case 4: return board_.generateKnightAttacks(square);
-        case 5: return board_.generatePawnAttacks(square, color);
-        default: return 0;
+    // Безопасность черного короля (с отрицательным знаком)
+    Bitboard::BitboardType black_king_bb = board_.getPieces(Bitboard::BLACK, Bitboard::KING);
+    if (black_king_bb) {
+        int king_square = BitboardUtils::lsb(black_king_bb);
+        int king_rank = king_square / 8;
+        int king_file = king_square % 8;
+        
+        // Бонус за защиту пешками
+        int shield_bonus = 0;
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int df = -1; df <= 1; df++) {
+                int r = king_rank + dr;
+                int f = king_file + df;
+                if (r >= 0 && r < 8 && f >= 0 && f < 8) {
+                    int sq = r * 8 + f;
+                    if (BitboardUtils::getBit(board_.getPieces(Bitboard::BLACK, Bitboard::PAWN), sq)) {
+                        shield_bonus += pawn_shield_bonus_[sq];
+                    }
+                }
+            }
+        }
+        score -= shield_bonus;
+        
+        // Штраф за открытые линии рядом с королем
+        Bitboard::BitboardType rook_attacks = board_.getRookAttacks(king_square, board_.getAllPieces());
+        Bitboard::BitboardType enemy_rooks = board_.getPieces(Bitboard::WHITE, Bitboard::ROOK);
+        if (rook_attacks & enemy_rooks) {
+            score -= EvaluationConstants::KING_EXPOSURE_PENALTY;
+        }
     }
+    
+    return score;
+}
+
+int IncrementalEvaluator::evaluate() const {
+    return material_score_ + positional_score_ + mobility_score_ + 
+           pawn_structure_score_ + king_safety_score_;
+}
+
+void IncrementalEvaluator::updateOnMove(int from_square, int to_square, 
+                                       Bitboard::PieceType captured_piece) {
+    Bitboard::PieceType moved_piece = board_.getPieceType(from_square);
+    Bitboard::Color moved_color = board_.getPieceColor(from_square);
+    
+    if (moved_piece == Bitboard::PIECE_TYPE_COUNT) return;
+    
+    // Обновляем материальную оценку
+    updateMaterialOnMove(from_square, to_square, captured_piece);
+    
+    // Обновляем позиционную оценку
+    updatePositionalOnMove(from_square, to_square);
+    
+    // Обновляем мобильность
+    updateMobilityOnMove(to_square, moved_piece);
+    
+    // Обновляем структуру пешек (если двигалась пешка)
+    if (moved_piece == Bitboard::PAWN) {
+        updatePawnStructureOnMove(from_square, to_square);
+    }
+    
+    // Обновляем безопасность короля (если двигался король)
+    if (moved_piece == Bitboard::KING) {
+        updateKingSafetyOnMove(to_square);
+    }
+}
+
+void IncrementalEvaluator::updateMaterialOnMove(int from_square, int to_square, 
+                                               Bitboard::PieceType captured_piece) {
+    // Если была захвачена фигура, обновляем материальную оценку
+    if (captured_piece != Bitboard::PIECE_TYPE_COUNT) {
+        Bitboard::Color captured_color = board_.getPieceColor(to_square);
+        int value = MATERIAL_WEIGHTS[captured_piece];
+        
+        if (captured_color == Bitboard::WHITE) {
+            material_score_ += value; // Белая фигура захвачена - выгодно для черных
+        } else {
+            material_score_ -= value; // Черная фигура захвачена - выгодно для белых
+        }
+    }
+}
+
+void IncrementalEvaluator::updatePositionalOnMove(int from_square, int to_square) {
+    // Вычитаем старую позиционную оценку
+    positional_score_ -= POSITIONAL_BONUSES[from_square];
+    // Добавляем новую позиционную оценку
+    positional_score_ += POSITIONAL_BONUSES[to_square];
+}
+
+void IncrementalEvaluator::updateMobilityOnMove(int square, Bitboard::PieceType piece_type) {
+    // В реальной реализации здесь будет обновление мобильности конкретной фигуры
+    // Пока используем упрощенную версию
+    (void)square;
+    (void)piece_type;
+}
+
+void IncrementalEvaluator::updatePawnStructureOnMove(int from_square, int to_square) {
+    // В реальной реализации здесь будет обновление структуры пешек
+    // Пока используем упрощенную версию
+    (void)from_square;
+    (void)to_square;
+}
+
+void IncrementalEvaluator::updateKingSafetyOnMove(int square) {
+    // В реальной реализации здесь будет обновление безопасности короля
+    // Пока используем упрощенную версию
+    (void)square;
+}
+
+void IncrementalEvaluator::reset() {
+    material_score_ = 0;
+    positional_score_ = 0;
+    mobility_score_ = 0;
+    pawn_structure_score_ = 0;
+    king_safety_score_ = 0;
+}
+
+void IncrementalEvaluator::fullRecalculate() {
+    reset();
+    material_score_ = calculateMaterialScore();
+    positional_score_ = calculatePositionalScore();
+    mobility_score_ = calculateMobilityScore();
+    pawn_structure_score_ = calculatePawnStructureScore();
+    king_safety_score_ = calculateKingSafetyScore();
+}
+
+void IncrementalEvaluator::printEvaluationBreakdown() const {
+    std::cout << "\n=== РАЗБИВКА ОЦЕНКИ ПОЗИЦИИ ===" << std::endl;
+    std::cout << "Материальная оценка:     " << material_score_ << std::endl;
+    std::cout << "Позиционная оценка:      " << positional_score_ << std::endl;
+    std::cout << "Оценка мобильности:      " << mobility_score_ << std::endl;
+    std::cout << "Структура пешек:         " << pawn_structure_score_ << std::endl;
+    std::cout << "Безопасность короля:     " << king_safety_score_ << std::endl;
+    std::cout << "-------------------------------" << std::endl;
+    std::cout << "Итоговая оценка:         " << evaluate() << std::endl;
+    std::cout << "===============================" << std::endl;
+}
+
+std::string IncrementalEvaluator::getEvaluationDetails() const {
+    std::stringstream ss;
+    ss << "Material: " << material_score_ 
+       << ", Positional: " << positional_score_
+       << ", Mobility: " << mobility_score_
+       << ", Pawn Structure: " << pawn_structure_score_
+       << ", King Safety: " << king_safety_score_
+       << ", Total: " << evaluate();
+    return ss.str();
 }

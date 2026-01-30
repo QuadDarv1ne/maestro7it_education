@@ -7,80 +7,100 @@
 /**
  * @brief Инкрементальный оценщик позиции
  * 
- * Система оценки, которая отслеживает изменения в позиции и обновляет 
- * только те компоненты оценки, которые действительно изменились.
- * Обеспечивает 2-3x ускорение по сравнению с полным пересчетом.
+ * Обновляет оценку позиции инкрементально при каждом ходе,
+ * вместо полного пересчета всей позиции.
  */
 class IncrementalEvaluator {
 private:
-    const BitboardEngine& board_;
+    const Bitboard& board_;
     
-    // Кэшированные значения компонентов оценки
-    int material_[2];        // Материал для каждого цвета
-    int mobility_[2];        // Мобильность для каждого цвета
-    int pawnStructure_[2];   // Пешечная структура
-    int kingSafety_[2];      // Безопасность короля
-    int centerControl_[2];   // Контроль центра
+    // Текущая оценка позиции
+    int material_score_;
+    int positional_score_;
+    int mobility_score_;
+    int pawn_structure_score_;
+    int king_safety_score_;
     
-    // Флаги изменений
-    bool materialChanged_;
-    bool mobilityChanged_;
-    bool pawnStructureChanged_;
-    bool kingSafetyChanged_;
-    bool centerControlChanged_;
+    // Кэшированные значения для быстрого доступа
+    std::array<int, 64> square_values_;
+    std::array<int, 64> pawn_shield_bonus_;
     
-    // Таблицы для быстрой оценки
-    static const int PIECE_VALUES[6];
-    static const int PSQT[6][64]; // Piece-Square Tables
+    // Веса для разных компонентов оценки
+    static const int MATERIAL_WEIGHTS[Bitboard::PIECE_TYPE_COUNT];
+    static const int POSITIONAL_BONUSES[64];
+    static const int MOBILITY_BONUSES[Bitboard::PIECE_TYPE_COUNT];
+    
+    // Инициализация таблиц значений
+    void initializeSquareValues();
+    void initializePawnShieldBonuses();
+    
+    // Расчет компонентов оценки
+    int calculateMaterialScore() const;
+    int calculatePositionalScore() const;
+    int calculateMobilityScore() const;
+    int calculatePawnStructureScore() const;
+    int calculateKingSafetyScore() const;
+    
+    // Инкрементальные обновления
+    void updateMaterialOnMove(int from_square, int to_square, 
+                             Bitboard::PieceType captured_piece = Bitboard::PIECE_TYPE_COUNT);
+    void updatePositionalOnMove(int from_square, int to_square);
+    void updateMobilityOnMove(int square, Bitboard::PieceType piece_type);
+    void updatePawnStructureOnMove(int from_square, int to_square);
+    void updateKingSafetyOnMove(int square);
     
 public:
-    IncrementalEvaluator(const BitboardEngine& board);
+    IncrementalEvaluator(const Bitboard& board);
     
-    // Основной интерфейс
-    int evaluate();
-    void updateAfterMove(int fromSquare, int toSquare, int pieceType, int color, int capturedPiece = -1);
-    void fullRecalculation();
+    // Основной метод оценки
+    int evaluate() const;
     
-    // Геттеры для компонентов
-    int getMaterialScore() const { return material_[0] - material_[1]; }
-    int getMobilityScore() const { return mobility_[0] - mobility_[1]; }
-    int getPawnStructureScore() const { return pawnStructure_[0] - pawnStructure_[1]; }
-    int getKingSafetyScore() const { return kingSafety_[0] - kingSafety_[1]; }
-    int getCenterControlScore() const { return centerControl_[0] - centerControl_[1]; }
+    // Инкрементальное обновление после хода
+    void updateOnMove(int from_square, int to_square, 
+                     Bitboard::PieceType captured_piece = Bitboard::PIECE_TYPE_COUNT);
     
-private:
-    // Инкрементальные обновления
-    void updateMaterial(int pieceType, int color, int capturedPiece = -1);
-    void updateMobility(int square, int pieceType, int color);
-    void updatePawnStructure(int fromSquare, int toSquare, int color);
-    void updateKingSafety(int kingSquare, int color);
-    void updateCenterControl(int square, int pieceType, int color);
+    // Сброс и полный пересчет
+    void reset();
+    void fullRecalculate();
     
-    // Вспомогательные функции
-    int calculatePieceMobility(Bitboard attacks, Bitboard opponentPieces) const;
-    int calculatePawnStructure(int color) const;
-    int calculateKingSafety(int kingSquare, int color) const;
-    int calculateCenterControl(int color) const;
-    Bitboard getPieceAttacks(int square, int pieceType, int color) const;
+    // Получение компонентов оценки
+    int getMaterialScore() const { return material_score_; }
+    int getPositionalScore() const { return positional_score_; }
+    int getMobilityScore() const { return mobility_score_; }
+    int getPawnStructureScore() const { return pawn_structure_score_; }
+    int getKingSafetyScore() const { return king_safety_score_; }
+    
+    // Отладочные методы
+    void printEvaluationBreakdown() const;
+    std::string getEvaluationDetails() const;
 };
 
 // Константы для оценки
 namespace EvaluationConstants {
-    // Значения фигур в сантипешках
-    extern const int PAWN_VALUE;
-    extern const int KNIGHT_VALUE;
-    extern const int BISHOP_VALUE;
-    extern const int ROOK_VALUE;
-    extern const int QUEEN_VALUE;
-    extern const int KING_VALUE;
+    // Материальные значения фигур (в сантипешках)
+    const int PAWN_VALUE = 100;
+    const int KNIGHT_VALUE = 320;
+    const int BISHOP_VALUE = 330;
+    const int ROOK_VALUE = 500;
+    const int QUEEN_VALUE = 900;
+    const int KING_VALUE = 20000; // Очень большое значение для короля
     
-    // Бонусы и штрафы
-    extern const int CENTER_BONUS;
-    extern const int MOBILITY_BONUS;
-    extern const int KING_SAFETY_BONUS;
-    extern const int DOUBLED_PAWN_PENALTY;
-    extern const int ISOLATED_PAWN_PENALTY;
-    extern const int PASSED_PAWN_BONUS;
+    // Позиционные бонусы
+    const int CENTER_BONUS = 10;
+    const int DEVELOPMENT_BONUS = 5;
+    const int KING_SAFETY_BONUS = 15;
+    
+    // Мобильность
+    const int MOBILITY_BONUS_PER_MOVE = 2;
+    
+    // Структура пешек
+    const int DOUBLED_PAWN_PENALTY = -15;
+    const int ISOLATED_PAWN_PENALTY = -20;
+    const int PASSED_PAWN_BONUS = 25;
+    
+    // Безопасность короля
+    const int KING_SHIELD_BONUS = 10;
+    const int KING_EXPOSURE_PENALTY = -30;
 }
 
 #endif // INCREMENTAL_EVALUATOR_HPP

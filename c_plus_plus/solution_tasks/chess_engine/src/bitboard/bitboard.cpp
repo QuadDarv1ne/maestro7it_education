@@ -1,0 +1,478 @@
+#include "../../include/bitboard.hpp"
+#include <cstring>
+#include <cassert>
+
+// Инициализация констант
+const int BitboardUtils::KNIGHT_DELTAS[8] = {-17, -15, -10, -6, 6, 10, 15, 17};
+const int BitboardUtils::KING_DELTAS[8] = {-9, -8, -7, -1, 1, 7, 8, 9};
+const int BitboardUtils::BISHOP_DELTAS[4] = {-9, -7, 7, 9};
+const int BitboardUtils::ROOK_DELTAS[4] = {-8, -1, 1, 8};
+
+// Заглушки для magic numbers
+Bitboard::BitboardType BitboardUtils::BISHOP_MAGICS[64];
+Bitboard::BitboardType BitboardUtils::ROOK_MAGICS[64];
+
+Bitboard::Bitboard() {
+    clear();
+    side_to_move_ = WHITE;
+    en_passant_square_ = -1;
+    half_move_clock_ = 0;
+    full_move_number_ = 1;
+    
+    // Инициализация рокировок
+    castling_rights_[WHITE][0] = castling_rights_[WHITE][1] = true;
+    castling_rights_[BLACK][0] = castling_rights_[BLACK][1] = true;
+}
+
+void Bitboard::clear() {
+    memset(pieces_, 0, sizeof(pieces_));
+    memset(occupancy_, 0, sizeof(occupancy_));
+    all_pieces_ = 0;
+}
+
+void Bitboard::setupStartPosition() {
+    clear();
+    
+    // Белые пешки
+    pieces_[WHITE][PAWN] = 0xFF00ULL; // Ранг 2
+    // Черные пешки  
+    pieces_[BLACK][PAWN] = 0xFF000000000000ULL; // Ранг 7
+    
+    // Белые фигуры (ранг 1)
+    pieces_[WHITE][ROOK] = 0x81ULL;
+    pieces_[WHITE][KNIGHT] = 0x42ULL;
+    pieces_[WHITE][BISHOP] = 0x24ULL;
+    pieces_[WHITE][QUEEN] = 0x8ULL;
+    pieces_[WHITE][KING] = 0x10ULL;
+    
+    // Черные фигуры (ранг 8)
+    pieces_[BLACK][ROOK] = 0x8100000000000000ULL;
+    pieces_[BLACK][KNIGHT] = 0x4200000000000000ULL;
+    pieces_[BLACK][BISHOP] = 0x2400000000000000ULL;
+    pieces_[BLACK][QUEEN] = 0x800000000000000ULL;
+    pieces_[BLACK][KING] = 0x1000000000000000ULL;
+    
+    // Обновляем occupancy bitboards
+    for (int color = 0; color < COLOR_COUNT; color++) {
+        occupancy_[color] = 0;
+        for (int piece = 0; piece < PIECE_TYPE_COUNT; piece++) {
+            occupancy_[color] |= pieces_[color][piece];
+        }
+    }
+    
+    all_pieces_ = occupancy_[WHITE] | occupancy_[BLACK];
+    side_to_move_ = WHITE;
+}
+
+bool Bitboard::isEmpty(int square) const {
+    return !BitboardUtils::getBit(all_pieces_, square);
+}
+
+bool Bitboard::isOccupied(int square) const {
+    return BitboardUtils::getBit(all_pieces_, square);
+}
+
+Bitboard::PieceType Bitboard::getPieceType(int square) const {
+    for (int piece = 0; piece < PIECE_TYPE_COUNT; piece++) {
+        if (BitboardUtils::getBit(pieces_[WHITE][piece], square)) return static_cast<PieceType>(piece);
+        if (BitboardUtils::getBit(pieces_[BLACK][piece], square)) return static_cast<PieceType>(piece);
+    }
+    return static_cast<PieceType>(PIECE_TYPE_COUNT); // Invalid
+}
+
+Bitboard::Color Bitboard::getPieceColor(int square) const {
+    if (BitboardUtils::getBit(occupancy_[WHITE], square)) return WHITE;
+    if (BitboardUtils::getBit(occupancy_[BLACK], square)) return BLACK;
+    return static_cast<Color>(COLOR_COUNT); // Invalid
+}
+
+void Bitboard::setPiece(int square, PieceType piece, Color color) {
+    // Удаляем любую существующую фигуру на этой клетке
+    removePiece(square);
+    
+    // Устанавливаем новую фигуру
+    pieces_[color][piece] = BitboardUtils::setBit(pieces_[color][piece], square);
+    occupancy_[color] = BitboardUtils::setBit(occupancy_[color], square);
+    all_pieces_ = BitboardUtils::setBit(all_pieces_, square);
+}
+
+void Bitboard::removePiece(int square) {
+    // Находим и удаляем фигуру
+    for (int color = 0; color < COLOR_COUNT; color++) {
+        for (int piece = 0; piece < PIECE_TYPE_COUNT; piece++) {
+            if (BitboardUtils::getBit(pieces_[color][piece], square)) {
+                pieces_[color][piece] = BitboardUtils::clearBit(pieces_[color][piece], square);
+                break;
+            }
+        }
+        occupancy_[color] = BitboardUtils::clearBit(occupancy_[color], square);
+    }
+    all_pieces_ = BitboardUtils::clearBit(all_pieces_, square);
+}
+
+void Bitboard::movePiece(int from_square, int to_square) {
+    PieceType piece = getPieceType(from_square);
+    Color color = getPieceColor(from_square);
+    
+    if (piece != PIECE_TYPE_COUNT && color != COLOR_COUNT) {
+        removePiece(from_square);
+        setPiece(to_square, piece, color);
+    }
+}
+
+Bitboard::BitboardType Bitboard::getPawnAttacks(int square, Color color) const {
+    BitboardType attacks = 0;
+    BitboardType pawn = 1ULL << square;
+    
+    if (color == WHITE) {
+        // Белые пешки атакуют вверх-влево и вверх-вправо
+        attacks |= (pawn << 7) & 0x7F7F7F7F7F7F7F7FULL; // Влево
+        attacks |= (pawn << 9) & 0xFEFEFEFEFEFEFEFEULL; // Вправо
+    } else {
+        // Черные пешки атакуют вниз-влево и вниз-вправо
+        attacks |= (pawn >> 7) & 0xFEFEFEFEFEFEFEFEULL; // Вправо
+        attacks |= (pawn >> 9) & 0x7F7F7F7F7F7F7F7FULL; // Влево
+    }
+    
+    return attacks;
+}
+
+Bitboard::BitboardType Bitboard::getKnightAttacks(int square) const {
+    BitboardType attacks = 0;
+    int rank = square / 8;
+    int file = square % 8;
+    
+    for (int i = 0; i < 8; i++) {
+        int new_rank = rank + (BitboardUtils::KNIGHT_DELTAS[i] / 8);
+        int new_file = file + (BitboardUtils::KNIGHT_DELTAS[i] % 8);
+        
+        if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8) {
+            int new_square = new_rank * 8 + new_file;
+            attacks |= 1ULL << new_square;
+        }
+    }
+    
+    return attacks;
+}
+
+Bitboard::BitboardType Bitboard::getKingAttacks(int square) const {
+    BitboardType attacks = 0;
+    int rank = square / 8;
+    int file = square % 8;
+    
+    for (int i = 0; i < 8; i++) {
+        int new_rank = rank + (BitboardUtils::KING_DELTAS[i] / 8);
+        int new_file = file + (BitboardUtils::KING_DELTAS[i] % 8);
+        
+        if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8) {
+            int new_square = new_rank * 8 + new_file;
+            attacks |= 1ULL << new_square;
+        }
+    }
+    
+    return attacks;
+}
+
+Bitboard::BitboardType Bitboard::getBishopAttacks(int square, BitboardType occupied) const {
+    BitboardType attacks = 0;
+    int rank = square / 8;
+    int file = square % 8;
+    
+    // Четыре диагональных направления
+    for (int dir = 0; dir < 4; dir++) {
+        int dr = BitboardUtils::BISHOP_DELTAS[dir] / 8;
+        int df = BitboardUtils::BISHOP_DELTAS[dir] % 8;
+        
+        int r = rank + dr;
+        int f = file + df;
+        
+        while (r >= 0 && r < 8 && f >= 0 && f < 8) {
+            int sq = r * 8 + f;
+            attacks |= 1ULL << sq;
+            
+            // Если клетка занята, останавливаемся
+            if (BitboardUtils::getBit(occupied, sq)) break;
+            
+            r += dr;
+            f += df;
+        }
+    }
+    
+    return attacks;
+}
+
+Bitboard::BitboardType Bitboard::getRookAttacks(int square, BitboardType occupied) const {
+    BitboardType attacks = 0;
+    int rank = square / 8;
+    int file = square % 8;
+    
+    // Четыре ортогональных направления
+    for (int dir = 0; dir < 4; dir++) {
+        int dr = BitboardUtils::ROOK_DELTAS[dir] / 8;
+        int df = BitboardUtils::ROOK_DELTAS[dir] % 8;
+        
+        int r = rank + dr;
+        int f = file + df;
+        
+        while (r >= 0 && r < 8 && f >= 0 && f < 8) {
+            int sq = r * 8 + f;
+            attacks |= 1ULL << sq;
+            
+            // Если клетка занята, останавливаемся
+            if (BitboardUtils::getBit(occupied, sq)) break;
+            
+            r += dr;
+            f += df;
+        }
+    }
+    
+    return attacks;
+}
+
+Bitboard::BitboardType Bitboard::getQueenAttacks(int square, BitboardType occupied) const {
+    return getBishopAttacks(square, occupied) | getRookAttacks(square, occupied);
+}
+
+std::vector<std::pair<int, int>> Bitboard::generateLegalMoves() const {
+    std::vector<std::pair<int, int>> moves;
+    
+    // Для простоты реализуем базовую генерацию ходов
+    // В реальной реализации здесь будет полноценная генерация легальных ходов
+    
+    BitboardType us = occupancy_[side_to_move_];
+    BitboardType them = occupancy_[side_to_move_ == WHITE ? BLACK : WHITE];
+    BitboardType empty = ~all_pieces_;
+    
+    // Генерируем ходы для каждой фигуры
+    for (int square = 0; square < 64; square++) {
+        if (!BitboardUtils::getBit(us, square)) continue;
+        
+        PieceType piece = getPieceType(square);
+        BitboardType attacks = 0;
+        
+        switch (piece) {
+            case PAWN:
+                attacks = getPawnAttacks(square, side_to_move_);
+                break;
+            case KNIGHT:
+                attacks = getKnightAttacks(square);
+                break;
+            case BISHOP:
+                attacks = getBishopAttacks(square, all_pieces_);
+                break;
+            case ROOK:
+                attacks = getRookAttacks(square, all_pieces_);
+                break;
+            case QUEEN:
+                attacks = getQueenAttacks(square, all_pieces_);
+                break;
+            case KING:
+                attacks = getKingAttacks(square);
+                break;
+            default:
+                continue;
+        }
+        
+        // Добавляем ходы на пустые клетки и взятия
+        BitboardType targets = (attacks & empty) | (attacks & them);
+        
+        while (targets) {
+            int to_square = BitboardUtils::lsb(targets);
+            moves.emplace_back(square, to_square);
+            targets &= targets - 1; // Удаляем младший бит
+        }
+    }
+    
+    return moves;
+}
+
+bool Bitboard::isInCheck(Color color) const {
+    // Находим короля
+    BitboardType king_bb = pieces_[color][KING];
+    if (!king_bb) return false;
+    
+    int king_square = BitboardUtils::lsb(king_bb);
+    
+    // Проверяем атаки противника
+    Color opponent = (color == WHITE) ? BLACK : WHITE;
+    BitboardType opponent_pieces = occupancy_[opponent];
+    
+    // Проверяем атаки пешек
+    if (getPawnAttacks(king_square, opponent) & pieces_[opponent][PAWN])
+        return true;
+    
+    // Проверяем атаки коней
+    if (getKnightAttacks(king_square) & pieces_[opponent][KNIGHT])
+        return true;
+    
+    // Проверяем атаки слонов и ферзей
+    if (getBishopAttacks(king_square, all_pieces_) & 
+        (pieces_[opponent][BISHOP] | pieces_[opponent][QUEEN]))
+        return true;
+    
+    // Проверяем атаки ладей и ферзей
+    if (getRookAttacks(king_square, all_pieces_) & 
+        (pieces_[opponent][ROOK] | pieces_[opponent][QUEEN]))
+        return true;
+    
+    // Проверяем атаки королей
+    if (getKingAttacks(king_square) & pieces_[opponent][KING])
+        return true;
+    
+    return false;
+}
+
+void Bitboard::initMagicBitboards() {
+    // Заглушка - в реальной реализации здесь будут инициализированы magic numbers
+    // для быстрого вычисления атак слонов и ладей
+}
+
+void Bitboard::printBoard() const {
+    std::cout << "\n  a b c d e f g h\n";
+    for (int rank = 7; rank >= 0; rank--) {
+        std::cout << (rank + 1) << " ";
+        for (int file = 0; file < 8; file++) {
+            int square = rank * 8 + file;
+            char piece_char = '.';
+            
+            if (isOccupied(square)) {
+                PieceType piece = getPieceType(square);
+                Color color = getPieceColor(square);
+                
+                switch (piece) {
+                    case PAWN: piece_char = 'P'; break;
+                    case KNIGHT: piece_char = 'N'; break;
+                    case BISHOP: piece_char = 'B'; break;
+                    case ROOK: piece_char = 'R'; break;
+                    case QUEEN: piece_char = 'Q'; break;
+                    case KING: piece_char = 'K'; break;
+                    default: piece_char = '?'; break;
+                }
+                
+                if (color == BLACK) {
+                    piece_char = tolower(piece_char);
+                }
+            }
+            
+            std::cout << piece_char << " ";
+        }
+        std::cout << (rank + 1) << "\n";
+    }
+    std::cout << "  a b c d e f g h\n";
+    std::cout << "Side to move: " << (side_to_move_ == WHITE ? "White" : "Black") << "\n\n";
+}
+
+std::string Bitboard::toFen() const {
+    std::string fen;
+    int empty_count = 0;
+    
+    for (int rank = 7; rank >= 0; rank--) {
+        for (int file = 0; file < 8; file++) {
+            int square = rank * 8 + file;
+            
+            if (isEmpty(square)) {
+                empty_count++;
+            } else {
+                if (empty_count > 0) {
+                    fen += std::to_string(empty_count);
+                    empty_count = 0;
+                }
+                
+                PieceType piece = getPieceType(square);
+                Color color = getPieceColor(square);
+                char piece_char;
+                
+                switch (piece) {
+                    case PAWN: piece_char = 'p'; break;
+                    case KNIGHT: piece_char = 'n'; break;
+                    case BISHOP: piece_char = 'b'; break;
+                    case ROOK: piece_char = 'r'; break;
+                    case QUEEN: piece_char = 'q'; break;
+                    case KING: piece_char = 'k'; break;
+                    default: piece_char = '?'; break;
+                }
+                
+                if (color == WHITE) {
+                    piece_char = toupper(piece_char);
+                }
+                
+                fen += piece_char;
+            }
+        }
+        
+        if (empty_count > 0) {
+            fen += std::to_string(empty_count);
+            empty_count = 0;
+        }
+        
+        if (rank > 0) fen += '/';
+    }
+    
+    // Добавляем информацию о стороне, рокировках и т.д.
+    fen += " ";
+    fen += (side_to_move_ == WHITE) ? "w" : "b";
+    fen += " ";
+    
+    // Рокировки
+    bool has_castling = false;
+    if (castling_rights_[WHITE][0]) { fen += "K"; has_castling = true; }
+    if (castling_rights_[WHITE][1]) { fen += "Q"; has_castling = true; }
+    if (castling_rights_[BLACK][0]) { fen += "k"; has_castling = true; }
+    if (castling_rights_[BLACK][1]) { fen += "q"; has_castling = true; }
+    if (!has_castling) fen += "-";
+    
+    fen += " ";
+    
+    // En passant
+    if (en_passant_square_ >= 0) {
+        int file = en_passant_square_ % 8;
+        int rank = en_passant_square_ / 8;
+        fen += static_cast<char>('a' + file);
+        fen += static_cast<char>('1' + rank);
+    } else {
+        fen += "-";
+    }
+    
+    fen += " ";
+    fen += std::to_string(half_move_clock_);
+    fen += " ";
+    fen += std::to_string(full_move_number_);
+    
+    return fen;
+}
+
+bool Bitboard::operator==(const Bitboard& other) const {
+    // Сравниваем все bitboards
+    for (int color = 0; color < COLOR_COUNT; color++) {
+        for (int piece = 0; piece < PIECE_TYPE_COUNT; piece++) {
+            if (pieces_[color][piece] != other.pieces_[color][piece])
+                return false;
+        }
+        if (occupancy_[color] != other.occupancy_[color])
+            return false;
+    }
+    
+    if (all_pieces_ != other.all_pieces_)
+        return false;
+    
+    if (side_to_move_ != other.side_to_move_)
+        return false;
+    
+    if (en_passant_square_ != other.en_passant_square_)
+        return false;
+    
+    if (half_move_clock_ != other.half_move_clock_)
+        return false;
+    
+    if (full_move_number_ != other.full_move_number_)
+        return false;
+    
+    for (int color = 0; color < COLOR_COUNT; color++) {
+        for (int side = 0; side < 2; side++) {
+            if (castling_rights_[color][side] != other.castling_rights_[color][side])
+                return false;
+        }
+    }
+    
+    return true;
+}

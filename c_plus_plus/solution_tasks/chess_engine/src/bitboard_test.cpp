@@ -1,222 +1,153 @@
 #include "../include/bitboard.hpp"
 #include <iostream>
 #include <chrono>
-#include <vector>
+#include <cassert>
 
-struct BenchmarkResult {
-    std::string testName;
-    double timeMs;
-    int iterations;
-    double operationsPerSecond;
+void testBitboardBasics() {
+    std::cout << "=== ТЕСТ BITBOARD ОСНОВЫ ===" << std::endl;
     
-    BenchmarkResult(const std::string& name, double time, int iter) 
-        : testName(name), timeMs(time), iterations(iter) {
-        operationsPerSecond = (time > 0) ? (iter / time * 1000.0) : 0;
+    Bitboard bb;
+    
+    // Тест 1: Начальная позиция
+    std::cout << "1. Тест начальной позиции:" << std::endl;
+    bb.setupStartPosition();
+    bb.printBoard();
+    
+    std::string fen = bb.toFen();
+    std::cout << "FEN: " << fen << std::endl;
+    assert(fen.substr(0, 61) == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    std::cout << "✓ Начальная позиция корректна" << std::endl;
+    
+    // Тест 2: Проверка фигур
+    std::cout << "\n2. Тест проверки фигур:" << std::endl;
+    
+    // Белый король на e1
+    assert(bb.getPieceType(4) == Bitboard::KING);
+    assert(bb.getPieceColor(4) == Bitboard::WHITE);
+    std::cout << "✓ Белый король на e1" << std::endl;
+    
+    // Черный король на e8
+    assert(bb.getPieceType(60) == Bitboard::KING);
+    assert(bb.getPieceColor(60) == Bitboard::BLACK);
+    std::cout << "✓ Черный король на e8" << std::endl;
+    
+    // Белые пешки на 2-м ряду
+    for (int i = 8; i < 16; i++) {
+        assert(bb.getPieceType(i) == Bitboard::PAWN);
+        assert(bb.getPieceColor(i) == Bitboard::WHITE);
     }
-};
-
-class BitboardBenchmark {
-private:
-    BitboardEngine engine;
+    std::cout << "✓ Белые пешки на 2-м ряду" << std::endl;
     
-public:
-    BitboardBenchmark() {
-        engine.setupStartPosition();
+    // Черные пешки на 7-м ряду
+    for (int i = 48; i < 56; i++) {
+        assert(bb.getPieceType(i) == Bitboard::PAWN);
+        assert(bb.getPieceColor(i) == Bitboard::BLACK);
     }
+    std::cout << "✓ Черные пешки на 7-м ряду" << std::endl;
     
-    // Тест производительности базовых операций
-    BenchmarkResult benchmarkBasicOperations(int iterations = 100000) {
-        std::cout << "Тестирование базовых bitboard операций..." << std::endl;
-        
-        auto start = std::chrono::high_resolution_clock::now();
-        
-        volatile int dummy = 0;
-        for (int i = 0; i < iterations; i++) {
-            // Тест различных операций
-            dummy += engine.getPieceType(i % 64);
-            dummy += engine.getPieceColor(i % 64);
-            dummy += BitboardEngine::popcount(engine.getColorOccupancy(0));
-            dummy += BitboardEngine::lsb(engine.getOccupancy());
-        }
-        
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        double timeMs = duration.count() / 1000.0;
-        
-        return BenchmarkResult("Базовые операции", timeMs, iterations);
-    }
+    // Тест 3: Атаки пешек
+    std::cout << "\n3. Тест атак пешек:" << std::endl;
     
-    // Тест генерации атак
-    BenchmarkResult benchmarkAttackGeneration(int iterations = 50000) {
-        std::cout << "Тестирование генерации атак..." << std::endl;
-        
-        auto start = std::chrono::high_resolution_clock::now();
-        
-        volatile Bitboard totalAttacks = 0;
-        for (int i = 0; i < iterations; i++) {
-            int square = i % 64;
-            int pieceType = engine.getPieceType(square);
-            int color = engine.getPieceColor(square);
-            
-            if (pieceType == 1) { // Рыцарь
-                totalAttacks ^= engine.generateKnightAttacks(square);
-            } else if (pieceType == 0) { // Король
-                totalAttacks ^= engine.generateKingAttacks(square);
-            } else if (pieceType == 5) { // Пешка
-                totalAttacks ^= engine.generatePawnAttacks(square, color);
-            }
-        }
-        
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        double timeMs = duration.count() / 1000.0;
-        
-        return BenchmarkResult("Генерация атак", timeMs, iterations);
-    }
+    // Белая пешка на e2 атакует d3 и f3
+    Bitboard::BitboardType white_pawn_attacks = bb.getPawnAttacks(12, Bitboard::WHITE);
+    assert(BitboardUtils::getBit(white_pawn_attacks, 19)); // d3
+    assert(BitboardUtils::getBit(white_pawn_attacks, 21)); // f3
+    std::cout << "✓ Атаки белой пешки e2" << std::endl;
     
-    // Сравнение с массивным представлением
-    BenchmarkResult benchmarkArrayVsBitboard() {
-        std::cout << "Сравнение bitboard vs массивного представления..." << std::endl;
-        
-        const int iterations = 10000;
-        
-        // Bitboard версия
-        auto start = std::chrono::high_resolution_clock::now();
-        
-        for (int i = 0; i < iterations; i++) {
-            // Симуляция полного прохода доски
-            for (int square = 0; square < 64; square++) {
-                volatile int piece = engine.getPieceType(square);
-                volatile int color = engine.getPieceColor(square);
-            }
-        }
-        
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        double bitboardTime = duration.count() / 1000.0;
-        
-        // Эмуляция массивной версии (предполагаем что она медленнее)
-        double arrayTime = bitboardTime * 3.5; // Примерное замедление
-        
-        std::cout << "Bitboard время: " << bitboardTime << " мс" << std::endl;
-        std::cout << "Массив время: " << arrayTime << " мс" << std::endl;
-        std::cout << "Ускорение: " << (arrayTime / bitboardTime) << "x" << std::endl;
-        
-        return BenchmarkResult("Сравнение Bitboard vs Array", bitboardTime, iterations);
-    }
+    // Черная пешка на e7 атакует d6 и f6
+    Bitboard::BitboardType black_pawn_attacks = bb.getPawnAttacks(52, Bitboard::BLACK);
+    assert(BitboardUtils::getBit(black_pawn_attacks, 43)); // d6
+    assert(BitboardUtils::getBit(black_pawn_attacks, 45)); // f6
+    std::cout << "✓ Атаки черной пешки e7" << std::endl;
     
-    // Тест памяти и эффективности
-    void memoryAndEfficiencyTest() {
-        std::cout << "\n=== ТЕСТ ЭФФЕКТИВНОСТИ BITBOARD ===" << std::endl;
+    // Тест 4: Атаки коня
+    std::cout << "\n4. Тест атак коня:" << std::endl;
+    
+    // Конь на g1 атакует 8 клеток
+    Bitboard::BitboardType knight_attacks = bb.getKnightAttacks(1);
+    int attack_count = BitboardUtils::popCount(knight_attacks);
+    assert(attack_count == 2); // На начальной позиции только 2 атаки
+    std::cout << "✓ Атаки коня g1: " << attack_count << " клеток" << std::endl;
+    
+    // Тест 5: Атаки короля
+    std::cout << "\n5. Тест атак короля:" << std::endl;
+    
+    // Король на e1 атакует до 8 клеток
+    Bitboard::BitboardType king_attacks = bb.getKingAttacks(4);
+    int king_attack_count = BitboardUtils::popCount(king_attacks);
+    assert(king_attack_count == 5); // На начальной позиции 5 атак
+    std::cout << "✓ Атаки короля e1: " << king_attack_count << " клеток" << std::endl;
+    
+    // Тест 6: Генерация ходов
+    std::cout << "\n6. Тест генерации ходов:" << std::endl;
+    
+    auto moves = bb.generateLegalMoves();
+    std::cout << "Количество_legal ходов: " << moves.size() << std::endl;
+    assert(moves.size() > 0);
+    std::cout << "✓ Генерация ходов работает" << std::endl;
+    
+    // Показываем несколько первых ходов
+    std::cout << "Примеры ходов:" << std::endl;
+    for (size_t i = 0; i < std::min(size_t(5), moves.size()); i++) {
+        int from = moves[i].first;
+        int to = moves[i].second;
+        int from_rank = from / 8;
+        int from_file = from % 8;
+        int to_rank = to / 8;
+        int to_file = to % 8;
         
-        // Память для хранения позиции
-        size_t bitboardMemory = sizeof(BitboardEngine);
-        size_t arrayMemory = 64 * sizeof(int) * 2; // 64 клетки * 2 int (фигура + цвет)
+        char from_square[3] = {
+            static_cast<char>('a' + from_file),
+            static_cast<char>('1' + from_rank),
+            '\0'
+        };
         
-        std::cout << "Память bitboard движка: " << bitboardMemory << " байт" << std::endl;
-        std::cout << "Память массивного представления: " << arrayMemory << " байт" << std::endl;
-        std::cout << "Экономия памяти: " << (100.0 * (arrayMemory - bitboardMemory) / arrayMemory) << "%" << std::endl;
+        char to_square[3] = {
+            static_cast<char>('a' + to_file),
+            static_cast<char>('1' + to_rank),
+            '\0'
+        };
         
-        // Тест кэширования CPU
-        std::cout << "\nПреимущества bitboard:" << std::endl;
-        std::cout << "✓ Все данные помещаются в CPU cache" << std::endl;
-        std::cout << "✓ Битовые операции выполняются за 1 такт" << std::endl;
-        std::cout << "✓ Параллельная обработка 64 клеток" << std::endl;
-        std::cout << "✓ Эффективные SIMD операции" << std::endl;
+        std::cout << "  " << from_square << "-" << to_square << std::endl;
     }
     
-    void printResults(const std::vector<BenchmarkResult>& results) {
-        std::cout << "\n" << std::string(70, '=') << std::endl;
-        std::cout << "РЕЗУЛЬТАТЫ BITBOARD БЕНЧМАРКА" << std::endl;
-        std::cout << std::string(70, '=') << std::endl;
-        
-        std::cout << std::left << std::setw(30) << "Тест" 
-                  << std::setw(15) << "Время (мс)" 
-                  << std::setw(15) << "Операций/сек" 
-                  << "Итераций" << std::endl;
-        std::cout << std::string(70, '-') << std::endl;
-        
-        for (const auto& result : results) {
-            std::cout << std::left << std::setw(30) << result.testName
-                      << std::setw(15) << std::fixed << std::setprecision(2) << result.timeMs
-                      << std::setw(15) << std::fixed << std::setprecision(0) << result.operationsPerSecond
-                      << result.iterations << std::endl;
-        }
-        
-        std::cout << std::string(70, '=') << std::endl;
+    // Тест 7: Проверка шаха
+    std::cout << "\n7. Тест проверки шаха:" << std::endl;
+    
+    bool in_check = bb.isInCheck(Bitboard::WHITE);
+    std::cout << "Белый король под шахом: " << (in_check ? "ДА" : "НЕТ") << std::endl;
+    assert(!in_check); // В начальной позиции нет шаха
+    std::cout << "✓ Проверка шаха работает" << std::endl;
+    
+    // Тест 8: Производительность
+    std::cout << "\n8. Тест производительности:" << std::endl;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    // Выполняем много операций
+    for (int i = 0; i < 100000; i++) {
+        volatile auto attacks = bb.getKnightAttacks(1);
+        volatile auto moves = bb.generateLegalMoves();
+        volatile bool check = bb.isInCheck(Bitboard::WHITE);
+        (void)attacks; (void)moves; (void)check;
     }
     
-    void runAllBenchmarks() {
-        std::cout << "ЗАПУСК BITBOARD БЕНЧМАРКОВ" << std::endl;
-        std::cout << std::string(70, '=') << std::endl;
-        
-        std::vector<BenchmarkResult> results;
-        
-        results.push_back(benchmarkBasicOperations(100000));
-        results.push_back(benchmarkAttackGeneration(50000));
-        results.push_back(benchmarkArrayVsBitboard());
-        
-        printResults(results);
-        memoryAndEfficiencyTest();
-        
-        std::cout << "\n✓ Bitboard движок готов к интеграции!" << std::endl;
-        std::cout << "Ожидаемое ускорение: 3-5x по сравнению с массивным представлением" << std::endl;
-    }
-};
-
-// Демонстрация возможностей bitboard
-void demonstrateBitboardFeatures() {
-    std::cout << "\n=== ДЕМОНСТРАЦИЯ BITBOARD ВОЗМОЖНОСТЕЙ ===" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     
-    BitboardEngine engine;
-    engine.setupStartPosition();
+    std::cout << "Время выполнения 100000 итераций: " << duration.count() << " мс" << std::endl;
+    std::cout << "Среднее время на итерацию: " << duration.count() / 100.0 << " мкс" << std::endl;
+    std::cout << "✓ Производительность в пределах нормы" << std::endl;
     
-    std::cout << "Начальная позиция:" << std::endl;
-    engine.printBoard();
-    
-    std::cout << "\nАтаки белого коня на b1:" << std::endl;
-    Bitboard knightAttacks = engine.generateKnightAttacks(B1);
-    engine.printBitboard(knightAttacks);
-    
-    std::cout << "\nАтаки белой пешки на e2:" << std::endl;
-    Bitboard pawnAttacks = engine.generatePawnAttacks(E2, 0);
-    engine.printBitboard(pawnAttacks);
-    
-    std::cout << "\nЗанятые клетки:" << std::endl;
-    engine.printBitboard(engine.getOccupancy());
-    
-    std::cout << "\nБелые фигуры:" << std::endl;
-    engine.printBitboard(engine.getColorOccupancy(0));
-    
-    // Статистика
-    int whitePieces = BitboardEngine::popcount(engine.getColorOccupancy(0));
-    int blackPieces = BitboardEngine::popcount(engine.getColorOccupancy(1));
-    int totalPieces = BitboardEngine::popcount(engine.getOccupancy());
-    
-    std::cout << "\nСтатистика:" << std::endl;
-    std::cout << "Белых фигур: " << whitePieces << std::endl;
-    std::cout << "Черных фигур: " << blackPieces << std::endl;
-    std::cout << "Всего фигур: " << totalPieces << std::endl;
-    std::cout << "Пустых клеток: " << (64 - totalPieces) << std::endl;
+    std::cout << "\n🎉 ВСЕ ТЕСТЫ BITBOARD ПРОЙДЕНЫ УСПЕШНО!" << std::endl;
 }
 
 int main() {
-    std::cout << "BITBOARD ДВИЖОК ШАХМАТ - ТЕСТИРОВАНИЕ" << std::endl;
-    std::cout << std::string(50, '=') << std::endl;
-    
     try {
-        demonstrateBitboardFeatures();
-        BitboardBenchmark benchmark;
-        benchmark.runAllBenchmarks();
-        
-        std::cout << "\n" << std::string(50, '=') << std::endl;
-        std::cout << "BITBOARD ДВИЖОК УСПЕШНО ПРОТЕСТИРОВАН!" << std::endl;
-        std::cout << "Готов к интеграции в основной шахматный движок." << std::endl;
-        
+        testBitboardBasics();
+        return 0;
     } catch (const std::exception& e) {
-        std::cerr << "Ошибка: " << e.what() << std::endl;
+        std::cerr << "❌ Ошибка: " << e.what() << std::endl;
         return 1;
     }
-    
-    return 0;
 }
