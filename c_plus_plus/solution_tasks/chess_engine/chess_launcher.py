@@ -38,7 +38,13 @@ def show_menu():
     print("     • Мышиный интерфейс")
     print("     • Требует установку pygame")
     print()
-    print("  3. ❌ Выход")
+    print("  3. 🌐 Веб-версия (браузер)")
+    print("     • Современный интерфейс")
+    print("     • Игра в браузере")
+    print("     • Многопользовательская игра")
+    print("     • Real-time обновления")
+    print()
+    print("  4. ❌ Выход")
     print()
     print("-" * 40)
 
@@ -108,6 +114,54 @@ def run_graphical_version():
         print(f"❌ Ошибка запуска: {e}")
         input("Нажмите Enter для возврата в меню...")
 
+def run_web_version():
+    """Run the web chess server"""
+    print("🌐 Запуск веб-сервера...")
+    print()
+    
+    # Check dependencies
+    try:
+        import flask
+        import flask_socketio
+    except ImportError as e:
+        print("⚠️  Некоторые библиотеки не установлены!")
+        choice = input("Установить Flask и Flask-SocketIO? (y/n): ").strip().lower()
+        if choice == 'y':
+            print("🔧 Устанавливаю зависимости...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "flask", "flask-socketio"])
+                print("✅ Библиотеки установлены!")
+            except subprocess.CalledProcessError:
+                print("❌ Не удалось установить библиотеки")
+                input("Нажмите Enter для возврата в меню...")
+                return
+        else:
+            print("Для веб-версии нужны Flask и Flask-SocketIO!")
+            input("Нажмите Enter для возврата в меню...")
+            return
+    
+    # Run web server
+    try:
+        print("🚀 Сервер запущен на http://localhost:5000")
+        print("🎯 Откройте этот адрес в браузере")
+        print("⌨️  Нажмите Ctrl+C для остановки сервера")
+        print()
+        
+        # Change to web directory and run server
+        web_dir = os.path.join(os.path.dirname(__file__), 'web')
+        if os.path.exists(web_dir):
+            os.chdir(web_dir)
+            subprocess.run([sys.executable, 'enhanced_chess_server.py'])
+        else:
+            # Run from main directory
+            subprocess.run([sys.executable, 'web/enhanced_chess_server.py'])
+            
+    except KeyboardInterrupt:
+        print("\n\n🛑 Сервер остановлен пользователем")
+    except Exception as e:
+        print(f"❌ Ошибка запуска: {e}")
+        input("Нажмите Enter для возврата в меню...")
+
 def main():
     """Main menu loop"""
     while True:
@@ -116,17 +170,19 @@ def main():
         show_menu()
         
         try:
-            choice = input("Введите номер варианта (1-3): ").strip()
+            choice = input("Введите номер варианта (1-4): ").strip()
             
             if choice == '1':
                 run_terminal_version()
             elif choice == '2':
                 run_graphical_version()
             elif choice == '3':
+                run_web_version()
+            elif choice == '4':
                 print("👋 До свидания! Спасибо за игру!")
                 break
             else:
-                print("❌ Неверный выбор. Введите число от 1 до 3.")
+                print("❌ Неверный выбор. Введите число от 1 до 4.")
                 input("Нажмите Enter для продолжения...")
                 
         except KeyboardInterrupt:
