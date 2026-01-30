@@ -2,56 +2,56 @@
 # -*- coding: utf-8 -*-
 
 """
-Optimized Bitboard-based Chess Move Generator
-Uses 64-bit integers to represent board positions for maximum performance
+Оптимизированный генератор шахматных ходов на основе битбордов
+Использует 64-битные целые числа для представления позиций для максимальной производительности
 """
 
 from typing import List, Tuple, Set
 import numpy as np
 
 class BitboardMoveGenerator:
-    """High-performance move generator using bitboard representation"""
+    """Высокопроизводительный генератор ходов с использованием битбордов"""
     
     def __init__(self):
-        # Precomputed attack tables for sliding pieces
+        # Предвычисленные таблицы атак для скользящих фигур
         self.initialize_attack_tables()
         
-        # Piece square tables for evaluation
+        # Таблицы позиций фигур для оценки
         self.piece_square_tables = self.initialize_piece_square_tables()
         
     def initialize_attack_tables(self):
-        """Initialize precomputed attack tables for faster move generation"""
-        # Direction vectors for sliding pieces
+        """Инициализация предвычисленных таблиц атак для более быстрой генерации ходов"""
+        # Векторы направлений для скользящих фигур
         self.directions = {
-            'rook': [(0, 1), (0, -1), (1, 0), (-1, 0)],      # Horizontal/Vertical
-            'bishop': [(1, 1), (1, -1), (-1, 1), (-1, -1)],  # Diagonals
-            'queen': [(0, 1), (0, -1), (1, 0), (-1, 0),      # All directions
+            'rook': [(0, 1), (0, -1), (1, 0), (-1, 0)],      # Горизонталь/Вертикаль
+            'bishop': [(1, 1), (1, -1), (-1, 1), (-1, -1)],  # Диагонали
+            'queen': [(0, 1), (0, -1), (1, 0), (-1, 0),      # Все направления
                      (1, 1), (1, -1), (-1, 1), (-1, -1)]
         }
         
-        # Precompute rays for each square and direction
+        # Предвычисление лучей для каждой клетки и направления
         self.rays = {}
         for square in range(64):
             self.rays[square] = {}
             row, col = square // 8, square % 8
             
-            # Rook rays
+            # Лучи ладьи
             self.rays[square]['rook'] = self.compute_ray(row, col, self.directions['rook'])
             
-            # Bishop rays
+            # Лучи слона
             self.rays[square]['bishop'] = self.compute_ray(row, col, self.directions['bishop'])
             
-            # Queen rays (combination)
+            # Лучи ферзя (комбинация)
             self.rays[square]['queen'] = self.compute_ray(row, col, self.directions['queen'])
         
-        # Knight moves precomputed
+        # Ходы коня предвычислены
         self.knight_moves = self.compute_knight_moves()
         
-        # King moves precomputed
+        # Ходы короля предвычислены
         self.king_moves = self.compute_king_moves()
         
     def compute_ray(self, row: int, col: int, directions: List[Tuple[int, int]]) -> dict:
-        """Compute ray attacks for a piece from given position"""
+        """Вычисление атак лучами для фигуры с заданной позиции"""
         rays = {}
         for dr, dc in directions:
             mask = 0
@@ -64,7 +64,7 @@ class BitboardMoveGenerator:
         return rays
     
     def compute_knight_moves(self) -> dict:
-        """Precompute all possible knight moves"""
+        """Предвычисление всех возможных ходов коня"""
         knight_moves = {}
         knight_offsets = [
             (-2, -1), (-2, 1), (-1, -2), (-1, 2),
@@ -82,7 +82,7 @@ class BitboardMoveGenerator:
         return knight_moves
     
     def compute_king_moves(self) -> dict:
-        """Precompute all possible king moves"""
+        """Предвычисление всех возможных ходов короля"""
         king_moves = {}
         king_offsets = [
             (-1, -1), (-1, 0), (-1, 1),
@@ -101,8 +101,8 @@ class BitboardMoveGenerator:
         return king_moves
     
     def initialize_piece_square_tables(self) -> dict:
-        """Initialize piece-square tables for position evaluation"""
-        # Simplified PST values (center control bonuses)
+        """Инициализация таблиц позиций фигур для оценки позиции"""
+        # Упрощенные значения PST (бонусы за контроль центра)
         pst = {
             'pawn': [
                 0,  0,  0,  0,  0,  0,  0,  0,
@@ -138,7 +138,7 @@ class BitboardMoveGenerator:
         return pst
     
     def board_to_bitboards(self, board: List[List[str]]) -> dict:
-        """Convert standard board representation to bitboards"""
+        """Преобразование стандартного представления доски в битборды"""
         bitboards = {
             'white_pawns': 0, 'white_knights': 0, 'white_bishops': 0,
             'white_rooks': 0, 'white_queens': 0, 'white_king': 0,
@@ -167,7 +167,7 @@ class BitboardMoveGenerator:
         return bitboards
     
     def piece_to_type(self, piece: str) -> str:
-        """Convert piece character to type name"""
+        """Преобразование символа фигуры в имя типа"""
         piece_map = {
             'P': 'pawns', 'N': 'knights', 'B': 'bishops',
             'R': 'rooks', 'Q': 'queens', 'K': 'king',
@@ -177,39 +177,39 @@ class BitboardMoveGenerator:
         return piece_map.get(piece.upper(), 'pawns')
     
     def is_square_attacked(self, board: List[List[str]], square: int, by_white: bool) -> bool:
-        """Efficiently check if a square is attacked by a given color"""
+        """Эффективная проверка, атакована ли клетка заданным цветом"""
         bitboards = self.board_to_bitboards(board)
         row, col = square // 8, square % 8
         
-        # 1. Pawn attacks
+        # 1. Атаки пешек
         pawn_bb = bitboards['white_pawns' if by_white else 'black_pawns']
         if by_white:
-            # White pawns attack from below (larger row index for black king)
+            # Белые пешки атакуют снизу (больший индекс строки для черного короля)
             if col > 0 and (row < 7) and (board[row+1][col-1] == 'P'): return True
             if col < 7 and (row < 7) and (board[row+1][col+1] == 'P'): return True
         else:
-            # Black pawns attack from above (smaller row index for white king)
+            # Черные пешки атакуют сверху (меньший индекс строки для белого короля)
             if col > 0 and (row > 0) and (board[row-1][col-1] == 'p'): return True
             if col < 7 and (row > 0) and (board[row-1][col+1] == 'p'): return True
             
-        # 2. Knight attacks
+        # 2. Атаки коня
         knight_bb = bitboards['white_knights' if by_white else 'black_knights']
         if self.knight_moves[square] & knight_bb:
             return True
             
-        # 3. Sliding attacks (Rook/Queen)
+        # 3. Скользящие атаки (Ладья/Ферзь)
         rook_queen_bb = bitboards['white_rooks' if by_white else 'black_rooks'] | \
                         bitboards['white_queens' if by_white else 'black_queens']
         if self.compute_sliding_attacks(square, bitboards['occupied'], 'rook') & rook_queen_bb:
             return True
             
-        # 4. Sliding attacks (Bishop/Queen)
+        # 4. Скользящие атаки (Слон/Ферзь)
         bishop_queen_bb = bitboards['white_bishops' if by_white else 'black_bishops'] | \
                           bitboards['white_queens' if by_white else 'black_queens']
         if self.compute_sliding_attacks(square, bitboards['occupied'], 'bishop') & bishop_queen_bb:
             return True
             
-        # 5. King attacks
+        # 5. Атаки короля
         king_bb = bitboards['white_king' if by_white else 'black_king']
         if self.king_moves[square] & king_bb:
             return True
@@ -217,20 +217,20 @@ class BitboardMoveGenerator:
         return False
 
     def generate_legal_moves(self, board: List[List[str]], color: bool) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Generate all legal moves for given color using bitboards"""
+        """Генерация всех легальных ходов для заданного цвета с использованием битбордов"""
         bitboards = self.board_to_bitboards(board)
         moves = []
         
-        if color:  # White to move
+        if color:  # Ход белых
             piece_bb_prefix = 'white_'
             occupied_bb = bitboards['white_occupied']
             opponent_bb = bitboards['black_occupied']
-        else:  # Black to move
+        else:  # Ход черных
             piece_bb_prefix = 'black_'
             occupied_bb = bitboards['black_occupied']
             opponent_bb = bitboards['white_occupied']
         
-        # Generate moves for each piece type
+        # Генерация ходов для каждого типа фигур
         moves.extend(self.generate_pawn_moves(bitboards, color, occupied_bb, opponent_bb))
         moves.extend(self.generate_knight_moves(bitboards, piece_bb_prefix, occupied_bb, opponent_bb))
         moves.extend(self.generate_bishop_moves(bitboards, piece_bb_prefix, occupied_bb, opponent_bb))

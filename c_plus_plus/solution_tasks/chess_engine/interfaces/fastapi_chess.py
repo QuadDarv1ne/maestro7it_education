@@ -238,6 +238,7 @@ async def get_ai_move(game_id: str, depth: int = 4):
             return {
                 'success': True,
                 'move_notation': move_record['notation'],
+                'ai_stats': engine.get_game_statistics(),
                 'game_state': GameResponse(
                     game_id=game_id,
                     board_state=engine.board_state,

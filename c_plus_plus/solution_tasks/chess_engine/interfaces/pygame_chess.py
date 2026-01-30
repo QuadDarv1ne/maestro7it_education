@@ -96,6 +96,7 @@ class PygameChessGUI:
             'game_start_time': pygame.time.get_ticks(),
             'ai_thinking_time': 0
         }
+        self.last_ai_stats = {}
         
         # Таймер для визуальной задержки
         self.computer_move_delay = 0
@@ -137,7 +138,7 @@ class PygameChessGUI:
         """Загрузка звуков"""
         return {}
     
-    def ai_worker(self, depth: int = 3):
+    def ai_worker(self, depth: int = 4):
         """Воркер для вычисления AI хода в отдельном потоке"""
         try:
             # Вызываем метод AI движка
@@ -147,13 +148,15 @@ class PygameChessGUI:
             with self.lock:
                 self.ai_result = best_move
                 self.ai_calculating = False
+                # Store stats
+                self.last_ai_stats = self.engine.get_game_statistics()
         except Exception as e:
             print(f"Ошибка в AI потоке: {e}")
             with self.lock:
                 self.ai_result = None
                 self.ai_calculating = False
     
-    def start_ai_calculation(self, depth: int = 3):
+    def start_ai_calculation(self, depth: int = 4):
         """Запуск AI вычислений в отдельном потоке"""
         if self.ai_calculating:
             return
@@ -342,6 +345,16 @@ class PygameChessGUI:
         # Индикатор обдумывания AI
         if self.ai_calculating:
             y_offset = self.draw_thinking_indicator(650, y_offset)
+        elif self.last_ai_stats:
+            nodes = self.last_ai_stats.get('ai_nodes', 0)
+            tt_hits = self.last_ai_stats.get('ai_tt_hits', 0)
+            if nodes > 0:
+                stats_text = self.small_font.render(f"AI: {nodes} узлов", True, self.GRAY)
+                self.screen.blit(stats_text, (650, y_offset))
+                y_offset += 20
+                tt_text = self.small_font.render(f"TT Hits: {tt_hits}", True, self.GRAY)
+                self.screen.blit(tt_text, (650, y_offset))
+                y_offset += 25
         
         # Режим игры
         mode_text = "vs AI" if self.game_mode == 'computer' else "2 игрока"

@@ -75,6 +75,14 @@ class ChessEngineWrapper:
             ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
         ]
     
+    def get_game_statistics(self) -> dict:
+        """Получение статистики текущей игры"""
+        stats = self.game_stats.copy()
+        if self.ai:
+            stats['ai_nodes'] = self.nodes_searched = getattr(self.ai, 'nodes_searched', 0)
+            stats['ai_tt_hits'] = getattr(self.ai, 'tt_hits', 0)
+        return stats
+    
     def board_to_fen(self) -> str:
         """Преобразование доски в FEN нотацию"""
         fen = ""

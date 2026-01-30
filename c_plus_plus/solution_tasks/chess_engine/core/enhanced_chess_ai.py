@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Enhanced Chess AI with Advanced Evaluation Function
-Features:
-- Multi-layer position evaluation
-- Tactical pattern recognition
-- Material and positional assessment
-- King safety evaluation
-- Mobility analysis
+Улучшенный шахматный ИИ с продвинутой функцией оценки
+Возможности:
+- Многоуровневая оценка позиции
+- Распознавание тактических паттернов
+- Оценка материала и позиции
+- Оценка безопасности короля
+- Анализ мобильности
 """
 
 from typing import List, Tuple, Dict
@@ -16,7 +16,7 @@ import math
 import json
 
 class EnhancedChessAI:
-    """Advanced chess AI with sophisticated evaluation"""
+    """Продвинутый шахматный ИИ с утонченной оценкой"""
     
     def __init__(self, search_depth: int = 4):
         self.search_depth = search_depth
@@ -25,16 +25,16 @@ class EnhancedChessAI:
         self.nodes_searched = 0
         self.tt_hits = 0
         
-        # Reuse move generator
+        # Переиспользуем генератор ходов
         from core.optimized_move_generator import BitboardMoveGenerator
         self.move_gen = BitboardMoveGenerator()
         
         self.initialize_evaluation_weights()
     
     def initialize_evaluation_weights(self):
-        """Initialize evaluation weights for different factors"""
+        """Инициализация весов оценки для различных факторов"""
         self.weights = {
-            # Material values
+            # Значения материала
             'material': 1.0,
             'piece_square': 0.1,
             'mobility': 0.1,
@@ -45,13 +45,13 @@ class EnhancedChessAI:
             'tempo': 0.05
         }
         
-        # Piece values
+        # Ценность фигур
         self.piece_values = {
             'P': 100, 'N': 320, 'B': 330, 'R': 500, 'Q': 900, 'K': 20000,
             'p': -100, 'n': -320, 'b': -330, 'r': -500, 'q': -900, 'k': -20000
         }
         
-        # Piece-square tables (simplified)
+        # Таблицы позиций фигур (упрощенные)
         self.piece_square_tables = {
             'P': [
                 0,  0,  0,  0,  0,  0,  0,  0,
@@ -115,48 +115,48 @@ class EnhancedChessAI:
             ]
         }
         
-        # Mirror tables for black pieces
+        # Зеркальные таблицы для черных фигур
         for piece in ['P', 'N', 'B', 'R', 'Q', 'K']:
             white_table = self.piece_square_tables[piece]
-            black_table = white_table[::-1]  # Reverse for black
+            black_table = white_table[::-1]  # Разворот для черных
             self.piece_square_tables[piece.lower()] = black_table
     
     def evaluate_position(self, board: List[List[str]]) -> int:
-        """Enhanced position evaluation function"""
+        """Улучшенная функция оценки позиции"""
         score = 0
         
-        # 1. Material evaluation
+        # 1. Оценка материала
         material_score = self.evaluate_material(board)
         score += self.weights['material'] * material_score
         
-        # 2. Piece-square table evaluation
+        # 2. Оценка по таблицам позиций
         pst_score = self.evaluate_piece_square_tables(board)
         score += self.weights['piece_square'] * pst_score
         
-        # 3. Mobility evaluation
+        # 3. Оценка мобильности
         mobility_score = self.evaluate_mobility(board)
         score += self.weights['mobility'] * mobility_score
         
-        # 4. Pawn structure evaluation
+        # 4. Оценка пешечной структуры
         pawn_score = self.evaluate_pawn_structure(board)
         score += self.weights['pawn_structure'] * pawn_score
         
-        # 5. King safety evaluation
+        # 5. Оценка безопасности короля
         king_safety_score = self.evaluate_king_safety(board)
         score += self.weights['king_safety'] * king_safety_score
         
-        # 6. Center control evaluation
+        # 6. Оценка контроля центра
         center_score = self.evaluate_center_control(board)
         score += self.weights['center_control'] * center_score
         
-        # 7. Development evaluation (early game)
+        # 7. Оценка развития (ранняя игра)
         development_score = self.evaluate_development(board)
         score += self.weights['development'] * development_score
         
         return int(score)
     
     def evaluate_material(self, board: List[List[str]]) -> int:
-        """Evaluate material balance"""
+        """Оценка материального баланса"""
         material = 0
         for row in range(8):
             for col in range(8):
@@ -166,7 +166,7 @@ class EnhancedChessAI:
         return material
     
     def evaluate_piece_square_tables(self, board: List[List[str]]) -> int:
-        """Evaluate piece positions using piece-square tables"""
+        """Оценка позиций фигур с использованием таблиц"""
         score = 0
         for row in range(8):
             for col in range(8):
@@ -179,17 +179,17 @@ class EnhancedChessAI:
         return score
     
     def evaluate_mobility(self, board: List[List[str]]) -> int:
-        """Evaluate piece mobility"""
+        """Оценка мобильности фигур"""
         white_moves = len(self.move_gen.generate_legal_moves(board, True))
         black_moves = len(self.move_gen.generate_legal_moves(board, False))
         
-        return (white_moves - black_moves) * 5  # Mobility bonus
+        return (white_moves - black_moves) * 5  # Бонус за мобильность
     
     def evaluate_pawn_structure(self, board: List[List[str]]) -> int:
-        """Evaluate pawn structure"""
+        """Оценка пешечной структуры"""
         score = 0
         
-        # Check for doubled pawns
+        # Проверка сдвоенных пешек
         for col in range(8):
             white_pawns = 0
             black_pawns = 0
@@ -200,17 +200,17 @@ class EnhancedChessAI:
                     black_pawns += 1
             
             if white_pawns > 1:
-                score -= (white_pawns - 1) * 10  # Penalty for doubled pawns
+                score -= (white_pawns - 1) * 10  # Штраф за сдвоенные пешки
             if black_pawns > 1:
-                score += (black_pawns - 1) * 10  # Bonus for opponent's doubled pawns
+                score += (black_pawns - 1) * 10  # Бонус за сдвоенные пешки противника
         
-        # Check for isolated pawns
+        # Проверка изолированных пешек
         score += self.evaluate_isolated_pawns(board)
         
         return score
     
     def evaluate_isolated_pawns(self, board: List[List[str]]) -> int:
-        """Evaluate isolated pawns"""
+        """Оценка изолированных пешек"""
         score = 0
         
         for row in range(8):
@@ -218,7 +218,7 @@ class EnhancedChessAI:
                 piece = board[row][col]
                 if piece.lower() == 'p':
                     is_isolated = True
-                    # Check adjacent columns
+                    # Проверка соседних вертикалей
                     for adj_col in [col-1, col+1]:
                         if 0 <= adj_col < 8:
                             for adj_row in range(8):
@@ -231,17 +231,17 @@ class EnhancedChessAI:
                     
                     if is_isolated:
                         if piece.isupper():
-                            score -= 15  # Penalty for isolated white pawn
+                            score -= 15  # Штраф за изолированную белую пешку
                         else:
-                            score += 15  # Bonus for isolated black pawn
+                            score += 15  # Бонус за изолированную черную пешку
         
         return score
     
     def evaluate_king_safety(self, board: List[List[str]]) -> int:
-        """Evaluate king safety"""
+        """Оценка безопасности короля"""
         score = 0
         
-        # Find kings
+        # Поиск королей
         white_king_pos = None
         black_king_pos = None
         
@@ -260,74 +260,81 @@ class EnhancedChessAI:
         return score
     
     def evaluate_king_zone_safety(self, board: List[List[str]], king_pos: Tuple[int, int], is_white: bool) -> int:
-        """Evaluate safety around the king"""
+        """Оценка безопасности зоны вокруг короля"""
         king_row, king_col = king_pos
         score = 0
         enemy_color = 'black' if is_white else 'white'
         
-        # Check king zone (3x3 area around king)
+        # Проверка зоны короля (3x3 область вокруг короля)
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
                 new_row, new_col = king_row + dr, king_col + dc
                 if 0 <= new_row < 8 and 0 <= new_col < 8:
                     piece = board[new_row][new_col]
                     if piece != '.':
-                        # Friendly pieces near king are good
+                        # Свои фигуры рядом с королем - хорошо
                         if (piece.isupper() and is_white) or (piece.islower() and not is_white):
                             score += 5
-                        # Enemy pieces near king are bad
+                        # Вражеские фигуры рядом с королем - плохо
                         else:
                             score -= 10
         
         return score
     
     def evaluate_center_control(self, board: List[List[str]]) -> int:
-        """Evaluate center control"""
+        """Оценка контроля центра"""
         center_squares = [(3, 3), (3, 4), (4, 3), (4, 4)]
         score = 0
         
         for row, col in center_squares:
             piece = board[row][col]
             if piece != '.':
-                if piece.isupper():  # White piece
+                if piece.isupper():  # Белая фигура
                     score += 10
-                else:  # Black piece
+                else:  # Черная фигура
                     score -= 10
         
         return score
     
     def evaluate_development(self, board: List[List[str]]) -> int:
-        """Evaluate piece development (early game)"""
+        """Оценка развития фигур (ранняя игра)"""
         score = 0
         
-        # Knights developed from starting position
-        if board[7][1] == '.' and board[6][0] == 'N':  # White knight
+        # Кони, развитые с начальной позиции
+        if board[7][1] == '.' and board[6][0] == 'N':  # Белый конь
             score += 20
-        if board[7][6] == '.' and board[6][7] == 'N':  # White knight
+        if board[7][6] == '.' and board[6][7] == 'N':  # Белый конь
             score += 20
-        if board[0][1] == '.' and board[1][0] == 'n':  # Black knight
+        if board[0][1] == '.' and board[1][0] == 'n':  # Черный конь
             score -= 20
-        if board[0][6] == '.' and board[1][7] == 'n':  # Black knight
+        if board[0][6] == '.' and board[1][7] == 'n':  # Черный конь
             score -= 20
         
-        # Bishops developed
-        if board[7][2] == '.' and board[6][1] == 'B':  # White bishop
+        # Развитые слоны
+        if board[7][2] == '.' and board[6][1] == 'B':  # Белый слон
             score += 15
-        if board[7][5] == '.' and board[6][6] == 'B':  # White bishop
+        if board[7][5] == '.' and board[6][6] == 'B':  # Белый слон
             score += 15
-        if board[0][2] == '.' and board[1][1] == 'b':  # Black bishop
+        if board[0][2] == '.' and board[1][1] == 'b':  # Черный слон
             score -= 15
-        if board[0][5] == '.' and board[1][6] == 'b':  # Black bishop
+        if board[0][5] == '.' and board[1][6] == 'b':  # Черный слон
             score -= 15
         
         return score
     
     def minimax(self, board: List[List[str]], depth: int, alpha: float, beta: float, 
                 maximizing_player: bool) -> Tuple[int, Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Minimax algorithm with alpha-beta pruning, move ordering, and transposition table"""
+        """Алгоритм минимакс с альфа-бета отсечением, упорядочиванием ходов и транспозиционной таблицей"""
         self.nodes_searched += 1
         
-        # Transposition Table Lookup
+        # Проверка времени (каждые 1024 узла)
+        if self.nodes_searched & 1023 == 0:
+            import time
+            if time.time() - self.start_time > self.time_limit:
+                # Возвращаем текущую оценку, если время истекло
+                return self.evaluate_position(board), None
+
+        # Поиск в транспозиционной таблице
         board_hash = self.get_board_hash(board, maximizing_player)
         if board_hash in self.transposition_table:
             entry = self.transposition_table[board_hash]
@@ -335,21 +342,21 @@ class EnhancedChessAI:
                 self.tt_hits += 1
                 return entry['score'], entry['move']
         
-        # Terminal conditions
+        # Терминальные условия
         if depth == 0:
             return self.quiescence_search(board, alpha, beta, maximizing_player), None
         
-        # Generate legal moves
+        # Генерация легальных ходов
         moves = self.move_gen.generate_legal_moves(board, maximizing_player)
         
         if not moves:
-            # Check for checkmate or stalemate
+            # Проверка на мат или пат
             if self.is_in_check(board, maximizing_player):
                 return -100000 - depth if maximizing_player else 100000 + depth, None
             else:
-                return 0, None  # Stalemate
+                return 0, None  # Пат
         
-        # Move Ordering
+        # Упорядочивание ходов
         ordered_moves = self.order_moves(board, moves, maximizing_player)
         
         best_move = None
@@ -366,11 +373,11 @@ class EnhancedChessAI:
                 
                 alpha = max(alpha, eval_score)
                 if beta <= alpha:
-                    # History heuristic: record successful cutoff
+                    # Эвристика истории: записываем успешное отсечение
                     self.update_history(move, depth)
-                    break  # Beta cutoff
+                    break  # Бета-отсечение
             
-            # Store in Transposition Table
+            # Сохраняем в транспозиционной таблице
             self.transposition_table[board_hash] = {
                 'score': max_eval,
                 'move': best_move,
@@ -390,9 +397,9 @@ class EnhancedChessAI:
                 beta = min(beta, eval_score)
                 if beta <= alpha:
                     self.update_history(move, depth)
-                    break  # Alpha cutoff
+                    break  # Альфа-отсечение
             
-            # Store in Transposition Table
+            # Сохраняем в транспозиционной таблице
             self.transposition_table[board_hash] = {
                 'score': min_eval,
                 'move': best_move,
@@ -402,7 +409,7 @@ class EnhancedChessAI:
     
     def quiescence_search(self, board: List[List[str]], alpha: float, beta: float, 
                            maximizing_player: bool) -> int:
-        """Search only captures to avoid horizon effect"""
+        """Поиск только взятий для избежания эффекта горизонта"""
         stand_pat = self.evaluate_position(board)
         
         if maximizing_player:
@@ -410,7 +417,7 @@ class EnhancedChessAI:
                 return beta
             alpha = max(alpha, stand_pat)
             
-            # Only consider captures
+            # Рассматриваем только взятия
             moves = self.move_gen.generate_legal_moves(board, maximizing_player)
             captures = [m for m in moves if board[m[1][0]][m[1][1]] != '.']
             ordered_captures = self.order_moves(board, captures, maximizing_player)
@@ -440,7 +447,7 @@ class EnhancedChessAI:
             return beta
 
     def order_moves(self, board: List[List[str]], moves: List, is_white: bool) -> List:
-        """Sort moves to improve alpha-beta pruning performance"""
+        """Сортировка ходов для улучшения производительности альфа-бета отсечения"""
         move_scores = []
         for move in moves:
             score = 0
@@ -448,47 +455,98 @@ class EnhancedChessAI:
             piece = board[from_pos[0]][from_pos[1]]
             target = board[to_pos[0]][to_pos[1]]
             
-            # 1. MVV-LVA (Most Valuable Victim - Least Valuable Aggressor)
+            # 1. MVV-LVA (Самая ценная жертва - Наименее ценный агрессор)
             if target != '.':
                 score += 10 * abs(self.piece_values[target]) - abs(self.piece_values[piece]) // 10
             
-            # 2. History heuristic
+            # 2. Эвристика истории
             score += self.history_table.get(move, 0)
             
-            # 3. Promotions are good
+            # 3. Превращения пешек хороши
             if piece.lower() == 'p' and (to_pos[0] == 0 or to_pos[0] == 7):
                 score += 800
             
             move_scores.append((score, move))
         
-        # Sort descending by score
+        # Сортировка по убыванию оценки
         move_scores.sort(key=lambda x: x[0], reverse=True)
         return [m[1] for m in move_scores]
 
     def update_history(self, move: Tuple, depth: int):
-        """Update history table for move ordering"""
+        """Обновление таблицы истории для упорядочивания ходов"""
         self.history_table[move] = self.history_table.get(move, 0) + depth * depth
 
     def get_board_hash(self, board: List[List[str]], turn: bool) -> int:
-        """Create a hash of the board state for the Transposition Table"""
-        # Simple string hash for now (could be Zobrist hash for better performance)
+        """Создание хэша состояния доски для транспозиционной таблицы"""
+        # Простой строковый хэш (можно использовать хэш Зобриста для лучшей производительности)
         board_str = "".join("".join(row) for row in board)
         return hash(board_str + str(turn))
 
-    def get_best_move(self, board: List[List[str]], color: bool) -> Tuple[Tuple[int, int], Tuple[int, int]]:
-        """Get the best move for the given position"""
+    def make_move(self, board: List[List[str]], move: Tuple[Tuple[int, int], Tuple[int, int]]) -> List[List[str]]:
+        """Выполнение хода на доске (возвращает новую доску)"""
+        from_pos, to_pos = move
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        
+        # Создаем копию доски
+        new_board = [row[:] for row in board]
+        
+        # Выполняем ход
+        piece = new_board[from_row][from_col]
+        new_board[to_row][to_col] = piece
+        new_board[from_row][from_col] = '.'
+        
+        return new_board
+
+    def is_in_check(self, board: List[List[str]], is_white: bool) -> bool:
+        """Проверка шаха королю с использованием эффективного определения атак"""
+        king_char = 'K' if is_white else 'k'
+        king_square = -1
+        
+        for row in range(8):
+            for col in range(8):
+                if board[row][col] == king_char:
+                    king_square = row * 8 + col
+                    break
+            if king_square != -1:
+                break
+        
+        if king_square == -1:
+            return False
+            
+        return self.move_gen.is_square_attacked(board, king_square, not is_white)
+
+    def get_best_move(self, board: List[List[str]], color: bool, time_limit: float = 3.0) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+        """Получение лучшего хода с использованием итеративного углубления"""
+        import time
         self.nodes_searched = 0
         self.tt_hits = 0
-        _, best_move = self.minimax(board, self.search_depth, float('-inf'), float('inf'), color)
-        print(f"Nodes searched: {self.nodes_searched}, TT hits: {self.tt_hits}")
-        return best_move
+        self.start_time = time.time()
+        self.time_limit = time_limit
+        
+        best_overall_move = None
+        
+        # Итеративное углубление
+        for current_depth in range(1, self.search_depth + 1):
+            eval_score, move = self.minimax(board, current_depth, float('-inf'), float('inf'), color)
+            
+            if move:
+                best_overall_move = move
+            
+            # Проверка, нужно ли прекратить углубление поиска
+            if time.time() - self.start_time > self.time_limit:
+                break
+                
+        print(f"Глубина поиска ИИ: {current_depth}")
+        print(f"Узлов проверено: {self.nodes_searched}, Попаданий в TT: {self.tt_hits}")
+        return best_overall_move
 
-# Test the enhanced AI
+# Тестирование улучшенного ИИ
 def test_enhanced_ai():
-    """Test the enhanced AI performance"""
+    """Тестирование производительности улучшенного ИИ"""
     import time
     
-    # Test position
+    # Тестовая позиция
     test_board = [
         ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
         ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
@@ -502,24 +560,24 @@ def test_enhanced_ai():
     
     ai = EnhancedChessAI(search_depth=3)
     
-    print("🤖 Testing Enhanced Chess AI")
+    print("🤖 Тестирование улучшенного шахматного ИИ")
     print("=" * 40)
     
-    # Test position evaluation
+    # Тест оценки позиции
     start_time = time.perf_counter()
     score = ai.evaluate_position(test_board)
     eval_time = time.perf_counter() - start_time
     
-    print(f"Position evaluation: {score}")
-    print(f"Evaluation time: {eval_time*1000:.4f} ms")
+    print(f"Оценка позиции: {score}")
+    print(f"Время оценки: {eval_time*1000:.4f} мс")
     
-    # Test move generation
+    # Тест генерации хода
     start_time = time.perf_counter()
     best_move = ai.get_best_move(test_board, True)
     move_time = time.perf_counter() - start_time
     
-    print(f"Best move found: {best_move}")
-    print(f"Move calculation time: {move_time:.4f} s")
+    print(f"Лучший ход найден: {best_move}")
+    print(f"Время расчета хода: {move_time:.4f} с")
     
     return score, best_move, move_time
 
