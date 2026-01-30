@@ -13,6 +13,25 @@ class ChessEngineWrapper:
         self.lib = None
         self.board_state = self.get_initial_board()
         self.current_turn = True  # True = белые, False = черные
+        self.move_history = []
+        self.captured_pieces = {'white': [], 'black': []}
+        self.game_stats = {'moves_count': 0, 'captures_count': 0, 'check_count': 0}
+        self.game_active = True
+        self.selected_square = None
+        self.valid_moves = []
+        
+        # Интеграция оптимизированных компонентов
+        try:
+            from optimized_move_generator import BitboardMoveGenerator
+            self.move_gen = BitboardMoveGenerator()
+        except ImportError:
+            self.move_gen = None
+            
+        try:
+            from enhanced_chess_ai import EnhancedChessAI
+            self.ai = EnhancedChessAI(search_depth=4)
+        except ImportError:
+            self.ai = None
         
     def initialize_engine(self) -> bool:
         """Инициализация С++ библиотеки движка"""
@@ -72,7 +91,18 @@ class ChessEngineWrapper:
         return fen
     
     def is_valid_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Проверка допустимости хода через С++ или Python"""
+        """Проверка допустимости хода через оптимизированный движок, С++ или Python"""
+        # Сначала пробуем BitboardMoveGenerator
+        if self.move_gen:
+            try:
+                # Bitboard generator usually returns all legal moves, 
+                # but we can use it to check a specific move
+                legal_moves = self.move_gen.generate_legal_moves(self.board_state, self.current_turn)
+                return (from_pos, to_pos) in legal_moves
+            except Exception as e:
+                print(f"Ошибка Bitboard MoveGen: {e}")
+        
+        # Резервные варианты
         try:
             return self.is_valid_move_cpp(from_pos, to_pos)
         except:
@@ -313,7 +343,15 @@ class ChessEngineWrapper:
         return True
     
     def get_best_move(self, depth: int = 3) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Получение лучшего хода для AI (продвинутая реализация)"""
+        """Получение лучшего хода для AI (использует Enhanced AI если доступен)"""
+        if self.ai:
+            try:
+                self.ai.search_depth = depth
+                return self.ai.get_best_move(self.board_state, self.current_turn)
+            except Exception as e:
+                print(f"Ошибка Enhanced AI: {e}")
+        
+        # Резервный вариант из старой реализации
         try:
             # Импортируем продвинутый ИИ
             import sys
