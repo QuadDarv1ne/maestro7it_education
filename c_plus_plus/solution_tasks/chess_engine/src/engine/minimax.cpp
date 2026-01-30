@@ -8,19 +8,19 @@
 
 Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), openingBook_(), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)), historyTable(HISTORY_SIZE, 0) {
     initZobrist();
-    // Initialize the transposition table
+    // Инициализация таблицы транспозиций
     for(size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
         transpositionTable[i] = TTEntry();
     }
     
-    // Initialize killer moves
+    // Инициализация killer moves
     for (int ply = 0; ply < MAX_PLY; ply++) {
         for (int k = 0; k < MAX_KILLER_MOVES; k++) {
             killerMoves[ply][k] = Move();
         }
     }
     
-    // Initialize history table
+    // Инициализация таблицы истории
     for (int i = 0; i < HISTORY_SIZE; i++) {
         historyTable[i] = 0;
     }
@@ -224,14 +224,14 @@ bool Minimax::isKillerMove(const Move& move, int ply) const {
 }
 
 int Minimax::aspirationSearch(int depth, int previousScore, Color maximizingPlayer) {
-    const int ASPIRATION_WINDOW = 50; // Window size around previous score
+    const int ASPIRATION_WINDOW = 50; // Размер окна вокруг предыдущей оценки
     
     int alpha = previousScore - ASPIRATION_WINDOW;
     int beta = previousScore + ASPIRATION_WINDOW;
     
     int score = minimaxWithTT(depth, alpha, beta, maximizingPlayer);
     
-    // If we failed high or low, search with full window
+    // Если провал в верхнем или нижнем диапазоне, ищем с полным окном
     if (score <= alpha || score >= beta) {
         score = minimaxWithTT(depth, INT_MIN, INT_MAX, maximizingPlayer);
     }
@@ -240,19 +240,19 @@ int Minimax::aspirationSearch(int depth, int previousScore, Color maximizingPlay
 }
 
 void Minimax::updateHistory(const Move& move, int depth) {
-    // Don't update history for captures or promotions
+    // Не обновляем историю для взятий и превращений
     Piece capturedPiece = board_.getPiece(move.to);
     if (!capturedPiece.isEmpty() || move.promotion != PieceType::EMPTY) {
         return;
     }
     
-    // Calculate index in history table
+    // Вычисляем индекс в таблице истории
     int index = move.from * 64 + move.to;
     if (index >= 0 && index < HISTORY_SIZE) {
-        // Increase history score, but prevent overflow
+        // Увеличиваем оценку истории, но предотвращаем переполнение
         historyTable[index] += depth * depth;
         if (historyTable[index] > 10000) {
-            // Scale down all history scores to prevent overflow
+            // Масштабируем все оценки истории, чтобы предотвратить переполнение
             for (int i = 0; i < HISTORY_SIZE; i++) {
                 historyTable[i] /= 2;
             }
@@ -269,13 +269,13 @@ int Minimax::getHistoryScore(const Move& move) const {
 }
 
 bool Minimax::isFutile(int depth, int alpha, int staticEval) const {
-    // Futility pruning constants (in centipawns)
+    // Константы futility pruning (в сотых пешки)
     static const int FUTILITY_MARGIN[] = {0, 100, 300, 500, 900};
     
-    if (depth >= 4) return false; // Only apply for shallow depths
+    if (depth >= 4) return false; // Применяем только на малых глубинах
     if (depth <= 0 || depth >= 5) return false;
     
-    // Check if the static evaluation plus margin is still below alpha
+    // Проверяем, находится ли статическая оценка плюс маржа ниже alpha
     int margin = (depth < 5) ? FUTILITY_MARGIN[depth] : 900;
     return (staticEval + margin) <= alpha;
 }

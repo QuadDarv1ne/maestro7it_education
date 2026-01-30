@@ -50,12 +50,12 @@ std::string Piece::getName() const {
 int Piece::getValue() const {
     switch (type_) {
         case PieceType::EMPTY: return 0;
-        case PieceType::PAWN: return 100;      // 1.0 pawns
-        case PieceType::KNIGHT: return 320;    // 3.2 pawns
-        case PieceType::BISHOP: return 330;    // 3.3 pawns
-        case PieceType::ROOK: return 500;      // 5.0 pawns
-        case PieceType::QUEEN: return 900;     // 9.0 pawns
-        case PieceType::KING: return 20000;    // King has infinite value (game ender)
+        case PieceType::PAWN: return 100;      // 1.0 пешки
+        case PieceType::KNIGHT: return 320;    // 3.2 пешки
+        case PieceType::BISHOP: return 330;    // 3.3 пешки
+        case PieceType::ROOK: return 500;      // 5.0 пешок
+        case PieceType::QUEEN: return 900;     // 9.0 пешок
+        case PieceType::KING: return 20000;    // Король имеет бесконечную ценность (конец игры)
         default: return 0;
     }
 }
@@ -89,7 +89,7 @@ Piece Piece::createPiece(char symbol) {
     if (it != pieceMap.end()) {
         return Piece(it->second.first, it->second.second);
     }
-    return Piece(); // Return empty piece if not found
+    return Piece(); // Возвращаем пустую фигуру, если не найдена
 }
 
 Color Piece::oppositeColor(Color color) {

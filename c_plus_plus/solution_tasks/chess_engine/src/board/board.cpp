@@ -22,16 +22,16 @@ void Board::initializeEmptyBoard() {
 }
 
 void Board::setupStartPosition() {
-    // Clear the board first
+    // Сначала очищаем доску
     initializeEmptyBoard();
     
-    // Set up pawns
+    // Расставляем пешки
     for (int file = 0; file < 8; file++) {
         setPiece(square(file, 1), Piece(PieceType::PAWN, Color::WHITE));
         setPiece(square(file, 6), Piece(PieceType::PAWN, Color::BLACK));
     }
     
-    // Set up other pieces
+    // Расставляем остальные фигуры
     Piece pieces[] = {
         Piece(PieceType::ROOK, Color::WHITE),
         Piece(PieceType::KNIGHT, Color::WHITE),
