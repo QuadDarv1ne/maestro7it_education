@@ -1,331 +1,179 @@
 #include "../../include/parallel_search.hpp"
-#include "../../include/move_generator.hpp"
 #include <iostream>
 #include <algorithm>
-#include <numeric>
+#include <climits>
+#include <chrono>
 
 ParallelSearch::ParallelSearch(const Bitboard& board, IncrementalEvaluator& evaluator, 
-                               int max_depth, int num_threads)
+                              int max_depth, int num_threads)
     : board_(board), evaluator_(evaluator), max_depth_(max_depth), 
       num_threads_(num_threads), time_limit_(std::chrono::milliseconds(10000)),
-      stop_search_(false), best_score_(0), nodes_searched_(0) {
+      stop_search_(false), best_score_(INT_MIN), nodes_searched_(0) {
     
-    // Инициализация таблицы транспозиций
     transposition_table_.resize(TT_SIZE);
-    for (size_t i = 0; i < TT_SIZE; ++i) {
-        transposition_table_[i] = TTEntry();
-    }
 }
 
-Move ParallelChessEngine::findBestMove(Color color, std::chrono::milliseconds timeLimit) {
-    setTimeLimit(timeLimit);
-    
-    // Сброс состояния поиска
-    stopSearch_.store(false);
-    bestScore_.store(0);
-    searchDepth_.store(0);
-    
-    std::cout << "Начало параллельного поиска с " << numThreads_ << " потоками" << std::endl;
-    
-    // Создание потоков
+void ParallelSearch::resetStats() {
+    nodes_searched_ = 0;
+}
+
+void ParallelSearch::stop() {
+    stop_search_ = true;
+}
+
+bool ParallelSearch::isTimeUp() const {
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time_);
+    return elapsed >= time_limit_;
+}
+
+std::pair<int, int> ParallelSearch::findBestMove(Bitboard::Color color) {
+    resetStats();
+    stop_search_ = false;
+    start_time_ = std::chrono::steady_clock::now();
+    best_score_ = (color == Bitboard::Color::WHITE) ? INT_MIN : INT_MAX;
+    best_move_ = {-1, -1};
+
+    auto moves = board_.generateLegalMoves();
+    if (moves.empty()) return {-1, -1};
+
+    int moves_per_thread = (moves.size() + num_threads_ - 1) / num_threads_;
     std::vector<std::thread> threads;
-    std::vector<std::promise<Move>> promises(numThreads_);
-    
-    auto startTime = std::chrono::steady_clock::now();
-    
-    // Запуск рабочих потоков
-    for (int i = 0; i < numThreads_; i++) {
-        threads.emplace_back([this, i, color, &promises]() {
-            try {
-                workerThread(i, color);
-                promises[i].set_value(bestMove_.load());
-            } catch (const std::exception& e) {
-                promises[i].set_exception(std::current_exception());
-            }
-        });
+
+    for (int i = 0; i < num_threads_; ++i) {
+        int start = i * moves_per_thread;
+        int end = std::min(static_cast<int>(moves.size()), (i + 1) * moves_per_thread);
+        if (start < end) {
+            threads.emplace_back(&ParallelSearch::workerThread, this, i, moves, start, end, color);
+        }
     }
-    
-    // Ожидание завершения или истечения времени
-    std::future_status status;
-    do {
-        status = std::async(std::launch::async, [this, startTime]() {
-            auto elapsed = std::chrono::steady_clock::now() - startTime;
-            return elapsed >= timeLimit_;
-        }).wait_for(std::chrono::milliseconds(100));
-        
-        if (status == std::future_status::ready) {
-            stopSearch_.store(true);
+
+    for (auto& t : threads) {
+        if (t.joinable()) t.join();
+    }
+
+    return best_move_;
+}
+
+void ParallelSearch::workerThread(int thread_id, std::vector<std::pair<int, int>> moves, 
+                                 int start_idx, int end_idx, Bitboard::Color color) {
+    int local_best_score = (color == Bitboard::Color::WHITE) ? INT_MIN : INT_MAX;
+    std::pair<int, int> local_best_move = {-1, -1};
+
+    for (int i = start_idx; i < end_idx; ++i) {
+        if (stop_search_ || isTimeUp()) {
+            stop_search_ = true;
             break;
         }
-    } while (status != std::future_status::ready);
-    
-    // Сбор результатов
-    Move bestMove;
-    int bestThread = -1;
-    int bestThreadScore = INT_MIN;
-    
-    for (int i = 0; i < numThreads_; i++) {
-        try {
-            Move threadMove = promises[i].get_future().get();
-            if (i == 0) { // Основной поток
-                bestMove = threadMove;
-                bestThread = 0;
-                bestThreadScore = bestScore_.load();
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Ошибка в потоке " << i << ": " << e.what() << std::endl;
-        }
-    }
-    
-    // Остановка всех потоков
-    stopAllThreads();
-    
-    // Ожидание завершения потоков
-    for (auto& thread : threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-    
-    auto endTime = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    
-    std::cout << "Параллельный поиск завершен за " << duration.count() << " мс" << std::endl;
-    std::cout << "Лучший ход: " << board_.squareToAlgebraic(bestMove.from) 
-              << "-" << board_.squareToAlgebraic(bestMove.to) << std::endl;
-    std::cout << "Оценка позиции: " << bestScore_.load() << std::endl;
-    
-    return bestMove;
-}
 
-void ParallelChessEngine::workerThread(int threadId, Color color) {
-    std::cout << "Поток " << threadId << " запущен" << std::endl;
-    
-    // Генерация ходов
-    std::vector<Move> moves = generateLegalMoves();
-    if (moves.empty()) return;
-    
-    // Упорядочивание ходов для лучшего распределения
-    moves = orderMoves(moves, 0);
-    
-    int alpha = INT_MIN;
-    int beta = INT_MAX;
-    int localBestScore = INT_MIN;
-    Move localBestMove = moves[0];
-    
-    // Итеративное углубление
-    for (int depth = 1; depth <= maxDepth_ && !shouldStop(); depth++) {
-        searchDepth_.store(depth);
+        Bitboard local_board = board_;
+        auto move = moves[i];
+        local_board.movePiece(move.first, move.second);
         
-        for (size_t i = 0; i < moves.size() && !shouldStop(); i++) {
-            const Move& move = moves[i];
-            
-            // Выполнение хода
-            Piece capturedPiece = board_.getPiece(move.to);
-            Piece movingPiece = board_.getPiece(move.from);
-            board_.setPiece(move.to, movingPiece);
-            board_.setPiece(move.from, Piece());
-            
-            Color opponent = (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
-            board_.setSideToMove(opponent);
-            
-            // Поиск минимаксом
-            int score = -parallelMinimax(depth - 1, -beta, -alpha, opponent, threadId);
-            
-            // Восстановление позиции
-            board_.setPiece(move.from, movingPiece);
-            board_.setPiece(move.to, capturedPiece);
-            board_.setSideToMove(color);
-            
-            // Обновление лучшего результата
-            if (score > localBestScore) {
-                localBestScore = score;
-                localBestMove = move;
-                
-                if (score > alpha) {
-                    alpha = score;
-                }
-                
-                // Обновление глобального лучшего результата
-                if (threadId == 0) { // Только основной поток обновляет глобальные значения
-                    int currentBest = bestScore_.load();
-                    if (score > currentBest) {
-                        bestScore_.store(score);
-                        bestMove_.store(move);
-                    }
-                }
-            }
-            
-            if (shouldStop()) break;
-        }
-    }
-    
-    std::cout << "Поток " << threadId << " завершен. Лучший результат: " << localBestScore << std::endl;
-}
+        IncrementalEvaluator local_eval(local_board);
+        int score = alphabeta(local_board, local_eval, max_depth_ - 1, INT_MIN + 1, INT_MAX - 1, 
+                             (color == Bitboard::Color::WHITE ? Bitboard::Color::BLACK : Bitboard::Color::WHITE));
 
-int ParallelChessEngine::parallelMinimax(int depth, int alpha, int beta, Color maximizingPlayer, int threadId) {
-    if (depth == 0 || shouldStop()) {
-        return evaluatePosition();
-    }
-    
-    // Проверка транспозиционной таблицы
-    uint64_t hash = hashPosition();
-    TranspositionEntry* entry = probeTT(hash, threadId);
-    
-    if (entry && entry->depth >= depth) {
-        if (entry->flag == 'E') return entry->score;
-        if (entry->flag == 'L' && entry->score >= beta) return beta;
-        if (entry->flag == 'U' && entry->score <= alpha) return alpha;
-    }
-    
-    std::vector<Move> moves = generateLegalMoves();
-    if (moves.empty()) {
-        return evaluatePosition();
-    }
-    
-    moves = orderMoves(moves, maxDepth_ - depth);
-    
-    int bestValue = (maximizingPlayer == Color::WHITE) ? INT_MIN : INT_MAX;
-    Move bestMove;
-    
-    for (const Move& move : moves) {
-        if (shouldStop()) break;
-        
-        // Выполнение хода
-        Piece capturedPiece = board_.getPiece(move.to);
-        Piece movingPiece = board_.getPiece(move.from);
-        board_.setPiece(move.to, movingPiece);
-        board_.setPiece(move.from, Piece());
-        
-        Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
-        board_.setSideToMove(opponent);
-        
-        int value = -parallelMinimax(depth - 1, -beta, -alpha, opponent, threadId);
-        
-        // Восстановление позиции
-        board_.setPiece(move.from, movingPiece);
-        board_.setPiece(move.to, capturedPiece);
-        board_.setSideToMove(maximizingPlayer);
-        
-        if (maximizingPlayer == Color::WHITE) {
-            if (value > bestValue) {
-                bestValue = value;
-                bestMove = move;
-                alpha = std::max(alpha, value);
-                if (alpha >= beta) break;
+        if (color == Bitboard::Color::WHITE) {
+            if (score > local_best_score) {
+                local_best_score = score;
+                local_best_move = move;
             }
         } else {
-            if (value < bestValue) {
-                bestValue = value;
-                bestMove = move;
-                beta = std::min(beta, value);
-                if (beta <= alpha) break;
+            if (score < local_best_score) {
+                local_best_score = score;
+                local_best_move = move;
             }
         }
     }
-    
-    // Сохранение в транспозиционную таблицу
-    char flag = 'E';
-    if (bestValue <= alpha) flag = 'U';
-    if (bestValue >= beta) flag = 'L';
-    
-    storeInTT(hash, depth, bestValue, bestMove, flag, threadId);
-    
-    return bestValue;
-}
 
-// Вспомогательные функции
-std::vector<Move> ParallelChessEngine::orderMoves(const std::vector<Move>& moves, int ply) const {
-    std::vector<Move> orderedMoves = moves;
-    
-    std::sort(orderedMoves.begin(), orderedMoves.end(), 
-              [this, ply](const Move& a, const Move& b) {
-                  return getMovePriority(a, ply) > getMovePriority(b, ply);
-              });
-    
-    return orderedMoves;
-}
-
-int ParallelChessEngine::getMovePriority(const Move& move, int ply) const {
-    Piece capturedPiece = board_.getPiece(move.to);
-    Piece movingPiece = board_.getPiece(move.from);
-    
-    // Приоритет взятий (MVV-LVA)
-    if (!capturedPiece.isEmpty()) {
-        return 10000 + capturedPiece.getValue() * 10 - movingPiece.getValue();
-    }
-    
-    // Приоритет истории
-    int historyScore = getHistoryScore(move);
-    if (historyScore > 0) {
-        return 1000 + historyScore;
-    }
-    
-    // Приоритет продвижения пешек
-    if (movingPiece.getType() == PieceType::PAWN) {
-        int rankDiff = (movingPiece.getColor() == Color::WHITE) ? 
-                      (board_.rank(move.to) - board_.rank(move.from)) : 
-                      (board_.rank(move.from) - board_.rank(move.to));
-        if (rankDiff > 0) {
-            return 500 + rankDiff * 50;
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (color == Bitboard::Color::WHITE) {
+        if (local_best_score > best_score_) {
+            best_score_ = local_best_score;
+            best_move_ = local_best_move;
+        }
+    } else {
+        if (local_best_score < best_score_) {
+            best_score_ = local_best_score;
+            best_move_ = local_best_move;
         }
     }
+}
+
+int ParallelSearch::alphabeta(Bitboard& b, IncrementalEvaluator& eval, int depth, int alpha, int beta, Bitboard::Color color) {
+    nodes_searched_++;
     
-    return movingPiece.getValue();
-}
-
-void ParallelChessEngine::storeInTT(uint64_t hash, int depth, int score, Move bestMove, char flag, int threadId) {
-    // Простая реализация без блокировок для демонстрации
-    size_t index = hash % TRANSPOSITION_TABLE_SIZE;
-    transpositionTable_[index] = TranspositionEntry(hash, depth, score, bestMove, flag);
-}
-
-ParallelChessEngine::TranspositionEntry* ParallelChessEngine::probeTT(uint64_t hash, int threadId) {
-    size_t index = hash % TRANSPOSITION_TABLE_SIZE;
-    if (transpositionTable_[index].hash == hash) {
-        return &transpositionTable_[index];
+    if (depth == 0) {
+        return eval.evaluate();
     }
+
+    if (nodes_searched_ % 1000 == 0 && isTimeUp()) {
+        stop_search_ = true;
+        return eval.evaluate();
+    }
+
+    auto moves = b.generateLegalMoves();
+    if (moves.empty()) {
+        if (b.isInCheck(color)) return (color == Bitboard::Color::WHITE) ? -20000 : 20000;
+        return 0;
+    }
+
+    if (color == Bitboard::Color::WHITE) {
+        int max_eval = INT_MIN + 1;
+        for (const auto& move : moves) {
+            Bitboard next_board = b;
+            next_board.movePiece(move.first, move.second);
+            IncrementalEvaluator next_eval(next_board);
+            int eval_score = alphabeta(next_board, next_eval, depth - 1, alpha, beta, Bitboard::Color::BLACK);
+            max_eval = std::max(max_eval, eval_score);
+            alpha = std::max(alpha, eval_score);
+            if (beta <= alpha) break;
+            if (stop_search_) break;
+        }
+        return max_eval;
+    } else {
+        int min_eval = INT_MAX - 1;
+        for (const auto& move : moves) {
+            Bitboard next_board = b;
+            next_board.movePiece(move.first, move.second);
+            IncrementalEvaluator next_eval(next_board);
+            int eval_score = alphabeta(next_board, next_eval, depth - 1, alpha, beta, Bitboard::Color::WHITE);
+            min_eval = std::min(min_eval, eval_score);
+            beta = std::min(beta, eval_score);
+            if (beta <= alpha) break;
+            if (stop_search_) break;
+        }
+        return min_eval;
+    }
+}
+
+uint64_t ParallelSearch::hashPosition(const Bitboard& b) const {
+    // Упрощенная реализация хеширования, если Bitboard не поддерживает Zobrist
+    return 0; 
+}
+
+void ParallelSearch::storeInTT(uint64_t hash, int depth, int score, std::pair<int, int> move, char flag) {
+    // Временно не используем ТТ для упрощения и во избежание проблем с многопоточностью
+}
+
+ParallelSearch::TTEntry* ParallelSearch::probeTT(uint64_t hash) {
     return nullptr;
 }
 
-// Геттеры и сеттеры
-void ParallelChessEngine::setMaxDepth(int depth) {
-    maxDepth_ = depth;
+void ParallelSearch::setMaxDepth(int depth) {
+    max_depth_ = depth;
 }
 
-void ParallelChessEngine::setNumThreads(int threads) {
-    numThreads_ = std::min(threads, ParallelConstants::MAX_THREADS);
+void ParallelSearch::setNumThreads(int threads) {
+    num_threads_ = threads;
 }
 
-void ParallelChessEngine::setTimeLimit(std::chrono::milliseconds limit) {
-    timeLimit_ = limit;
+void ParallelSearch::setTimeLimit(std::chrono::milliseconds limit) {
+    time_limit_ = limit;
 }
 
-void ParallelChessEngine::stopAllThreads() {
-    stopSearch_.store(true);
+void ParallelSearch::printSearchStats() const {
+    std::cout << "Узлов исследовано: " << nodes_searched_.load() << std::endl;
 }
 
-// Утилиты
-namespace ParallelUtils {
-    int getOptimalThreadCount() {
-        unsigned int hwThreads = std::thread::hardware_concurrency();
-        return hwThreads > 0 ? std::min(hwThreads, static_cast<unsigned int>(ParallelConstants::MAX_THREADS)) : 4;
-    }
-    
-    void distributeWork(const std::vector<Move>& moves, int numThreads, 
-                       std::vector<std::vector<Move>>& threadWork) {
-        threadWork.resize(numThreads);
-        int movesPerThread = moves.size() / numThreads;
-        int remainder = moves.size() % numThreads;
-        
-        int moveIndex = 0;
-        for (int i = 0; i < numThreads; i++) {
-            int threadMoves = movesPerThread + (i < remainder ? 1 : 0);
-            threadWork[i].reserve(threadMoves);
-            
-            for (int j = 0; j < threadMoves && moveIndex < static_cast<int>(moves.size()); j++) {
-                threadWork[i].push_back(moves[moveIndex++]);
-            }
-        }
-    }
-}

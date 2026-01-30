@@ -9,6 +9,9 @@
 #include <vector>
 #include <future>
 #include <condition_variable>
+#include <chrono>
+#include <utility>
+#include <cstdint>
 
 /**
  * @brief Многопоточный поиск лучших ходов
@@ -25,6 +28,7 @@ private:
     int max_depth_;
     int num_threads_;
     std::chrono::milliseconds time_limit_;
+    std::chrono::steady_clock::time_point start_time_;
     
     // Синхронизация
     std::mutex mutex_;
@@ -35,7 +39,6 @@ private:
     
     // Результаты поиска
     std::pair<int, int> best_move_;
-    std::vector<std::future<void>> futures_;
     
     // Таблица транспозиций
     struct TTEntry {
@@ -44,19 +47,20 @@ private:
         int score;
         std::pair<int, int> best_move;
         char flag; // 'E', 'L', 'U'
+        
+        TTEntry() : hash(0), depth(0), score(0), best_move({-1, -1}), flag(0) {}
     };
     
     static const size_t TT_SIZE = 1000000;
     std::vector<TTEntry> transposition_table_;
     
     // Вспомогательные методы
-    uint64_t hashPosition() const;
+    uint64_t hashPosition(const Bitboard& b) const;
     void storeInTT(uint64_t hash, int depth, int score, std::pair<int, int> move, char flag);
     TTEntry* probeTT(uint64_t hash);
     
     // Алгоритмы поиска
-    int minimax(int depth, int alpha, int beta, Bitboard::Color color, int thread_id = 0);
-    int alphabeta(int depth, int alpha, int beta, Bitboard::Color color, int thread_id);
+    int alphabeta(Bitboard& b, IncrementalEvaluator& eval, int depth, int alpha, int beta, Bitboard::Color color);
     
     // Параллельные методы
     void workerThread(int thread_id, std::vector<std::pair<int, int>> moves, 
@@ -86,6 +90,7 @@ public:
     // Отладочные методы
     void printSearchStats() const;
 };
+
 
 // Константы для параллельного поиска
 namespace ParallelConstants {
