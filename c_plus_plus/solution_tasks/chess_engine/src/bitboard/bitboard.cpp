@@ -625,6 +625,36 @@ void Bitboard::loadFromFEN(const std::string& fen) {
     full_move_number_ = full_move_number;
 }
 
+void Bitboard::undoMove() {
+    if (move_history_.empty()) return;
+    
+    const MoveState& state = move_history_.back();
+    
+    // Восстанавливаем фигуру на исходной позиции
+    PieceType piece = getPieceType(state.to_square);
+    removePiece(state.to_square);
+    setPiece(state.from_square, state.moved_piece, state.moved_color);
+    
+    // Восстанавливаем съеденную фигуру
+    if (state.captured_piece != PIECE_TYPE_COUNT) {
+        Color opponent_color = (state.moved_color == WHITE) ? BLACK : WHITE;
+        setPiece(state.to_square, state.captured_piece, opponent_color);
+    }
+    
+    // Восстанавливаем состояние
+    en_passant_square_ = state.en_passant_square;
+    half_move_clock_ = state.half_move_clock;
+    for (int c = 0; c < COLOR_COUNT; c++) {
+        castling_rights_[c][0] = state.castling_rights[c][0];
+        castling_rights_[c][1] = state.castling_rights[c][1];
+    }
+    
+    // Возвращаем сторону
+    side_to_move_ = state.moved_color;
+    
+    move_history_.pop_back();
+}
+
 bool Bitboard::operator==(const Bitboard& other) const {
     // Сравниваем все bitboards
     for (int color = 0; color < COLOR_COUNT; color++) {
