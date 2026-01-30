@@ -10,11 +10,15 @@ Features:
 - Move validation and game state management
 """
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import random
 import time
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
-from chess_engine_wrapper import chess_engine
+from core.chess_engine_wrapper import ChessEngineWrapper
 
 @dataclass
 class GameState:
@@ -32,7 +36,7 @@ class GameState:
 
 class FullChessGame:
     def __init__(self):
-        self.engine = chess_engine
+        self.engine = ChessEngineWrapper()
         self.state = GameState(
             board=self.engine.get_initial_board(),
             current_turn=True,
@@ -134,6 +138,8 @@ class FullChessGame:
         print("  m - сменить режим игры")
         print("  c - сменить цвет (в режиме vs AI)")
         print("  n - новая игра")
+        print("  save [файл] - сохранить игру")
+        print("  load [файл] - загрузить игру")
         print("  q - выход")
         print("="*50)
     
@@ -361,6 +367,28 @@ class FullChessGame:
             if user_input == 'q':
                 print("👋 До свидания!")
                 break
+            elif user_input.startswith('save'):
+                parts = user_input.split()
+                filename = parts[1] if len(parts) > 1 else "chess_save.json"
+                if self.engine.save_game(filename):
+                    print(f"✅ Игра сохранена в {filename}")
+                else:
+                    print("❌ Ошибка сохранения")
+                input("Нажмите Enter...")
+                continue
+            elif user_input.startswith('load'):
+                parts = user_input.split()
+                filename = parts[1] if len(parts) > 1 else "chess_save.json"
+                if self.engine.load_game(filename):
+                    self.state.board = [row[:] for row in self.engine.board_state]
+                    self.state.current_turn = self.engine.current_turn
+                    self.state.move_history = self.engine.move_history
+                    self.state.captured_pieces = self.engine.captured_pieces
+                    print(f"✅ Игра загружена из {filename}")
+                else:
+                    print("❌ Ошибка загрузки")
+                input("Нажмите Enter...")
+                continue
             elif user_input == 'n':
                 self.reset_game()
                 continue

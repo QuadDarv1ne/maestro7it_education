@@ -22,16 +22,24 @@ class ChessEngineWrapper:
         
         # Интеграция оптимизированных компонентов
         try:
-            from optimized_move_generator import BitboardMoveGenerator
+            from core.optimized_move_generator import BitboardMoveGenerator
             self.move_gen = BitboardMoveGenerator()
         except ImportError:
-            self.move_gen = None
+            try:
+                from .optimized_move_generator import BitboardMoveGenerator
+                self.move_gen = BitboardMoveGenerator()
+            except ImportError:
+                self.move_gen = None
             
         try:
-            from enhanced_chess_ai import EnhancedChessAI
+            from core.enhanced_chess_ai import EnhancedChessAI
             self.ai = EnhancedChessAI(search_depth=4)
         except ImportError:
-            self.ai = None
+            try:
+                from .enhanced_chess_ai import EnhancedChessAI
+                self.ai = EnhancedChessAI(search_depth=4)
+            except ImportError:
+                self.ai = None
         
     def initialize_engine(self) -> bool:
         """Инициализация С++ библиотеки движка"""
@@ -42,7 +50,7 @@ class ChessEngineWrapper:
             else:  # Linux/Mac
                 lib_name = 'libchess_engine.so'
             
-            lib_path = os.path.join(os.path.dirname(__file__), 'build_gui', lib_name)
+            lib_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'build_gui', lib_name)
             if os.path.exists(lib_path):
                 self.lib = ctypes.CDLL(lib_path)
                 print("С++ движок успешно загружен")
@@ -90,6 +98,54 @@ class ChessEngineWrapper:
         fen += "KQkq - 0 1"  # Права рокировки, en passant, счетчики
         return fen
     
+    def get_evaluation(self) -> int:
+        """Получение численной оценки текущей позиции"""
+        if self.ai:
+            return self.ai.evaluate_position(self.board_state)
+        return 0
+
+    def save_game(self, filename: str) -> bool:
+        """Сохранение игры в JSON файл"""
+        try:
+            import json
+            data = {
+                'board_state': self.board_state,
+                'current_turn': self.current_turn,
+                'move_history': self.move_history,
+                'captured_pieces': self.captured_pieces,
+                'game_stats': self.game_stats
+            }
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"Ошибка сохранения: {e}")
+            return False
+
+    def load_game(self, filename: str) -> bool:
+        """Загрузка игры из JSON файла"""
+        try:
+            import json
+            if not os.path.exists(filename):
+                return False
+            with open(filename, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            self.board_state = data['board_state']
+            self.current_turn = data['current_turn']
+            self.move_history = data.get('move_history', [])
+            self.captured_pieces = data.get('captured_pieces', {'white': [], 'black': []})
+            self.game_stats = data.get('game_stats', {'moves_count': 0, 'captures_count': 0, 'check_count': 0})
+            
+            # Сброс временных состояний
+            self.selected_square = None
+            self.valid_moves = []
+            
+            return True
+        except Exception as e:
+            print(f"Ошибка загрузки: {e}")
+            return False
+
     def is_valid_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
         """Проверка допустимости хода через оптимизированный движок, С++ или Python"""
         # Сначала пробуем BitboardMoveGenerator

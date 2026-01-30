@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Master - FastAPI Powered</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #4f46e5;
+            --accent: #f43f5e;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --square-light: #f1f5f9;
+            --square-dark: #cbd5e1;
+            --highlight: rgba(99, 102, 241, 0.5);
+            --valid: rgba(34, 197, 94, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+            color: var(--light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+        }
+
+        header {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #818cf8, #f43f5e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .chess-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .board-container {
+            position: relative;
+            background: var(--glass);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .eval-bar {
+            position: absolute;
+            left: -40px;
+            top: 1rem;
+            bottom: 1rem;
+            width: 30px;
+            background: #334155;
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column-reverse;
+            border: 1px solid var(--glass-border);
+        }
+
+        .eval-fill {
+            width: 100%;
+            height: 50%;
+            background: var(--light);
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .eval-text {
+            position: absolute;
+            left: -40px;
+            top: -25px;
+            width: 30px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 70px);
+            grid-template-rows: repeat(8, 70px);
+            border: 4px solid #334155;
+            border-radius: 4px;
+        }
+
+        .square {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .square.light { background-color: var(--square-light); color: #1e293b; }
+        .square.dark { background-color: var(--square-dark); color: #1e293b; }
+
+        .square.selected { background-color: var(--highlight) !important; }
+        .square.valid-move::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: var(--valid);
+            border-radius: 50%;
+        }
+        .square.valid-capture {
+            box-shadow: inset 0 0 0 6px var(--valid);
+        }
+
+        .square:hover { transform: scale(1.02); z-index: 10; }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--glass);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            background: var(--secondary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #818cf8;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+        }
+
+        .history-list {
+            height: 300px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: 40px 1fr 1fr;
+            gap: 0.5rem;
+            padding-right: 0.5rem;
+        }
+
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
+
+        .move-num { opacity: 0.5; font-size: 0.8rem; }
+        .move-text { background: rgba(255,255,255,0.05); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 500; }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        button {
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: none;
+            background: var(--secondary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover { background: var(--primary); transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        button.accent { background: var(--accent); }
+        button.outline { background: transparent; border: 1px solid var(--glass-border); }
+
+        .config-group {
+            margin-bottom: 1rem;
+        }
+
+        .config-group label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            color: white;
+            outline: none;
+        }
+
+        @media (max-width: 1000px) {
+            .container { grid-template-columns: 1fr; }
+            .info-panel { order: 2; }
+            .chess-section { order: 1; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-chess-knight"></i> Chess Master</h1>
+        <p>Advanced FastAPI Engine v2.0</p>
+    </header>
+
+    <div class="container">
+        <div class="chess-section">
+            <div class="board-container">
+                <div class="eval-text" id="evalText">+0.0</div>
+                <div class="eval-bar">
+                    <div class="eval-fill" id="evalFill"></div>
+                </div>
+                <div class="board" id="board"></div>
+            </div>
+            
+            <div class="card controls" style="width: 100%;">
+                <button onclick="undoMove()" class="outline"><i class="fas fa-undo"></i> Undo</button>
+                <button onclick="newGame()" class="accent"><i class="fas fa-plus"></i> New Game</button>
+                <button onclick="saveGame()" class="outline"><i class="fas fa-save"></i> Save</button>
+                <button onclick="loadGame()" class="outline"><i class="fas fa-upload"></i> Load</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="card">
+                <div class="status-badge" id="gameStatus">Initializing...</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="turnDisplay">White</span>
+                        <span class="stat-label">Current Turn</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="moveCount">0</span>
+                        <span class="stat-label">Total Moves</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 1rem;"><i class="fas fa-cog"></i> Settings</h3>
+                <div class="config-group">
+                    <label>Game Mode</label>
+                    <select id="gameMode" onchange="newGame()">
+                        <option value="ai">Vs Computer (Enhanced AI)</option>
+                        <option value="human">Local Multiplayer</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label>Difficulty</label>
+                    <select id="difficulty">
+                        <option value="2">Novice (Depth 2)</option>
+                        <option value="3">Casual (Depth 3)</option>
+                        <option value="4" selected>Pro (Depth 4)</option>
+                        <option value="5">Master (Depth 5)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 1rem;"><i class="fas fa-history"></i> Move History</h3>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameId = null;
+        let boardState = null;
+        let currentTurn = true; // true = white
+        let selectedSquare = null;
+        let validMoves = [];
+        const pieceIcons = {
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+        };
+
+        async function newGame() {
+            const mode = document.getElementById('gameMode').value;
+            const response = await fetch('/api/new-game', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({player_name: 'Player', game_mode: mode})
+            });
+            const data = await response.json();
+            gameId = data.game_id;
+            updateUI(data);
+            showNotification('New game started!');
+        }
+
+        function updateUI(data) {
+            boardState = data.board_state;
+            currentTurn = data.current_turn;
+            document.getElementById('turnDisplay').textContent = currentTurn ? 'White' : 'Black';
+            document.getElementById('moveCount').textContent = data.move_history.length;
+            document.getElementById('gameStatus').textContent = data.game_status.toUpperCase();
+            
+            renderBoard();
+            updateHistory(data.move_history);
+            updateEvaluation();
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    
+                    if (selectedSquare && selectedSquare[0] === r && selectedSquare[1] === c) {
+                        square.classList.add('selected');
+                    }
+                    
+                    const move = validMoves.find(m => m[0] === r && m[1] === c);
+                    if (move) {
+                        square.classList.add(boardState[r][c] === '.' ? 'valid-move' : 'valid-capture');
+                    }
+
+                    const piece = boardState[r][c];
+                    if (piece !== '.') {
+                        square.textContent = pieceIcons[piece];
+                        square.style.color = piece === piece.toUpperCase() ? '#1e293b' : '#000000';
+                        if (piece === piece.toLowerCase()) {
+                            square.style.textShadow = '0 0 2px white';
+                        }
+                    }
+
+                    square.onclick = () => handleSquareClick(r, c);
+                    boardEl.appendChild(square);
+                }
+            }
+        }
+
+        async function handleSquareClick(r, c) {
+            const piece = boardState[r][c];
+            const isWhitePiece = piece !== '.' && piece === piece.toUpperCase();
+            
+            if (selectedSquare) {
+                const move = validMoves.find(m => m[0] === r && m[1] === c);
+                if (move) {
+                    await makeMove(selectedSquare, [r, c]);
+                    selectedSquare = null;
+                    validMoves = [];
+                    return;
+                }
+            }
+
+            if (piece !== '.' && isWhitePiece === currentTurn) {
+                selectedSquare = [r, c];
+                // In a real app, fetch valid moves from API
+                // For now, simulate or fetch
+                const response = await fetch(`/api/valid-moves/${gameId}?r=${r}&c=${c}`);
+                const data = await response.json();
+                validMoves = data.moves;
+                renderBoard();
+            } else {
+                selectedSquare = null;
+                validMoves = [];
+                renderBoard();
+            }
+        }
+
+        async function makeMove(from, to) {
+            const response = await fetch('/api/make-move', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    game_id: gameId,
+                    from_pos: from,
+                    to_pos: to,
+                    player_color: currentTurn
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                updateUI(data.game_state);
+                if (document.getElementById('gameMode').value === 'ai') {
+                    await makeAIMove();
+                }
+            } else {
+                showNotification('Invalid move!', 'error');
+            }
+        }
+
+        async function makeAIMove() {
+            const depth = document.getElementById('difficulty').value;
+            const response = await fetch(`/api/ai-move/${gameId}?depth=${depth}`);
+            const data = await response.json();
+            if (data.success) {
+                updateUI(data.game_state);
+            }
+        }
+
+        async function undoMove() {
+            const response = await fetch(`/api/undo-move/${gameId}`, {method: 'POST'});
+            const data = await response.json();
+            if (data.success) updateUI(data.game_state);
+        }
+
+        function updateHistory(history) {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            for (let i = 0; i < history.length; i += 2) {
+                const num = Math.floor(i/2) + 1;
+                const m1 = history[i];
+                const m2 = history[i+1];
+                
+                list.innerHTML += `
+                    <div class="move-num">${num}.</div>
+                    <div class="move-text">${formatMove(m1)}</div>
+                    <div class="move-text">${m2 ? formatMove(m2) : ''}</div>
+                `;
+            }
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function formatMove(m) {
+            if (typeof m === 'string') return m;
+            return pieceIcons[m.piece] + String.fromCharCode(97 + m.to[1]) + (8 - m.to[0]);
+        }
+
+        async function updateEvaluation() {
+            const response = await fetch(`/api/evaluation/${gameId}`);
+            const data = await response.json();
+            const score = data.evaluation / 100;
+            const text = score > 0 ? `+${score.toFixed(1)}` : score.toFixed(1);
+            document.getElementById('evalText').textContent = text;
+            
+            // Map score to percentage (0 to 100, 50 is even)
+            // Clamp between -10 and +10
+            const clamped = Math.max(-10, Math.min(10, score));
+            const percent = 50 + (clamped * 5);
+            document.getElementById('evalFill').style.height = `${percent}%`;
+        }
+
+        async function saveGame() {
+            const response = await fetch(`/api/save-game/${gameId}`, {method: 'POST'});
+            const data = await response.json();
+            if (data.success) showNotification('Game saved successfully!', 'success');
+        }
+
+        async function loadGame() {
+            const response = await fetch('/api/load-game', {method: 'POST'});
+            const data = await response.json();
+            if (data.success) {
+                gameId = data.game_id;
+                updateUI(data.game_state);
+                showNotification('Game loaded!', 'success');
+            } else {
+                showNotification('Failed to load game', 'error');
+            }
+        }
+
+        function showNotification(msg, type='info') {
+            const status = document.getElementById('gameStatus');
+            const original = status.textContent;
+            status.textContent = msg;
+            setTimeout(() => status.textContent = original, 3000);
+        }
+
+        // Init
+        newGame();
+    </script>
+</body>
+</html>

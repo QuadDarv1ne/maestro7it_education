@@ -23,15 +23,11 @@ echo.
 echo 🚀 Запуск веб-сервера...
 echo.
 echo Сервер будет доступен по адресу:
-echo http://localhost:5000
-echo.
-echo Интерфейсы:
-echo • http://localhost:5000 - Улучшенный интерфейс
-echo • http://localhost:5000/classic - Классический интерфейс
+echo http://localhost:8000
 echo.
 echo Нажмите Ctrl+C для остановки сервера
 echo.
 
-python web\simple_server.py
+python interfaces/fastapi_chess.py
 
 pause

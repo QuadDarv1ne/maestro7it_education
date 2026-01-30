@@ -23,20 +23,20 @@ echo Dependencies OK!
 
 REM Check if chess engine components exist
 echo Checking chess engine components...
-if not exist "chess_engine_wrapper.py" (
-    echo Error: chess_engine_wrapper.py not found!
+if not exist "core/chess_engine_wrapper.py" (
+    echo Error: core/chess_engine_wrapper.py not found!
     pause
     exit /b 1
 )
 
-if not exist "optimized_move_generator.py" (
-    echo Error: optimized_move_generator.py not found!
+if not exist "core/optimized_move_generator.py" (
+    echo Error: core/optimized_move_generator.py not found!
     pause
     exit /b 1
 )
 
-if not exist "enhanced_chess_ai.py" (
-    echo Error: enhanced_chess_ai.py not found!
+if not exist "core/enhanced_chess_ai.py" (
+    echo Error: core/enhanced_chess_ai.py not found!
     pause
     exit /b 1
 )
@@ -50,6 +50,6 @@ echo Server will be available at: http://localhost:8000
 echo Press Ctrl+C to stop the server
 echo.
 
-python fastapi_chess.py
+python interfaces/fastapi_chess.py
 
 pause

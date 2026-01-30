@@ -38,11 +38,7 @@ def show_menu():
     print("     • Мышиный интерфейс")
     print("     • Требует установку pygame")
     print()
-    print("  3. 🌐 Веб-версия (Flask)")
-    print("     • Современный интерфейс")
-    print("     • Игра в браузере")
-    print("     • Многопользовательская игра")
-    print("     • Real-time обновления")
+    print("  3. ❌ Удалено (Flask)")
     print()
     print("  4. ⚡ Веб-версия (FastAPI)")
     print("     • Высокая производительность")
@@ -82,7 +78,7 @@ def run_terminal_version():
     print("🚀 Запуск консольной версии...")
     print()
     try:
-        from full_chess_game import FullChessGame
+        from interfaces.full_chess_game import FullChessGame
         game = FullChessGame()
         game.run()
     except Exception as e:
@@ -109,7 +105,7 @@ def run_graphical_version():
     
     # Run pygame version
     try:
-        from pygame_chess import PygameChessGUI
+        from interfaces.pygame_chess import PygameChessGUI
         game = PygameChessGUI()
         game.run()
     except ImportError as e:
@@ -121,46 +117,9 @@ def run_graphical_version():
         input("Нажмите Enter для возврата в меню...")
 
 def run_flask_web_version():
-    """Run the Flask web chess server"""
-    print("🌐 Запуск Flask веб-сервера...")
-    print()
-    
-    # Check dependencies
-    try:
-        import flask
-        import flask_socketio
-    except ImportError as e:
-        print("⚠️  Некоторые библиотеки не установлены!")
-        choice = input("Установить Flask и Flask-SocketIO? (y/n): ").strip().lower()
-        if choice == 'y':
-            print("🔧 Устанавливаю зависимости...")
-            try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "flask", "flask-socketio"])
-                print("✅ Библиотеки установлены!")
-            except subprocess.CalledProcessError:
-                print("❌ Не удалось установить библиотеки")
-                input("Нажмите Enter для возврата в меню...")
-                return
-        else:
-            print("Для веб-версии нужны Flask и Flask-SocketIO!")
-            input("Нажмите Enter для возврата в меню...")
-            return
-    
-    # Run Flask web server
-    try:
-        print("🚀 Flask сервер запущен на http://localhost:5000")
-        print("🎯 Откройте этот адрес в браузере")
-        print("⌨️  Нажмите Ctrl+C для остановки сервера")
-        print()
-        
-        # Run from main directory
-        subprocess.run([sys.executable, 'web/simple_server.py'])
-            
-    except KeyboardInterrupt:
-        print("\n\n🛑 Сервер остановлен пользователем")
-    except Exception as e:
-        print(f"❌ Ошибка запуска: {e}")
-        input("Нажмите Enter для возврата в меню...")
+    """Run the Flask web chess server (Obsolete)"""
+    print("🌐 Версия Flask была удалена в пользу FastAPI.")
+    input("Нажмите Enter...")
 
 def run_fastapi_web_version():
     """Run the FastAPI web chess server"""
@@ -195,7 +154,7 @@ def run_fastapi_web_version():
         print("⌨️  Нажмите Ctrl+C для остановки сервера")
         print()
         
-        subprocess.run([sys.executable, 'fastapi_chess.py'])
+        subprocess.run([sys.executable, 'interfaces/fastapi_chess.py'])
             
     except KeyboardInterrupt:
         print("\n\n🛑 Сервер остановлен пользователем")

@@ -3,13 +3,16 @@
 
 import pygame
 import sys
+import os
 import random
 import math
 import queue
 import threading
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
-from chess_engine_wrapper import chess_engine
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.chess_engine_wrapper import ChessEngineWrapper
 
 @dataclass
 class AnimationState:
@@ -50,7 +53,7 @@ class PygameChessGUI:
         self.clock = pygame.time.Clock()
         
         # Используем оптимизированный движок
-        self.engine = chess_engine
+        self.engine = ChessEngineWrapper()
         self.engine.board_state = self.engine.get_initial_board()
         self.engine.current_turn = True
         
@@ -111,7 +114,7 @@ class PygameChessGUI:
             'b': 'black_bishop.png', 'n': 'black_knight.png', 'p': 'black_pawn.png'
         }
         
-        icons_path = os.path.join(os.path.dirname(__file__), 'icons')
+        icons_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'icons')
         
         for piece, filename in piece_files.items():
             try:
@@ -395,9 +398,10 @@ class PygameChessGUI:
         
         return y
     
-    def draw_control_buttons(self) -> Tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
+    def draw_control_buttons(self) -> Dict[str, pygame.Rect]:
         """Отрисовка кнопок управления"""
-        button_y = self.HEIGHT - 190
+        buttons = {}
+        button_y = self.HEIGHT - 260  # Сдвигаем выше, чтобы влезли новые кнопки
         
         # Новая игра
         new_game_btn = pygame.Rect(650, button_y, 140, 35)
@@ -405,9 +409,10 @@ class PygameChessGUI:
         pygame.draw.rect(self.screen, self.BLACK, new_game_btn, 2)
         text = self.small_font.render("Новая игра", True, self.WHITE)
         self.screen.blit(text, text.get_rect(center=new_game_btn.center))
+        buttons['new_game'] = new_game_btn
         
         # Смена режима
-        button_y += 45
+        button_y += 40
         mode_btn = pygame.Rect(650, button_y, 140, 35)
         mode_color = (220, 20, 60) if self.game_mode == 'computer' else (50, 205, 50)
         pygame.draw.rect(self.screen, mode_color, mode_btn)
@@ -415,34 +420,47 @@ class PygameChessGUI:
         mode_text = "2 игрока" if self.game_mode == 'computer' else "vs AI"
         text = self.small_font.render(mode_text, True, self.WHITE)
         self.screen.blit(text, text.get_rect(center=mode_btn.center))
+        buttons['mode'] = mode_btn
         
-        # Выбор цвета (только для режима vs AI)
-        button_y += 45
-        if self.game_mode == 'computer':
-            color_btn = pygame.Rect(650, button_y, 140, 35)
-            color_color = (100, 100, 200)
-            pygame.draw.rect(self.screen, color_color, color_btn)
-            pygame.draw.rect(self.screen, self.BLACK, color_btn, 2)
-            color_text = "Вы: " + ("Белые" if self.player_color == 'white' else "Черные")
-            text = self.small_font.render(color_text, True, self.WHITE)
-            self.screen.blit(text, text.get_rect(center=color_btn.center))
-        else:
-            # Пустая кнопка для режима 2 игрока
-            color_btn = pygame.Rect(650, button_y, 140, 35)
-            pygame.draw.rect(self.screen, (200, 200, 200), color_btn)
-            pygame.draw.rect(self.screen, self.BLACK, color_btn, 2)
-            text = self.small_font.render("---", True, self.GRAY)
-            self.screen.blit(text, text.get_rect(center=color_btn.center))
+        # Выбор цвета
+        button_y += 40
+        color_btn = pygame.Rect(650, button_y, 140, 35)
+        color_color = (100, 100, 200) if self.game_mode == 'computer' else (200, 200, 200)
+        pygame.draw.rect(self.screen, color_color, color_btn)
+        pygame.draw.rect(self.screen, self.BLACK, color_btn, 2)
+        color_text = "Вы: " + ("Бел" if self.player_color == 'white' else "Чер") if self.game_mode == 'computer' else "---"
+        text = self.small_font.render(color_text, True, self.WHITE if self.game_mode == 'computer' else self.GRAY)
+        self.screen.blit(text, text.get_rect(center=color_btn.center))
+        buttons['color'] = color_btn
+
+        # Сохранить
+        button_y += 40
+        save_btn = pygame.Rect(650, button_y, 140, 35)
+        pygame.draw.rect(self.screen, (60, 179, 113), save_btn)
+        pygame.draw.rect(self.screen, self.BLACK, save_btn, 2)
+        text = self.small_font.render("Сохранить", True, self.WHITE)
+        self.screen.blit(text, text.get_rect(center=save_btn.center))
+        buttons['save'] = save_btn
+
+        # Загрузить
+        button_y += 40
+        load_btn = pygame.Rect(650, button_y, 140, 35)
+        pygame.draw.rect(self.screen, (218, 165, 32), load_btn)
+        pygame.draw.rect(self.screen, self.BLACK, load_btn, 2)
+        text = self.small_font.render("Загрузить", True, self.WHITE)
+        self.screen.blit(text, text.get_rect(center=load_btn.center))
+        buttons['load'] = load_btn
         
         # Выход
-        button_y += 45
+        button_y += 40
         exit_btn = pygame.Rect(650, button_y, 140, 35)
         pygame.draw.rect(self.screen, (169, 169, 169), exit_btn)
         pygame.draw.rect(self.screen, self.BLACK, exit_btn, 2)
         text = self.small_font.render("Выход", True, self.BLACK)
         self.screen.blit(text, text.get_rect(center=exit_btn.center))
+        buttons['exit'] = exit_btn
         
-        return new_game_btn, mode_btn, color_btn, exit_btn
+        return buttons
     
     def get_square_from_mouse(self, pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """Преобразование координат мыши в координаты доски"""
@@ -578,18 +596,42 @@ class PygameChessGUI:
     
     def handle_button_click(self, pos: Tuple[int, int]) -> bool:
         """Обработка кликов по кнопкам"""
-        new_game_btn, mode_btn, color_btn, exit_btn = self.draw_control_buttons()
+        buttons = self.draw_control_buttons()
         
-        if new_game_btn.collidepoint(pos):
+        if buttons['new_game'].collidepoint(pos):
             self.new_game()
-        elif mode_btn.collidepoint(pos):
+        elif buttons['mode'].collidepoint(pos):
             self.toggle_game_mode()
-        elif color_btn.collidepoint(pos):
+        elif buttons['color'].collidepoint(pos):
             self.toggle_player_color()
-        elif exit_btn.collidepoint(pos):
+        elif buttons['save'].collidepoint(pos):
+            self.save_game()
+        elif buttons['load'].collidepoint(pos):
+            self.load_game()
+        elif buttons['exit'].collidepoint(pos):
             return False
         
         return True
+
+    def save_game(self, filename: str = "pygame_save.json"):
+        """Сохранение игры"""
+        if self.engine.save_game(filename):
+            print(f"Игра сохранена в {filename}")
+        else:
+            print("Ошибка сохранения")
+
+    def load_game(self, filename: str = "pygame_save.json"):
+        """Загрузка игры"""
+        if self.engine.load_game(filename):
+            self.white_turn = self.engine.current_turn
+            self.move_history = self.engine.move_history
+            self.captured_pieces = self.engine.captured_pieces
+            self.last_move_highlight = None
+            self.selected_square = None
+            self.valid_moves = []
+            print(f"Игра загружена из {filename}")
+        else:
+            print("Ошибка загрузки")
     
     def toggle_game_mode(self):
         """Переключение режима игры"""

@@ -7,5 +7,5 @@ echo ================================
 echo.
 echo Запуск консольной шахматной игры...
 echo.
-python full_chess_game.py
+python interfaces/full_chess_game.py
 pause
