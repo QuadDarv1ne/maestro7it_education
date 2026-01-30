@@ -14,7 +14,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Requ
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from fastapi.middleware.gzip import GZipMiddleware
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Optional, Tuple
 import asyncio
 import json
@@ -93,6 +94,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Добавление GZip сжатия для улучшения производительности
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Подключение статических файлов
 app.mount("/static", StaticFiles(directory="web"), name="static")
@@ -740,7 +744,8 @@ class MoveRequest(BaseModel):
     to_pos: Tuple[int, int] = Field(..., description="Конечная позиция (row, col)")
     player_color: bool = Field(..., description="Цвет игрока (True=белые, False=черные)")
     
-    @validator('from_pos', 'to_pos')
+    @field_validator('from_pos', 'to_pos')
+    @classmethod
     def validate_position(cls, v):
         """Валидация позиции на доске"""
         if not (0 <= v[0] < 8 and 0 <= v[1] < 8):
@@ -753,7 +758,8 @@ class GameRequest(BaseModel):
     player_color: bool = Field(default=True, description="Цвет игрока")
     time_control: int = Field(default=0, ge=0, le=60, description="Контроль времени в минутах (0=без ограничения)")
     
-    @validator('player_name')
+    @field_validator('player_name')
+    @classmethod
     def validate_player_name(cls, v):
         """Валидация имени игрока"""
         if not v or v.strip() == "":
