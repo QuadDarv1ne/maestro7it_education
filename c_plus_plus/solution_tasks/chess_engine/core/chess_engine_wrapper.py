@@ -611,8 +611,8 @@ class ChessEngineWrapper:
             possible_moves = []
             capture_moves = []
             
-            # AI играет за черных (если current_turn=False)
-            ai_is_white = not self.current_turn
+            # AI играет той же стороной, что и текущий ход
+            ai_is_white = self.current_turn
             
             for row in range(8):
                 for col in range(8):
@@ -641,11 +641,13 @@ class ChessEngineWrapper:
                             self.current_turn = ai_is_white
                             
                             if self.is_valid_move_python((row, col), (to_row, to_col)):
-                                move = ((row, col), (to_row, to_col))
-                                if target != '.':
-                                    capture_moves.append(move)  # Приоритет взятиям
-                                else:
-                                    possible_moves.append(move)
+                                # Проверяем, не подставит ли этот ход короля под шах
+                                if not self.would_still_be_in_check((row, col), (to_row, to_col), ai_is_white):
+                                    move = ((row, col), (to_row, to_col))
+                                    if target != '.':
+                                        capture_moves.append(move)  # Приоритет взятиям
+                                    else:
+                                        possible_moves.append(move)
                             
                             self.current_turn = original_turn
             

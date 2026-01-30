@@ -75,6 +75,10 @@ class PygameChessGUI:
         self.player_color = 'white'  # 'white' or 'black'
         self.ai_color = 'black'      # 'white' or 'black'
         
+        # Превращение пешки
+        self.pawn_promotion_pending = False
+        self.promotion_move: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
+        
         # Анимация
         self.animation = AnimationState()
         self.last_move_highlight: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
@@ -183,6 +187,13 @@ class PygameChessGUI:
         for row in range(self.BOARD_SIZE):
             for col in range(self.BOARD_SIZE):
                 color = self.LIGHT_SQUARE if (row + col) % 2 == 0 else self.DARK_SQUARE
+                
+                # Подсветка короля под шахом
+                piece = self.engine.board_state[row][col]
+                if piece.lower() == 'k':
+                    king_is_white = piece.isupper()
+                    if self.is_king_in_check(king_is_white):
+                        color = (255, 100, 100)  # Красная подсветка
                 
                 # Подсветка последнего хода
                 if self.last_move_highlight:
@@ -300,6 +311,73 @@ class PygameChessGUI:
             text = self.small_font.render(str(8-i), True, self.BLACK)
             y = i * self.SQUARE_SIZE + self.SQUARE_SIZE // 2
             self.screen.blit(text, (5, y - text.get_height()//2))
+    
+    def draw_promotion_dialog(self) -> Dict[str, pygame.Rect]:
+        """Отрисовка диалога выбора фигуры при превращении пешки"""
+        if not self.pawn_promotion_pending:
+            return {}
+        
+        # Полупрозрачный фон
+        overlay = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        self.screen.blit(overlay, (0, 0))
+        
+        # Диалоговое окно
+        dialog_width = 400
+        dialog_height = 250
+        dialog_x = (self.WIDTH - dialog_width) // 2
+        dialog_y = (self.HEIGHT - dialog_height) // 2
+        
+        dialog_rect = pygame.Rect(dialog_x, dialog_y, dialog_width, dialog_height)
+        pygame.draw.rect(self.screen, self.WHITE, dialog_rect)
+        pygame.draw.rect(self.screen, self.BLACK, dialog_rect, 3)
+        
+        # Заголовок
+        title = self.big_font.render("Выберите фигуру", True, self.BLACK)
+        title_rect = title.get_rect(center=(dialog_x + dialog_width // 2, dialog_y + 40))
+        self.screen.blit(title, title_rect)
+        
+        # Фигуры для выбора
+        pieces = ['Q', 'R', 'B', 'N']
+        piece_names = {'Ферзь', 'Ладья', 'Слон', 'Конь'}
+        piece_rects = {}
+        
+        box_size = 80
+        spacing = 20
+        total_width = len(pieces) * box_size + (len(pieces) - 1) * spacing
+        start_x = dialog_x + (dialog_width - total_width) // 2
+        start_y = dialog_y + 100
+        
+        for i, (piece, name) in enumerate(zip(pieces, ['Ферзь', 'Ладья', 'Слон', 'Конь'])):
+            x = start_x + i * (box_size + spacing)
+            rect = pygame.Rect(x, start_y, box_size, box_size)
+            
+            # Коробка
+            pygame.draw.rect(self.screen, self.LIGHT_SQUARE, rect)
+            pygame.draw.rect(self.screen, self.BLACK, rect, 2)
+            
+            # Фигура
+            display_piece = piece if self.white_turn else piece.lower()
+            if display_piece in self.piece_images and self.piece_images[display_piece]:
+                img = pygame.transform.scale(self.piece_images[display_piece], (60, 60))
+                img_rect = img.get_rect(center=rect.center)
+                self.screen.blit(img, img_rect)
+            else:
+                symbols = {'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘',
+                          'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞'}
+                symbol = symbols.get(display_piece, piece)
+                text = self.big_font.render(symbol, True, self.BLACK)
+                text_rect = text.get_rect(center=rect.center)
+                self.screen.blit(text, text_rect)
+            
+            # Название
+            name_text = self.small_font.render(name, True, self.BLACK)
+            name_rect = name_text.get_rect(center=(rect.centerx, rect.bottom + 15))
+            self.screen.blit(name_text, name_rect)
+            
+            piece_rects[piece] = rect
+        
+        return piece_rects
     
     def draw_side_panel(self):
         """Отрисовка боковой панели"""
@@ -544,7 +622,7 @@ class PygameChessGUI:
         
         return False
     
-    def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
+    def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], promotion_piece: str = 'Q') -> bool:
         """Выполнение хода"""
         from_row, from_col = from_pos
         to_row, to_col = to_pos
@@ -557,6 +635,17 @@ class PygameChessGUI:
             print(f"Неправильная очередь хода! Попытка хода {piece} когда очередь {'белых' if self.white_turn else 'черных'}")
             return False
         
+        # Проверка превращения пешки
+        is_pawn_promotion = (piece.lower() == 'p' and 
+                            ((is_white_piece and to_row == 0) or 
+                             (not is_white_piece and to_row == 7)))
+        
+        # Если превращение пешки и не указана фигура, показываем диалог
+        if is_pawn_promotion and not self.pawn_promotion_pending:
+            self.pawn_promotion_pending = True
+            self.promotion_move = (from_pos, to_pos)
+            return False  # Ожидаем выбора фигуры
+        
         # Сохранение захваченной фигуры
         captured = self.engine.board_state[to_row][to_col]
         
@@ -568,6 +657,13 @@ class PygameChessGUI:
             self.animation.active = False
             return False
         
+        # Превращение пешки
+        if is_pawn_promotion:
+            promo_piece = promotion_piece.upper() if is_white_piece else promotion_piece.lower()
+            self.engine.board_state[to_row][to_col] = promo_piece
+            self.pawn_promotion_pending = False
+            self.promotion_move = None
+        
         # Обновление истории
         piece = self.engine.board_state[to_row][to_col]
         from_square = chr(ord('a') + from_col) + str(8 - from_row)
@@ -577,6 +673,8 @@ class PygameChessGUI:
         capture_symbol = 'x' if captured != '.' else '-'
         
         move_notation = f"{piece_symbol}{from_square}{capture_symbol}{to_square}"
+        if is_pawn_promotion:
+            move_notation += f"={promotion_piece.upper()}"
         self.move_history.append(move_notation)
         
         # Обновление захваченных фигур
@@ -735,6 +833,18 @@ class PygameChessGUI:
                 return False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 pos = pygame.mouse.get_pos()
+                
+                # Обработка диалога превращения пешки
+                if self.pawn_promotion_pending:
+                    piece_rects = self.draw_promotion_dialog()
+                    for piece, rect in piece_rects.items():
+                        if rect.collidepoint(pos):
+                            # Выполняем ход с выбранной фигурой
+                            if self.promotion_move:
+                                from_pos, to_pos = self.promotion_move
+                                self.make_move(from_pos, to_pos, piece)
+                            return True
+                
                 if pos[0] >= 640:
                     return self.handle_button_click(pos)
                 elif self.game_active:
@@ -759,6 +869,10 @@ class PygameChessGUI:
         self.draw_board()
         self.draw_coordinates()
         self.draw_side_panel()
+        
+        # Диалог превращения пешки
+        if self.pawn_promotion_pending:
+            self.draw_promotion_dialog()
         
         # Сообщение о завершении игры
         if not self.game_active:
