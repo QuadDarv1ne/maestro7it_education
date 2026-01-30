@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-FastAPI Chess Web Application
-Modern, high-performance chess web interface with real-time capabilities
+FastAPI Шахматное веб-приложение
+Современный, высокопроизводительный шахматный веб-интерфейс с real-time возможностями
 """
 
 import sys
@@ -22,11 +22,11 @@ import uuid
 from datetime import datetime
 import logging
 
-# Configure logging
+# Настройка логгирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import chess components
+# Импорт шахматных компонентов
 from core.chess_engine_wrapper import ChessEngineWrapper
 from core.optimized_move_generator import BitboardMoveGenerator
 from core.enhanced_chess_ai import EnhancedChessAI
@@ -37,7 +37,7 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Add CORS middleware
+# Добавление CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,10 +46,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
+# Подключение статических файлов
 app.mount("/static", StaticFiles(directory="web"), name="static")
 
-# Game management
+# Управление играми
 class GameManager:
     def __init__(self):
         self.games: Dict[str, dict] = {}
@@ -87,7 +87,7 @@ class GameManager:
 
 game_manager = GameManager()
 
-# Pydantic models
+# Pydantic модели
 class MoveRequest(BaseModel):
     game_id: str
     from_pos: Tuple[int, int]
@@ -108,10 +108,10 @@ class GameResponse(BaseModel):
     player_name: str
     game_mode: str
 
-# HTML templates
+# HTML шаблоны
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    """Serve the main chess application page"""
+    """Отображение главной страницы шахматного приложения"""
     try:
         with open("web/fastapi_index.html", "r", encoding="utf-8") as f:
             return f.read()
@@ -120,7 +120,7 @@ async def read_root():
 
 @app.post("/api/new-game")
 async def create_new_game(request: GameRequest):
-    """Create a new chess game"""
+    """Создание новой шахматной игры"""
     try:
         game_id = game_manager.create_game(request.player_name, request.game_mode)
         game = game_manager.get_game(game_id)
@@ -140,7 +140,7 @@ async def create_new_game(request: GameRequest):
 
 @app.post("/api/make-move")
 async def make_move(request: MoveRequest):
-    """Make a move in the chess game"""
+    """Выполнение хода в шахматной игре"""
     try:
         game = game_manager.get_game(request.game_id)
         if not game:
@@ -150,11 +150,11 @@ async def make_move(request: MoveRequest):
         from_pos = tuple(request.from_pos)
         to_pos = tuple(request.to_pos)
         
-        # Execute move using engine
+        # Выполнение хода через движок
         success = engine.make_move(from_pos, to_pos)
         
         if success:
-            # Record move for web UI
+            # Запись хода для веб UI
             move_record = {
                 'from': from_pos,
                 'to': to_pos,
@@ -164,7 +164,7 @@ async def make_move(request: MoveRequest):
             }
             game['move_history'].append(move_record)
             
-            # Update game status safely without calling is_checkmate
+            # Обновление статуса игры безопасно без вызова is_checkmate
             game['game_status'] = 'active'
             
             return {
@@ -191,7 +191,7 @@ async def make_move(request: MoveRequest):
 
 @app.get("/api/valid-moves/{game_id}")
 async def get_valid_moves(game_id: str, r: int, c: int):
-    """Get valid moves for a piece at (r, c)"""
+    """Получение допустимых ходов для фигуры на (r, c)"""
     game = game_manager.get_game(game_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
