@@ -31,6 +31,23 @@ class EnhancedChessAI:
         
         self.initialize_evaluation_weights()
     
+    def initialize_zobrist_keys(self) -> dict:
+        """Инициализация Zobrist ключей для быстрого хэширования позиций"""
+        import random
+        random.seed(42)  # Фиксированный seed для воспроизводимости
+        
+        keys = {
+            'pieces': {},  # [piece][square]
+            'turn': random.getrandbits(64),  # Ключ для очереди хода
+        }
+        
+        # Генерируем ключи для каждой фигуры на каждой клетке
+        pieces = ['P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k']
+        for piece in pieces:
+            keys['pieces'][piece] = [random.getrandbits(64) for _ in range(64)]
+        
+        return keys
+    
     def initialize_evaluation_weights(self):
         """Инициализация весов оценки для различных факторов"""
         self.weights = {
@@ -357,15 +374,32 @@ class EnhancedChessAI:
                 return 0, None  # Пат
         
         # Упорядочивание ходов
-        ordered_moves = self.order_moves(board, moves, maximizing_player)
+        ordered_moves = self.order_moves(board, moves, maximizing_player, depth)
         
         best_move = None
+        moves_searched = 0
         
         if maximizing_player:
             max_eval = float('-inf')
             for move in ordered_moves:
                 new_board = self.make_move(board, move)
-                eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
+                
+                # Late Move Reduction (LMR) - уменьшаем глубину для поздних ходов
+                reduction = 0
+                if moves_searched >= 3 and depth >= 3:
+                    # Не для взятий и не для ходов с шахом
+                    target = board[move[1][0]][move[1][1]]
+                    if target == '.':
+                        reduction = 1
+                
+                # Поиск с уменьшенной глубиной
+                if reduction > 0:
+                    eval_score, _ = self.minimax(new_board, depth - 1 - reduction, alpha, beta, False)
+                    # Если результат выглядит хорошо, перепроверяем с полной глубиной
+                    if eval_score > alpha:
+                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
+                else:
+                    eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
                 
                 if eval_score > max_eval:
                     max_eval = eval_score
@@ -375,7 +409,13 @@ class EnhancedChessAI:
                 if beta <= alpha:
                     # Эвристика истории: записываем успешное отсечение
                     self.update_history(move, depth)
+                    # Обновляем killer moves для тихих ходов
+                    target = board[move[1][0]][move[1][1]]
+                    if target == '.':
+                        self.update_killer_moves(move, depth)
                     break  # Бета-отсечение
+                
+                moves_searched += 1
             
             # Сохраняем в транспозиционной таблице
             self.transposition_table[board_hash] = {
@@ -386,9 +426,23 @@ class EnhancedChessAI:
             return max_eval, best_move
         else:
             min_eval = float('inf')
+            moves_searched = 0
             for move in ordered_moves:
                 new_board = self.make_move(board, move)
-                eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
+                
+                # Late Move Reduction (LMR)
+                reduction = 0
+                if moves_searched >= 3 and depth >= 3:
+                    target = board[move[1][0]][move[1][1]]
+                    if target == '.':
+                        reduction = 1
+                
+                if reduction > 0:
+                    eval_score, _ = self.minimax(new_board, depth - 1 - reduction, alpha, beta, True)
+                    if eval_score < beta:
+                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
+                else:
+                    eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
                 
                 if eval_score < min_eval:
                     min_eval = eval_score
@@ -397,7 +451,12 @@ class EnhancedChessAI:
                 beta = min(beta, eval_score)
                 if beta <= alpha:
                     self.update_history(move, depth)
+                    target = board[move[1][0]][move[1][1]]
+                    if target == '.':
+                        self.update_killer_moves(move, depth)
                     break  # Альфа-отсечение
+                
+                moves_searched += 1
             
             # Сохраняем в транспозиционной таблице
             self.transposition_table[board_hash] = {
@@ -420,7 +479,7 @@ class EnhancedChessAI:
             # Рассматриваем только взятия
             moves = self.move_gen.generate_legal_moves(board, maximizing_player)
             captures = [m for m in moves if board[m[1][0]][m[1][1]] != '.']
-            ordered_captures = self.order_moves(board, captures, maximizing_player)
+            ordered_captures = self.order_moves(board, captures, maximizing_player, 0)
             
             for move in ordered_captures:
                 new_board = self.make_move(board, move)
@@ -436,7 +495,7 @@ class EnhancedChessAI:
             
             moves = self.move_gen.generate_legal_moves(board, maximizing_player)
             captures = [m for m in moves if board[m[1][0]][m[1][1]] != '.']
-            ordered_captures = self.order_moves(board, captures, maximizing_player)
+            ordered_captures = self.order_moves(board, captures, maximizing_player, 0)
             
             for move in ordered_captures:
                 new_board = self.make_move(board, move)
@@ -446,7 +505,7 @@ class EnhancedChessAI:
                 beta = min(beta, score)
             return beta
 
-    def order_moves(self, board: List[List[str]], moves: List, is_white: bool) -> List:
+    def order_moves(self, board: List[List[str]], moves: List, is_white: bool, depth: int = 0) -> List:
         """Сортировка ходов для улучшения производительности альфа-бета отсечения"""
         move_scores = []
         for move in moves:
@@ -455,16 +514,27 @@ class EnhancedChessAI:
             piece = board[from_pos[0]][from_pos[1]]
             target = board[to_pos[0]][to_pos[1]]
             
-            # 1. MVV-LVA (Самая ценная жертва - Наименее ценный агрессор)
-            if target != '.':
-                score += 10 * abs(self.piece_values[target]) - abs(self.piece_values[piece]) // 10
+            # 1. Killer moves - очень высокий приоритет
+            if depth < len(self.killer_moves):
+                if move == self.killer_moves[depth][0]:
+                    score += 9000
+                elif move == self.killer_moves[depth][1]:
+                    score += 8900
             
-            # 2. Эвристика истории
+            # 2. MVV-LVA (Самая ценная жертва - Наименее ценный агрессор)
+            if target != '.':
+                score += 10000 + 10 * abs(self.piece_values[target]) - abs(self.piece_values[piece]) // 10
+            
+            # 3. Эвристика истории
             score += self.history_table.get(move, 0)
             
-            # 3. Превращения пешек хороши
+            # 4. Превращения пешек хороши
             if piece.lower() == 'p' and (to_pos[0] == 0 or to_pos[0] == 7):
-                score += 800
+                score += 8000
+            
+            # 5. Ходы к центру лучше
+            to_center_dist = abs(to_pos[0] - 3.5) + abs(to_pos[1] - 3.5)
+            score -= int(to_center_dist * 10)
             
             move_scores.append((score, move))
         
@@ -475,12 +545,34 @@ class EnhancedChessAI:
     def update_history(self, move: Tuple, depth: int):
         """Обновление таблицы истории для упорядочивания ходов"""
         self.history_table[move] = self.history_table.get(move, 0) + depth * depth
+    
+    def update_killer_moves(self, move: Tuple, depth: int):
+        """Обновление killer moves для данной глубины"""
+        if depth < len(self.killer_moves):
+            # Если этот ход уже не первый killer move
+            if self.killer_moves[depth][0] != move:
+                # Сдвигаем второй killer move
+                self.killer_moves[depth][1] = self.killer_moves[depth][0]
+                # Добавляем новый как первый
+                self.killer_moves[depth][0] = move
 
     def get_board_hash(self, board: List[List[str]], turn: bool) -> int:
-        """Создание хэша состояния доски для транспозиционной таблицы"""
-        # Простой строковый хэш (можно использовать хэш Зобриста для лучшей производительности)
-        board_str = "".join("".join(row) for row in board)
-        return hash(board_str + str(turn))
+        """Создание хэша состояния доски для транспозиционной таблицы (Zobrist hashing)"""
+        hash_value = 0
+        
+        # XOR всех фигур на доске
+        for row in range(8):
+            for col in range(8):
+                piece = board[row][col]
+                if piece != '.':
+                    square = row * 8 + col
+                    hash_value ^= self.zobrist_keys['pieces'][piece][square]
+        
+        # XOR ключа очереди хода
+        if turn:
+            hash_value ^= self.zobrist_keys['turn']
+        
+        return hash_value
 
     def make_move(self, board: List[List[str]], move: Tuple[Tuple[int, int], Tuple[int, int]]) -> List[List[str]]:
         """Выполнение хода на доске (возвращает новую доску)"""
@@ -523,6 +615,9 @@ class EnhancedChessAI:
         self.tt_hits = 0
         self.start_time = time.time()
         self.time_limit = time_limit
+        
+        # Очищаем killer moves в начале поиска
+        self.killer_moves = [[None, None] for _ in range(64)]
         
         best_overall_move = None
         
