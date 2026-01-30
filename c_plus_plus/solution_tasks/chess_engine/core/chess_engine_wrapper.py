@@ -252,7 +252,7 @@ class ChessEngineWrapper:
         )
         return bool(result)
     
-    def is_valid_move_python(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
+    def is_valid_move_python(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], debug: bool = False) -> bool:
         """Python реализация проверки хода с отладкой"""
         from_row, from_col = from_pos
         to_row, to_col = to_pos
@@ -260,75 +260,89 @@ class ChessEngineWrapper:
         piece = self.board_state[from_row][from_col]
         target_piece = self.board_state[to_row][to_col]
         
-        print(f"Проверка хода: {piece} с ({from_row},{from_col}) на ({to_row},{to_col})")
-        print(f"Целевая клетка: '{target_piece}'")
+        if debug:
+            print(f"Проверка хода: {piece} с ({from_row},{from_col}) на ({to_row},{to_col})")
+            print(f"Целевая клетка: '{target_piece}'")
         
         # Проверка цвета фигуры
         is_white_piece = piece.isupper()
-        print(f"Белая фигура: {is_white_piece}, Очередь белых: {self.current_turn}")
+        if debug:
+            print(f"Белая фигура: {is_white_piece}, Очередь белых: {self.current_turn}")
         
         if (is_white_piece and not self.current_turn) or (not is_white_piece and self.current_turn):
-            print("Неправильная очередь хода!")
+            if debug:
+                print("Неправильная очередь хода!")
             return False
             
         # Проверка выхода за границы
         if not (0 <= to_row < 8 and 0 <= to_col < 8):
-            print("Выход за границы доски!")
+            if debug:
+                print("Выход за границы доски!")
             return False
             
         # Проверка на то же поле
         if from_pos == to_pos:
-            print("Нельзя ходить на ту же клетку!")
+            if debug:
+                print("Нельзя ходить на ту же клетку!")
             return False
             
         # Проверка, что нельзя съесть свою фигуру
         if target_piece != '.' and ((target_piece.isupper() and is_white_piece) or 
                                    (target_piece.islower() and not is_white_piece)):
-            print("Нельзя съесть свою фигуру!")
+            if debug:
+                print("Нельзя съесть свою фигуру!")
             return False
             
         # Проверка, что нельзя съесть короля
         if target_piece.lower() == 'k':
-            print("Нельзя съесть короля!")
+            if debug:
+                print("Нельзя съесть короля!")
             return False
             
         piece_type = piece.lower()
-        print(f"Тип фигуры: {piece_type}")
+        if debug:
+            print(f"Тип фигуры: {piece_type}")
         
         # Логика для пешки
         if piece_type == 'p':
             direction = -1 if is_white_piece else 1
             start_row = 6 if is_white_piece else 1
-            print(f"Пешка: направление={direction}, начальная строка={start_row}")
+            if debug:
+                print(f"Пешка: направление={direction}, начальная строка={start_row}")
             
             # Ход вперед на одну клетку
             if from_col == to_col and to_row == from_row + direction and target_piece == '.':
-                print("Допустимый ход пешки вперед")
+                if debug:
+                    print("Допустимый ход пешки вперед")
                 return True
                 
             # Двойной ход с начальной позиции
             if (from_row == start_row and from_col == to_col and 
                 to_row == from_row + 2 * direction and 
                 target_piece == '.' and self.board_state[from_row + direction][from_col] == '.'):
-                print("Допустимый двойной ход пешки")
+                if debug:
+                    print("Допустимый двойной ход пешки")
                 return True
                 
             # Взятие по диагонали
             if (abs(from_col - to_col) == 1 and to_row == from_row + direction and 
                 target_piece != '.' and target_piece.isupper() != is_white_piece):
-                print("Допустимое взятие пешкой")
+                if debug:
+                    print("Допустимое взятие пешкой")
                 return True
                 
         # Логика для ладьи
         elif piece_type == 'r':
             result = self.is_straight_move(from_pos, to_pos)
-            print(f"Ладья: прямой ход = {result}")
+            if debug:
+                print(f"Ладья: прямой ход = {result}")
             return result
             
         # Логика для слона
         elif piece_type == 'b':
             result = self.is_diagonal_move(from_pos, to_pos)
-            print(f"Слон: диагональный ход = {result}")
+            if debug:
+                print(f"Слон: диагональный ход = {result}")
             return result
             
         # Логика для ферзя
@@ -336,14 +350,16 @@ class ChessEngineWrapper:
             straight = self.is_straight_move(from_pos, to_pos)
             diagonal = self.is_diagonal_move(from_pos, to_pos)
             result = straight or diagonal
-            print(f"Ферзь: прямой={straight}, диагональный={diagonal}, результат={result}")
+            if debug:
+                print(f"Ферзь: прямой={straight}, диагональный={diagonal}, результат={result}")
             return result
             
         # Логика для короля
         elif piece_type == 'k':
             row_diff = abs(to_row - from_row)
             col_diff = abs(to_col - from_col)
-            print(f"Король: разница строк={row_diff}, столбцов={col_diff}")
+            if debug:
+                print(f"Король: разница строк={row_diff}, столбцов={col_diff}")
             
             # Проверка рокировки
             if row_diff == 0 and col_diff == 2:
@@ -353,7 +369,8 @@ class ChessEngineWrapper:
             if row_diff <= 1 and col_diff <= 1:
                 # Проверяем, не попадает ли под атаку
                 attacked = self.would_king_be_attacked(from_pos, to_pos, is_white_piece)
-                print(f"Король под атакой после хода: {attacked}")
+                if debug:
+                    print(f"Король под атакой после хода: {attacked}")
                 return not attacked
             
         # Логика для коня
@@ -361,10 +378,12 @@ class ChessEngineWrapper:
             row_diff = abs(to_row - from_row)
             col_diff = abs(to_col - from_col)
             result = (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)
-            print(f"Конь: разница строк={row_diff}, столбцов={col_diff}, результат={result}")
+            if debug:
+                print(f"Конь: разница строк={row_diff}, столбцов={col_diff}, результат={result}")
             return result
             
-        print("Ход не соответствует правилам!")
+        if debug:
+            print("Ход не соответствует правилам!")
         return False
     
     def is_straight_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
