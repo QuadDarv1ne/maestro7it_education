@@ -29,11 +29,11 @@ class PygameChessGUI:
         pygame.init()
         
         # Настройки экрана
-        self.WIDTH = 1000
-        self.HEIGHT = 800
+        self.WIDTH = 800
+        self.HEIGHT = 640
         self.BOARD_SIZE = 8
-        self.SIDE_PANEL_WIDTH = 200
-        self.SQUARE_SIZE = (self.HEIGHT - 40) // self.BOARD_SIZE  # Адаптивный размер клетки
+        self.SIDE_PANEL_WIDTH = 160
+        self.SQUARE_SIZE = 640 // self.BOARD_SIZE
         
         # Цвета
         self.WHITE = (255, 255, 255)
@@ -48,11 +48,8 @@ class PygameChessGUI:
         self.PANEL_BG = (245, 245, 245)
         
         # Создание окна
-        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT), pygame.RESIZABLE)
+        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Шахматы - Многопоточная версия")
-        
-        # Адаптивные параметры
-        self.update_adaptive_sizes()
         self.clock = pygame.time.Clock()
         
         # Используем оптимизированный движок
@@ -196,16 +193,7 @@ class PygameChessGUI:
     
     def update_adaptive_sizes(self):
         """Обновление адаптивных размеров при изменении окна"""
-        window_width, window_height = self.screen.get_size()
-        self.SQUARE_SIZE = (window_height - 40) // self.BOARD_SIZE
-        self.BOARD_OFFSET_X = (window_width - self.SIDE_PANEL_WIDTH - (self.SQUARE_SIZE * self.BOARD_SIZE)) // 2
-        self.BOARD_OFFSET_Y = 20
-        
-        # Обновление шрифтов для нового размера
-        font_size = max(12, min(24, self.SQUARE_SIZE // 8))
-        self.font = pygame.font.SysFont('Arial', font_size)
-        self.small_font = pygame.font.SysFont('Arial', max(10, font_size - 4))
-        self.big_font = pygame.font.SysFont('Arial', max(16, font_size + 8), bold=True)
+        pass  # Не используется в фиксированном режиме
     
     def draw_static_board(self):
         """Отрисовка статической шахматной доски без анимаций и подсветок"""
@@ -215,11 +203,8 @@ class PygameChessGUI:
                 color = self.LIGHT_SQUARE if (row + col) % 2 == 0 else self.DARK_SQUARE
                 
                 # Базовая доска без подсветок во время AI расчетов
-                rect = pygame.Rect(
-                    self.BOARD_OFFSET_X + col * self.SQUARE_SIZE, 
-                    self.BOARD_OFFSET_Y + row * self.SQUARE_SIZE,
-                    self.SQUARE_SIZE, self.SQUARE_SIZE
-                )
+                rect = pygame.Rect(col * self.SQUARE_SIZE, row * self.SQUARE_SIZE,
+                                 self.SQUARE_SIZE, self.SQUARE_SIZE)
                 pygame.draw.rect(self.screen, color, rect)
                 pygame.draw.rect(self.screen, self.BLACK, rect, 1)
                 
@@ -232,12 +217,9 @@ class PygameChessGUI:
         """Статическая отрисовка фигуры без эффектов"""
         if piece in self.piece_images and self.piece_images[piece] is not None:
             piece_surface = self.piece_images[piece]
-            # Масштабируем изображение под размер клетки
-            scaled_size = self.SQUARE_SIZE - 10
-            scaled_image = pygame.transform.smoothscale(piece_surface, (scaled_size, scaled_size))
-            piece_rect = scaled_image.get_rect(center=rect.center)
+            piece_rect = piece_surface.get_rect(center=rect.center)
             # Отключаем любые визуальные эффекты
-            self.screen.blit(scaled_image, piece_rect)
+            self.screen.blit(piece_surface, piece_rect)
         else:
             # Резервный вариант
             unicode_symbols = {
@@ -370,23 +352,15 @@ class PygameChessGUI:
     def draw_coordinates_static(self):
         """Статическая отрисовка координат доски"""
         letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-        window_width, window_height = self.screen.get_size()
-        
-        # Горизонтальные координаты (буквы)
         for i, letter in enumerate(letters):
             text = self.small_font.render(letter, True, self.BLACK)
-            x = self.BOARD_OFFSET_X + i * self.SQUARE_SIZE + self.SQUARE_SIZE // 2
-            y = self.BOARD_OFFSET_Y + (self.BOARD_SIZE * self.SQUARE_SIZE) + 5
-            if y < window_height - 20:  # Проверка границы окна
-                self.screen.blit(text, (x - text.get_width()//2, y))
+            x = i * self.SQUARE_SIZE + self.SQUARE_SIZE // 2
+            self.screen.blit(text, (x - text.get_width()//2, self.HEIGHT - 20))
         
-        # Вертикальные координаты (цифры)
         for i in range(8):
             text = self.small_font.render(str(8-i), True, self.BLACK)
-            x = self.BOARD_OFFSET_X - 15
-            y = self.BOARD_OFFSET_Y + i * self.SQUARE_SIZE + self.SQUARE_SIZE // 2
-            if x > 5:  # Проверка границы окна
-                self.screen.blit(text, (x, y - text.get_height()//2))
+            y = i * self.SQUARE_SIZE + self.SQUARE_SIZE // 2
+            self.screen.blit(text, (5, y - text.get_height()//2))
     
     def draw_coordinates(self):
         """Отрисовка координат доски"""
@@ -471,24 +445,21 @@ class PygameChessGUI:
     def draw_side_panel_minimal_frozen(self):
         """Полностью замороженная боковая панель без ИИ индикатора"""
         # Абсолютно статическая панель - никаких изменений во время AI расчетов
-        window_width, window_height = self.screen.get_size()
-        panel_x = window_width - self.SIDE_PANEL_WIDTH
-        panel_rect = pygame.Rect(panel_x, 0, self.SIDE_PANEL_WIDTH, window_height)
+        panel_rect = pygame.Rect(640, 0, self.SIDE_PANEL_WIDTH, self.HEIGHT)
         pygame.draw.rect(self.screen, self.PANEL_BG, panel_rect)
-        pygame.draw.line(self.screen, self.BLACK, (panel_x, 0), (panel_x, window_height), 2)
+        pygame.draw.line(self.screen, self.BLACK, (640, 0), (640, self.HEIGHT), 2)
         
         y_offset = 20
-        text_x = panel_x + 10
         
         # Заголовок
         title = self.big_font.render("Инфо", True, self.BLACK)
-        self.screen.blit(title, (text_x, y_offset))
+        self.screen.blit(title, (650, y_offset))
         y_offset += 50
         
         # Текущий игрок (замороженный)
         player_text = "Белые" if self.white_turn else "Черные"
         turn_text = self.font.render(f"Ход: {player_text}", True, self.BLACK)
-        self.screen.blit(turn_text, (text_x, y_offset))
+        self.screen.blit(turn_text, (650, y_offset))
         y_offset += 30
         
         # Информация об игроках
@@ -499,16 +470,16 @@ class PygameChessGUI:
             player_render = self.small_font.render(player_color_text, True, self.BLACK)
             ai_render = self.small_font.render(ai_color_text, True, self.BLACK)
             
-            self.screen.blit(player_render, (text_x, y_offset))
+            self.screen.blit(player_render, (650, y_offset))
             y_offset += 25
-            self.screen.blit(ai_render, (text_x, y_offset))
+            self.screen.blit(ai_render, (650, y_offset))
             y_offset += 35
         
         # НЕ отображаем индикатор AI во время расчетов (полная заморозка)
         # Только режим игры
         mode_text = "vs AI" if self.game_mode == 'computer' else "2 игрока"
         mode_render = self.small_font.render(mode_text, True, self.GRAY)
-        self.screen.blit(mode_render, (text_x, y_offset))
+        self.screen.blit(mode_render, (650, y_offset))
         
         # Только базовые кнопки
         self.draw_control_buttons_simple_frozen()
@@ -682,15 +653,11 @@ class PygameChessGUI:
     def draw_control_buttons_simple_frozen(self) -> Dict[str, pygame.Rect]:
         """Полностью замороженные кнопки управления без обработки событий"""
         # Абсолютно статические кнопки - никаких изменений
-        window_width, window_height = self.screen.get_size()
         buttons = {}
-        button_width = self.SIDE_PANEL_WIDTH - 20
-        button_height = max(35, min(50, window_height // 20))
-        button_y = window_height - (button_height * 2 + 30)  # Размещение внизу
-        button_x = window_width - self.SIDE_PANEL_WIDTH + 10
+        button_y = self.HEIGHT - 180  # Выше, чтобы поместилось меньше кнопок
         
         # Новая игра (замороженная)
-        new_game_btn = pygame.Rect(button_x, button_y, button_width, button_height)
+        new_game_btn = pygame.Rect(650, button_y, 140, 35)
         pygame.draw.rect(self.screen, (70, 130, 180), new_game_btn)
         pygame.draw.rect(self.screen, self.BLACK, new_game_btn, 2)
         text = self.small_font.render("Новая игра", True, self.WHITE)
@@ -698,8 +665,8 @@ class PygameChessGUI:
         buttons['new_game'] = new_game_btn
         
         # Выход (замороженная)
-        button_y += button_height + 10
-        exit_btn = pygame.Rect(button_x, button_y, button_width, button_height)
+        button_y += 40
+        exit_btn = pygame.Rect(650, button_y, 140, 35)
         pygame.draw.rect(self.screen, (169, 169, 169), exit_btn)
         pygame.draw.rect(self.screen, self.BLACK, exit_btn, 2)
         text = self.small_font.render("Выход", True, self.BLACK)
@@ -810,17 +777,10 @@ class PygameChessGUI:
     def get_square_from_mouse(self, pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """Преобразование координат мыши в координаты доски"""
         x, y = pos
-        window_width, window_height = self.screen.get_size()
-        
-        # Проверка попадания в доску
-        if (x < self.BOARD_OFFSET_X or 
-            x >= self.BOARD_OFFSET_X + (self.SQUARE_SIZE * self.BOARD_SIZE) or
-            y < self.BOARD_OFFSET_Y or 
-            y >= self.BOARD_OFFSET_Y + (self.SQUARE_SIZE * self.BOARD_SIZE)):
+        if x >= 640 or y >= 640:
             return None
-            
-        col = (x - self.BOARD_OFFSET_X) // self.SQUARE_SIZE
-        row = (y - self.BOARD_OFFSET_Y) // self.SQUARE_SIZE
+        col = x // self.SQUARE_SIZE
+        row = y // self.SQUARE_SIZE
         return (row, col) if 0 <= row < 8 and 0 <= col < 8 else None
     
     def is_valid_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
@@ -1101,10 +1061,6 @@ class PygameChessGUI:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
-            elif event.type == pygame.VIDEORESIZE:
-                # Обработка изменения размера окна
-                self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                self.update_adaptive_sizes()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 pos = pygame.mouse.get_pos()
                 
@@ -1119,8 +1075,7 @@ class PygameChessGUI:
                                 self.make_move(from_pos, to_pos, piece)
                             return True
                 
-                window_width, window_height = self.screen.get_size()
-                if pos[0] >= window_width - self.SIDE_PANEL_WIDTH:
+                if pos[0] >= 640:
                     return self.handle_button_click(pos)
                 elif self.game_active:
                     square = self.get_square_from_mouse(pos)
