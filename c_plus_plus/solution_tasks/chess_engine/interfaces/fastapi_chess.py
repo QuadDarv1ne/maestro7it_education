@@ -40,6 +40,51 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Rate limiting
+class RateLimiter:
+    """Простой rate limiter для защиты от злоупотреблений"""
+    def __init__(self, requests: int = 100, window: int = 60):
+        self.requests = requests
+        self.window = window
+        self.clients = defaultdict(list)
+    
+    def is_allowed(self, client_id: str) -> bool:
+        """Проверка, разрешен ли запрос от клиента"""
+        now = time.time()
+        # Очистка старых запросов
+        self.clients[client_id] = [
+            req_time for req_time in self.clients[client_id]
+            if now - req_time < self.window
+        ]
+        
+        if len(self.clients[client_id]) >= self.requests:
+            return False
+        
+        self.clients[client_id].append(now)
+        return True
+
+rate_limiter = RateLimiter(requests=100, window=60)
+
+# Middleware для логирования и rate limiting
+@app.middleware("http")
+async def add_process_time_and_rate_limit(request: Request, call_next):
+    """Middleware для замера времени обработки и rate limiting"""
+    start_time = time.time()
+    
+    # Rate limiting по IP
+    client_ip = request.client.host if request.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Please try again later."}
+        )
+    
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
+    return response
+
 # Добавление CORS middleware
 app.add_middleware(
     CORSMiddleware,
