@@ -103,9 +103,9 @@ class PygameChessGUI:
         self.last_ai_stats = {}
         self.show_performance_stats = False  # Новый флаг для отображения статистики
         
-        # Таймер для визуальной задержки
+        # Таймер для визуальной задержки (отключен по запросу)
         self.computer_move_delay = 0
-        self.COMPUTER_VISUAL_DELAY = 300  # мс для визуального комфорта
+        self.COMPUTER_VISUAL_DELAY = 0  # Отключено - AI ходит сразу
         self.pending_ai_move: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
         
     def load_piece_images(self):
@@ -979,23 +979,13 @@ class PygameChessGUI:
                 ai_move = self.check_ai_result()
                 
                 if ai_move is not None:
-                    # AI закончил вычисления, сохраняем ход
-                    self.pending_ai_move = ai_move
-                    self.computer_move_delay = 0
-                elif not self.ai_calculating and self.pending_ai_move is None:
+                    # AI закончил вычисления, выполняем ход немедленно
+                    from_pos, to_pos = ai_move
+                    self.make_move(from_pos, to_pos)
+                elif not self.ai_calculating:
                     # Запускаем AI вычисления с меньшей глубиной
                     ai_start_time = pygame.time.get_ticks()
                     self.start_ai_calculation(depth=2)
-                
-                # Выполняем ход с визуальной задержкой
-                if self.pending_ai_move is not None and not self.animation.active:
-                    self.computer_move_delay += delta_time
-                    
-                    if self.computer_move_delay >= self.COMPUTER_VISUAL_DELAY:
-                        from_pos, to_pos = self.pending_ai_move
-                        self.make_move(from_pos, to_pos)
-                        self.pending_ai_move = None
-                        self.computer_move_delay = 0
             
             self.draw()
         
