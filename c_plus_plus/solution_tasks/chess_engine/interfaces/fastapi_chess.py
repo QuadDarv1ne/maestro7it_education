@@ -35,6 +35,7 @@ from core.chess_engine_wrapper import ChessEngineWrapper
 from core.optimized_move_generator import BitboardMoveGenerator
 from core.enhanced_chess_ai import EnhancedChessAI
 from src.pgn_saver import PGNSaver, GameRecorder
+from src.san_parser import SANParser
 
 app = FastAPI(
     title="Chess Engine API",
@@ -899,6 +900,7 @@ class OpeningBook:
         }
 
 opening_book = OpeningBook()
+san_parser = SANParser()  # SAN notation parser
 
 # Расширенная система статистики игрока
 class PlayerProfile:
@@ -1283,10 +1285,15 @@ async def make_move(request: MoveRequest):
             }
             game['move_history'].append(move_record)
             
-            # Запись в PGN рекордер
+            # Запись в PGN рекордер с SAN нотацией
             if request.game_id in game_manager.game_recorders:
                 recorder = game_manager.game_recorders[request.game_id]
-                recorder.add_move(move_record['notation'])
+                is_capture = engine.board_state[to_pos[0]][to_pos[1]] != '.'
+                san_notation = san_parser.move_to_san(
+                    from_pos, to_pos, move_record['piece'], 
+                    engine.board_state, is_capture
+                )
+                recorder.add_move(san_notation)
             
             # Определение статуса игры (мат, пат, ничья)
             if engine.is_checkmate():
