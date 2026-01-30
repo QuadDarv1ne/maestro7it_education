@@ -316,13 +316,40 @@ int PositionEvaluator::getPawnStructure(Color color) const {
 }
 
 bool PositionEvaluator::isPassedPawn(Square square) const {
-    // TODO: реализовать проверку проходной пешки
-    return false;
+    Piece piece = board_.getPiece(square);
+    Color color = piece.getColor();
+    int rank = board_.rank(square);
+    int file = board_.file(square);
+    int direction = (color == Color::WHITE) ? 1 : -1;
+    
+    // Проверяем все клетки впереди на той же и соседних вертикалях
+    for (int r = rank + direction; r >= 0 && r < 8; r += direction) {
+        for (int f = std::max(0, file - 1); f <= std::min(7, file + 1); f++) {
+            Piece target = board_.getPiece(board_.square(f, r));
+            if (target.getType() == PieceType::PAWN && target.getColor() != color) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 bool PositionEvaluator::isIsolatedPawn(Square square) const {
-    // TODO: реализовать проверку изолированной пешки
-    return false;
+    Piece piece = board_.getPiece(square);
+    Color color = piece.getColor();
+    int file = board_.file(square);
+    
+    // Проверяем соседние вертикали на наличие своих пешек
+    for (int f : {file - 1, file + 1}) {
+        if (f < 0 || f > 7) continue;
+        for (int r = 0; r < 8; r++) {
+            Piece target = board_.getPiece(board_.square(f, r));
+            if (target.getType() == PieceType::PAWN && target.getColor() == color) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 // Вспомогательные функции для оценки безопасности короля
@@ -381,13 +408,27 @@ int PositionEvaluator::evaluatePawnStructure(Color color) const {
 
 // Вспомогательные функции
 int PositionEvaluator::countDefenders(Square square, Color color) const {
-    // TODO: реализовать подсчет защитников
-    return 0;
+    int defenders = 0;
+    MoveGenerator moveGen(board_);
+    
+    // Проверяем атаку со стороны своего цвета (защита)
+    if (moveGen.isSquareAttacked(square, color)) {
+        defenders++;
+    }
+    
+    return defenders;
 }
 
 int PositionEvaluator::countAttackers(Square square, Color color) const {
-    // TODO: реализовать подсчет атакующих фигур
-    return 0;
+    MoveGenerator moveGen(board_);
+    Color opponent = (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    
+    int count = 0;
+    if (moveGen.isSquareAttacked(square, opponent)) {
+        count = 1; 
+    }
+    
+    return count;
 }
 
 int PositionEvaluator::getDistanceToCenter(Square square) const {
@@ -413,11 +454,40 @@ int PositionEvaluator::getDistanceToCenter(Square square) const {
 }
 
 bool PositionEvaluator::isConnectedPawn(Square square) const {
-    // TODO: реализовать проверку связанных пешек
+    Piece piece = board_.getPiece(square);
+    Color color = piece.getColor();
+    int rank = board_.rank(square);
+    int file = board_.file(square);
+    
+    for (int f : {file - 1, file + 1}) {
+        if (f < 0 || f > 7) continue;
+        for (int r : {rank - 1, rank, rank + 1}) {
+            if (r < 0 || r > 7) continue;
+            Piece target = board_.getPiece(board_.square(f, r));
+            if (target.getType() == PieceType::PAWN && target.getColor() == color) {
+                return true;
+            }
+        }
+    }
     return false;
 }
 
 bool PositionEvaluator::isProtectedPawn(Square square) const {
-    // TODO: реализовать проверку защищенных пешек
+    Piece piece = board_.getPiece(square);
+    Color color = piece.getColor();
+    int rank = board_.rank(square);
+    int file = board_.file(square);
+    int direction = (color == Color::WHITE) ? -1 : 1; 
+    
+    for (int df : {-1, 1}) {
+        int nr = rank + direction;
+        int nf = file + df;
+        if (nr >= 0 && nr < 8 && nf >= 0 && nf < 8) {
+            Piece protector = board_.getPiece(board_.square(nf, nr));
+            if (protector.getType() == PieceType::PAWN && protector.getColor() == color) {
+                return true;
+            }
+        }
+    }
     return false;
 }

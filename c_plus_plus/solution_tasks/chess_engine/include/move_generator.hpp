@@ -24,16 +24,31 @@ struct Move {
                                    isCastling(false), isEnPassant(false) {}
     
     std::string toString() const;
+    std::string toAlgebraic() const;
 };
 
-// Реализация метода toString для Move
-inline std::string Move::toString() const {
-    if (from == INVALID_SQUARE || to == INVALID_SQUARE) {
-        return "Invalid move";
+// Реализация методов для Move
+inline std::string Move::toAlgebraic() const {
+    if (from == INVALID_SQUARE || to == INVALID_SQUARE) return "0000";
+    
+    std::string result = "";
+    result += (char)('a' + (from % 8));
+    result += (char)('1' + (from / 8));
+    result += (char)('a' + (to % 8));
+    result += (char)('1' + (to / 8));
+    
+    if (promotion != PieceType::EMPTY) {
+        if (promotion == PieceType::QUEEN) result += 'q';
+        else if (promotion == PieceType::ROOK) result += 'r';
+        else if (promotion == PieceType::BISHOP) result += 'b';
+        else if (promotion == PieceType::KNIGHT) result += 'n';
     }
     
-    // TODO: реализовать преобразование в алгебраическую нотацию
-    return "Move from " + std::to_string(from) + " to " + std::to_string(to);
+    return result;
+}
+
+inline std::string Move::toString() const {
+    return toAlgebraic();
 };
 
 class MoveGenerator {
