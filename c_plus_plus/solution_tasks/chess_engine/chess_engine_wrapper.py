@@ -312,28 +312,30 @@ class ChessEngineWrapper:
         print("=== ХОД ЗАВЕРШЕН ===\n")
         return True
     
-    def get_best_move_cpp(self) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Получение лучшего хода от С++ движка"""
-        if not self.lib:
-            return self.get_best_move_python()
-        
+    def get_best_move(self, depth: int = 3) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """Получение лучшего хода для AI (простая реализация)"""
         try:
-            # Получаем FEN позицию
-            fen = self.board_to_fen()
+            # Генерируем все возможные ходы
+            possible_moves = []
+            for row in range(8):
+                for col in range(8):
+                    piece = self.board_state[row][col]
+                    if piece != '.' and ((piece.isupper() and not self.current_turn) or 
+                                       (piece.islower() and self.current_turn)):
+                        for to_row in range(8):
+                            for to_col in range(8):
+                                if self.is_valid_move_python((row, col), (to_row, to_col)):
+                                    possible_moves.append(((row, col), (to_row, to_col)))
             
-            # Вызываем С++ функцию поиска (псевдокод)
-            # move_result = self.lib.find_best_move(fen.encode('utf-8'), 4)  # глубина 4
-            # if move_result:
-            #     # Преобразуем результат обратно в координаты
-            #     from_square, to_square = move_result.decode().split('-')
-            #     from_pos = (8 - int(from_square[1]), ord(from_square[0]) - ord('a'))
-            #     to_pos = (8 - int(to_square[1]), ord(to_square[0]) - ord('a'))
-            #     return (from_pos, to_pos)
+            if not possible_moves:
+                return None
             
-            return self.get_best_move_python()
+            # Выбираем случайный допустимый ход (временно)
+            import random
+            return random.choice(possible_moves)
         except Exception as e:
-            print(f"Ошибка вызова С++ движка для поиска: {e}")
-            return self.get_best_move_python()
+            print(f"Ошибка в get_best_move: {e}")
+            return None
     
     def is_king_in_check(self, king_color: bool) -> bool:
         """Проверка, находится ли король под шахом"""
@@ -430,6 +432,58 @@ class ChessEngineWrapper:
         
         return in_check
     
+    def would_king_be_attacked(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], king_color: bool) -> bool:
+        """Проверка, будет ли король атакован после хода"""
+        # Сохраняем текущее состояние
+        original_board = [row[:] for row in self.board_state]
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        
+        # Делаем временный ход
+        piece = self.board_state[from_row][from_col]
+        self.board_state[to_row][to_col] = piece
+        self.board_state[from_row][from_col] = '.'
+        
+        # Находим положение короля
+        king_piece = 'K' if king_color else 'k'
+        king_pos = None
+        for row in range(8):
+            for col in range(8):
+                if self.board_state[row][col] == king_piece:
+                    king_pos = (row, col)
+                    break
+            if king_pos:
+                break
+        
+        if not king_pos:
+            # Восстанавливаем доску
+            self.board_state = original_board
+            return False
+        
+        # Проверяем, может ли какая-либо вражеская фигура атаковать короля
+        opponent_color = not king_color
+        attacked = False
+        
+        for row in range(8):
+            for col in range(8):
+                piece = self.board_state[row][col]
+                if piece != '.' and ((piece.isupper() and not king_color) or 
+                                   (piece.islower() and king_color)):
+                    # Временно меняем очередь хода для проверки
+                    original_turn = self.current_turn
+                    self.current_turn = opponent_color
+                    if self.is_valid_attack((row, col), king_pos):
+                        attacked = True
+                        self.current_turn = original_turn
+                        break
+                    self.current_turn = original_turn
+            if attacked:
+                break
+        
+        # Восстанавливаем доску
+        self.board_state = original_board
+        return attacked
+        """Проверка, может ли фигура атаковать позицию (без проверки цвета)"""
     def is_valid_attack(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
         """Проверка, может ли фигура атаковать позицию (без проверки цвета)"""
         from_row, from_col = from_pos
@@ -467,6 +521,58 @@ class ChessEngineWrapper:
             return (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)
             
         return False
+    
+    def is_straight_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
+        """Проверка прямого хода (ладья, ферзь)"""
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        
+        # Движение по горизонтали
+        if from_row == to_row:
+            start_col = min(from_col, to_col)
+            end_col = max(from_col, to_col)
+            for col in range(start_col + 1, end_col):
+                if self.board_state[from_row][col] != '.':
+                    return False
+            return True
+        
+        # Движение по вертикали
+        elif from_col == to_col:
+            start_row = min(from_row, to_row)
+            end_row = max(from_row, to_row)
+            for row in range(start_row + 1, end_row):
+                if self.board_state[row][from_col] != '.':
+                    return False
+            return True
+        
+        return False
+    
+    def is_diagonal_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
+        """Проверка диагонального хода (слон, ферзь)"""
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        
+        row_diff = abs(to_row - from_row)
+        col_diff = abs(to_col - from_col)
+        
+        # Должно быть равное количество шагов по строкам и столбцам
+        if row_diff != col_diff:
+            return False
+        
+        # Проверяем путь
+        row_step = 1 if to_row > from_row else -1
+        col_step = 1 if to_col > from_col else -1
+        
+        current_row = from_row + row_step
+        current_col = from_col + col_step
+        
+        while current_row != to_row and current_col != to_col:
+            if self.board_state[current_row][current_col] != '.':
+                return False
+            current_row += row_step
+            current_col += col_step
+        
+        return True
     
     def get_best_move_python(self) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
         """Python реализация поиска лучшего хода (резервный вариант)"""
