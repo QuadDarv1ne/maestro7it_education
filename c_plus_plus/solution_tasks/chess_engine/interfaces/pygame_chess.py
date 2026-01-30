@@ -878,6 +878,15 @@ class PygameChessGUI:
     
     def draw(self):
         """Основная отрисовка"""
+        # Если AI считает, показываем минимальную отрисовку без анимаций
+        if self.ai_calculating:
+            self.screen.fill(self.WHITE)
+            self.draw_static_board()  # Только статическая доска
+            self.draw_coordinates()
+            self.draw_side_panel_minimal()  # Минимальная боковая панель
+            pygame.display.flip()
+            return
+        
         self.screen.fill(self.WHITE)
         self.draw_board()
         self.draw_coordinates()
