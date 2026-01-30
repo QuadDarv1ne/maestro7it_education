@@ -147,22 +147,112 @@ std::string Board::squareToAlgebraic(Square square) const {
     return std::string(1, fileChar) + rankChar;
 }
 
-void Board::printBoard() const {
-    std::cout << "\n  a b c d e f g h\n";
-    std::cout << " +-----------------+\n";
+void Board::pushHistory(Square from, Square to, const Piece& captured, bool isCastling, bool isEnPassant, PieceType promotion) {
+    UndoInfo info;
+    info.from = from;
+    info.to = to;
+    info.capturedPiece = captured;
+    info.whiteKS = whiteKingSideCastle_;
+    info.whiteQS = whiteQueenSideCastle_;
+    info.blackKS = blackKingSideCastle_;
+    info.blackQS = blackQueenSideCastle_;
+    info.enPassantSquare = enPassantSquare_;
+    info.halfMoveClock = halfMoveClock_;
+    info.isCastling = isCastling;
+    info.isEnPassant = isEnPassant;
+    info.promotion = promotion;
     
-    for (int rank = 7; rank >= 0; rank--) {
-        std::cout << (rank + 1) << "| ";
-        for (int file = 0; file < 8; file++) {
-            Square sq = square(file, rank);
-            std::cout << getPiece(sq) << " ";
-        }
-        std::cout << "|" << (rank + 1) << "\n";
+    history_.push_back(info);
+}
+
+void Board::undoMove() {
+    if (history_.empty()) return;
+    
+    UndoInfo info = history_.back();
+    history_.pop_back();
+    
+    Piece movingPiece = getPiece(info.to);
+    
+    // 1. Отмена превращения (вернуть пешку)
+    if (info.promotion != PieceType::EMPTY) {
+        movingPiece = Piece(PieceType::PAWN, movingPiece.getColor());
     }
     
-    std::cout << " +-----------------+\n";
-    std::cout << "  a b c d e f g h\n";
-    std::cout << "\nCurrent player: " << (currentPlayer_ == Color::WHITE ? "White" : "Black") << "\n";
+    // 2. Вернуть фигуру на место
+    setPiece(info.from, movingPiece);
+    setPiece(info.to, info.capturedPiece);
+    
+    // 3. Отмена рокировки
+    if (info.isCastling) {
+        int rank = rank(info.from);
+        int toFile = file(info.to);
+        
+        if (toFile == 6) { // Была короткая рокировка
+            Square rookFrom = square(7, rank);
+            Square rookTo = square(5, rank);
+            setPiece(rookFrom, getPiece(rookTo));
+            setPiece(rookTo, Piece());
+        } else if (toFile == 2) { // Была длинная рокировка
+            Square rookFrom = square(0, rank);
+            Square rookTo = square(3, rank);
+            setPiece(rookFrom, getPiece(rookTo));
+            setPiece(rookTo, Piece());
+        }
+    }
+    
+    // 4. Отмена взятия на проходе
+    if (info.isEnPassant) {
+        int fromRank = rank(info.from);
+        int toFile = file(info.to);
+        Square capturedPawnSquare = square(toFile, fromRank);
+        setPiece(capturedPawnSquare, Piece(PieceType::PAWN, Piece::oppositeColor(movingPiece.getColor())));
+    }
+    
+    // 5. Восстановить состояние
+    whiteKingSideCastle_ = info.whiteKS;
+    whiteQueenSideCastle_ = info.whiteQS;
+    blackKingSideCastle_ = info.blackKS;
+    blackQueenSideCastle_ = info.blackQS;
+    enPassantSquare_ = info.enPassantSquare;
+    halfMoveClock_ = info.halfMoveClock;
+    
+    // Смена игрока
+    currentPlayer_ = Piece::oppositeColor(currentPlayer_);
+    
+    // Уменьшить счетчик ходов если ходили черные (т.е. сейчас опять ход белых)
+    if (currentPlayer_ == Color::WHITE) {
+        moveCount_--;
+    }
+}
+
+void Board::makeMove(Square from, Square to) {
+    // Эта функция в Board обычно выполняет ход БЕЗ валидации GameRules
+    // (для внутреннего использования или когда валидация уже прошла)
+    Piece movingPiece = getPiece(from);
+    if (movingPiece.isEmpty()) return;
+    
+    // Для полноценного хода с правилами используйте GameRules::makeMove
+    // Здесь мы просто переместим фигуру для базовой функциональности
+    pushHistory(from, to, getPiece(to));
+    setPiece(to, movingPiece);
+    setPiece(from, Piece());
+    
+    currentPlayer_ = Piece::oppositeColor(currentPlayer_);
+    if (currentPlayer_ == Color::WHITE) moveCount_++;
+}
+
+void Board::makeMove(const std::string& algebraicNotation) {
+    if (algebraicNotation.length() < 4) return;
+    Square from = algebraicToSquare(algebraicNotation.substr(0, 2));
+    Square to = algebraicToSquare(algebraicNotation.substr(2, 2));
+    makeMove(from, to);
+}
+
+bool Board::isValidMove(Square from, Square to) const {
+    // Базовая проверка границ
+    if (!isInBounds(from) || !isInBounds(to)) return false;
+    if (getPiece(from).isEmpty()) return false;
+    return true;
 }
 
 // Загрузка позиции из FEN-нотации

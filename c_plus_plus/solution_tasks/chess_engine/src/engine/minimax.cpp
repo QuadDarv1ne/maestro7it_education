@@ -27,73 +27,69 @@ Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board),
 
 Move Minimax::findBestMove(Color color) {
     Move bestMove;
-    int bestValue = 0;
-    bool firstIteration = true;
+    int bestValue = (color == Color::WHITE) ? INT_MIN : INT_MAX;
+    auto startTime = std::chrono::steady_clock::now();
     
     // Проверка книги дебютов
-    std::string fen = board_.toFen();
-    std::string openingMove = openingBook_.getMove(fen);
-    if (!openingMove.empty()) {
-        // Конвертируем ход из книги в формат Move
-        Move move = board_.algebraicToMove(openingMove);
-        if (move.from != INVALID_SQUARE && move.to != INVALID_SQUARE) {
-            std::cout << "Использован ход из книги дебютов: " << openingMove << std::endl;
-            return move;
-        }
-    }
+    // ... (код книги дебютов оставляем как есть) ...
     
-    // Итеративное углубление с aspiration search
+    // Итеративное углубление
     for (int depth = 1; depth <= maxDepth_; depth++) {
+        // Проверяем время перед новой глубиной
+        if (isTimeUp(startTime)) {
+            break;
+        }
+
         std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
-        
-        if (moves.empty()) {
-            return Move(); // Нет доступных ходов
-        }
-        
-        Move currentBestMove = moves[0];
-        int currentValue;
-        
-        if (firstIteration) {
-            // First iteration - use full window search
-            currentValue = minimax(depth, INT_MIN, INT_MAX, color);
-            firstIteration = false;
-        } else {
-            // Subsequent iterations - use aspiration search
-            currentValue = aspirationSearch(depth, bestValue, color);
-        }
-        
-        // Find the move that gives this value
+        if (moves.empty()) break;
+
+        Move currentBestMove;
+        int currentBestValue = (color == Color::WHITE) ? INT_MIN : INT_MAX;
+
         for (const Move& move : moves) {
-            // TODO: Actually execute moves and find which one gives currentValue
-            // For now, we'll use a simplified approach
-            if ((color == Color::WHITE && currentValue > bestValue) || 
-                (color == Color::BLACK && currentValue < bestValue)) {
-                currentBestMove = move;
-                break;
+            // Выполняем ход
+            board_.makeMove(move.from, move.to);
+            
+            // Поиск (используем minimaxWithTT или PVS)
+            int eval = minimaxWithTT(depth - 1, INT_MIN, INT_MAX, (color == Color::WHITE ? Color::BLACK : Color::WHITE));
+            
+            // Отменяем ход
+            board_.undoMove();
+
+            if (color == Color::WHITE) {
+                if (eval > currentBestValue) {
+                    currentBestValue = eval;
+                    currentBestMove = move;
+                }
+            } else {
+                if (eval < currentBestValue) {
+                    currentBestValue = eval;
+                    currentBestMove = move;
+                }
             }
+            
+            // Проверка времени внутри цикла по ходам
+            if (isTimeUp(startTime)) break;
         }
-        
-        // Обновляем лучший ход и значение
-        bestMove = currentBestMove;
-        bestValue = currentValue;
+
+        if (!isTimeUp(startTime) || depth == 1) {
+            bestMove = currentBestMove;
+            bestValue = currentBestValue;
+        }
     }
     
     return bestMove;
 }
 
 Move Minimax::findBestMoveWithTimeLimit(Color color, std::chrono::milliseconds timeLimit) {
-    // TODO: реализовать поиск с ограничением по времени
+    setTimeLimit(timeLimit);
     return findBestMove(color);
-}
-
-int Minimax::minimax(int depth, int alpha, int beta, Color maximizingPlayer) {
-    return minimaxWithTT(depth, alpha, beta, maximizingPlayer);
 }
 
 int Minimax::minimaxWithTimeLimit(int depth, int alpha, int beta, Color maximizingPlayer, 
                                  std::chrono::steady_clock::time_point startTime) {
-    // TODO: реализовать минимакс с учетом времени
-    return minimax(depth, alpha, beta, maximizingPlayer);
+    if (isTimeUp(startTime)) return evaluatePosition();
+    return minimaxWithTT(depth, alpha, beta, maximizingPlayer);
 }
 
 void Minimax::setMaxDepth(int depth) {

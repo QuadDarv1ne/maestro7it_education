@@ -31,7 +31,21 @@ private:
     
     // Счетчик полуходов для правила 50 ходов
     int halfMoveClock_;          ///< Счетчик полуходов без взятия и движения пешек
-    
+
+    // История ходов для функции отмены
+    struct UndoInfo {
+        Square from;
+        Square to;
+        Piece capturedPiece;
+        bool whiteKS, whiteQS, blackKS, blackQS;
+        Square enPassantSquare;
+        int halfMoveClock;
+        bool isCastling;
+        bool isEnPassant;
+        PieceType promotion;
+    };
+    std::vector<UndoInfo> history_;
+
 public:
     // Конструктор
     Board();
@@ -60,7 +74,11 @@ public:
     // Операции с доской
     void makeMove(Square from, Square to);             ///< Выполняет ход с одной клетки на другую
     void makeMove(const std::string& algebraicNotation);  ///< Выполняет ход в алгебраической нотации
+    void undoMove();                                   ///< Отменяет последний ход
     bool isValidMove(Square from, Square to) const;    ///< Проверяет корректность хода
+    
+    // Сохранение/загрузка истории (для makeMove в GameRules)
+    void pushHistory(Square from, Square to, const Piece& captured, bool isCastling = false, bool isEnPassant = false, PieceType promotion = PieceType::EMPTY);
     
     // Вспомогательные методы
     Square algebraicToSquare(const std::string& algebraic) const;  ///< Преобразует алгебраическую нотацию в клетку
