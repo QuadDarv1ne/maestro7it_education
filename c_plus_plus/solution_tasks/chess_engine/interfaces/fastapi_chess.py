@@ -11,7 +11,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, validator
@@ -174,6 +174,293 @@ class MoveCache:
         self.cache.clear()
 
 move_cache = MoveCache()
+
+# Статистика игроков
+class PlayerStats:
+    """Хранение и управление статистикой игроков"""
+    def __init__(self):
+        self.stats: Dict[str, Dict] = defaultdict(lambda: {
+            'games_played': 0,
+            'wins': 0,
+            'losses': 0,
+            'draws': 0,
+            'total_moves': 0,
+            'avg_game_time': 0,
+            'longest_game': 0,
+            'shortest_game': float('inf'),
+            'favorite_opening': None,
+            'win_rate': 0.0
+        })
+    
+    def update_stats(self, player_name: str, game_data: Dict):
+        """Обновление статистики после игры"""
+        stats = self.stats[player_name]
+        stats['games_played'] += 1
+        
+        if game_data.get('winner') == player_name:
+            stats['wins'] += 1
+        elif game_data.get('winner') and game_data.get('winner') != player_name:
+            stats['losses'] += 1
+        else:
+            stats['draws'] += 1
+        
+        moves = len(game_data.get('move_history', []))
+        stats['total_moves'] += moves
+        
+        game_duration = (game_data.get('ended_at', datetime.now()) - 
+                        game_data.get('created_at', datetime.now())).total_seconds()
+        
+        stats['longest_game'] = max(stats['longest_game'], game_duration)
+        if stats['shortest_game'] == float('inf'):
+            stats['shortest_game'] = game_duration
+        else:
+            stats['shortest_game'] = min(stats['shortest_game'], game_duration)
+        
+        # Расчет среднего времени игры
+        stats['avg_game_time'] = (
+            stats['avg_game_time'] * (stats['games_played'] - 1) + game_duration
+        ) / stats['games_played']
+        
+        # Расчет процента побед
+        if stats['games_played'] > 0:
+            stats['win_rate'] = (stats['wins'] / stats['games_played']) * 100
+    
+    def get_stats(self, player_name: str) -> Dict:
+        """Получение статистики игрока"""
+        return dict(self.stats[player_name])
+    
+    def get_leaderboard(self, limit: int = 10) -> List[Dict]:
+        """Получение таблицы лидеров"""
+        leaderboard = []
+        for player, stats in self.stats.items():
+            leaderboard.append({
+                'player': player,
+                'wins': stats['wins'],
+                'games': stats['games_played'],
+                'win_rate': stats['win_rate']
+            })
+        
+        return sorted(leaderboard, key=lambda x: x['win_rate'], reverse=True)[:limit]
+
+player_stats = PlayerStats()
+
+# История игр
+class GameHistory:
+    """Хранение истории завершенных игр"""
+    def __init__(self, max_games: int = 100):
+        self.games: List[Dict] = []
+        self.max_games = max_games
+    
+    def add_game(self, game_data: Dict):
+        """Добавление игры в историю"""
+        game_record = {
+            'game_id': game_data['id'],
+            'player_name': game_data['player_name'],
+            'game_mode': game_data['game_mode'],
+            'winner': game_data.get('winner'),
+            'game_status': game_data['game_status'],
+            'moves': len(game_data['move_history']),
+            'duration': (game_data.get('ended_at', datetime.now()) - 
+                        game_data['created_at']).total_seconds(),
+            'time_control': game_data['time_control'],
+            'created_at': game_data['created_at'].isoformat(),
+            'ended_at': game_data.get('ended_at', datetime.now()).isoformat(),
+            'move_history': game_data['move_history']
+        }
+        
+        self.games.insert(0, game_record)  # Новые игры вверху
+        
+        # Ограничение размера истории
+        if len(self.games) > self.max_games:
+            self.games = self.games[:self.max_games]
+    
+    def get_recent_games(self, limit: int = 10) -> List[Dict]:
+        """Получение последних игр"""
+        return self.games[:limit]
+    
+    def get_player_games(self, player_name: str, limit: int = 10) -> List[Dict]:
+        """Получение игр конкретного игрока"""
+        player_games = [g for g in self.games if g['player_name'] == player_name]
+        return player_games[:limit]
+    
+    def export_to_pgn(self, game_id: str) -> str:
+        """Экспорт игры в формат PGN"""
+        game = next((g for g in self.games if g['game_id'] == game_id), None)
+        if not game:
+            return ""
+        
+        pgn = f"[Event \"FastAPI Chess Game\"]\n"
+        pgn += f"[Site \"Chess Master\"]\n"
+        pgn += f"[Date \"{game['created_at'][:10]}\"]\n"
+        pgn += f"[White \"{game['player_name']}\"]\n"
+        pgn += f"[Black \"{'AI' if game['game_mode'] == 'ai' else 'Human'}\"]\n"
+        pgn += f"[Result \"{self._get_result(game)}\"]\n"
+        pgn += f"[TimeControl \"{game['time_control'] * 60 if game['time_control'] > 0 else '-'}\"]\n\n"
+        
+        # Добавление ходов
+        moves_text = ""
+        for i, move in enumerate(game['move_history']):
+            if i % 2 == 0:
+                moves_text += f"{i//2 + 1}. "
+            moves_text += f"{move.get('notation', '')} "
+        
+        pgn += moves_text + self._get_result(game)
+        return pgn
+    
+    def _get_result(self, game: Dict) -> str:
+        """Получение результата игры в формате PGN"""
+        if game['winner'] == game['player_name']:
+            return "1-0"
+        elif game['winner']:
+            return "0-1"
+        else:
+            return "1/2-1/2"
+
+game_history = GameHistory()
+
+# Анализ партий
+class GameAnalyzer:
+    """Анализ завершенных партий"""
+    def __init__(self):
+        self.ai = EnhancedChessAI(search_depth=5)  # Более глубокий поиск для анализа
+    
+    def analyze_game(self, game_data: Dict) -> Dict:
+        """Полный анализ партии"""
+        moves = game_data['move_history']
+        engine = ChessEngineWrapper()
+        
+        analysis = {
+            'total_moves': len(moves),
+            'blunders': [],  # Грубые ошибки (eval drop > 2)
+            'mistakes': [],  # Ошибки (eval drop > 1)
+            'inaccuracies': [],  # Неточности (eval drop > 0.5)
+            'best_moves': [],  # Лучшие ходы в партии
+            'accuracy': {'white': 0.0, 'black': 0.0},
+            'avg_eval': 0.0,
+            'position_analysis': []
+        }
+        
+        prev_eval = 0.0
+        eval_sum = 0.0
+        white_accurate = 0
+        black_accurate = 0
+        white_total = 0
+        black_total = 0
+        
+        # Анализ каждой позиции
+        for i, move in enumerate(moves):
+            is_white = i % 2 == 0
+            
+            # Получение лучшего хода от AI
+            board = engine.get_board()
+            best_move = self.ai.get_best_move(board, is_white)
+            
+            # Оценка позиции
+            current_eval = self.ai.evaluate_position(board, is_white)
+            eval_change = current_eval - prev_eval if not is_white else prev_eval - current_eval
+            
+            # Классификация хода
+            move_quality = 'excellent'
+            if abs(eval_change) < 0.2:
+                if is_white:
+                    white_accurate += 1
+                else:
+                    black_accurate += 1
+            elif eval_change < -0.5:
+                move_quality = 'inaccuracy'
+                analysis['inaccuracies'].append({
+                    'move_num': i + 1,
+                    'player': 'White' if is_white else 'Black',
+                    'move': move.get('notation', ''),
+                    'eval_loss': round(abs(eval_change), 2)
+                })
+            elif eval_change < -1.0:
+                move_quality = 'mistake'
+                analysis['mistakes'].append({
+                    'move_num': i + 1,
+                    'player': 'White' if is_white else 'Black',
+                    'move': move.get('notation', ''),
+                    'eval_loss': round(abs(eval_change), 2),
+                    'best_move': best_move
+                })
+            elif eval_change < -2.0:
+                move_quality = 'blunder'
+                analysis['blunders'].append({
+                    'move_num': i + 1,
+                    'player': 'White' if is_white else 'Black',
+                    'move': move.get('notation', ''),
+                    'eval_loss': round(abs(eval_change), 2),
+                    'best_move': best_move
+                })
+            
+            # Лучшие ходы
+            if eval_change > 1.5:
+                analysis['best_moves'].append({
+                    'move_num': i + 1,
+                    'player': 'White' if is_white else 'Black',
+                    'move': move.get('notation', ''),
+                    'eval_gain': round(eval_change, 2)
+                })
+            
+            analysis['position_analysis'].append({
+                'move_num': i + 1,
+                'move': move.get('notation', ''),
+                'evaluation': round(current_eval, 2),
+                'quality': move_quality,
+                'best_alternative': best_move if move_quality != 'excellent' else None
+            })
+            
+            # Выполнение хода
+            if 'from' in move and 'to' in move:
+                engine.make_move(move['from'], move['to'])
+            
+            prev_eval = current_eval
+            eval_sum += current_eval
+            
+            if is_white:
+                white_total += 1
+            else:
+                black_total += 1
+        
+        # Расчет точности
+        analysis['accuracy']['white'] = round((white_accurate / white_total * 100) if white_total > 0 else 0, 1)
+        analysis['accuracy']['black'] = round((black_accurate / black_total * 100) if black_total > 0 else 0, 1)
+        analysis['avg_eval'] = round(eval_sum / len(moves) if moves else 0, 2)
+        
+        return analysis
+    
+    def get_position_insights(self, board_state: List[List[str]], is_white: bool) -> Dict:
+        """Получение подсказок для текущей позиции"""
+        best_move = self.ai.get_best_move(board_state, is_white)
+        evaluation = self.ai.evaluate_position(board_state, is_white)
+        
+        # Определение рекомендаций
+        insights = {
+            'best_move': best_move,
+            'evaluation': round(evaluation, 2),
+            'recommendation': self._get_recommendation(evaluation, is_white)
+        }
+        
+        return insights
+    
+    def _get_recommendation(self, eval_score: float, is_white: bool) -> str:
+        """Получение рекомендации на основе оценки"""
+        if eval_score > 3:
+            return "You have a winning advantage! Look for forcing moves."
+        elif eval_score > 1:
+            return "You have a clear advantage. Maintain pressure!"
+        elif eval_score > 0.5:
+            return "Slightly better position. Play carefully."
+        elif eval_score > -0.5:
+            return "Position is equal. Look for tactical opportunities."
+        elif eval_score > -1:
+            return "Slightly worse position. Defend actively."
+        elif eval_score > -3:
+            return "You are under pressure. Look for counterplay."
+        else:
+            return "Critical position! Focus on defense and tactics."
+
+game_analyzer = GameAnalyzer()
 
 # Pydantic модели
 class MoveRequest(BaseModel):
@@ -637,6 +924,137 @@ async def get_stats(game_id: str):
     except Exception as e:
         logger.error(f"Error getting stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to get stats")
+
+@app.get("/api/player-stats/{player_name}")
+async def get_player_stats(player_name: str):
+    """Получение статистики игрока"""
+    stats = player_stats.get_stats(player_name)
+    
+    # Форматирование времени
+    if stats['shortest_game'] == float('inf'):
+        stats['shortest_game'] = 0
+    
+    return {
+        'player': player_name,
+        'games_played': stats['games_played'],
+        'wins': stats['wins'],
+        'losses': stats['losses'],
+        'draws': stats['draws'],
+        'win_rate': round(stats['win_rate'], 2),
+        'total_moves': stats['total_moves'],
+        'avg_game_time': round(stats['avg_game_time'], 1),
+        'longest_game': round(stats['longest_game'], 1),
+        'shortest_game': round(stats['shortest_game'], 1)
+    }
+
+@app.get("/api/leaderboard")
+async def get_leaderboard(limit: int = 10):
+    """Получение таблицы лидеров"""
+    leaderboard = player_stats.get_leaderboard(limit)
+    return {
+        "leaderboard": leaderboard,
+        "total_players": len(player_stats.stats)
+    }
+
+@app.post("/api/end-game/{game_id}")
+async def end_game(game_id: str, winner: Optional[str] = None):
+    """Завершение игры и обновление статистики"""
+    game = game_manager.get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    game['ended_at'] = datetime.now()
+    game['winner'] = winner
+    game['game_status'] = 'finished'
+    
+    # Обновление статистики игрока
+    player_stats.update_stats(game['player_name'], game)
+    
+    # Добавление в историю
+    game_history.add_game(game)
+    
+    return {
+        "success": True,
+        "winner": winner,
+        "game_duration": (game['ended_at'] - game['created_at']).total_seconds(),
+        "total_moves": len(game['move_history'])
+    }
+
+@app.get("/api/game-history")
+async def get_game_history(limit: int = 10):
+    """Получение истории игр"""
+    recent_games = game_history.get_recent_games(limit)
+    return {
+        "games": recent_games,
+        "total": len(game_history.games)
+    }
+
+@app.get("/api/player-history/{player_name}")
+async def get_player_history(player_name: str, limit: int = 10):
+    """Получение истории игр игрока"""
+    player_games = game_history.get_player_games(player_name, limit)
+    return {
+        "player": player_name,
+        "games": player_games,
+        "total": len(player_games)
+    }
+
+@app.get("/api/export-pgn/{game_id}")
+async def export_game_pgn(game_id: str):
+    """Экспорт игры в формат PGN"""
+    pgn = game_history.export_to_pgn(game_id)
+    if not pgn:
+        raise HTTPException(status_code=404, detail="Game not found in history")
+    
+    return PlainTextResponse(
+        content=pgn,
+        media_type="application/x-chess-pgn",
+        headers={"Content-Disposition": f"attachment; filename=chess_game_{game_id[:8]}.pgn"}
+    )
+
+@app.post("/api/analyze-game/{game_id}")
+async def analyze_game(game_id: str):
+    """Анализ завершенной игры"""
+    # Поиск в истории
+    game_data = next((g for g in game_history.games if g['game_id'] == game_id), None)
+    
+    if not game_data:
+        # Проверка активных игр
+        game = game_manager.get_game(game_id)
+        if not game:
+            raise HTTPException(status_code=404, detail="Game not found")
+        game_data = game
+    
+    try:
+        analysis = game_analyzer.analyze_game(game_data)
+        return {
+            "success": True,
+            "game_id": game_id,
+            "analysis": analysis
+        }
+    except Exception as e:
+        logger.error(f"Error analyzing game: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+@app.get("/api/position-insights/{game_id}")
+async def get_position_insights(game_id: str):
+    """Получение подсказок для текущей позиции"""
+    game = game_manager.get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    try:
+        board_state = game['engine'].get_board()
+        is_white = game['current_player']
+        insights = game_analyzer.get_position_insights(board_state, is_white)
+        
+        return {
+            "success": True,
+            "insights": insights
+        }
+    except Exception as e:
+        logger.error(f"Error getting position insights: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get insights: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

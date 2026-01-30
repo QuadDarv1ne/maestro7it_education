@@ -18,6 +18,24 @@
             --square-dark: #cbd5e1;
             --highlight: rgba(99, 102, 241, 0.5);
             --valid: rgba(34, 197, 94, 0.4);
+            --bg-gradient-1: #1e1b4b;
+            --bg-gradient-2: #0f172a;
+            --text-color: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Светлая тема */
+        [data-theme="light"] {
+            --dark: #f8fafc;
+            --light: #0f172a;
+            --glass: rgba(0, 0, 0, 0.05);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --square-light: #f0d9b5;
+            --square-dark: #b58863;
+            --bg-gradient-1: #e0e7ff;
+            --bg-gradient-2: #f8fafc;
+            --text-color: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.8);
         }
 
         * {
@@ -28,13 +46,14 @@
         }
 
         body {
-            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
-            color: var(--light);
+            background: radial-gradient(circle at top right, var(--bg-gradient-1), var(--bg-gradient-2));
+            color: var(--text-color);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 2rem;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         .container {
@@ -144,7 +163,87 @@
             box-shadow: inset 0 0 0 6px var(--valid);
         }
 
+        /* Подсказки для новичков */
+        .square.hint-move {
+            position: relative;
+        }
+        .square.hint-move::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 3px solid #fbbf24;
+            box-sizing: border-box;
+            animation: pulse 1.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .square.hint-best::after {
+            content: '★';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            color: #fbbf24;
+            font-size: 1.2rem;
+            text-shadow: 0 0 5px rgba(251, 191, 36, 0.8);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+
         .square:hover { transform: scale(1.02); z-index: 10; }
+
+        .square.last-move {
+            background-color: rgba(250, 204, 21, 0.3) !important;
+        }
+
+        .piece-animation {
+            animation: pieceMove 0.3s ease-out;
+        }
+
+        @keyframes pieceMove {
+            0% { transform: scale(1.2); }
+            50% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: var(--glass);
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.show {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success { border-left: 4px solid #22c55e; }
+        .notification.error { border-left: 4px solid #ef4444; }
+        .notification.info { border-left: 4px solid #3b82f6; }
 
         .info-panel {
             display: flex;
@@ -307,9 +406,48 @@
             .info-panel { order: 2; }
             .chess-section { order: 1; }
         }
+
+        /* Кнопка переключения темы */
+        .theme-toggle {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(180deg);
+            background: var(--primary);
+        }
+
+        .theme-toggle i {
+            font-size: 1.5rem;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover i {
+            color: white;
+        }
     </style>
 </head>
 <body>
+    <!-- Переключатель темы -->
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+        <i class="fas fa-moon" id="themeIcon"></i>
+    </div>
+
     <header>
         <h1><i class="fas fa-chess-knight"></i> Chess Master</h1>
         <p>Advanced FastAPI Engine v2.0</p>
@@ -328,8 +466,8 @@
             <div class="card controls" style="width: 100%;">
                 <button onclick="undoMove()" class="outline"><i class="fas fa-undo"></i> Undo</button>
                 <button onclick="newGame()" class="accent"><i class="fas fa-plus"></i> New Game</button>
-                <button onclick="saveGame()" class="outline"><i class="fas fa-save"></i> Save</button>
-                <button onclick="loadGame()" class="outline"><i class="fas fa-upload"></i> Load</button>
+                <button onclick="toggleHints()" class="outline" id="hintsBtn"><i class="fas fa-lightbulb"></i> Show Hints</button>
+                <button onclick="getPositionInsights()" class="outline"><i class="fas fa-brain"></i> Analysis</button>
             </div>
         </div>
 
@@ -390,11 +528,32 @@
                         <option value="5">Master (Depth 5)</option>
                     </select>
                 </div>
+                <div class="config-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="soundToggle" checked onchange="toggleSound()" style="width: auto;">
+                        <span>Sound Effects</span>
+                    </label>
+                </div>
             </div>
 
             <div class="card">
                 <h3 style="margin-bottom: 1rem;"><i class="fas fa-history"></i> Move History</h3>
                 <div class="history-list" id="historyList"></div>
+            </div>
+
+            <div class="card" id="insightsCard" style="display: none;">
+                <h3 style="margin-bottom: 1rem;"><i class="fas fa-lightbulb"></i> Position Insights</h3>
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: #818cf8;">Evaluation:</strong>
+                    <span id="insightEval" style="font-size: 1.2rem; font-weight: bold;">0.00</span>
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: #818cf8;">Best Move:</strong>
+                    <span id="insightMove" style="font-weight: 600;">-</span>
+                </div>
+                <div style="padding: 0.75rem; background: rgba(99, 102, 241, 0.1); border-radius: 0.5rem; border-left: 3px solid #818cf8;">
+                    <p id="insightRecommendation" style="margin: 0; line-height: 1.5;">Click 'Analysis' to get position insights</p>
+                </div>
             </div>
 
             <div class="card" id="aiStatsCard" style="display: none;">
@@ -412,6 +571,11 @@
         </div>
     </div>
 
+    <div class="notification" id="notification">
+        <i class="fas fa-info-circle" id="notificationIcon"></i>
+        <span id="notificationText"></span>
+    </div>
+
     <script>
         let gameId = null;
         let boardState = null;
@@ -422,15 +586,92 @@
         let whiteTime = 0;
         let blackTime = 0;
         let timerInterval = null;
+        let lastMoveFrom = null;
+        let lastMoveTo = null;
+        let soundEnabled = true;
+        let hintsEnabled = false;
+        let currentHints = [];
         
         const pieceIcons = {
             'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
             'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
         };
 
+        // Звуковые эффекты через Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(frequency = 440, duration = 0.1, type = 'sine') {
+            if (!soundEnabled) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playMoveSound() {
+            playSound(523.25, 0.1, 'sine'); // C5 note
+        }
+
+        function playCaptureSound() {
+            playSound(349.23, 0.15, 'square'); // F4 note
+        }
+
+        function playCheckSound() {
+            playSound(880, 0.2, 'sawtooth'); // A5 note
+        }
+
+        function toggleSound() {
+            soundEnabled = document.getElementById('soundToggle').checked;
+            if (soundEnabled) {
+                showNotification('Sound effects enabled', 'success');
+                playMoveSound(); // Тестовый звук
+            } else {
+                showNotification('Sound effects disabled', 'info');
+            }
+        }
+
+        // Переключение темы
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            const icon = document.getElementById('themeIcon');
+            
+            html.setAttribute('data-theme', newTheme);
+            icon.className = newTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+            
+            // Сохранение в localStorage
+            localStorage.setItem('chess-theme', newTheme);
+            
+            showNotification(`${newTheme === 'light' ? 'Light' : 'Dark'} theme activated`, 'success');
+        }
+
+        // Загрузка темы при старте
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('chess-theme') || 'dark';
+            const icon = document.getElementById('themeIcon');
+            
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            icon.className = savedTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
         async function newGame() {
             const mode = document.getElementById('gameMode').value;
             const time = parseInt(document.getElementById('timeControl').value);
+            
+            // Сброс последнего хода
+            lastMoveFrom = null;
+            lastMoveTo = null;
             
             const response = await fetch('/api/new-game', {
                 method: 'POST',
@@ -448,7 +689,7 @@
             blackTime = data.black_time || 0;
             
             updateUI(data);
-            showNotification('New game started!');
+            showNotification('New game started!', 'success');
             
             // Запуск таймера если есть контроль времени
             if (timeControl > 0) {
@@ -544,6 +785,14 @@
                     const square = document.createElement('div');
                     square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     
+                    // Подсветка последнего хода
+                    if (lastMoveFrom && lastMoveFrom[0] === r && lastMoveFrom[1] === c) {
+                        square.classList.add('last-move');
+                    }
+                    if (lastMoveTo && lastMoveTo[0] === r && lastMoveTo[1] === c) {
+                        square.classList.add('last-move');
+                    }
+                    
                     if (selectedSquare && selectedSquare[0] === r && selectedSquare[1] === c) {
                         square.classList.add('selected');
                     }
@@ -552,6 +801,19 @@
                     if (move) {
                         square.classList.add(boardState[r][c] === '.' ? 'valid-move' : 'valid-capture');
                     }
+                    
+                    // Подсказки для новичков
+                    if (hintsEnabled) {
+                        const hint = currentHints.find(h => h.from && h.from[0] === r && h.from[1] === c);
+                        if (hint) {
+                            square.classList.add('hint-move');
+                            if (hint.isBest) square.classList.add('hint-best');
+                        }
+                        const hintTo = currentHints.find(h => h.to && h.to[0] === r && h.to[1] === c);
+                        if (hintTo) {
+                            square.classList.add('hint-move');
+                        }
+                    }
 
                     const piece = boardState[r][c];
                     if (piece !== '.') {
@@ -559,6 +821,11 @@
                         square.style.color = piece === piece.toUpperCase() ? '#1e293b' : '#000000';
                         if (piece === piece.toLowerCase()) {
                             square.style.textShadow = '0 0 2px white';
+                        }
+                        
+                        // Анимация для последней перемещенной фигуры
+                        if (lastMoveTo && lastMoveTo[0] === r && lastMoveTo[1] === c) {
+                            square.classList.add('piece-animation');
                         }
                     }
 
@@ -598,6 +865,8 @@
         }
 
         async function makeMove(from, to) {
+            const wasCapture = boardState[to[0]][to[1]] !== '.';
+            
             const response = await fetch('/api/make-move', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -610,6 +879,16 @@
             });
             const data = await response.json();
             if (data.success) {
+                lastMoveFrom = from;
+                lastMoveTo = to;
+                
+                // Звуковые эффекты
+                if (wasCapture) {
+                    playCaptureSound();
+                } else {
+                    playMoveSound();
+                }
+                
                 updateUI(data.game_state);
                 if (document.getElementById('gameMode').value === 'ai') {
                     await makeAIMove();
@@ -724,14 +1003,112 @@
             }
         }
 
+        async function toggleHints() {
+            hintsEnabled = !hintsEnabled;
+            const btn = document.getElementById('hintsBtn');
+            
+            if (hintsEnabled) {
+                btn.innerHTML = '<i class="fas fa-lightbulb"></i> Hide Hints';
+                btn.style.background = '#fbbf24';
+                btn.style.color = '#000';
+                await loadHints();
+                showNotification('Hints enabled! Best moves are marked with stars', 'success');
+            } else {
+                btn.innerHTML = '<i class="fas fa-lightbulb"></i> Show Hints';
+                btn.style.background = '';
+                btn.style.color = '';
+                currentHints = [];
+                showNotification('Hints disabled', 'info');
+            }
+            
+            renderBoard();
+        }
+
+        async function loadHints() {
+            try {
+                const response = await fetch(`/api/position-insights/${gameId}`);
+                const data = await response.json();
+                
+                if (data.success && data.insights.best_move) {
+                    const bestMove = data.insights.best_move;
+                    // Предполагаем формат "e2-e4"
+                    const parts = bestMove.split('-');
+                    if (parts.length === 2) {
+                        const from = positionToCoords(parts[0]);
+                        const to = positionToCoords(parts[1]);
+                        currentHints = [{from, to, isBest: true}];
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load hints:', error);
+            }
+        }
+
+        function positionToCoords(pos) {
+            // Конвертация "e2" -> [6, 4]
+            const col = pos.charCodeAt(0) - 'a'.charCodeAt(0);
+            const row = 8 - parseInt(pos[1]);
+            return [row, col];
+        }
+
+        async function getPositionInsights() {
+            try {
+                const response = await fetch(`/api/position-insights/${gameId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const insights = data.insights;
+                    document.getElementById('insightEval').textContent = 
+                        insights.evaluation > 0 ? `+${insights.evaluation}` : insights.evaluation;
+                    document.getElementById('insightMove').textContent = insights.best_move || '-';
+                    document.getElementById('insightRecommendation').textContent = insights.recommendation;
+                    document.getElementById('insightsCard').style.display = 'block';
+                    
+                    // Цвет оценки
+                    const evalEl = document.getElementById('insightEval');
+                    if (insights.evaluation > 1) {
+                        evalEl.style.color = '#22c55e';
+                    } else if (insights.evaluation < -1) {
+                        evalEl.style.color = '#f43f5e';
+                    } else {
+                        evalEl.style.color = '#818cf8';
+                    }
+                    
+                    showNotification('Position analysis complete', 'success');
+                } else {
+                    showNotification('Failed to analyze position', 'error');
+                }
+            } catch (error) {
+                console.error('Error getting insights:', error);
+                showNotification('Analysis error', 'error');
+            }
+        }
+
         function showNotification(msg, type='info') {
-            const status = document.getElementById('gameStatus');
-            const original = status.textContent;
-            status.textContent = msg;
-            setTimeout(() => status.textContent = original, 3000);
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const text = document.getElementById('notificationText');
+            
+            // Установка иконки и стиля
+            notification.className = 'notification show ' + type;
+            text.textContent = msg;
+            
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+            } else if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle';
+            } else {
+                icon.className = 'fas fa-info-circle';
+            }
+            
+            // Автоскрытие через 3 секунды
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
 
         // Init
+        loadTheme();
         newGame();
     </script>
 </body>
