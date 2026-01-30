@@ -252,7 +252,7 @@ class ChessEngineWrapper:
         """Выполнение хода с отладкой"""
         print(f"\n=== ПОПЫТКА ХОДА ===")
         print(f"Из: {from_pos}, В: {to_pos}")
-        print(f"Очередь белых: {self.white_turn}")
+        print(f"Очередь белых: {self.current_turn}")
         
         if not self.is_valid_move(from_pos, to_pos):
             print("Ход НЕДОПУСТИМ!")
@@ -274,25 +274,27 @@ class ChessEngineWrapper:
             self.captured_pieces['white' if captured.isupper() else 'black'].append(captured)
             self.game_stats['captures_count'] += 1
         
+        # Проверяем наличие move_history
+        if not hasattr(self, 'move_history'):
+            self.move_history = []
         self.move_history.append(move_notation)
         print(f"Ход записан: {move_notation}")
         
         # Выполнение хода
         print("Выполняю ход...")
-        if not self.engine.make_move(from_pos, to_pos):
-            print("ОШИБКА: Движок не выполнил ход!")
-            return False
-        
+        # Используем Python реализацию вместо С++
+        self.board_state[to_row][to_col] = piece
+        self.board_state[from_row][from_col] = '.'
         print("Ход выполнен успешно!")
         
         # Проверка шаха
-        if self.is_king_in_check(not self.white_turn):
+        if self.is_king_in_check(not self.current_turn):
             self.game_stats['check_count'] += 1
             print("ШАХ!")
         
         # Смена очереди
-        self.white_turn = not self.white_turn
-        print(f"Очередь перешла: {'белым' if self.white_turn else 'черным'}")
+        self.current_turn = not self.current_turn
+        print(f"Очередь перешла: {'белым' if self.current_turn else 'черным'}")
         
         # Сброс выбора
         self.selected_square = None
@@ -301,7 +303,7 @@ class ChessEngineWrapper:
         # Проверка окончания игры
         if self.is_checkmate():
             self.game_active = False
-            winner = "Черные" if self.white_turn else "Белые"
+            winner = "Черные" if self.current_turn else "Белые"
             print(f"МАТ! Победили {winner}")
         elif self.is_stalemate():
             self.game_active = False

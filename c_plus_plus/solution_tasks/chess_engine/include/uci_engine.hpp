@@ -4,91 +4,104 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <iostream>
-#include <sstream>
 #include <thread>
 #include <atomic>
+#include <iostream>
 
 /**
  * @brief UCI (Universal Chess Interface) протокол
  * 
- * Реализация стандартного протокола для взаимодействия с шахматными GUI.
- * Позволяет интеграцию движка с популярными программами: Arena, ChessBase, Fritz и др.
+ * Реализует стандартный протокол для взаимодействия с шахматными GUI
  */
 class UCIEngine {
 private:
-    // Состояние движка
-    std::string engineName_;
-    std::string engineAuthor_;
-    std::atomic<bool> shouldStop_;
-    std::atomic<bool> isSearching_;
+    // Состояние двигателя
+    std::atomic<bool> running_;
+    std::atomic<bool> searching_;
+    std::thread search_thread_;
     
-    // Настройки поиска
-    int searchDepth_;
-    int searchTime_;
-    int searchNodes_;
-    bool ponder_;
+    // Параметры поиска
+    int search_depth_;
+    int search_time_ms_;
+    bool infinite_search_;
     
-    // Опции движка
+    // Опции двигателя
     std::map<std::string, std::string> options_;
     
-    // Текущая позиция
-    std::string currentPosition_;
-    std::vector<std::string> moveHistory_;
+    // Callback функции
+    std::function<void(const std::string&)> send_command_callback_;
     
-public:
-    UCIEngine(const std::string& name = "Professional Chess Engine", 
-              const std::string& author = "Development Team");
-    
-    // Основной интерфейс UCI
-    void runUCIProtocol();
-    void processCommand(const std::string& command);
-    
-    // Команды UCI
-    void handleUCI();
-    void handleIsReady();
-    void handlePosition(const std::string& command);
-    void handleGo(const std::string& command);
-    void handleStop();
-    void handlePonderHit();
-    void handleSetOption(const std::string& command);
+    // Внутренние методы
+    void processUCICommand(const std::string& command);
     void handleUCINewGame();
+    void handlePosition(const std::vector<std::string>& tokens);
+    void handleGo(const std::vector<std::string>& tokens);
+    void handleStop();
     void handleQuit();
-    
-    // Вспомогательные функции
-    std::vector<std::string> parseCommand(const std::string& command);
-    std::string getCurrentMove() const;
     void sendInfo(const std::string& info);
     void sendBestMove(const std::string& move);
     
-private:
-    // Внутренние методы поиска
-    std::string findBestMove();
-    void startSearch();
-    void stopSearch();
+    // Вспомогательные функции
+    std::vector<std::string> tokenize(const std::string& input);
+    std::string trim(const std::string& str);
     
-    // Валидация и парсинг
-    bool isValidMove(const std::string& move) const;
-    bool isValidFEN(const std::string& fen) const;
-    std::string moveToUCI(const std::string& internalMove) const;
-    std::string moveFromUCI(const std::string& uciMove) const;
+public:
+    UCIEngine();
+    ~UCIEngine();
+    
+    // Основной интерфейс
+    void start();
+    void stop();
+    void sendCommand(const std::string& command);
+    
+    // Настройка callback'ов
+    void setSendCallback(std::function<void(const std::string&)> callback);
+    
+    // Получение информации
+    bool isRunning() const { return running_; }
+    bool isSearching() const { return searching_; }
+    
+    // Опции двигателя
+    void setOption(const std::string& name, const std::string& value);
+    std::string getOption(const std::string& name) const;
+    void printOptions() const;
 };
 
 // Константы UCI протокола
 namespace UCIConstants {
-    extern const std::string ENGINE_NAME;
-    extern const std::string ENGINE_AUTHOR;
-    extern const int DEFAULT_SEARCH_DEPTH;
-    extern const int DEFAULT_SEARCH_TIME;
-    extern const std::vector<std::string> SUPPORTED_OPTIONS;
-}
-
-// Утилиты для работы с UCI
-namespace UCIUtils {
-    std::vector<std::string> splitString(const std::string& str, char delimiter);
-    std::string trimString(const std::string& str);
-    bool stringStartsWith(const std::string& str, const std::string& prefix);
-    std::string toLowerCase(const std::string& str);
+    const std::string VERSION = "1.0";
+    const std::string AUTHOR = "Chess Engine Team";
+    
+    // Стандартные команды
+    const std::string CMD_UCI = "uci";
+    const std::string CMD_ISREADY = "isready";
+    const std::string CMD_UCINEWGAME = "ucinewgame";
+    const std::string CMD_POSITION = "position";
+    const std::string CMD_GO = "go";
+    const std::string CMD_STOP = "stop";
+    const std::string CMD_QUIT = "quit";
+    const std::string CMD_SET_OPTION = "setoption";
+    
+    // Ответы двигателя
+    const std::string RESP_ID_NAME = "id name Maestro Chess Engine";
+    const std::string RESP_ID_AUTHOR = "id author " + AUTHOR;
+    const std::string RESP_UCI_OK = "uciok";
+    const std::string RESP_READY_OK = "readyok";
+    const std::string RESP_BESTMOVE = "bestmove ";
+    const std::string RESP_INFO = "info ";
+    
+    // Опции двигателя
+    const std::string OPTION_HASH = "Hash";
+    const std::string OPTION_THREADS = "Threads";
+    const std::string OPTION_MULTI_PV = "MultiPV";
+    const std::string OPTION_OWN_BOOK = "OwnBook";
+    
+    // Типы опций
+    const std::string TYPE_CHECK = "check";
+    const std::string TYPE_SPIN = "spin";
+    const std::string TYPE_COMBO = "combo";
+    const std::string TYPE_BUTTON = "button";
+    const std::string TYPE_STRING = "string";
 }
 
 #endif // UCI_ENGINE_HPP
