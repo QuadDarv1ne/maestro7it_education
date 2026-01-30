@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+build/
+build_gui/
+*.exe
+*.o
+*.obj
+
+# Documentation
+notes/
+*.md
+!README.md
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Development files
+TODO.md
+.git/
+.gitignore
+
+# Large dependencies
+stockfish/
+
+# Source code (we only need compiled/Python)
+src/
+
+# Tools
+tools/
+
+# Icons (optional, remove if needed in container)
+icons/

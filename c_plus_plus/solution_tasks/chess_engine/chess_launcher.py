@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Chess Game Launcher
-Main menu to choose between terminal and graphical interface
+Лаунчер шахматной игры
+Главное меню для выбора между терминальным и графическим интерфейсом
 """
 
 import os
@@ -11,11 +11,11 @@ import sys
 import subprocess
 
 def clear_screen():
-    """Clear the terminal screen"""
+    """Очистка экрана терминала"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def print_header():
-    """Print the main header"""
+    """Вывод главного заголовка"""
     print("♔ ♕ ♖ ♗ ♘ ♙  ШАХМАТЫ  ♟ ♞ ♝ ♜ ♛ ♚")
     print("=" * 40)
     print("    ВЫБЕРИТЕ РЕЖИМ ИГРЫ")
@@ -23,7 +23,7 @@ def print_header():
     print()
 
 def show_menu():
-    """Show the main menu"""
+    """Отображение главного меню"""
     print("📋 ДОСТУПНЫЕ РЕЖИМЫ:")
     print()
     print("  1. 🖥️  Консольная версия (терминал)")
@@ -51,7 +51,7 @@ def show_menu():
     print("-" * 40)
 
 def check_pygame():
-    """Check if pygame is installed"""
+    """Проверка установки pygame"""
     try:
         import pygame
         return True
@@ -59,7 +59,7 @@ def check_pygame():
         return False
 
 def install_pygame():
-    """Attempt to install pygame"""
+    """Попытка установки pygame"""
     print("🔧 Pygame не найден. Пытаюсь установить...")
     try:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pygame"])
@@ -74,8 +74,8 @@ def install_pygame():
         return False
 
 def run_terminal_version():
-    """Run the terminal chess game"""
-    print("🚀 Запуск консольной версии...")
+    """Запуск терминальной шахматной игры"""
+    print("Запуск консольной версии...")
     print()
     try:
         from interfaces.full_chess_game import FullChessGame
@@ -86,11 +86,11 @@ def run_terminal_version():
         input("Нажмите Enter для возврата в меню...")
 
 def run_graphical_version():
-    """Run the graphical chess game"""
+    """Запуск графической шахматной игры"""
     print("🎮 Запуск графической версии...")
     print()
     
-    # Check if pygame is available
+    # Проверка доступности pygame
     if not check_pygame():
         print("⚠️  Pygame не установлен!")
         choice = input("Установить pygame автоматически? (y/n): ").strip().lower()
@@ -103,7 +103,7 @@ def run_graphical_version():
             input("Нажмите Enter для возврата в меню...")
             return
     
-    # Run pygame version
+    # Запуск pygame версии
     try:
         from interfaces.pygame_chess import PygameChessGUI
         game = PygameChessGUI()
@@ -117,16 +117,16 @@ def run_graphical_version():
         input("Нажмите Enter для возврата в меню...")
 
 def run_flask_web_version():
-    """Run the Flask web chess server (Obsolete)"""
+    """Запуск Flask веб-сервера шахмат (устарело)"""
     print("🌐 Версия Flask была удалена в пользу FastAPI.")
     input("Нажмите Enter...")
 
 def run_fastapi_web_version():
-    """Run the FastAPI web chess server"""
+    """Запуск FastAPI веб-сервера шахмат"""
     print("⚡ Запуск FastAPI веб-сервера...")
     print()
     
-    # Check dependencies
+    # Проверка зависимостей
     try:
         import fastapi
         import uvicorn
@@ -147,10 +147,10 @@ def run_fastapi_web_version():
             input("Нажмите Enter для возврата в меню...")
             return
     
-    # Run FastAPI server
+    # Запуск FastAPI сервера
     try:
-        print("🚀 FastAPI сервер запущен на http://localhost:8000")
-        print("🎯 Откройте этот адрес в браузере")
+        print("FastAPI сервер запущен на http://localhost:8000")
+        print("Откройте этот адрес в браузере")
         print("⌨️  Нажмите Ctrl+C для остановки сервера")
         print()
         
@@ -163,7 +163,7 @@ def run_fastapi_web_version():
         input("Нажмите Enter для возврата в меню...")
 
 def main():
-    """Main menu loop"""
+    """Главный цикл меню"""
     while True:
         clear_screen()
         print_header()

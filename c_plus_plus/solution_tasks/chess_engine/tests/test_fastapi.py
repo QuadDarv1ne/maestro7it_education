@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-FastAPI Chess API Testing and Documentation
-Tests all endpoints and generates API documentation
+Тестирование и документация FastAPI Chess API
+Проверка всех endpoint'ов и генерация API документации
 """
 
 import requests
@@ -18,7 +18,7 @@ class APITester:
         self.game_id = None
     
     def test_health_endpoint(self) -> bool:
-        """Test the health check endpoint"""
+        """Тест health check endpoint"""
         print("🏥 Testing Health Endpoint...")
         try:
             response = self.session.get(f"{self.base_url}/health")
@@ -34,7 +34,7 @@ class APITester:
             return False
     
     def test_create_game(self) -> bool:
-        """Test creating a new game"""
+        """Тест создания новой игры"""
         print("\n🎮 Testing Game Creation...")
         try:
             payload = {
@@ -65,14 +65,14 @@ class APITester:
             return False
     
     def test_make_move(self) -> bool:
-        """Test making a move"""
+        """Тест выполнения хода"""
         if not self.game_id:
             print("   ⚠ No game ID available for move test")
             return False
             
         print("\n♟️ Testing Move Making...")
         try:
-            # Try a simple pawn move: e2 to e4 (in 0-indexed: [6,4] to [4,4])
+            # Пробуем простой ход пешки: e2 на e4 (в индексации с 0: [6,4] на [4,4])
             payload = {
                 "game_id": self.game_id,
                 "from_pos": [6, 4],  # e2
@@ -103,7 +103,7 @@ class APITester:
             return False
     
     def test_ai_move(self) -> bool:
-        """Test getting AI move"""
+        """Тест получения хода AI"""
         if not self.game_id:
             print("   ⚠ No game ID available for AI test")
             return False
@@ -129,7 +129,7 @@ class APITester:
             return False
     
     def test_undo_move(self) -> bool:
-        """Test undoing a move"""
+        """Тест отмены хода"""
         if not self.game_id:
             print("   ⚠ No game ID available for undo test")
             return False
@@ -155,23 +155,23 @@ class APITester:
             return False
     
     def run_comprehensive_test(self):
-        """Run all tests and generate report"""
+        """Запуск всех тестов и генерация отчёта"""
         print("♔ ♕ ♖ ♗ ♘ ♙ FASTAPI CHESS API TEST SUITE ♟ ♞ ♝ ♜ ♛ ♚")
         print("=" * 60)
         
         results = {}
         
-        # Test health endpoint
+        # Тест health endpoint
         results['health'] = self.test_health_endpoint()
         
-        # Test game creation
+        # Тест создания игры
         results['create_game'] = self.test_create_game()
         
-        # Test move making (if game created)
+        # Тест выполнения хода (если игра создана)
         if results['create_game']:
             results['make_move'] = self.test_make_move()
             
-            # Test AI move (if move was made)
+            # Тест хода AI (если ход был сделан)
             if results['make_move']:
                 results['ai_move'] = self.test_ai_move()
                 results['undo_move'] = self.test_undo_move()

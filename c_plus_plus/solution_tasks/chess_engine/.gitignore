@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build artifacts
+build/
+build_gui/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.exe
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Game data
+games_data/
+*.pgn
+*.fen
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Docker volumes
+nginx.conf
+ssl/
+
+# Performance reports
+benchmark_results.json
+performance_analysis_report.json
+*.png
+
+# Node modules (if using any JS tools)
+node_modules/
