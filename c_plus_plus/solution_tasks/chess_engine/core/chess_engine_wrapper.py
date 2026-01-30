@@ -4,7 +4,10 @@
 import ctypes
 import os
 import sys
-from typing import Tuple, List, Optional
+import time
+from typing import Tuple, List, Optional, Dict
+from functools import lru_cache
+import hashlib
 
 class ChessEngineWrapper:
     """Python wrapper для С++ шахматного движка"""
@@ -15,10 +18,32 @@ class ChessEngineWrapper:
         self.current_turn = True  # True = белые, False = черные
         self.move_history = []
         self.captured_pieces = {'white': [], 'black': []}
-        self.game_stats = {'moves_count': 0, 'captures_count': 0, 'check_count': 0}
+        self.game_stats = {
+            'moves_count': 0,
+            'captures_count': 0,
+            'check_count': 0,
+            'cache_hits': 0,
+            'cache_misses': 0,
+            'position_evaluations': 0
+        }
         self.game_active = True
         self.selected_square = None
         self.valid_moves = []
+        
+        # Кэширование для оптимизации
+        self._position_hash_cache = {}
+        self._move_validation_cache = {}
+        self._king_check_cache = {}
+        self._legal_moves_cache = {}
+        self._cache_max_size = 10000
+        
+        # Метрики производительности
+        self._performance_metrics = {
+            'move_validation_time': 0.0,
+            'checkmate_detection_time': 0.0,
+            'ai_thinking_time': 0.0,
+            'cache_cleanup_time': 0.0
+        }
         
         # Рокировка и специальные ходы
         self.castling_rights = {
@@ -49,17 +74,29 @@ class ChessEngineWrapper:
         #         self.move_gen = None
         self.move_gen = None  # Используем только Python валидацию
             
-        # ВРЕМЕННО ОТКЛЮЧЕНО: EnhancedChessAI вызывает циклическую зависимость
-        # try:
-        #     from core.enhanced_chess_ai import EnhancedChessAI
-        #     self.ai = EnhancedChessAI(search_depth=4)
-        # except ImportError:
-        #     try:
-        #         from .enhanced_chess_ai import EnhancedChessAI
-        #         self.ai = EnhancedChessAI(search_depth=4)
-        #     except ImportError:
-        #         self.ai = None
-        self.ai = None  # Используем базовый AI
+        # ВКЛЮЧЕНО: EnhancedChessAI теперь работает без циклической зависимости
+        try:
+            from core.enhanced_chess_ai import EnhancedChessAI
+            self.ai = EnhancedChessAI(search_depth=4, engine_wrapper=self)
+        except ImportError:
+            try:
+                from .enhanced_chess_ai import EnhancedChessAI
+                self.ai = EnhancedChessAI(search_depth=4, engine_wrapper=self)
+            except ImportError:
+                print("Предупреждение: EnhancedChessAI не найден, используем базовый AI")
+                self.ai = None
+                
+        # Zobrist hashing для быстрой проверки позиций (синхронизируем с AI)
+        if self.ai:
+            self.zobrist_keys = self.ai.zobrist_keys
+        else:
+            # Резервная инициализация Zobrist если AI не найден
+            import random
+            random.seed(42)
+            self.zobrist_keys = {
+                'pieces': {p: [random.getrandbits(64) for _ in range(64)] for p in ['P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k']},
+                'turn': random.getrandbits(64)
+            }
         
     def initialize_engine(self) -> bool:
         """Инициализация С++ библиотеки движка"""
@@ -98,39 +135,132 @@ class ChessEngineWrapper:
     def get_game_statistics(self) -> dict:
         """Получение статистики текущей игры"""
         stats = self.game_stats.copy()
+        stats['performance_metrics'] = self._performance_metrics.copy()
+        stats['cache_size'] = {
+            'position_hash': len(self._position_hash_cache),
+            'move_validation': len(self._move_validation_cache),
+            'king_check': len(self._king_check_cache),
+            'legal_moves': len(self._legal_moves_cache)
+        }
         if self.ai:
             stats['ai_nodes'] = self.nodes_searched = getattr(self.ai, 'nodes_searched', 0)
             stats['ai_tt_hits'] = getattr(self.ai, 'tt_hits', 0)
         return stats
     
+    def _get_position_hash(self) -> int:
+        """Генерация хэша текущей позиции с использованием Zobrist hashing"""
+        hash_value = 0
+        
+        # XOR всех фигур на доске
+        for row in range(8):
+            for col in range(8):
+                piece = self.board_state[row][col]
+                if piece != '.':
+                    square = row * 8 + col
+                    hash_value ^= self.zobrist_keys['pieces'][piece][square]
+        
+        # XOR ключа очереди хода
+        if self.current_turn:
+            hash_value ^= self.zobrist_keys['turn']
+        
+        return hash_value
+    
+    def _clear_caches(self):
+        """Очистка кэшей при превышении лимита"""
+        start_time = time.perf_counter()
+        
+        if len(self._move_validation_cache) > self._cache_max_size:
+            self._move_validation_cache.clear()
+        if len(self._king_check_cache) > self._cache_max_size:
+            self._king_check_cache.clear()
+        if len(self._legal_moves_cache) > self._cache_max_size:
+            self._legal_moves_cache.clear()
+        
+        self._performance_metrics['cache_cleanup_time'] += time.perf_counter() - start_time
+    
+    def invalidate_caches(self):
+        """Принудительная инвалидация всех кэшей"""
+        self._position_hash_cache.clear()
+        self._move_validation_cache.clear()
+        self._king_check_cache.clear()
+        self._legal_moves_cache.clear()
+    
     def is_checkmate(self, is_white: bool) -> bool:
-        """Эффективная проверка мата"""
+        """Эффективная проверка мата с кэшированием"""
+        start_time = time.perf_counter()
+        
+        # Кэширование результата
+        cache_key = f"{self._get_position_hash()}_checkmate_{is_white}"
+        if cache_key in self._king_check_cache:
+            self.game_stats['cache_hits'] += 1
+            self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
+            return self._king_check_cache[cache_key]
+        
+        self.game_stats['cache_misses'] += 1
+        
         # Если нет шаха, то и мата нет
         if not self.is_king_in_check(is_white):
-            return False
+            result = False
+            self._king_check_cache[cache_key] = result
+            self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
+            return result
         
         # Проверяем, есть ли хоть один легальный ход
         if self.move_gen:
             try:
                 legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
-                return len(legal_moves) == 0
+                result = len(legal_moves) == 0
+                self._king_check_cache[cache_key] = result
+                self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
+                return result
             except Exception as e:
                 print(f"Ошибка MoveGen в is_checkmate: {e}")
         
         # Резервная Python-реализация
-        return self._is_checkmate_python(is_white)
+        result = self._is_checkmate_python(is_white)
+        self._king_check_cache[cache_key] = result
+        self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
+        
+        # Очистка кэша при необходимости
+        self._clear_caches()
+        
+        return result
     
     def _is_checkmate_python(self, is_white: bool) -> bool:
-        """Резервная Python-реализация проверки мата"""
+        """Резервная Python-реализация проверки мата с ранним прерыванием"""
         # Король уже под шахом, проверяем все возможные ходы
         original_turn = self.current_turn
         self.current_turn = is_white
         
-        # Перебираем все фигуры текущего цвета
+        # Оптимизация: проверяем сначала ходы короля (быстрее)
+        king_pos = None
+        for row in range(8):
+            for col in range(8):
+                piece = self.board_state[row][col]
+                if piece.lower() == 'k' and piece.isupper() == is_white:
+                    king_pos = (row, col)
+                    break
+            if king_pos:
+                break
+        
+        # Проверяем ходы короля сначала
+        if king_pos:
+            from_row, from_col = king_pos
+            for to_row in range(max(0, from_row-1), min(8, from_row+2)):
+                for to_col in range(max(0, from_col-1), min(8, from_col+2)):
+                    if (from_row, from_col) == (to_row, to_col):
+                        continue
+                    
+                    if self.is_valid_move_python((from_row, from_col), (to_row, to_col)):
+                        if not self.would_still_be_in_check((from_row, from_col), (to_row, to_col), is_white):
+                            self.current_turn = original_turn
+                            return False
+        
+        # Перебираем все остальные фигуры
         for from_row in range(8):
             for from_col in range(8):
                 piece = self.board_state[from_row][from_col]
-                if piece == '.':
+                if piece == '.' or piece.lower() == 'k':
                     continue
                 
                 piece_is_white = piece.isupper()
@@ -143,9 +273,7 @@ class ChessEngineWrapper:
                         if (from_row, from_col) == (to_row, to_col):
                             continue
                         
-                        # Проверяем, является ли ход допустимым
                         if self.is_valid_move_python((from_row, from_col), (to_row, to_col)):
-                            # Проверяем, не останется ли король под шахом
                             if not self.would_still_be_in_check((from_row, from_col), (to_row, to_col), is_white):
                                 # Нашли легальный ход - не мат!
                                 self.current_turn = original_turn
@@ -663,102 +791,127 @@ class ChessEngineWrapper:
         return True
     
     def get_best_move(self, depth: int = 3) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Получение лучшего хода для AI (использует Enhanced AI если доступен)"""
+        """Получение лучшего хода для AI с кэшированием и оптимизацией"""
+        start_time = time.perf_counter()
+        
+        # Проверяем кэш для текущей позиции
+        cache_key = f"{self._get_position_hash()}_bestmove_{depth}"
+        if cache_key in self._legal_moves_cache:
+            self.game_stats['cache_hits'] += 1
+            cached_move = self._legal_moves_cache[cache_key]
+            self._performance_metrics['ai_thinking_time'] += time.perf_counter() - start_time
+            return cached_move
+        
+        self.game_stats['cache_misses'] += 1
+        
         if self.ai:
             try:
                 self.ai.search_depth = depth
-                return self.ai.get_best_move(self.board_state, self.current_turn)
+                result = self.ai.get_best_move(self.board_state, self.current_turn)
+                self._legal_moves_cache[cache_key] = result
+                self._performance_metrics['ai_thinking_time'] += time.perf_counter() - start_time
+                return result
             except Exception as e:
                 print(f"Ошибка Enhanced AI: {e}")
         
-        # Резервный вариант из старой реализации
-        try:
-            # Импортируем продвинутый ИИ
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+        # Оптимизированный резервный вариант
+        result = self._get_best_move_optimized(depth)
+        self._legal_moves_cache[cache_key] = result
+        self._performance_metrics['ai_thinking_time'] += time.perf_counter() - start_time
+        self._clear_caches()
+        
+        return result
+    
+    def _get_best_move_optimized(self, depth: int) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """Оптимизированная генерация лучшего хода"""
+        capture_moves = []
+        check_moves = []
+        regular_moves = []
+        
+        ai_is_white = self.current_turn
+        
+        # Оптимизация: сначала проверяем центральные клетки
+        priority_squares = [
+            (3, 3), (3, 4), (4, 3), (4, 4),  # Центр
+            (2, 2), (2, 5), (5, 2), (5, 5)   # Расширенный центр
+        ]
+        
+        def check_square(row, col):
+            piece = self.board_state[row][col]
+            if piece == '.' or piece.isupper() != ai_is_white:
+                return
             
-            try:
-                from advanced_ai import AdvancedChessAI
-                ai = AdvancedChessAI(search_depth=depth, time_limit=3000)
-                
-                # Преобразуем доску в формат AI
-                ai_board = [[cell for cell in row] for row in self.board_state]
-                
-                # Получаем лучший ход
-                best_move = ai.get_best_move(ai_board, not self.current_turn)  # AI играет за черных
-                
-                if best_move:
-                    stats = ai.get_statistics()
-                    print(f"AI: Рассмотрено {stats['nodes_searched']:,} узлов, TT hits: {stats['tt_hits']}")
-                    return best_move
-                
-            except ImportError:
-                print("Продвинутый ИИ не доступен, используем улучшенный базовый")
-                pass
-            
-            # Улучшенный резервный вариант - с приоритетом взятий
-            possible_moves = []
-            capture_moves = []
-            
-            # AI играет той же стороной, что и текущий ход
-            ai_is_white = self.current_turn
-            
-            for row in range(8):
-                for col in range(8):
-                    piece = self.board_state[row][col]
-                    if piece == '.':
+            for to_row in range(8):
+                for to_col in range(8):
+                    if (row, col) == (to_row, to_col):
                         continue
                     
-                    # Проверяем, что это фигура AI
-                    piece_is_white = piece.isupper()
-                    if piece_is_white != ai_is_white:
+                    target = self.board_state[to_row][to_col]
+                    if target != '.' and (target.isupper() == ai_is_white):
                         continue
                     
-                    # Генерируем ходы только для фигур AI
-                    for to_row in range(8):
-                        for to_col in range(8):
-                            if (row, col) == (to_row, to_col):
-                                continue
-                            
-                            # Быстрая предварительная проверка
-                            target = self.board_state[to_row][to_col]
-                            if target != '.' and (target.isupper() == piece_is_white):
-                                continue  # Не можем съесть свою фигуру
-                            
-                            # Временно меняем очередь для проверки
-                            original_turn = self.current_turn
-                            self.current_turn = ai_is_white
-                            
-                            if self.is_valid_move_python((row, col), (to_row, to_col)):
-                                # Проверяем, не подставит ли этот ход короля под шах
-                                if not self.would_still_be_in_check((row, col), (to_row, to_col), ai_is_white):
-                                    move = ((row, col), (to_row, to_col))
-                                    if target != '.':
-                                        capture_moves.append(move)  # Приоритет взятиям
-                                    else:
-                                        possible_moves.append(move)
-                            
-                            self.current_turn = original_turn
-            
-            # Приоритет взятиям, потом обычным ходам
-            all_moves = capture_moves + possible_moves
-            
-            if not all_moves:
-                return None
-            
-            # Выбираем первый ход (лучше взятие если есть)
-            import random
-            if capture_moves:
-                return capture_moves[0]  # Берем первое взятие
-            else:
-                return random.choice(possible_moves)  # Случайный ход
-            
-        except Exception as e:
-            print(f"Ошибка в get_best_move: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+                    # Кэширование валидации
+                    move_key = f"{row}{col}{to_row}{to_col}"
+                    if move_key in self._move_validation_cache:
+                        is_valid = self._move_validation_cache[move_key]
+                    else:
+                        original_turn = self.current_turn
+                        self.current_turn = ai_is_white
+                        is_valid = (self.is_valid_move_python((row, col), (to_row, to_col)) and
+                                  not self.would_still_be_in_check((row, col), (to_row, to_col), ai_is_white))
+                        self.current_turn = original_turn
+                        self._move_validation_cache[move_key] = is_valid
+                    
+                    if is_valid:
+                        move = ((row, col), (to_row, to_col))
+                        if target != '.':
+                            capture_moves.append(move)
+                        elif self._move_gives_check(move, ai_is_white):
+                            check_moves.append(move)
+                        else:
+                            regular_moves.append(move)
+        
+        # Сначала приоритетные клетки
+        for row, col in priority_squares:
+            check_square(row, col)
+        
+        # Если нашли взятие или шах - возвращаем
+        if capture_moves:
+            return capture_moves[0]
+        if check_moves:
+            return check_moves[0]
+        
+        # Потом остальные клетки
+        for row in range(8):
+            for col in range(8):
+                if (row, col) not in priority_squares:
+                    check_square(row, col)
+        
+        # Приоритет: взятия > шахи > обычные ходы
+        all_moves = capture_moves + check_moves + regular_moves
+        return all_moves[0] if all_moves else None
+    
+    def _move_gives_check(self, move: Tuple[Tuple[int, int], Tuple[int, int]], is_white: bool) -> bool:
+        """Проверяет, даёт ли ход шах"""
+        from_pos, to_pos = move
+        
+        # Симулируем ход
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        
+        piece = self.board_state[from_row][from_col]
+        captured = self.board_state[to_row][to_col]
+        
+        self.board_state[to_row][to_col] = piece
+        self.board_state[from_row][from_col] = '.'
+        
+        gives_check = self.is_king_in_check(not is_white)
+        
+        # Откатываем
+        self.board_state[from_row][from_col] = piece
+        self.board_state[to_row][to_col] = captured
+        
+        return gives_check
     
     def is_king_in_check(self, king_color: bool) -> bool:
         """Проверка, находится ли король под шахом"""
@@ -799,11 +952,13 @@ class ChessEngineWrapper:
         """Проверка, будет ли король все еще под шахом после хода"""
         # Сохраняем текущее состояние
         original_board = [row[:] for row in self.board_state]
+        original_turn = self.current_turn
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         
         # Делаем временный ход
         piece = self.board_state[from_row][from_col]
+        captured = self.board_state[to_row][to_col]
         self.board_state[to_row][to_col] = piece
         self.board_state[from_row][from_col] = '.'
         
@@ -811,7 +966,9 @@ class ChessEngineWrapper:
         in_check = self.is_king_in_check(king_color)
         
         # Восстанавливаем доску
-        self.board_state = original_board
+        self.board_state[from_row][from_col] = piece
+        self.board_state[to_row][to_col] = captured
+        self.current_turn = original_turn
         
         return in_check
     

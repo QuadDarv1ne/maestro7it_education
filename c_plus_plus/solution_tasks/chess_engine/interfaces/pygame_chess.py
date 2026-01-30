@@ -101,6 +101,7 @@ class PygameChessGUI:
             'ai_thinking_time': 0
         }
         self.last_ai_stats = {}
+        self.show_performance_stats = False  # Новый флаг для отображения статистики
         
         # Таймер для визуальной задержки
         self.computer_move_delay = 0
@@ -551,6 +552,16 @@ class PygameChessGUI:
         self.screen.blit(text, text.get_rect(center=exit_btn.center))
         buttons['exit'] = exit_btn
         
+        # Статистика (новая кнопка)
+        button_y += 40
+        stats_btn = pygame.Rect(650, button_y, 140, 30)
+        stats_color = (30, 144, 255) if self.show_performance_stats else (180, 180, 180)
+        pygame.draw.rect(self.screen, stats_color, stats_btn)
+        pygame.draw.rect(self.screen, self.BLACK, stats_btn, 2)
+        text = self.small_font.render("Статистика", True, self.WHITE if self.show_performance_stats else self.BLACK)
+        self.screen.blit(text, text.get_rect(center=stats_btn.center))
+        buttons['stats'] = stats_btn
+        
         return buttons
     
     def get_square_from_mouse(self, pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
@@ -719,6 +730,8 @@ class PygameChessGUI:
             self.save_game()
         elif buttons['load'].collidepoint(pos):
             self.load_game()
+        elif buttons.get('stats') and buttons['stats'].collidepoint(pos):
+            self.show_performance_stats = not self.show_performance_stats
         elif buttons['exit'].collidepoint(pos):
             return False
         
@@ -874,6 +887,10 @@ class PygameChessGUI:
         if self.pawn_promotion_pending:
             self.draw_promotion_dialog()
         
+        # Статистика производительности
+        if self.show_performance_stats:
+            self.draw_performance_stats()
+        
         # Сообщение о завершении игры
         if not self.game_active:
             overlay = pygame.Surface((640, 640), pygame.SRCALPHA)
@@ -891,6 +908,54 @@ class PygameChessGUI:
             self.screen.blit(text, text_rect)
         
         pygame.display.flip()
+    
+    def draw_performance_stats(self):
+        """Отрисовка статистики производительности"""
+        # Получаем статистику из движка
+        stats = self.engine.get_game_statistics()
+        
+        # Полупрозрачное окно
+        panel_width = 300
+        panel_height = 250
+        panel_x = (640 - panel_width) // 2
+        panel_y = 50
+        
+        # Фон
+        panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surface.fill((50, 50, 50, 230))
+        self.screen.blit(panel_surface, (panel_x, panel_y))
+        
+        # Рамка
+        pygame.draw.rect(self.screen, (200, 200, 200), 
+                        (panel_x, panel_y, panel_width, panel_height), 2)
+        
+        # Заголовок
+        y = panel_y + 10
+        title = self.font.render("Статистика производительности", True, (255, 255, 255))
+        self.screen.blit(title, (panel_x + 10, y))
+        y += 35
+        
+        # Основная статистика
+        cache_stats = stats.get('cache_size', {})
+        perf_metrics = stats.get('performance_metrics', {})
+        
+        info_lines = [
+            f"Кэш валидации: {cache_stats.get('move_validation', 0)}",
+            f"Кэш шахов: {cache_stats.get('king_check', 0)}",
+            f"Попадания: {stats.get('cache_hits', 0)}",
+            f"Промахи: {stats.get('cache_misses', 0)}",
+            f"Время проверки мата: {perf_metrics.get('checkmate_detection_time', 0):.4f}s",
+            f"Оценок позиций: {stats.get('position_evaluations', 0)}"
+        ]
+        
+        for line in info_lines:
+            text = self.small_font.render(line, True, (220, 220, 220))
+            self.screen.blit(text, (panel_x + 15, y))
+            y += 25
+        
+        # Подсказка
+        hint = self.small_font.render("Нажмите кнопку еще раз для закрытия", True, (180, 180, 180))
+        self.screen.blit(hint, (panel_x + 10, panel_y + panel_height - 25))
     
     def run(self):
         """Основной цикл игры с многопоточным AI"""
