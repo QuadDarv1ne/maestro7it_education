@@ -7,6 +7,7 @@
 #include <iostream>
 
 Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), openingBook_(), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)), historyTable(HISTORY_SIZE, 0) {
+    initZobrist();
     // Initialize the transposition table
     for(size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
         transpositionTable[i] = TTEntry();
@@ -587,21 +588,58 @@ int Minimax::quiescenceSearch(int alpha, int beta, int depth) {
 }
 
 // Simple hash function for board positions
-uint64_t Minimax::hashPosition() const {
-    // Simple XOR-based hashing - in a real implementation, you'd want Zobrist hashing
-    uint64_t hash = 0;
+void Minimax::initZobrist() {
+    std::mt19937_64 rng(123456789); // Fixed seed for reproducibility
+    std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
     
-    for (int square = 0; square < 64; square++) {
-        Piece piece = board_.getPiece(square);
-        if (!piece.isEmpty()) {
-            // Combine piece type, color, and position
-            uint64_t pieceHash = (piece.getType() * 16 + piece.getColor()) * 64 + square;
-            hash ^= pieceHash;
+    for (int i = 0; i < 64; i++) {
+        for (int j = 0; j < 12; j++) {
+            zobristTable[i][j] = dist(rng);
         }
     }
     
-    // Include whose turn it is
-    hash ^= static_cast<int>(board_.getCurrentPlayer()) * 10000;
+    zobristBlackToMove = dist(rng);
+    
+    for (int i = 0; i < 16; i++) {
+        zobristCastling[i] = dist(rng);
+    }
+    
+    for (int i = 0; i < 8; i++) {
+        zobristEnPassant[i] = dist(rng);
+    }
+}
+
+uint64_t Minimax::hashPosition() const {
+    uint64_t hash = 0;
+    
+    // Pieces
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (!piece.isEmpty()) {
+            int pieceIdx = static_cast<int>(piece.getType());
+            if (piece.getColor() == Color::BLACK) pieceIdx += 6;
+            hash ^= zobristTable[square][pieceIdx];
+        }
+    }
+    
+    // Turn
+    if (board_.getCurrentPlayer() == Color::BLACK) {
+        hash ^= zobristBlackToMove;
+    }
+    
+    // Castling
+    int castlingIdx = 0;
+    if (board_.canCastleKingSide(Color::WHITE)) castlingIdx |= 1;
+    if (board_.canCastleQueenSide(Color::WHITE)) castlingIdx |= 2;
+    if (board_.canCastleKingSide(Color::BLACK)) castlingIdx |= 4;
+    if (board_.canCastleQueenSide(Color::BLACK)) castlingIdx |= 8;
+    hash ^= zobristCastling[castlingIdx];
+    
+    // En passant
+    Square ep = board_.getEnPassantSquare();
+    if (ep != INVALID_SQUARE) {
+        hash ^= zobristEnPassant[board_.file(ep)];
+    }
     
     return hash;
 }
@@ -673,10 +711,15 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
         int maxValue = INT_MIN;
         for (size_t i = 0; i < moves.size(); i++) {
             const Move& move = moves[i];
-            // TODO: выполнить ход
+            
+            // Выполняем ход
+            board_.makeMove(move.from, move.to);
+            
             int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Late move reduction
             int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::BLACK);
-            // TODO: откатить ход
+            
+            // Отменяем ход
+            board_.undoMove();
             
             if (eval > maxValue) {
                 maxValue = eval;
@@ -694,10 +737,15 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
         int minValue = INT_MAX;
         for (size_t i = 0; i < moves.size(); i++) {
             const Move& move = moves[i];
-            // TODO: выполнить ход
+            
+            // Выполняем ход
+            board_.makeMove(move.from, move.to);
+            
             int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Late move reduction
             int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::WHITE);
-            // TODO: откатить ход
+            
+            // Отменяем ход
+            board_.undoMove();
             
             if (eval < minValue) {
                 minValue = eval;

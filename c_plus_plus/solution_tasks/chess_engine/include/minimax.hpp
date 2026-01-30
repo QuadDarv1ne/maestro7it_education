@@ -49,6 +49,13 @@ private:
     static const int HISTORY_SIZE = 64 * 64; // From-To square combinations
     std::vector<int> historyTable;
     
+    // Zobrist hashing
+    uint64_t zobristTable[64][12]; // 64 squares, 12 pieces (6 types * 2 colors)
+    uint64_t zobristBlackToMove;
+    uint64_t zobristCastling[16];
+    uint64_t zobristEnPassant[8];
+    void initZobrist();
+
 public:
     Minimax(Board& board, int maxDepth = 4);
     
