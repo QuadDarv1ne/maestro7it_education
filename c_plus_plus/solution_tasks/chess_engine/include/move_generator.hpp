@@ -58,16 +58,16 @@ private:
 public:
     MoveGenerator(const Board& board);
     
-    // Generate all legal moves for current player
+    // Генерация всех легальных ходов для текущего игрока
     std::vector<Move> generateLegalMoves() const;
     
-    // Generate pseudo-legal moves (may include moves that leave king in check)
+    // Генерация псевдо-легальных ходов (может включать ходы, оставляющие короля под шахом)
     std::vector<Move> generatePseudoLegalMoves() const;
     
-    // Check if a move is legal
+    // Проверка, является ли ход легальным
     bool isLegalMove(const Move& move) const;
     
-    // Specific piece move generators
+    // Генераторы ходов для конкретных фигур
     std::vector<Move> generatePawnMoves(Square from) const;
     std::vector<Move> generateKnightMoves(Square from) const;
     std::vector<Move> generateBishopMoves(Square from) const;
@@ -75,24 +75,24 @@ public:
     std::vector<Move> generateQueenMoves(Square from) const;
     std::vector<Move> generateKingMoves(Square from) const;
     
-    // Special moves
+    // Специальные ходы
     std::vector<Move> generateCastlingMoves() const;
     std::vector<Move> generateEnPassantMoves() const;
     
-    // Validation helpers
+    // Вспомогательные методы валидации
     bool wouldBeInCheck(Square from, Square to) const;
     bool isSquareAttacked(Square square, Color byColor) const;
     bool isSquareAttackedOnBoard(const Board& board, Square square, Color byColor) const;
     bool isAttackedInDirection(const Board& board, Square square, int rankDelta, int fileDelta, Color byColor, bool diagonal) const;
     
 private:
-    // Helper methods
+    // Вспомогательные методы
     std::vector<Move> addMovesInDirection(Square from, int fileDelta, int rankDelta) const;
     bool isValidSquare(Square square) const;
     bool isOpponentPiece(Square square) const;
     bool isEmptySquare(Square square) const;
     
-    // Castling helpers
+    // Вспомогательные методы для рокировки
     bool canCastleKingside(Color color) const;
     bool canCastleQueenside(Color color) const;
     Square findKingSquare(Color color) const;

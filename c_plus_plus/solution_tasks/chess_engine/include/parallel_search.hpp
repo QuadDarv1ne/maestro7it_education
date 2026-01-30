@@ -37,7 +37,7 @@ private:
     std::pair<int, int> best_move_;
     std::vector<std::future<void>> futures_;
     
-    // Transposition table
+    // Таблица транспозиций
     struct TTEntry {
         uint64_t hash;
         int depth;
