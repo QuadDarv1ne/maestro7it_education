@@ -281,24 +281,24 @@ bool Minimax::isFutile(int depth, int alpha, int staticEval) const {
 }
 
 bool Minimax::isRazoringApplicable(int depth, int beta, int staticEval) const {
-    // Razoring constants (in centipawns)
+    // Константы razoring (в сотых пешки)
     static const int RAZOR_MARGIN[] = {0, 300, 400, 600, 800};
     
-    if (depth >= 4) return false; // Only apply for shallow depths
+    if (depth >= 4) return false; // Применяем только на малых глубинах
     if (depth <= 0 || depth >= 5) return false;
     
-    // Check if the static evaluation minus margin is still above beta
+    // Проверяем, находится ли статическая оценка минус маржа выше beta
     int margin = (depth < 5) ? RAZOR_MARGIN[depth] : 800;
     return (staticEval - margin) >= beta;
 }
 
 int Minimax::multiCutPruning(int depth, int alpha, int beta, Color maximizingPlayer, int cutNumber) {
-    // Multi-cut pruning - try to prove multiple cuts in one search
+    // Multi-cut pruning - попытка доказать несколько отсечений за один поиск
     if (depth <= 2 || cutNumber <= 0) {
         return minimaxWithTT(depth, alpha, beta, maximizingPlayer);
     }
     
-    // Try to find multiple good moves that would cause beta cutoffs
+    // Пытаемся найти несколько хороших ходов, которые вызовут beta cutoff
     std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
     if (moves.empty()) {
         return evaluatePosition();
@@ -306,12 +306,12 @@ int Minimax::multiCutPruning(int depth, int alpha, int beta, Color maximizingPla
     
     int bestValue = (maximizingPlayer == Color::WHITE) ? INT_MIN : INT_MAX;
     int cutsFound = 0;
-    const int CUT_THRESHOLD = 2; // Number of cuts needed to trigger multi-cut
+    const int CUT_THRESHOLD = 2; // Количество отсечений для запуска multi-cut
     
     for (size_t i = 0; i < moves.size() && cutsFound < CUT_THRESHOLD; i++) {
         const Move& move = moves[i];
         
-        // Execute move
+        // Выполняем ход
         Piece capturedPiece = board_.getPiece(move.to);
         Piece movingPiece = board_.getPiece(move.from);
         board_.setPiece(move.to, movingPiece);
@@ -320,22 +320,22 @@ int Minimax::multiCutPruning(int depth, int alpha, int beta, Color maximizingPla
         Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
         board_.setCurrentPlayer(opponent);
         
-        // Reduced depth search to test for cuts
+        // Поиск с уменьшенной глубиной для проверки отсечений
         int reducedDepth = depth - 2;
         int eval = -minimaxWithTT(reducedDepth, -beta, -alpha, opponent);
         
-        // Restore board
+        // Восстанавливаем доску
         board_.setPiece(move.from, movingPiece);
         board_.setPiece(move.to, capturedPiece);
         board_.setCurrentPlayer(maximizingPlayer);
         
-        // Check if this move causes a cut
+        // Проверяем, вызывает ли этот ход отсечение
         if ((maximizingPlayer == Color::WHITE && eval >= beta) ||
             (maximizingPlayer == Color::BLACK && eval <= alpha)) {
             cutsFound++;
         }
         
-        // Update best value
+        // Обновляем лучшее значение
         if (maximizingPlayer == Color::WHITE) {
             bestValue = std::max(bestValue, eval);
             alpha = std::max(alpha, eval);
@@ -344,13 +344,13 @@ int Minimax::multiCutPruning(int depth, int alpha, int beta, Color maximizingPla
             beta = std::min(beta, eval);
         }
         
-        // Early termination if we found enough cuts
+        // Досрочное завершение, если нашли достаточно отсечений
         if (cutsFound >= CUT_THRESHOLD) {
             return bestValue;
         }
     }
     
-    // If we didn't find enough cuts, do normal search
+    // Если не нашли достаточно отсечений, делаем обычный поиск
     return minimaxWithTT(depth, alpha, beta, maximizingPlayer);
 }
 
@@ -361,14 +361,14 @@ int Minimax::evaluatePosition() const {
 std::vector<Move> Minimax::orderCaptures(const std::vector<Move>& captures) const {
     std::vector<Move> orderedCaptures = captures;
     
-    // Order captures by MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
+    // Сортируем взятия по MVV-LVA (Наиболее ценная жертва - Наименее ценный атакующий)
     std::sort(orderedCaptures.begin(), orderedCaptures.end(), [this](const Move& a, const Move& b) {
         Piece victimA = board_.getPiece(a.to);
         Piece attackerA = board_.getPiece(a.from);
         Piece victimB = board_.getPiece(b.to);
         Piece attackerB = board_.getPiece(b.from);
         
-        // MVV-LVA scoring: higher value for more valuable victims and less valuable attackers
+        // MVV-LVA оценка: большее значение для более ценных жертв и менее ценных атакующих
         int scoreA = victimA.getValue() * 10 - attackerA.getValue();
         int scoreB = victimB.getValue() * 10 - attackerB.getValue();
         
@@ -379,24 +379,24 @@ std::vector<Move> Minimax::orderCaptures(const std::vector<Move>& captures) cons
 }
 
 int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int ply) {
-    // Stand pat evaluation
+    // Статическая оценка позиции
     int standPat = evaluatePosition();
     
-    // Beta cutoff
+    // Beta отсечение
     if (standPat >= beta) {
         return beta;
     }
     
-    // Alpha update
+    // Обновление alpha
     if (standPat > alpha) {
         alpha = standPat;
     }
     
-    // Generate only captures and legal moves (simplified - generate all legal moves and filter captures)
+    // Генерируем только взятия и легальные ходы (упрощенно - генерируем все легальные ходы и фильтруем взятия)
     MoveGenerator generator(board_);
     std::vector<Move> allMoves = generator.generateLegalMoves();
     
-    // Filter only captures
+    // Фильтруем только взятия
     std::vector<Move> tacticalMoves;
     for (const Move& move : allMoves) {
         if (move.isCapture || isInCheck(maximizingPlayer)) {
@@ -404,10 +404,10 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
         }
     }
     
-    // Order tactical moves
+    // Упорядочиваем тактические ходы
     tacticalMoves = orderCaptures(tacticalMoves);
     
-    // Limit quiescence depth to prevent explosion
+    // Ограничиваем глубину quiescence search для предотвращения взрыва
     const int MAX_QUIESCENCE_DEPTH = 8;
     if (ply >= MAX_QUIESCENCE_DEPTH) {
         return standPat;
@@ -416,16 +416,16 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
     int bestValue = standPat;
     
     for (const Move& move : tacticalMoves) {
-        // Delta pruning - if capture gain + positional bonus doesn't beat alpha, skip
+        // Delta pruning - если выгода от взятия + позиционный бонус не превосходит alpha, пропускаем
         Piece captured = board_.getPiece(move.to);
         if (!captured.isEmpty()) {
-            int delta = captured.getValue() + 200; // Positional bonus
+            int delta = captured.getValue() + 200; // Позиционный бонус
             if (standPat + delta < alpha) {
-                continue; // Skip this capture
+                continue; // Пропускаем это взятие
             }
         }
         
-        // Execute move
+        // Выполняем ход
         Piece capturedPiece = board_.getPiece(move.to);
         Piece movingPiece = board_.getPiece(move.from);
         board_.setPiece(move.to, movingPiece);
@@ -434,21 +434,21 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
         Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
         board_.setCurrentPlayer(opponent);
         
-        // Recursive quiescence search
+        // Рекурсивный quiescence search
         int score = -quiescenceSearch(-beta, -alpha, opponent, ply + 1);
         
-        // Restore board
+        // Восстанавливаем доску
         board_.setPiece(move.from, movingPiece);
         board_.setPiece(move.to, capturedPiece);
         board_.setCurrentPlayer(maximizingPlayer);
         
-        // Update best value and bounds
+        // Обновляем лучшее значение и границы
         if (score > bestValue) {
             bestValue = score;
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
-                    break; // Beta cutoff
+                    break; // Beta отсечение
                 }
             }
         }
@@ -458,23 +458,23 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
 }
 
 bool Minimax::probCut(int depth, int beta, Color maximizingPlayer, int threshold) {
-    // ProbCut - probabilistic cutoff based on shallow search
-    if (depth < 3) return false; // Only apply for sufficient depth
+    // ProbCut - вероятностное отсечение на основе поверхностного поиска
+    if (depth < 3) return false; // Применяем только при достаточной глубине
     
-    // Perform a shallow search with reduced depth
+    // Выполняем поверхностный поиск с уменьшенной глубиной
     int shallowDepth = depth - 2;
     int shallowBeta = beta - threshold;
     
     std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
     if (moves.empty()) return false;
     
-    // Test the top few moves with shallow search
+    // Тестируем несколько лучших ходов с поверхностным поиском
     int testMoves = std::min(3, static_cast<int>(moves.size()));
     
     for (int i = 0; i < testMoves; i++) {
         const Move& move = moves[i];
         
-        // Execute move
+        // Выполняем ход
         Piece capturedPiece = board_.getPiece(move.to);
         Piece movingPiece = board_.getPiece(move.from);
         board_.setPiece(move.to, movingPiece);
@@ -483,87 +483,87 @@ bool Minimax::probCut(int depth, int beta, Color maximizingPlayer, int threshold
         Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
         board_.setCurrentPlayer(opponent);
         
-        // Shallow search
+        // Поверхностный поиск
         int shallowScore = -minimaxWithTT(shallowDepth, -shallowBeta - 1, -shallowBeta, opponent);
         
-        // Restore board
+        // Восстанавливаем доску
         board_.setPiece(move.from, movingPiece);
         board_.setPiece(move.to, capturedPiece);
         board_.setCurrentPlayer(maximizingPlayer);
         
-        // If shallow search exceeds threshold, likely to cause cutoff
+        // Если поверхностный поиск превышает порог, вероятно вызовет отсечение
         if (shallowScore >= shallowBeta) {
-            // Do a verification search at full depth
+            // Выполняем проверочный поиск на полной глубине
             int verifyScore = -minimaxWithTT(depth - 1, -beta - 1, -beta, opponent);
             
             if (verifyScore >= beta) {
-                return true; // Probabilistic cutoff confirmed
+                return true; // Вероятностное отсечение подтверждено
             }
         }
     }
     
-    return false; // No cutoff predicted
+    return false; // Не удалось предсказать отсечение
 }
 
 int Minimax::calculateExtension(const Move& move, Color maximizingPlayer, int depth) const {
     int extension = 0;
     
-    // Check extensions
+    // Расширения для шахов
     if (isInCheck(maximizingPlayer)) {
-        extension += 1; // One ply extension for check positions
+        extension += 1; // Расширение на 1 полуход для позиций с шахом
     }
     
-    // Capture extensions
+    // Расширения для взятий
     Piece capturedPiece = board_.getPiece(move.to);
     if (!capturedPiece.isEmpty()) {
-        // Extend for capture of valuable pieces
-        if (capturedPiece.getValue() >= 500) { // Queen or rook
+        // Расширяем для взятия ценных фигур
+        if (capturedPiece.getValue() >= 500) { // Ферзь или ладья
             extension += 1;
-        } else if (capturedPiece.getValue() >= 300) { // Bishop or knight
-            extension += 0; // No extension for minor pieces
+        } else if (capturedPiece.getValue() >= 300) { // Слон или конь
+            extension += 0; // Нет расширения для легких фигур
         }
     }
     
-    // Promotion extensions
+    // Расширения для превращений
     if (move.promotion != PieceType::EMPTY) {
-        extension += 1; // Extend for promotions
+        extension += 1; // Расширяем для превращений
     }
     
-    // Pawn push extensions near promotion
+    // Расширения для продвижения пешек близко к превращению
     Piece movingPiece = board_.getPiece(move.from);
     if (movingPiece.getType() == PieceType::PAWN) {
         int toRank = board_.rank(move.to);
         if ((movingPiece.getColor() == Color::WHITE && toRank >= 6) ||
             (movingPiece.getColor() == Color::BLACK && toRank <= 1)) {
-            extension += 1; // Extend pawn pushes to 7th/2nd rank
+            extension += 1; // Расширяем продвижение пешек на 7-ю/2-ю горизонталь
         }
     }
     
-    // Limit total extension
-    return std::min(extension, 2); // Maximum 2 ply extension
+    // Ограничиваем общее расширение
+    return std::min(extension, 2); // Максимум 2 полухода расширения
 }
 
 bool Minimax::isCriticalPosition() const {
-    // A position is critical if:
-    // 1. King is in check
-    // 2. Material balance is close (within 200 centipawns)
-    // 3. Position has tactical threats
+    // Позиция является критической, если:
+    // 1. Король под шахом
+    // 2. Материальный баланс близок (в пределах 200 сотых пешки)
+    // 3. Позиция имеет тактические угрозы
     
     Color currentPlayer = board_.getCurrentPlayer();
     if (isInCheck(currentPlayer)) {
         return true;
     }
     
-    // Check material balance
-    int materialEval = evaluatePosition(); // Use the general evaluation function
+    // Проверяем материальный баланс
+    int materialEval = evaluatePosition(); // Используем общую функцию оценки
     if (std::abs(materialEval) <= 200) {
-        return true; // Close game
+        return true; // Близкая игра
     }
     
-    // TODO: Add more sophisticated critical position detection
-    // - Look for hanging pieces
-    // - Check for tactical motifs
-    // - Analyze pawn structure tension
+    // TODO: Добавить более сложное определение критических позиций
+    // - Поиск висящих фигур
+    // - Проверка тактических мотивов
+    // - Анализ напряжения пешечной структуры
     
     return false;
 }
@@ -590,9 +590,9 @@ int Minimax::quiescenceSearch(int alpha, int beta, int depth) {
     return standPat;
 }
 
-// Simple hash function for board positions
+// Простая хеш-функция для позиций на доске
 void Minimax::initZobrist() {
-    std::mt19937_64 rng(123456789); // Fixed seed for reproducibility
+    std::mt19937_64 rng(123456789); // Фиксированное зерно для воспроизводимости
     std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
     
     for (int i = 0; i < 64; i++) {
@@ -615,7 +615,7 @@ void Minimax::initZobrist() {
 uint64_t Minimax::hashPosition() const {
     uint64_t hash = 0;
     
-    // Pieces
+    // Фигуры
     for (int square = 0; square < 64; square++) {
         Piece piece = board_.getPiece(square);
         if (!piece.isEmpty()) {
@@ -625,12 +625,12 @@ uint64_t Minimax::hashPosition() const {
         }
     }
     
-    // Turn
+    // Ход (сторона)
     if (board_.getCurrentPlayer() == Color::BLACK) {
         hash ^= zobristBlackToMove;
     }
     
-    // Castling
+    // Рокировка
     int castlingIdx = 0;
     if (board_.canCastleKingSide(Color::WHITE)) castlingIdx |= 1;
     if (board_.canCastleQueenSide(Color::WHITE)) castlingIdx |= 2;
@@ -638,7 +638,7 @@ uint64_t Minimax::hashPosition() const {
     if (board_.canCastleQueenSide(Color::BLACK)) castlingIdx |= 8;
     hash ^= zobristCastling[castlingIdx];
     
-    // En passant
+    // Взятие на проходе
     Square ep = board_.getEnPassantSquare();
     if (ep != INVALID_SQUARE) {
         hash ^= zobristEnPassant[board_.file(ep)];
@@ -664,16 +664,16 @@ Minimax::TTEntry* Minimax::probeTT(uint64_t hash) {
 }
 
 int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlayer) {
-    // Check transposition table
+    // Проверяем таблицу транспозиций
     uint64_t hash = hashPosition();
     TTEntry* entry = probeTT(hash);
     
     if (entry && entry->depth >= depth) {
-        if (entry->flag == 'E') { // Exact
+        if (entry->flag == 'E') { // Точное значение
             return entry->score;
-        } else if (entry->flag == 'L' && entry->score >= beta) { // Lower bound
+        } else if (entry->flag == 'L' && entry->score >= beta) { // Нижняя граница
             return entry->score;
-        } else if (entry->flag == 'U' && entry->score <= alpha) { // Upper bound
+        } else if (entry->flag == 'U' && entry->score <= alpha) { // Верхняя граница
             return entry->score;
         }
     }
@@ -690,17 +690,17 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
     
     // Null-move pruning
     if (depth >= 3 && !isInCheck(maximizingPlayer)) {
-        // Make null move (pass the turn)
+        // Делаем пустой ход (передаем ход)
         Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
         board_.setCurrentPlayer(opponent);
         
         int nullScore = -minimaxWithTT(depth - 1 - 2, -beta, -beta + 1, opponent);
         
-        // Restore player
+        // Восстанавливаем сторону
         board_.setCurrentPlayer(maximizingPlayer);
         
         if (nullScore >= beta) {
-            return beta; // Prune the subtree
+            return beta; // Отсекаем поддерево
         }
     }
     
@@ -718,7 +718,7 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
             // Выполняем ход
             board_.makeMove(move.from, move.to);
             
-            int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Late move reduction
+            int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Редукция поздних ходов
             int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::BLACK);
             
             // Отменяем ход
@@ -744,7 +744,7 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
             // Выполняем ход
             board_.makeMove(move.from, move.to);
             
-            int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Late move reduction
+            int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Редукция поздних ходов
             int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::WHITE);
             
             // Отменяем ход
@@ -764,14 +764,14 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
         bestScore = minValue;
     }
     
-    // Store result in transposition table
+    // Сохраняем результат в таблице транспозиций
     char flag;
     if (bestScore <= alpha) {
-        flag = 'U'; // Upper bound
+        flag = 'U'; // Верхняя граница
     } else if (bestScore >= beta) {
-        flag = 'L'; // Lower bound
+        flag = 'L'; // Нижняя граница
     } else {
-        flag = 'E'; // Exact
+        flag = 'E'; // Точное значение
     }
     
     storeInTT(hash, depth, bestScore, hasBestMove ? bestMove : Move(), flag);
@@ -780,19 +780,19 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
 }
 
 int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maximizingPlayer, bool isPVNode) {
-    // Base case: leaf node
+    // Базовый случай: листовой узел
     if (depth <= 0) {
         return quiescenceSearch(alpha, beta, maximizingPlayer);
     }
     
-    // Check transposition table
+    // Проверяем таблицу транспозиций
     uint64_t hash = hashPosition();
     TTEntry* entry = probeTT(hash);
     
     if (entry && entry->depth >= depth) {
-        if (entry->flag == 'E') return entry->score; // Exact score
-        if (entry->flag == 'L' && entry->score >= beta) return beta; // Lower bound
-        if (entry->flag == 'U' && entry->score <= alpha) return alpha; // Upper bound
+        if (entry->flag == 'E') return entry->score; // Точная оценка
+        if (entry->flag == 'L' && entry->score >= beta) return beta; // Нижняя граница
+        if (entry->flag == 'U' && entry->score <= alpha) return alpha; // Верхняя граница
     }
     
     std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
@@ -805,7 +805,7 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
     bool firstMove = true;
     
     for (const Move& move : moves) {
-        // Execute move
+        // Выполняем ход
         Piece capturedPiece = board_.getPiece(move.to);
         Piece movingPiece = board_.getPiece(move.from);
         board_.setPiece(move.to, movingPiece);
@@ -816,25 +816,25 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
         
         int eval;
         if (firstMove) {
-            // First move gets full window search
+            // Первый ход получает поиск с полным окном
             eval = -principalVariationSearch(depth - 1, -beta, -alpha, opponent, isPVNode);
             firstMove = false;
         } else {
-            // Subsequent moves get null-window search
+            // Последующие ходы получают поиск с нулевым окном
             eval = -principalVariationSearch(depth - 1, -alpha - 1, -alpha, opponent, false);
             
-            // If the null-window search suggests improvement, do full re-search
+            // Если поиск с нулевым окном указывает на улучшение, делаем полный перепоиск
             if (eval > alpha && eval < beta) {
                 eval = -principalVariationSearch(depth - 1, -beta, -alpha, opponent, isPVNode);
             }
         }
         
-        // Restore board
+        // Восстанавливаем доску
         board_.setPiece(move.from, movingPiece);
         board_.setPiece(move.to, capturedPiece);
         board_.setCurrentPlayer(maximizingPlayer);
         
-        // Update best value and bounds
+        // Обновляем лучшее значение и границы
         if (maximizingPlayer == Color::WHITE) {
             if (eval > bestValue) {
                 bestValue = eval;
@@ -842,7 +842,7 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
                 if (eval > alpha) {
                     alpha = eval;
                     if (eval >= beta) {
-                        // Beta cutoff - add killer move
+                        // Beta отсечение - добавляем killer move
                         addKillerMove(move, depth);
                         break;
                     }
@@ -855,7 +855,7 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
                 if (eval < beta) {
                     beta = eval;
                     if (eval <= alpha) {
-                        // Alpha cutoff - add killer move
+                        // Alpha отсечение - добавляем killer move
                         addKillerMove(move, depth);
                         break;
                     }
@@ -864,10 +864,10 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
         }
     }
     
-    // Store in transposition table
-    char flag = 'E'; // Exact
-    if (bestValue <= alpha) flag = 'U'; // Upper bound
-    if (bestValue >= beta) flag = 'L';  // Lower bound
+    // Сохраняем в таблице транспозиций
+    char flag = 'E'; // Точное значение
+    if (bestValue <= alpha) flag = 'U'; // Верхняя граница
+    if (bestValue >= beta) flag = 'L';  // Нижняя граница
     
     storeInTT(hash, depth, bestValue, bestMove, flag);
     

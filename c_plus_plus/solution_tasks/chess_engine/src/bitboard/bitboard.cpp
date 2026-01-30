@@ -77,13 +77,13 @@ Bitboard::PieceType Bitboard::getPieceType(int square) const {
         if (BitboardUtils::getBit(pieces_[WHITE][piece], square)) return static_cast<PieceType>(piece);
         if (BitboardUtils::getBit(pieces_[BLACK][piece], square)) return static_cast<PieceType>(piece);
     }
-    return static_cast<PieceType>(PIECE_TYPE_COUNT); // Invalid
+    return static_cast<PieceType>(PIECE_TYPE_COUNT); // Неверно
 }
 
 Bitboard::Color Bitboard::getPieceColor(int square) const {
     if (BitboardUtils::getBit(occupancy_[WHITE], square)) return WHITE;
     if (BitboardUtils::getBit(occupancy_[BLACK], square)) return BLACK;
-    return static_cast<Color>(COLOR_COUNT); // Invalid
+    return static_cast<Color>(COLOR_COUNT); // Неверно
 }
 
 void Bitboard::setPiece(int square, PieceType piece, Color color) {
@@ -423,7 +423,7 @@ std::string Bitboard::toFen() const {
     
     fen += " ";
     
-    // En passant
+    // Взятие на проходе
     if (en_passant_square_ >= 0) {
         int file = en_passant_square_ % 8;
         int rank = en_passant_square_ / 8;

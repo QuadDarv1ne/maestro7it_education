@@ -19,7 +19,7 @@ namespace Bitboards {
     
     // Инициализация масок атак
     void initAttackTables() {
-        // Knight attacks
+        // Атаки коня
         for (int sq = 0; sq < 64; sq++) {
             Bitboard attacks = 0;
             int rank = sq / 8;
@@ -40,7 +40,7 @@ namespace Bitboards {
             KNIGHT_ATTACKS[sq] = attacks;
         }
         
-        // King attacks
+        // Атаки короля
         for (int sq = 0; sq < 64; sq++) {
             Bitboard attacks = 0;
             int rank = sq / 8;
@@ -59,7 +59,7 @@ namespace Bitboards {
             KING_ATTACKS[sq] = attacks;
         }
         
-        // Pawn attacks
+        // Атаки пешек
         for (int color = 0; color < 2; color++) {
             for (int sq = 0; sq < 64; sq++) {
                 Bitboard attacks = 0;
@@ -259,11 +259,11 @@ Bitboard BitboardEngine::squareToBitboard(int square) {
 
 int BitboardEngine::bitboardToSquare(Bitboard bb) {
     if (bb == 0) return INVALID_SQUARE;
-    return __builtin_ctzll(bb); // Count trailing zeros
+    return __builtin_ctzll(bb); // Подсчет замыкающих нулей
 }
 
 int BitboardEngine::popcount(Bitboard bb) {
-    return __builtin_popcountll(bb); // Population count
+    return __builtin_popcountll(bb); // Подсчет количества единиц
 }
 
 int BitboardEngine::lsb(Bitboard bb) {
