@@ -10,9 +10,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    """Serve the enhanced chess interface"""
+    """Serve the optimized chess interface"""
     web_dir = os.path.dirname(os.path.abspath(__file__))
-    return send_from_directory(web_dir, 'enhanced_chess.html')
+    return send_from_directory(web_dir, 'optimized_chess.html')
 
 @app.route('/classic')
 def classic():
@@ -20,11 +20,18 @@ def classic():
     web_dir = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(web_dir, 'index.html')
 
+@app.route('/enhanced')
+def enhanced():
+    """Serve the enhanced chess interface"""
+    web_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(web_dir, 'enhanced_chess.html')
+
 if __name__ == '__main__':
-    print("♔ ♕ ♖ ♗ ♘ ♙ SIMPLE CHESS SERVER ♟ ♞ ♝ ♜ ♛ ♚")
-    print("=" * 40)
+    print("♔ ♕ ♖ ♗ ♘ ♙ OPTIMIZED CHESS SERVER ♟ ♞ ♝ ♜ ♛ ♚")
+    print("=" * 50)
     print("Available at: http://localhost:5000")
     print("Classic version: http://localhost:5000/classic")
-    print("=" * 40)
+    print("Enhanced version: http://localhost:5000/enhanced")
+    print("=" * 50)
     
     app.run(host='0.0.0.0', port=5000, debug=True)

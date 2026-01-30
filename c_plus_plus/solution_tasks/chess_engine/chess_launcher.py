@@ -151,10 +151,10 @@ def run_web_version():
         web_dir = os.path.join(os.path.dirname(__file__), 'web')
         if os.path.exists(web_dir):
             os.chdir(web_dir)
-            subprocess.run([sys.executable, 'enhanced_chess_server.py'])
+            subprocess.run([sys.executable, 'simple_server.py'])
         else:
             # Run from main directory
-            subprocess.run([sys.executable, 'web/enhanced_chess_server.py'])
+            subprocess.run([sys.executable, 'web/simple_server.py'])
             
     except KeyboardInterrupt:
         print("\n\n🛑 Сервер остановлен пользователем")
