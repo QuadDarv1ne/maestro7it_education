@@ -210,8 +210,8 @@ class EnhancedChessAI:
     
     def evaluate_mobility(self, board: List[List[str]]) -> int:
         """Оценка мобильности фигур"""
-        white_moves = len(self.move_gen.generate_legal_moves(board, True))
-        black_moves = len(self.move_gen.generate_legal_moves(board, False))
+        white_moves = len(self.generate_legal_moves(board, True))
+        black_moves = len(self.generate_legal_moves(board, False))
         
         return (white_moves - black_moves) * 5  # Бонус за мобильность
     
@@ -352,6 +352,47 @@ class EnhancedChessAI:
         
         return score
     
+    def generate_legal_moves(self, board: List[List[str]], is_white: bool) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """Генерация всех легальных ходов для данного цвета"""
+        moves = []
+        for from_row in range(8):
+            for from_col in range(8):
+                piece = board[from_row][from_col]
+                if piece == '.':
+                    continue
+                    
+                # Проверяем, что фигура принадлежит нужному цвету
+                if (is_white and piece.isupper()) or (not is_white and piece.islower()):
+                    # Проверяем все возможные клетки назначения
+                    for to_row in range(8):
+                        for to_col in range(8):
+                            # Используем ChessEngineWrapper для проверки валидности
+                            self.engine_wrapper.board_state = [row[:] for row in board]
+                            self.engine_wrapper.current_turn = is_white
+                            if self.engine_wrapper.is_valid_move_python((from_row, from_col), (to_row, to_col)):
+                                moves.append(((from_row, from_col), (to_row, to_col)))
+        return moves
+    
+    def is_square_attacked(self, board: List[List[str]], square_index: int, by_white: bool) -> bool:
+        """Проверка, атакована ли клетка"""
+        target_row = square_index // 8
+        target_col = square_index % 8
+        
+        # Проверяем все фигуры атакующего цвета
+        for from_row in range(8):
+            for from_col in range(8):
+                piece = board[from_row][from_col]
+                if piece == '.':
+                    continue
+                    
+                # Проверяем, что фигура принадлежит атакующему цвету
+                if (by_white and piece.isupper()) or (not by_white and piece.islower()):
+                    self.engine_wrapper.board_state = [row[:] for row in board]
+                    self.engine_wrapper.current_turn = by_white
+                    if self.engine_wrapper.is_valid_attack((from_row, from_col), (target_row, target_col)):
+                        return True
+        return False
+    
     def minimax(self, board: List[List[str]], depth: int, alpha: float, beta: float, 
                 maximizing_player: bool, allow_null_move: bool = True) -> Tuple[int, Tuple[Tuple[int, int], Tuple[int, int]]]:
         """Алгоритм минимакс с альфа-бета отсечением, упорядочиванием ходов и транспозиционной таблицей"""
@@ -388,7 +429,7 @@ class EnhancedChessAI:
             return self.quiescence_search(board, alpha, beta, maximizing_player), None
         
         # Генерация легальных ходов
-        moves = self.move_gen.generate_legal_moves(board, maximizing_player)
+        moves = self.generate_legal_moves(board, maximizing_player)
         
         if not moves:
             # Проверка на мат или пат
@@ -527,7 +568,7 @@ class EnhancedChessAI:
             alpha = max(alpha, stand_pat)
             
             # Рассматриваем только взятия
-            moves = self.move_gen.generate_legal_moves(board, maximizing_player)
+            moves = self.generate_legal_moves(board, maximizing_player)
             captures = [m for m in moves if board[m[1][0]][m[1][1]] != '.']
             ordered_captures = self.order_moves(board, captures, maximizing_player, 0)
             
@@ -543,7 +584,7 @@ class EnhancedChessAI:
                 return alpha
             beta = min(beta, stand_pat)
             
-            moves = self.move_gen.generate_legal_moves(board, maximizing_player)
+            moves = self.generate_legal_moves(board, maximizing_player)
             captures = [m for m in moves if board[m[1][0]][m[1][1]] != '.']
             ordered_captures = self.order_moves(board, captures, maximizing_player, 0)
             
@@ -660,7 +701,7 @@ class EnhancedChessAI:
         if king_square == -1:
             return False
             
-        return self.move_gen.is_square_attacked(board, king_square, not is_white)
+        return self.is_square_attacked(board, king_square, not is_white)
 
     def get_best_move(self, board: List[List[str]], color: bool, time_limit: float = 3.0) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         """Получение лучшего хода с использованием итеративного углубления и aspiration windows"""

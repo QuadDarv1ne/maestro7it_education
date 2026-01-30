@@ -33,15 +33,17 @@ class ChessEngineWrapper:
         #         self.move_gen = None
         self.move_gen = None  # Используем только Python валидацию
             
-        try:
-            from core.enhanced_chess_ai import EnhancedChessAI
-            self.ai = EnhancedChessAI(search_depth=4)
-        except ImportError:
-            try:
-                from .enhanced_chess_ai import EnhancedChessAI
-                self.ai = EnhancedChessAI(search_depth=4)
-            except ImportError:
-                self.ai = None
+        # ВРЕМЕННО ОТКЛЮЧЕНО: EnhancedChessAI вызывает циклическую зависимость
+        # try:
+        #     from core.enhanced_chess_ai import EnhancedChessAI
+        #     self.ai = EnhancedChessAI(search_depth=4)
+        # except ImportError:
+        #     try:
+        #         from .enhanced_chess_ai import EnhancedChessAI
+        #         self.ai = EnhancedChessAI(search_depth=4)
+        #     except ImportError:
+        #         self.ai = None
+        self.ai = None  # Используем базовый AI
         
     def initialize_engine(self) -> bool:
         """Инициализация С++ библиотеки движка"""
