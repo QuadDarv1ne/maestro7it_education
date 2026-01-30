@@ -12,7 +12,7 @@ import os
 class SimplifiedEndgameTablebase:
     """
     Упрощенная система эндшпильных таблиц
-    Поддерживает базовые эндшпили: KPK, KRK, KQK
+    Поддерживает базовые эндшпили: KPK, KRK, KQK, KBK, KNK, KBNK
     """
     
     def __init__(self):
@@ -27,11 +27,17 @@ class SimplifiedEndgameTablebase:
         self.kpk_table = {}  # KPK: король + пешка против короля
         self.krk_table = {}  # KRK: король + ладья против короля
         self.kqk_table = {}  # KQK: король + ферзь против короля
+        self.kbk_table = {}  # KBK: король + слон против короля
+        self.knk_table = {}  # KNK: король + конь против короля
+        self.kbnk_table = {} # KBNK: король + слон + конь против короля
         
         # Генерируем базовые таблицы
         self._generate_kpk_table()
         self._generate_krk_table()
         self._generate_kqk_table()
+        self._generate_kbk_table()
+        self._generate_knk_table()
+        self._generate_kbnk_table()
     
     def _generate_kpk_table(self):
         """Генерирует таблицу KPK (король + пешка против короля)"""
@@ -78,6 +84,51 @@ class SimplifiedEndgameTablebase:
         
         print(f"KQK таблица сгенерирована: {len(self.kqk_table)} позиций")
     
+    def _generate_kbk_table(self):
+        """Генерирует таблицу KBK (король + слон против короля)"""
+        print("Генерация KBK таблицы...")
+        
+        # KBK - ничья (слон не может поставить мат)
+        # Но отмечаем позиции где король загнан в угол
+        for wk in range(64):
+            for wb in range(64):
+                for bk in range(64):
+                    if wk != bk and wb != bk and wk != wb:
+                        key = f"kbk_{wk}_{wb}_{bk}_w"
+                        # Слон одиночно не матует
+                        self.kbk_table[key] = "DRAW"
+        
+        print(f"KBK таблица сгенерирована: {len(self.kbk_table)} позиций")
+    
+    def _generate_knk_table(self):
+        """Генерирует таблицу KNK (король + конь против короля)"""
+        print("Генерация KNK таблицы...")
+        
+        # KNK - ничья (конь не может поставить мат)
+        for wk in range(64):
+            for wn in range(64):
+                for bk in range(64):
+                    if wk != bk and wn != bk and wk != wn:
+                        key = f"knk_{wk}_{wn}_{bk}_w"
+                        self.knk_table[key] = "DRAW"
+        
+        print(f"KNK таблица сгенерирована: {len(self.knk_table)} позиций")
+    
+    def _generate_kbnk_table(self):
+        """Генерирует таблицу KBNK (король + слон + конь против короля)"""
+        print("Генерация KBNK таблицы...")
+        
+        # KBNK - выигрыш (слон + конь могут поставить мат)
+        for wk in range(64):
+            for wb in range(64):
+                for wn in range(64):
+                    for bk in range(64):
+                        if len({wk, wb, wn, bk}) == 4:  # Все на разных клетках
+                            key = f"kbnk_{wk}_{wb}_{wn}_{bk}_w"
+                            self.kbnk_table[key] = "WIN"
+        
+        print(f"KBNK таблица сгенерирована: {len(self.kbnk_table)} позиций")
+    
     def is_applicable(self, board_state: dict) -> bool:
         """Проверяет, применима ли tablebase к данной позиции"""
         pieces = board_state.get('pieces', {})
@@ -86,8 +137,8 @@ class SimplifiedEndgameTablebase:
         
         total_pieces = len(white_pieces) + len(black_pieces)
         
-        # Применяем для позиций с 3-4 фигурами
-        return 3 <= total_pieces <= 4
+        # Применяем для позиций с 3-5 фигурами
+        return 3 <= total_pieces <= 5
     
     def get_result(self, board_state: dict) -> str:
         """Получает результат для позиции"""
@@ -155,6 +206,19 @@ class SimplifiedEndgameTablebase:
               black_counts.get('K', 0) == 1 and len(black_counts) == 1):
             return self._evaluate_kqk(board_state)
         
+        elif (white_counts.get('K', 0) == 1 and white_counts.get('B', 0) == 1 and 
+              black_counts.get('K', 0) == 1 and len(black_counts) == 1):
+            return self._evaluate_kbk(board_state)
+        
+        elif (white_counts.get('K', 0) == 1 and white_counts.get('N', 0) == 1 and 
+              black_counts.get('K', 0) == 1 and len(black_counts) == 1):
+            return self._evaluate_knk(board_state)
+        
+        elif (white_counts.get('K', 0) == 1 and white_counts.get('B', 0) == 1 and 
+              white_counts.get('N', 0) == 1 and black_counts.get('K', 0) == 1 and 
+              len(black_counts) == 1):
+            return self._evaluate_kbnk(board_state)
+        
         # Для других позиций - базовая оценка
         material_diff = sum(self._piece_value(p) for _, p in white_pieces) - \
                        sum(self._piece_value(p) for _, p in black_pieces)
@@ -214,6 +278,56 @@ class SimplifiedEndgameTablebase:
         key = f"kqk_{wk_square}_{wq_square}_{bk_square}_w"
         
         return self.kqk_table.get(key, "WIN")  # KQK всегда выигрывает
+    
+    def _evaluate_kbk(self, board_state: dict) -> str:
+        """Оценка KBK позиции"""
+        pieces = board_state.get('pieces', {})
+        
+        wk_pos = next(pos for pos, piece in pieces.items() if piece == 'K')
+        wb_pos = next(pos for pos, piece in pieces.items() if piece == 'B')
+        bk_pos = next(pos for pos, piece in pieces.items() if piece == 'k')
+        
+        wk_square = self._algebraic_to_square(wk_pos)
+        wb_square = self._algebraic_to_square(wb_pos)
+        bk_square = self._algebraic_to_square(bk_pos)
+        
+        key = f"kbk_{wk_square}_{wb_square}_{bk_square}_w"
+        
+        return self.kbk_table.get(key, "DRAW")  # KBK всегда ничья
+    
+    def _evaluate_knk(self, board_state: dict) -> str:
+        """Оценка KNK позиции"""
+        pieces = board_state.get('pieces', {})
+        
+        wk_pos = next(pos for pos, piece in pieces.items() if piece == 'K')
+        wn_pos = next(pos for pos, piece in pieces.items() if piece == 'N')
+        bk_pos = next(pos for pos, piece in pieces.items() if piece == 'k')
+        
+        wk_square = self._algebraic_to_square(wk_pos)
+        wn_square = self._algebraic_to_square(wn_pos)
+        bk_square = self._algebraic_to_square(bk_pos)
+        
+        key = f"knk_{wk_square}_{wn_square}_{bk_square}_w"
+        
+        return self.knk_table.get(key, "DRAW")  # KNK всегда ничья
+    
+    def _evaluate_kbnk(self, board_state: dict) -> str:
+        """Оценка KBNK позиции"""
+        pieces = board_state.get('pieces', {})
+        
+        wk_pos = next(pos for pos, piece in pieces.items() if piece == 'K')
+        wb_pos = next(pos for pos, piece in pieces.items() if piece == 'B')
+        wn_pos = next(pos for pos, piece in pieces.items() if piece == 'N')
+        bk_pos = next(pos for pos, piece in pieces.items() if piece == 'k')
+        
+        wk_square = self._algebraic_to_square(wk_pos)
+        wb_square = self._algebraic_to_square(wb_pos)
+        wn_square = self._algebraic_to_square(wn_pos)
+        bk_square = self._algebraic_to_square(bk_pos)
+        
+        key = f"kbnk_{wk_square}_{wb_square}_{wn_square}_{bk_square}_w"
+        
+        return self.kbnk_table.get(key, "WIN")  # KBNK выигрывает
     
     def _algebraic_to_square(self, algebraic: str) -> int:
         """Преобразует алгебраическую нотацию в номер поля (0-63)"""

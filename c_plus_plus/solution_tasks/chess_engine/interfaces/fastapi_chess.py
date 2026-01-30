@@ -36,6 +36,7 @@ from core.optimized_move_generator import BitboardMoveGenerator
 from core.enhanced_chess_ai import EnhancedChessAI
 from src.pgn_saver import PGNSaver, GameRecorder
 from src.san_parser import SANParser
+from src.endgame_tablebase import SimplifiedEndgameTablebase
 
 app = FastAPI(
     title="Chess Engine API",
@@ -901,6 +902,7 @@ class OpeningBook:
 
 opening_book = OpeningBook()
 san_parser = SANParser()  # SAN notation parser
+endgame_tablebase = SimplifiedEndgameTablebase()  # Endgame tablebase
 
 # Расширенная система статистики игрока
 class PlayerProfile:
@@ -2070,6 +2072,27 @@ async def analyze_position(game_id: str, depth: int = 3):
         # Безопасность короля
         king_safety = analyze_king_safety(engine.board_state)
         
+        # Проверка эндшпиля
+        endgame_result = None
+        if material_balance['white'] + material_balance['black'] <= 10:
+            # Преобразуем в формат tablebase
+            pieces = {}
+            for r in range(8):
+                for c in range(8):
+                    piece = engine.board_state[r][c]
+                    if piece != '.':
+                        file = 'abcdefgh'[c]
+                        rank = str(r + 1)
+                        pieces[file + rank] = piece
+            
+            board_for_tb = {
+                'pieces': pieces,
+                'turn': 'white' if engine.current_turn else 'black'
+            }
+            
+            if endgame_tablebase.is_applicable(board_for_tb):
+                endgame_result = endgame_tablebase.get_result(board_for_tb)
+        
         return {
             'game_id': game_id,
             'evaluation': evaluation,
@@ -2081,6 +2104,7 @@ async def analyze_position(game_id: str, depth: int = 3):
             'threats': threats,
             'center_control': center_control,
             'king_safety': king_safety,
+            'endgame_result': endgame_result,
             'move_count': len(game['move_history']),
             'current_turn': 'white' if engine.current_turn else 'black'
         }
