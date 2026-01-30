@@ -408,13 +408,20 @@ class EnhancedChessAI:
         # Null Move Pruning - пропускаем ход для проверки угрозы
         if allow_null_move and depth >= 3 and not self.is_in_check(board, maximizing_player):
             # Делаем "пустой" ход (меняем только очередь)
-            R = 2  # Reduction factor
+            # Adaptive R based on depth
+            R = 3 if depth >= 6 else 2
             null_eval, _ = self.minimax(board, depth - 1 - R, -beta, -beta + 1, not maximizing_player, False)
             null_eval = -null_eval
             
             if null_eval >= beta:
                 # Null move вызвало beta cutoff - позиция слишком хороша
-                return beta, None
+                # Verification search для предотвращения zugzwang
+                if depth >= 8:
+                    verify_eval, _ = self.minimax(board, depth - 5, alpha, beta, maximizing_player, False)
+                    if verify_eval >= beta:
+                        return beta, None
+                else:
+                    return beta, None
 
         # Поиск в транспозиционной таблице
         board_hash = self.get_board_hash(board, maximizing_player)
@@ -454,12 +461,17 @@ class EnhancedChessAI:
                     # Первый ход - полный поиск
                     eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
                 else:
-                    # Late Move Reduction (LMR)
+                    # Late Move Reduction (LMR) - улучшенная формула
                     reduction = 0
                     if moves_searched >= 3 and depth >= 3:
                         target = board[move[1][0]][move[1][1]]
                         if target == '.':
+                            # Более агрессивная редукция для тихих ходов
                             reduction = 1
+                            if moves_searched >= 6 and depth >= 5:
+                                reduction = 2
+                            if moves_searched >= 12 and depth >= 7:
+                                reduction = 3
                     
                     # PVS: узкое окно поиска
                     eval_score, _ = self.minimax(new_board, depth - 1 - reduction, alpha, alpha + 1, False, allow_null_move)
@@ -500,12 +512,17 @@ class EnhancedChessAI:
                 if i == 0:
                     eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
                 else:
-                    # Late Move Reduction
+                    # Late Move Reduction - улучшенная формула
                     reduction = 0
                     if moves_searched >= 3 and depth >= 3:
                         target = board[move[1][0]][move[1][1]]
                         if target == '.':
+                            # Более агрессивная редукция
                             reduction = 1
+                            if moves_searched >= 6 and depth >= 5:
+                                reduction = 2
+                            if moves_searched >= 12 and depth >= 7:
+                                reduction = 3
                     
                     # PVS: узкое окно
                     eval_score, _ = self.minimax(new_board, depth - 1 - reduction, beta - 1, beta, True, allow_null_move)
@@ -616,20 +633,34 @@ class EnhancedChessAI:
                 elif move == self.killer_moves[depth][1]:
                     score += 8900
             
-            # 2. MVV-LVA (Самая ценная жертва - Наименее ценный агрессор)
+            # 2. MVV-LVA (Самая ценная жертва - Наименее ценный агрессор) - улучшенный
             if target != '.' and target in self.piece_values:
-                score += 10000 + 10 * abs(self.piece_values[target]) - abs(self.piece_values[piece]) // 10
+                victim_value = abs(self.piece_values[target])
+                attacker_value = abs(self.piece_values[piece])
+                # Улучшенная MVV-LVA формула
+                score += 10000 + (victim_value * 10) - (attacker_value // 10)
+                
+                # Дополнительный бонус для winning captures
+                if victim_value >= attacker_value:
+                    score += 5000
             
             # 3. Эвристика истории
             score += self.history_table.get(move, 0)
             
             # 4. Превращения пешек хороши
             if piece.lower() == 'p' and (to_pos[0] == 0 or to_pos[0] == 7):
-                score += 8000
+                score += 20000  # Повышенный приоритет
             
             # 5. Ходы к центру лучше
             to_center_dist = abs(to_pos[0] - 3.5) + abs(to_pos[1] - 3.5)
             score -= int(to_center_dist * 10)
+            
+            # 6. Бонус за продвижение пешек
+            if piece.lower() == 'p':
+                direction = 1 if piece.isupper() else -1
+                advance = (to_pos[0] - from_pos[0]) * direction
+                if advance > 0:
+                    score += advance * 15
             
             move_scores.append((score, move))
         

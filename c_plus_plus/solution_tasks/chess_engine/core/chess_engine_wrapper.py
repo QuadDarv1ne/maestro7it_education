@@ -20,6 +20,22 @@ class ChessEngineWrapper:
         self.selected_square = None
         self.valid_moves = []
         
+        # Рокировка и специальные ходы
+        self.castling_rights = {
+            'white_kingside': True,
+            'white_queenside': True,
+            'black_kingside': True,
+            'black_queenside': True
+        }
+        self.king_moved = {'white': False, 'black': False}
+        self.rook_moved = {
+            'white_kingside': False,
+            'white_queenside': False,
+            'black_kingside': False,
+            'black_queenside': False
+        }
+        self.en_passant_target = None
+        
         # Интеграция оптимизированных компонентов
         # ВРЕМЕННО ОТКЛЮЧЕНО: BitboardMoveGenerator вызывает проблемы с валидацией
         # try:
@@ -328,6 +344,11 @@ class ChessEngineWrapper:
             row_diff = abs(to_row - from_row)
             col_diff = abs(to_col - from_col)
             print(f"Король: разница строк={row_diff}, столбцов={col_diff}")
+            
+            # Проверка рокировки
+            if row_diff == 0 and col_diff == 2:
+                return self.is_castling_valid(from_pos, to_pos, is_white_piece)
+            
             # Король может ходить только на одну клетку
             if row_diff <= 1 and col_diff <= 1:
                 # Проверяем, не попадает ли под атаку
@@ -390,6 +411,83 @@ class ChessEngineWrapper:
             col += col_step
         
         return True
+    
+    def is_castling_valid(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool) -> bool:
+        """Проверка возможности рокировки"""
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        
+        # Определяем тип рокировки
+        kingside = to_col > from_col
+        color = 'white' if is_white else 'black'
+        
+        # Проверка прав на рокировку
+        if kingside:
+            if not self.castling_rights[f'{color}_kingside']:
+                return False
+            rook_col = 7
+        else:
+            if not self.castling_rights[f'{color}_queenside']:
+                return False
+            rook_col = 0
+        
+        # Проверка что король не под шахом
+        if self.is_king_in_check(is_white):
+            return False
+        
+        # Проверка пути (должен быть свободен)
+        step = 1 if kingside else -1
+        for col in range(from_col + step, to_col + step, step):
+            if self.board_state[from_row][col] != '.':
+                return False
+            
+            # Проверяем что король не проходит через атакованное поле
+            if col != to_col + step:  # Не проверяем поле за королем
+                if self.is_square_under_attack((from_row, col), not is_white):
+                    return False
+        
+        # Проверка наличия ладьи
+        rook_piece = 'R' if is_white else 'r'
+        if self.board_state[from_row][rook_col] != rook_piece:
+            return False
+        
+        return True
+    
+    def is_square_under_attack(self, square: Tuple[int, int], by_white: bool) -> bool:
+        """Проверка атаки клетки"""
+        target_row, target_col = square
+        
+        for row in range(8):
+            for col in range(8):
+                piece = self.board_state[row][col]
+                if piece != '.' and piece.isupper() == by_white:
+                    # Проверяем может ли фигура атаковать клетку
+                    if self.can_piece_attack((row, col), square, piece):
+                        return True
+        return False
+    
+    def can_piece_attack(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], piece: str) -> bool:
+        """Проверяет может ли фигура атаковать клетку"""
+        piece_type = piece.lower()
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        
+        if piece_type == 'p':
+            direction = -1 if piece.isupper() else 1
+            return abs(from_col - to_col) == 1 and to_row == from_row + direction
+        elif piece_type == 'n':
+            row_diff = abs(to_row - from_row)
+            col_diff = abs(to_col - from_col)
+            return (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)
+        elif piece_type == 'b':
+            return self.is_diagonal_move(from_pos, to_pos)
+        elif piece_type == 'r':
+            return self.is_straight_move(from_pos, to_pos)
+        elif piece_type == 'q':
+            return self.is_straight_move(from_pos, to_pos) or self.is_diagonal_move(from_pos, to_pos)
+        elif piece_type == 'k':
+            return abs(to_row - from_row) <= 1 and abs(to_col - from_col) <= 1
+        return False
     
     def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
         """Выполнение хода с отладкой"""

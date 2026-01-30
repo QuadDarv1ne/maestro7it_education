@@ -1052,10 +1052,12 @@
                 lastMoveTo = to;
                 
                 // Звуковые эффекты
-                if (wasCapture) {
-                    playCaptureSound();
-                } else {
-                    playMoveSound();
+                if (soundEnabled) {
+                    if (wasCapture) {
+                        playCaptureSound();
+                    } else {
+                        playMoveSound();
+                    }
                 }
                 
                 updateUI(data.game_state);
