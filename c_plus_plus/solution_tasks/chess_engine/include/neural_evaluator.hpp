@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <cstdint>
 
 /**
  * @brief Нейросетевой оценщик позиции
@@ -72,6 +73,7 @@ private:
     int calculateMobility() const;
     int calculateKingSafety() const;
     int calculatePawnStructure() const;
+    uint64_t getPawnShield(int king_square, Bitboard::Color color) const;
     
     // Вспомогательные функции
     GamePhase getCurrentGamePhase() const;

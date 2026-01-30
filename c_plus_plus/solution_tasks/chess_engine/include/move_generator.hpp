@@ -80,7 +80,7 @@ public:
     std::vector<Move> generateEnPassantMoves() const;
     
     // Вспомогательные методы валидации
-    bool wouldBeInCheck(Square from, Square to) const;
+    bool wouldBeInCheck(const Move& move) const;
     bool isSquareAttacked(Square square, Color byColor) const;
     bool isSquareAttackedOnBoard(const Board& board, Square square, Color byColor) const;
     bool isAttackedInDirection(const Board& board, Square square, int rankDelta, int fileDelta, Color byColor, bool diagonal) const;

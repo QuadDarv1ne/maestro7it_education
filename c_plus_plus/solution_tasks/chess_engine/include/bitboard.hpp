@@ -81,7 +81,7 @@ public:
     // Установка и удаление фигур
     void setPiece(int square, PieceType piece, Color color);
     void removePiece(int square);
-    void movePiece(int from_square, int to_square);
+    PieceType movePiece(int from_square, int to_square);
     
     // Bitboard операции
     BitboardType getPieces(Color color, PieceType piece) const { return pieces_[color][piece]; }

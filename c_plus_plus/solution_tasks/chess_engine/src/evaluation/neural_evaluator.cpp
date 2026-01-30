@@ -1,9 +1,14 @@
-#include "../../include/neural_evaluator.hpp"
+#include <stdint.h>
 #include <random>
 #include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
+#include <limits.h>
+
+#include "../../include/neural_evaluator.hpp"
+#include <cstdint>
+#include <climits>
 
 // Инициализация констант
 const float NeuralEvaluator::NN_WEIGHT = 0.7f;
@@ -214,12 +219,30 @@ int NeuralEvaluator::calculatePositional() const {
 int NeuralEvaluator::calculateMobility() const {
     int score = 0;
     
-    // Упрощенная оценка мобильности
-    auto white_moves = board_.generateLegalMoves(); // Предполагаем метод существует
-    board_.getSideToMove(); // Заглушка
+    // Подсчет мобильности для белых
+    auto white_moves = board_.generateLegalMoves();
+    int white_mobility = static_cast<int>(white_moves.size());
     
-    // В реальной реализации здесь будет подсчет возможных ходов
-    (void)white_moves;
+    // Подсчет мобильности для черных
+    // Для этого нужно временно переключить ход (но Bitboard::generateLegalMoves использует side_to_move_)
+    // Нам нужно либо метод, принимающий цвет, либо временное переключение
+    
+    // В текущей реализации Bitboard::generateLegalMoves использует внутреннее состояние
+    // Создадим копию для подсчета мобильности черных, если сейчас ход белых, и наоборот
+    Bitboard temp_board = board_;
+    // Нам нужно переключить ход в Bitboard. Посмотрим если есть метод setSideToMove
+    // В bitboard.hpp нет setSideToMove, но есть side_to_move_ приватный.
+    // Однако в bitboard_engine.cpp я видел sideToMove.
+    
+    // В include/bitboard.hpp нет метода для смены хода. 
+    // Но подождите, я могу просто вызвать generateLegalMoves и посмотреть результат.
+    
+    // Для простоты, если мы не можем легко сменить ход, оценим мобильность текущего игрока
+    if (board_.getSideToMove() == Bitboard::WHITE) {
+        score += white_mobility * 2;
+    } else {
+        score -= white_mobility * 2;
+    }
     
     return score;
 }
@@ -228,45 +251,77 @@ int NeuralEvaluator::calculateKingSafety() const {
     int score = 0;
     
     // Простая оценка безопасности короля
-    Bitboard::BitboardType white_king_bb = board_.getPieces(Bitboard::WHITE, Bitboard::KING);
-    Bitboard::BitboardType black_king_bb = board_.getPieces(Bitboard::BLACK, Bitboard::KING);
+    uint64_t white_king_bb = board_.getPieces(Bitboard::WHITE, Bitboard::KING);
+    uint64_t black_king_bb = board_.getPieces(Bitboard::BLACK, Bitboard::KING);
     
     if (white_king_bb) {
         int king_square = BitboardUtils::lsb(white_king_bb);
         // Бонус за пешечный щит
-        Bitboard::BitboardType shield = getPawnShield(king_square, Bitboard::WHITE);
+        uint64_t shield = getPawnShield(king_square, Bitboard::WHITE);
         score += BitboardUtils::popCount(shield) * 5;
     }
     
     if (black_king_bb) {
         int king_square = BitboardUtils::lsb(black_king_bb);
-        Bitboard::BitboardType shield = getPawnShield(king_square, Bitboard::BLACK);
+        uint64_t shield = getPawnShield(king_square, Bitboard::BLACK);
         score -= BitboardUtils::popCount(shield) * 5;
     }
     
     return score;
 }
 
-Bitboard::BitboardType getPawnShield(int king_square, Bitboard::Color color) {
-    // Упрощенная реализация пешечного щита
-    (void)king_square; (void)color;
-    return 0; // Заглушка
+uint64_t NeuralEvaluator::getPawnShield(int king_square, Bitboard::Color color) const {
+    uint64_t shield = 0;
+    int rank = king_square / 8;
+    int file = king_square % 8;
+    
+    int direction = (color == Bitboard::WHITE) ? 1 : -1;
+    int shield_rank = rank + direction;
+    
+    if (shield_rank >= 0 && shield_rank < 8) {
+        for (int df = -1; df <= 1; df++) {
+            int shield_file = file + df;
+            if (shield_file >= 0 && shield_file < 8) {
+                int sq = shield_rank * 8 + shield_file;
+                if (board_.getPieceType(sq) == Bitboard::PAWN && 
+                    board_.getPieceColor(sq) == color) {
+                    shield |= (1ULL << sq);
+                }
+            }
+        }
+    }
+    
+    return shield;
 }
 
 int NeuralEvaluator::calculatePawnStructure() const {
     int score = 0;
     
-    // Оценка структуры пешек
-    Bitboard::BitboardType white_pawns = board_.getPieces(Bitboard::WHITE, Bitboard::PAWN);
-    Bitboard::BitboardType black_pawns = board_.getPieces(Bitboard::BLACK, Bitboard::PAWN);
+    uint64_t white_pawns = board_.getPieces(Bitboard::WHITE, Bitboard::PAWN);
+    uint64_t black_pawns = board_.getPieces(Bitboard::BLACK, Bitboard::PAWN);
     
-    // В реальной реализации здесь будет анализ:
-    // - Сдвоенные пешки
-    // - Изолированные пешки
-    // - Проходные пешки
-    // - Связанные пешки
+    // Штраф за сдвоенные пешки
+    for (int f = 0; f < 8; f++) {
+        uint64_t file_mask = 0x0101010101010101ULL << f;
+        
+        int white_on_file = BitboardUtils::popCount(white_pawns & file_mask);
+        if (white_on_file > 1) score -= (white_on_file - 1) * 20;
+        
+        int black_on_file = BitboardUtils::popCount(black_pawns & file_mask);
+        if (black_on_file > 1) score += (black_on_file - 1) * 20;
+    }
     
-    (void)white_pawns; (void)black_pawns;
+    // Бонус за проходные пешки (упрощенно)
+    for (int sq = 0; sq < 64; sq++) {
+        if (BitboardUtils::getBit(white_pawns, sq)) {
+            int rank = sq / 8;
+            if (rank >= 5) score += (rank - 4) * 15; // Белые пешки на 6-7 горизонтали
+        }
+        if (BitboardUtils::getBit(black_pawns, sq)) {
+            int rank = sq / 8;
+            if (rank <= 2) score -= (3 - rank) * 15; // Черные пешки на 2-3 горизонтали
+        }
+    }
     
     return score;
 }

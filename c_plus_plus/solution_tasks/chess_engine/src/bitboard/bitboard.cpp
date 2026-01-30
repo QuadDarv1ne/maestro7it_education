@@ -110,14 +110,64 @@ void Bitboard::removePiece(int square) {
     all_pieces_ = BitboardUtils::clearBit(all_pieces_, square);
 }
 
-void Bitboard::movePiece(int from_square, int to_square) {
+Bitboard::PieceType Bitboard::movePiece(int from_square, int to_square) {
     PieceType piece = getPieceType(from_square);
     Color color = getPieceColor(from_square);
     
-    if (piece != PIECE_TYPE_COUNT && color != COLOR_COUNT) {
-        removePiece(from_square);
+    if (piece == PIECE_TYPE_COUNT || color == COLOR_COUNT) return PIECE_TYPE_COUNT;
+
+    PieceType captured = getPieceType(to_square);
+
+    // 1. Обработка взятия на проходе
+    if (piece == PAWN && to_square == en_passant_square_) {
+        captured = PAWN;
+        int capture_square = (color == WHITE) ? (to_square - 8) : (to_square + 8);
+        removePiece(capture_square);
+    }
+
+    // 2. Обработка рокировки (движение ладьи)
+    if (piece == KING) {
+        if (std::abs(to_square % 8 - from_square % 8) > 1) {
+            int rank = from_square / 8;
+            if (to_square % 8 == 6) { // Короткая рокировка
+                movePiece(rank * 8 + 7, rank * 8 + 5);
+            } else if (to_square % 8 == 2) { // Длинная рокировка
+                movePiece(rank * 8 + 0, rank * 8 + 3);
+            }
+        }
+        // Сброс прав на рокировку при ходе короля
+        castling_rights_[color][0] = castling_rights_[color][1] = false;
+    }
+
+    // Сброс прав на рокировку при ходе ладьи
+    if (piece == ROOK) {
+        int file = from_square % 8;
+        if (file == 0) castling_rights_[color][1] = false;
+        if (file == 7) castling_rights_[color][0] = false;
+    }
+
+    // 3. Обновление en passant square
+    if (piece == PAWN && std::abs(to_square / 8 - from_square / 8) == 2) {
+        en_passant_square_ = (from_square + to_square) / 2;
+    } else {
+        en_passant_square_ = -1;
+    }
+
+    // Выполняем основное перемещение
+    removePiece(from_square);
+    
+    // Обработка превращения (по умолчанию в ферзя)
+    if (piece == PAWN && (to_square / 8 == 0 || to_square / 8 == 7)) {
+        setPiece(to_square, QUEEN, color);
+    } else {
         setPiece(to_square, piece, color);
     }
+
+    // Смена хода
+    side_to_move_ = (side_to_move_ == WHITE) ? BLACK : WHITE;
+    if (side_to_move_ == WHITE) full_move_number_++;
+
+    return captured;
 }
 
 Bitboard::BitboardType Bitboard::getPawnAttacks(int square, Color color) const {
@@ -234,56 +284,95 @@ Bitboard::BitboardType Bitboard::getQueenAttacks(int square, BitboardType occupi
 }
 
 std::vector<std::pair<int, int>> Bitboard::generateLegalMoves() const {
-    std::vector<std::pair<int, int>> moves;
-    
-    // Для простоты реализуем базовую генерацию ходов
-    // В реальной реализации здесь будет полноценная генерация легальных ходов
+    std::vector<std::pair<int, int>> pseudo_moves;
     
     BitboardType us = occupancy_[side_to_move_];
     BitboardType them = occupancy_[side_to_move_ == WHITE ? BLACK : WHITE];
     BitboardType empty = ~all_pieces_;
     
-    // Генерируем ходы для каждой фигуры
     for (int square = 0; square < 64; square++) {
         if (!BitboardUtils::getBit(us, square)) continue;
         
         PieceType piece = getPieceType(square);
         BitboardType attacks = 0;
         
-        switch (piece) {
-            case PAWN:
-                attacks = getPawnAttacks(square, side_to_move_);
-                break;
-            case KNIGHT:
-                attacks = getKnightAttacks(square);
-                break;
-            case BISHOP:
-                attacks = getBishopAttacks(square, all_pieces_);
-                break;
-            case ROOK:
-                attacks = getRookAttacks(square, all_pieces_);
-                break;
-            case QUEEN:
-                attacks = getQueenAttacks(square, all_pieces_);
-                break;
-            case KING:
-                attacks = getKingAttacks(square);
-                break;
-            default:
-                continue;
+        if (piece == PAWN) {
+            // Тихие ходы пешек
+            int dir = (side_to_move_ == WHITE) ? 8 : -8;
+            int next_sq = square + dir;
+            if (next_sq >= 0 && next_sq < 64 && isEmpty(next_sq)) {
+                pseudo_moves.emplace_back(square, next_sq);
+                // Двойной ход
+                int start_rank = (side_to_move_ == WHITE) ? 1 : 6;
+                if (square / 8 == start_rank) {
+                    int double_next = next_sq + dir;
+                    if (isEmpty(double_next)) pseudo_moves.emplace_back(square, double_next);
+                }
+            }
+            // Взятия пешками
+            attacks = getPawnAttacks(square, side_to_move_);
+            BitboardType captures = attacks & them;
+            if (en_passant_square_ != -1 && (attacks & (1ULL << en_passant_square_))) {
+                captures |= (1ULL << en_passant_square_);
+            }
+            attacks = captures;
+        } else if (piece == KNIGHT) {
+            attacks = getKnightAttacks(square) & ~us;
+        } else if (piece == BISHOP) {
+            attacks = getBishopAttacks(square, all_pieces_) & ~us;
+        } else if (piece == ROOK) {
+            attacks = getRookAttacks(square, all_pieces_) & ~us;
+        } else if (piece == QUEEN) {
+            attacks = getQueenAttacks(square, all_pieces_) & ~us;
+        } else if (piece == KING) {
+            attacks = getKingAttacks(square) & ~us;
+            // Рокировка (упрощенно добавим псевдо-легально)
+            int rank = (side_to_move_ == WHITE) ? 0 : 7;
+            if (castling_rights_[side_to_move_][0] && // King side
+                isEmpty(rank * 8 + 5) && isEmpty(rank * 8 + 6)) {
+                pseudo_moves.emplace_back(square, rank * 8 + 6);
+            }
+            if (castling_rights_[side_to_move_][1] && // Queen side
+                isEmpty(rank * 8 + 1) && isEmpty(rank * 8 + 2) && isEmpty(rank * 8 + 3)) {
+                pseudo_moves.emplace_back(square, rank * 8 + 2);
+            }
         }
         
-        // Добавляем ходы на пустые клетки и взятия
-        BitboardType targets = (attacks & empty) | (attacks & them);
-        
+        BitboardType targets = attacks;
         while (targets) {
             int to_square = BitboardUtils::lsb(targets);
-            moves.emplace_back(square, to_square);
-            targets &= targets - 1; // Удаляем младший бит
+            pseudo_moves.emplace_back(square, to_square);
+            targets &= targets - 1;
         }
     }
     
-    return moves;
+    // Фильтруем ходы, оставляющие короля под шахом
+    std::vector<std::pair<int, int>> legal_moves;
+    for (const auto& move : pseudo_moves) {
+        Bitboard temp = *this;
+        // Мы не можем использовать movePiece напрямую здесь если она меняет side_to_move_
+        // Но нам нужно проверить шах для ТЕКУЩЕГО цвета после хода
+        
+        // Временно реализуем проверку легальности через копирование
+        PieceType p = temp.getPieceType(move.first);
+        Color c = temp.getPieceColor(move.first);
+        
+        // Специальная логика для рокировки: нельзя прыгать через битое поле
+        if (p == KING && std::abs(move.second % 8 - move.first % 8) > 1) {
+            if (isInCheck(c)) continue; // Нельзя из под шаха
+            int step = (move.second > move.first) ? 1 : -1;
+            Bitboard temp2 = *this;
+            temp2.movePiece(move.first, move.first + step);
+            if (temp2.isInCheck(c)) continue; // Нельзя через битое поле
+        }
+
+        temp.movePiece(move.first, move.second);
+        if (!temp.isInCheck(c)) {
+            legal_moves.push_back(move);
+        }
+    }
+    
+    return legal_moves;
 }
 
 bool Bitboard::isInCheck(Color color) const {

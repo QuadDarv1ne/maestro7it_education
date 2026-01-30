@@ -1,5 +1,5 @@
-#include "../include/minimax.hpp"
-#include "../include/board.hpp"
+#include "../../include/minimax.hpp"
+#include "../../include/board.hpp"
 #include <algorithm>
 #include <climits>
 #include <random>
@@ -59,8 +59,8 @@ Move Minimax::findBestMove(Color color) {
             // Выполняем ход
             board_.makeMove(move);
             
-            // Поиск (используем minimaxWithTT или PVS)
-            int eval = minimaxWithTT(depth - 1, INT_MIN, INT_MAX, (color == Color::WHITE ? Color::BLACK : Color::WHITE));
+            // Поиск (используем PVS для лучшей производительности)
+            int eval = -principalVariationSearch(depth - 1, -1000000, 1000000, (color == Color::WHITE ? Color::BLACK : Color::WHITE), true);
             
             // Отменяем ход
             board_.undoMove();

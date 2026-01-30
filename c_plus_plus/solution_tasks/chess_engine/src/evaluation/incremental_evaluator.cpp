@@ -380,22 +380,38 @@ void IncrementalEvaluator::updateMaterialOnMove(int from_square, int to_square,
                                                Bitboard::PieceType captured_piece) {
     // Если была захвачена фигура, обновляем материальную оценку
     if (captured_piece != Bitboard::PIECE_TYPE_COUNT) {
-        Bitboard::Color captured_color = board_.getPieceColor(to_square);
+        // Мы предполагаем, что captured_piece имеет цвет, противоположный ходящему
+        // На tempBoard после movePiece ход уже сменился, но мы в updateOnMove вызываем это ПЕРЕД сменой хода? 
+        // Нет, ParallelSearch вызывает movePiece, которая меняет side_to_move_.
+        
+        // ВАЖНО: Мы должны знать цвет захваченной фигуры. 
+        // Так как ход уже сменился в movePiece, то captured_color - это цвет того, кто СЕЙЧАС должен ходить? 
+        // Нет, captured_color - это цвет того, КТО СХОДИЛ (т.е. противоположный текущему side_to_move_).
+        
+        Bitboard::Color current_side = board_.getSideToMove();
+        // Тот кто сходил - это opposite(current_side). Тот кого съели - это current_side.
+        Bitboard::Color captured_color = current_side; 
+        
         int value = MATERIAL_WEIGHTS[captured_piece];
         
         if (captured_color == Bitboard::WHITE) {
-            material_score_ += value; // Белая фигура захвачена - выгодно для черных
+            material_score_ -= value; // Белая фигура захвачена - счет уменьшается
         } else {
-            material_score_ -= value; // Черная фигура захвачена - выгодно для белых
+            material_score_ += value; // Черная фигура захвачена - счет увеличивается
         }
     }
 }
 
 void IncrementalEvaluator::updatePositionalOnMove(int from_square, int to_square) {
-    // Вычитаем старую позиционную оценку
-    positional_score_ -= POSITIONAL_BONUSES[from_square];
-    // Добавляем новую позиционную оценку
-    positional_score_ += POSITIONAL_BONUSES[to_square];
+    Bitboard::Color color = board_.getPieceColor(to_square); // Фигура уже перемещена
+    
+    if (color == Bitboard::WHITE) {
+        positional_score_ -= POSITIONAL_BONUSES[from_square];
+        positional_score_ += POSITIONAL_BONUSES[to_square];
+    } else {
+        positional_score_ += POSITIONAL_BONUSES[from_square];
+        positional_score_ -= POSITIONAL_BONUSES[to_square];
+    }
 }
 
 void IncrementalEvaluator::updateMobilityOnMove(int square, Bitboard::PieceType piece_type) {

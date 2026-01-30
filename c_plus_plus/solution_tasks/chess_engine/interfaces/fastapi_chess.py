@@ -2093,6 +2093,11 @@ async def analyze_position(game_id: str, depth: int = 3):
             if endgame_tablebase.is_applicable(board_for_tb):
                 endgame_result = endgame_tablebase.get_result(board_for_tb)
         
+        # Проверка мата и пата
+        is_mate = engine.is_checkmate(engine.current_turn)
+        is_stalemate = engine.is_stalemate(engine.current_turn)
+        is_check = engine.is_king_in_check(engine.current_turn)
+        
         return {
             'game_id': game_id,
             'evaluation': evaluation,
@@ -2105,6 +2110,9 @@ async def analyze_position(game_id: str, depth: int = 3):
             'center_control': center_control,
             'king_safety': king_safety,
             'endgame_result': endgame_result,
+            'is_checkmate': is_mate,
+            'is_stalemate': is_stalemate,
+            'is_check': is_check,
             'move_count': len(game['move_history']),
             'current_turn': 'white' if engine.current_turn else 'black'
         }

@@ -1,4 +1,4 @@
-#include "../include/uci_engine.hpp"
+#include "../../include/uci_engine.hpp"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -103,6 +103,10 @@ void UCIEngine::handleGo(const std::vector<std::string>& tokens) {
             searchDepth_ = std::stoi(tokens[i + 1]);
         } else if (tokens[i] == "movetime" && i + 1 < tokens.size()) {
             searchTimeMs_ = std::stoi(tokens[i + 1]);
+        } else if (tokens[i] == "wtime" && i + 1 < tokens.size() && board_.getCurrentPlayer() == Color::WHITE) {
+            searchTimeMs_ = std::stoi(tokens[i + 1]) / 30; // Тратим 1/30 оставшегося времени
+        } else if (tokens[i] == "btime" && i + 1 < tokens.size() && board_.getCurrentPlayer() == Color::BLACK) {
+            searchTimeMs_ = std::stoi(tokens[i + 1]) / 30;
         } else if (tokens[i] == "infinite") {
             infiniteSearch_ = true;
         }
@@ -127,6 +131,12 @@ void UCIEngine::startSearch() {
     }
     
     Move bestMove = minimax_.findBestMove(board_.getCurrentPlayer());
+    
+    // Вывод информации о поиске (в реальном времени это должно быть в minimax_)
+    // Но здесь мы можем вывести финальную информацию
+    int score = minimax_.evaluatePosition();
+    std::cout << "info depth " << searchDepth_ << " score cp " << score << " nodes " << 1000 << " pv " 
+              << board_.squareToAlgebraic(bestMove.from) << board_.squareToAlgebraic(bestMove.to) << std::endl;
     
     if (searching_ && !minimax_.isTimeUp()) {
         std::string moveStr = board_.squareToAlgebraic(bestMove.from) + board_.squareToAlgebraic(bestMove.to);

@@ -66,7 +66,7 @@ std::vector<Move> MoveGenerator::generatePseudoLegalMoves() const {
 
 bool MoveGenerator::isLegalMove(const Move& move) const {
     // Проверяем, не оставляет ли ход короля под шахом
-    return !wouldBeInCheck(move.from, move.to);
+    return !wouldBeInCheck(move);
 }
 
 std::vector<Move> MoveGenerator::generatePawnMoves(Square from) const {
@@ -432,28 +432,23 @@ std::vector<Move> MoveGenerator::generateEnPassantMoves() const {
 }
 
 // Проверка, оставляет ли ход короля под шахом
-bool MoveGenerator::wouldBeInCheck(Square from, Square to) const {
+bool MoveGenerator::wouldBeInCheck(const Move& move) const {
     // Создаем временную копию доски и выполняем ход
     Board tempBoard = board_;
-    Piece movingPiece = tempBoard.getPiece(from);
-    Color playerColor = movingPiece.getColor();
+    Color playerColor = board_.getPiece(move.from).getColor();
     
-    // Выполняем ход на временной доске
-    tempBoard.setPiece(to, movingPiece);
-    tempBoard.setPiece(from, Piece()); // Пустая клетка
+    // Выполняем полноценный ход на временной доске
+    // tempBoard.makeMove(move) обновит currentPlayer_, поэтому нам нужно знать playerColor заранее
+    tempBoard.makeMove(move);
     
     // Находим позицию короля после хода
     Square kingSquare = -1;
-    if (movingPiece.getType() == PieceType::KING) {
-        kingSquare = to; // Король переместился
-    } else {
-        // Ищем короля на доске
-        for (int sq = 0; sq < 64; sq++) {
-            Piece piece = tempBoard.getPiece(sq);
-            if (piece.getType() == PieceType::KING && piece.getColor() == playerColor) {
-                kingSquare = sq;
-                break;
-            }
+    // Ищем короля нужного цвета на доске
+    for (int sq = 0; sq < 64; sq++) {
+        Piece piece = tempBoard.getPiece(sq);
+        if (piece.getType() == PieceType::KING && piece.getColor() == playerColor) {
+            kingSquare = sq;
+            break;
         }
     }
     
@@ -461,7 +456,7 @@ bool MoveGenerator::wouldBeInCheck(Square from, Square to) const {
         return true; // Король не найден - критическая ошибка, считаем что под шахом
     }
     
-    // Проверяем, атакована ли клетка короля противником
+    // Проверяем, атакована ли клетка короля противником (который теперь currentPlayer на tempBoard)
     return isSquareAttackedOnBoard(tempBoard, kingSquare, oppositeColor(playerColor));
 }
 

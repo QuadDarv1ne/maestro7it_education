@@ -68,9 +68,11 @@ void ParallelSearch::workerThread(int thread_id, std::vector<std::pair<int, int>
 
         Bitboard local_board = board_;
         auto move = moves[i];
-        local_board.movePiece(move.first, move.second);
         
-        IncrementalEvaluator local_eval(local_board);
+        IncrementalEvaluator local_eval = evaluator_; // Копируем текущее состояние оценщика
+        Bitboard::PieceType captured = local_board.movePiece(move.first, move.second);
+        local_eval.updateOnMove(move.first, move.second, captured);
+        
         int score = alphabeta(local_board, local_eval, max_depth_ - 1, INT_MIN + 1, INT_MAX - 1, 
                              (color == Bitboard::Color::WHITE ? Bitboard::Color::BLACK : Bitboard::Color::WHITE));
 
@@ -123,8 +125,10 @@ int ParallelSearch::alphabeta(Bitboard& b, IncrementalEvaluator& eval, int depth
         int max_eval = INT_MIN + 1;
         for (const auto& move : moves) {
             Bitboard next_board = b;
-            next_board.movePiece(move.first, move.second);
-            IncrementalEvaluator next_eval(next_board);
+            IncrementalEvaluator next_eval = eval;
+            Bitboard::PieceType captured = next_board.movePiece(move.first, move.second);
+            next_eval.updateOnMove(move.first, move.second, captured);
+            
             int eval_score = alphabeta(next_board, next_eval, depth - 1, alpha, beta, Bitboard::Color::BLACK);
             max_eval = std::max(max_eval, eval_score);
             alpha = std::max(alpha, eval_score);
@@ -136,8 +140,10 @@ int ParallelSearch::alphabeta(Bitboard& b, IncrementalEvaluator& eval, int depth
         int min_eval = INT_MAX - 1;
         for (const auto& move : moves) {
             Bitboard next_board = b;
-            next_board.movePiece(move.first, move.second);
-            IncrementalEvaluator next_eval(next_board);
+            IncrementalEvaluator next_eval = eval;
+            Bitboard::PieceType captured = next_board.movePiece(move.first, move.second);
+            next_eval.updateOnMove(move.first, move.second, captured);
+            
             int eval_score = alphabeta(next_board, next_eval, depth - 1, alpha, beta, Bitboard::Color::WHITE);
             min_eval = std::min(min_eval, eval_score);
             beta = std::min(beta, eval_score);
