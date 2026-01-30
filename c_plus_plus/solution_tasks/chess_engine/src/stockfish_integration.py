@@ -13,22 +13,29 @@ from typing import Optional, Tuple, List
 class StockfishIntegration:
     """Интеграция с Stockfish движком"""
     
-    def __init__(self, stockfish_path: str = None):
+    def __init__(self, stockfish_path: str = None, threads: int = 6, hash_size: int = 2048):
         self.stockfish_process = None
         self.stockfish_path = stockfish_path or self._find_stockfish()
         self.is_running = False
         self.lock = threading.Lock()
+        self.threads = threads
+        self.hash_size = hash_size
         
-        # Параметры Stockfish по умолчанию
+        # Оптимизированные параметры Stockfish для многопоточной обработки
         self.default_params = {
-            "Threads": 4,           # Количество потоков
-            "Hash": 1024,           # Размер хэш-таблицы (MB)
-            "MultiPV": 1,           # Количество вариантов анализа
-            "Skill Level": 20,      # Уровень мастерства (0-20)
-            "Move Overhead": 10,    # Время на накладные расходы (мс)
-            "Slow Mover": 100,      # Скорость игры (10-1000)
-            "UCI_Chess960": False,  # Шахматы Фишера
-            "UCI_AnalyseMode": False # Режим анализа
+            "Threads": self.threads,     # Количество потоков CPU
+            "Hash": self.hash_size,      # Размер хэш-таблицы (MB)
+            "MultiPV": 1,               # Количество вариантов анализа
+            "Skill Level": 20,          # Максимальный уровень мастерства
+            "Move Overhead": 10,        # Время на накладные расходы (мс)
+            "Slow Mover": 100,          # Скорость игры
+            "UCI_Chess960": False,      # Шахматы Фишера
+            "UCI_AnalyseMode": True,    # Режим анализа
+            "Contempt": 0,              # Нейтральная оценка
+            "Min Split Depth": 6,       # Минимальная глубина разделения
+            "SyzygyPath": "<empty>",    # Путь к эндшпильным базам
+            "LargePages": True,         # Использование больших страниц памяти
+            "Ponder": False             # Отключение ponder режима для скорости
         }
         
     def _find_stockfish(self) -> Optional[str]:
@@ -150,7 +157,7 @@ class StockfishIntegration:
             print(f"Ошибка отправки команды: {e}")
             return None
     
-    def get_best_move(self, fen: str, depth: int = 15, movetime: int = 2000) -> Optional[str]:
+    def get_best_move(self, fen: str, depth: int = 18, movetime: int = 1500) -> Optional[str]:
         """Получение лучшего хода от Stockfish"""
         if not self.is_running:
             return None
@@ -180,7 +187,7 @@ class StockfishIntegration:
             print(f"Ошибка получения хода от Stockfish: {e}")
             return None
     
-    def analyze_position(self, fen: str, depth: int = 15) -> dict:
+    def analyze_position(self, fen: str, depth: int = 18, multipv: int = 3) -> dict:
         """Анализ позиции с оценкой"""
         if not self.is_running:
             return {}
@@ -189,15 +196,25 @@ class StockfishIntegration:
             # Устанавливаем позицию
             self._send_uci_command(f"position fen {fen}", False)
             
-            # Запускаем анализ
-            response = self._send_uci_command(f"go depth {depth}", True)
+            # Устанавливаем MultiPV для анализа нескольких линий
+            self._send_uci_command(f"setoption name MultiPV value {multipv}", False)
+            
+            # Запускаем параллельный анализ
+            search_command = f"go depth {depth}"
+            if movetime:
+                search_command += f" movetime {movetime}"
+                
+            response = self._send_uci_command(search_command, True)
             
             analysis = {
                 "score": None,
                 "depth": 0,
                 "nodes": 0,
                 "nps": 0,
-                "pv": []
+                "pv": [],
+                "multipv_lines": [],
+                "time_spent": 0,
+                "seldepth": 0
             }
             
             if response:
@@ -244,12 +261,72 @@ class StockfishIntegration:
                         parts = line.split()
                         pv_index = parts.index("pv")
                         analysis["pv"] = parts[pv_index + 1:]
+                    elif "multipv" in line:
+                        # Множественные линии анализа
+                        multipv_line = self._parse_multipv_line(line)
+                        if multipv_line:
+                            analysis["multipv_lines"].append(multipv_line)
+                    elif "time" in line and "nodes" not in line:
+                        # Время анализа
+                        parts = line.split()
+                        try:
+                            time_index = parts.index("time")
+                            analysis["time_spent"] = int(parts[time_index + 1])
+                        except:
+                            pass
+                    elif "seldepth" in line:
+                        # Выбранная глубина
+                        parts = line.split()
+                        try:
+                            seldepth_index = parts.index("seldepth")
+                            analysis["seldepth"] = int(parts[seldepth_index + 1])
+                        except:
+                            pass
             
             return analysis
             
         except Exception as e:
             print(f"Ошибка анализа позиции: {e}")
             return {}
+    
+    def _parse_multipv_line(self, line: str) -> Optional[dict]:
+        """Парсинг строки с множественным анализом"""
+        try:
+            parts = line.split()
+            multipv_index = parts.index("multipv")
+            pv_index = parts.index("pv")
+            
+            return {
+                "line_number": int(parts[multipv_index + 1]),
+                "score": self._extract_score(parts),
+                "depth": self._extract_depth(parts),
+                "pv": parts[pv_index + 1:pv_index + 6]  # Первые 5 ходов
+            }
+        except:
+            return None
+    
+    def _extract_score(self, parts: List[str]) -> Optional[str]:
+        """Извлечение оценки из частей строки"""
+        try:
+            if "cp" in parts:
+                cp_index = parts.index("cp")
+                return f"CP {parts[cp_index + 1]}"
+            elif "mate" in parts:
+                mate_index = parts.index("mate")
+                return f"Mate {parts[mate_index + 1]}"
+        except:
+            pass
+        return None
+    
+    def _extract_depth(self, parts: List[str]) -> int:
+        """Извлечение глубины анализа"""
+        try:
+            if "depth" in parts:
+                depth_index = parts.index("depth")
+                return int(parts[depth_index + 1])
+        except:
+            pass
+        return 0
 
 class StockfishDemo:
     """Демонстрация интеграции Stockfish"""
