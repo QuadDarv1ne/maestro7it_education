@@ -1,4 +1,4 @@
-#include "../include/piece.hpp"
+#include "../../include/piece.hpp"
 #include <map>
 
 Piece::Piece() : type_(PieceType::EMPTY), color_(Color::WHITE) {}

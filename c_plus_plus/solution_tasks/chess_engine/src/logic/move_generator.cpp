@@ -1,4 +1,4 @@
-#include "../include/move_generator.hpp"
+#include "../../include/move_generator.hpp"
 #include <algorithm>
 
 MoveGenerator::MoveGenerator(const Board& board) : board_(board) {}

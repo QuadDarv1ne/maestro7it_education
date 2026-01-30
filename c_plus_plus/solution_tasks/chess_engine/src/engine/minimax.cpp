@@ -57,7 +57,7 @@ Move Minimax::findBestMove(Color color) {
             if (shouldStop()) break;
 
             // Выполняем ход
-            board_.makeMove(move.from, move.to);
+            board_.makeMove(move);
             
             // Поиск (используем minimaxWithTT или PVS)
             int eval = minimaxWithTT(depth - 1, INT_MIN, INT_MAX, (color == Color::WHITE ? Color::BLACK : Color::WHITE));
@@ -441,21 +441,15 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
         }
         
         // Выполняем ход
-        Piece capturedPiece = board_.getPiece(move.to);
-        Piece movingPiece = board_.getPiece(move.from);
-        board_.setPiece(move.to, movingPiece);
-        board_.setPiece(move.from, Piece());
+        board_.makeMove(move);
         
         Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
-        board_.setCurrentPlayer(opponent);
         
         // Рекурсивный quiescence search
         int score = -quiescenceSearch(-beta, -alpha, opponent, ply + 1);
         
         // Восстанавливаем доску
-        board_.setPiece(move.from, movingPiece);
-        board_.setPiece(move.to, capturedPiece);
-        board_.setCurrentPlayer(maximizingPlayer);
+        board_.undoMove();
         
         // Обновляем лучшее значение и границы
         if (score > bestValue) {
@@ -490,21 +484,15 @@ bool Minimax::probCut(int depth, int beta, Color maximizingPlayer, int threshold
         const Move& move = moves[i];
         
         // Выполняем ход
-        Piece capturedPiece = board_.getPiece(move.to);
-        Piece movingPiece = board_.getPiece(move.from);
-        board_.setPiece(move.to, movingPiece);
-        board_.setPiece(move.from, Piece());
+        board_.makeMove(move);
         
         Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
-        board_.setCurrentPlayer(opponent);
         
         // Поверхностный поиск
         int shallowScore = -minimaxWithTT(shallowDepth, -shallowBeta - 1, -shallowBeta, opponent);
         
         // Восстанавливаем доску
-        board_.setPiece(move.from, movingPiece);
-        board_.setPiece(move.to, capturedPiece);
-        board_.setCurrentPlayer(maximizingPlayer);
+        board_.undoMove();
         
         // Если поверхностный поиск превышает порог, вероятно вызовет отсечение
         if (shallowScore >= shallowBeta) {
@@ -632,38 +620,7 @@ void Minimax::initZobrist() {
 }
 
 uint64_t Minimax::hashPosition() const {
-    uint64_t hash = 0;
-    
-    // Фигуры
-    for (int square = 0; square < 64; square++) {
-        Piece piece = board_.getPiece(square);
-        if (!piece.isEmpty()) {
-            int pieceIdx = static_cast<int>(piece.getType());
-            if (piece.getColor() == Color::BLACK) pieceIdx += 6;
-            hash ^= zobristTable[square][pieceIdx];
-        }
-    }
-    
-    // Ход (сторона)
-    if (board_.getCurrentPlayer() == Color::BLACK) {
-        hash ^= zobristBlackToMove;
-    }
-    
-    // Рокировка
-    int castlingIdx = 0;
-    if (board_.canCastleKingSide(Color::WHITE)) castlingIdx |= 1;
-    if (board_.canCastleQueenSide(Color::WHITE)) castlingIdx |= 2;
-    if (board_.canCastleKingSide(Color::BLACK)) castlingIdx |= 4;
-    if (board_.canCastleQueenSide(Color::BLACK)) castlingIdx |= 8;
-    hash ^= zobristCastling[castlingIdx];
-    
-    // Взятие на проходе
-    Square ep = board_.getEnPassantSquare();
-    if (ep != INVALID_SQUARE) {
-        hash ^= zobristEnPassant[board_.file(ep)];
-    }
-    
-    return hash;
+    return board_.getZobristHash();
 }
 
 void Minimax::storeInTT(uint64_t hash, int depth, int score, Move bestMove, char flag) {
@@ -685,6 +642,11 @@ Minimax::TTEntry* Minimax::probeTT(uint64_t hash) {
 int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlayer) {
     if (shouldStop()) return evaluatePosition();
     
+    // Проверка на ничью (повторение или правило 50 ходов)
+    if (board_.getHalfMoveClock() >= 100 || board_.isRepetition()) {
+        return 0;
+    }
+
     // Проверяем таблицу транспозиций
     uint64_t hash = hashPosition();
     TTEntry* entry = probeTT(hash);
@@ -727,6 +689,14 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
     
     std::vector<Move> moves = orderMoves(MoveGenerator(board_).generateLegalMoves());
     
+    if (moves.empty()) {
+        if (isInCheck(maximizingPlayer)) {
+            return (maximizingPlayer == Color::WHITE) ? (-20000 - depth) : (20000 + depth);
+        } else {
+            return 0; // Пат
+        }
+    }
+    
     int bestScore;
     Move bestMove;
     bool hasBestMove = false;
@@ -738,7 +708,7 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
             const Move& move = moves[i];
             
             // Выполняем ход
-            board_.makeMove(move.from, move.to);
+            board_.makeMove(move);
             
             int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Редукция поздних ходов
             int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::BLACK);
@@ -765,7 +735,7 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
             const Move& move = moves[i];
             
             // Выполняем ход
-            board_.makeMove(move.from, move.to);
+            board_.makeMove(move);
             
             int reduction = (i >= 4 && depth >= 3) ? 1 : 0; // Редукция поздних ходов
             int eval = minimaxWithTT(depth - 1 - reduction, alpha, beta, Color::WHITE);
@@ -805,6 +775,11 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
 int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maximizingPlayer, bool isPVNode) {
     if (shouldStop()) return evaluatePosition();
     
+    // Проверка на ничью
+    if (board_.getHalfMoveClock() >= 100 || board_.isRepetition()) {
+        return 0;
+    }
+
     // Базовый случай: листовой узел
     if (depth <= 0) {
         return quiescenceSearch(alpha, beta, maximizingPlayer);
@@ -832,13 +807,9 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
     for (const Move& move : moves) {
         if (shouldStop()) break;
         // Выполняем ход
-        Piece capturedPiece = board_.getPiece(move.to);
-        Piece movingPiece = board_.getPiece(move.from);
-        board_.setPiece(move.to, movingPiece);
-        board_.setPiece(move.from, Piece());
+        board_.makeMove(move);
         
         Color opponent = (maximizingPlayer == Color::WHITE) ? Color::BLACK : Color::WHITE;
-        board_.setCurrentPlayer(opponent);
         
         int eval;
         if (firstMove) {
@@ -856,9 +827,7 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
         }
         
         // Восстанавливаем доску
-        board_.setPiece(move.from, movingPiece);
-        board_.setPiece(move.to, capturedPiece);
-        board_.setCurrentPlayer(maximizingPlayer);
+        board_.undoMove();
         
         // Обновляем лучшее значение и границы
         if (maximizingPlayer == Color::WHITE) {

@@ -1,10 +1,14 @@
-#include "../include/board.hpp"
+#include "../../include/board.hpp"
+#include "../../include/move_generator.hpp"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <random>
+#include <limits>
 
 Board::Board() {
+    initZobrist();
     initializeEmptyBoard();
     setupStartPosition();
 }
@@ -147,7 +151,7 @@ std::string Board::squareToAlgebraic(Square square) const {
     return std::string(1, fileChar) + rankChar;
 }
 
-void Board::pushHistory(Square from, Square to, const Piece& captured, bool isCastling, bool isEnPassant, PieceType promotion) {
+void Board::pushHistory(Square from, Square to, const Piece& captured, bool isCastling, bool isEnPassant, PieceType promotion, uint64_t hash) {
     UndoInfo info;
     info.from = from;
     info.to = to;
@@ -161,6 +165,7 @@ void Board::pushHistory(Square from, Square to, const Piece& captured, bool isCa
     info.isCastling = isCastling;
     info.isEnPassant = isEnPassant;
     info.promotion = promotion;
+    info.hash = hash;
     
     history_.push_back(info);
 }
@@ -222,6 +227,102 @@ void Board::undoMove() {
     // Уменьшить счетчик ходов если ходили черные (т.е. сейчас опять ход белых)
     if (currentPlayer_ == Color::WHITE) {
         moveCount_--;
+    }
+}
+
+void Board::makeMove(const Move& move) {
+    Piece movingPiece = getPiece(move.from);
+    if (movingPiece.isEmpty()) return;
+    
+    // Сохраняем историю для отмены (включая хеш текущей позиции ПЕРЕД ходом)
+    pushHistory(move.from, move.to, getPiece(move.to), move.isCastling, move.isEnPassant, move.promotion, getZobristHash());
+    
+    // 1. Обработка рокировки
+    if (move.isCastling) {
+        int r = rank(move.from);
+        int toFile = file(move.to);
+        
+        // Перемещаем ладью
+        if (toFile == 6) { // Короткая рокировка
+            Square rookFrom = square(7, r);
+            Square rookTo = square(5, r);
+            setPiece(rookTo, getPiece(rookFrom));
+            setPiece(rookFrom, Piece());
+        } else if (toFile == 2) { // Длинная рокировка
+            Square rookFrom = square(0, r);
+            Square rookTo = square(3, r);
+            setPiece(rookTo, getPiece(rookFrom));
+            setPiece(rookFrom, Piece());
+        }
+    }
+    
+    // 2. Обработка взятия на проходе
+    if (move.isEnPassant) {
+        int toFile = file(move.to);
+        int fromRank = rank(move.from);
+        Square capturedPawnSquare = square(toFile, fromRank);
+        setPiece(capturedPawnSquare, Piece());
+    }
+    
+    // 3. Обработка превращения пешки
+    if (move.promotion != PieceType::EMPTY) {
+        movingPiece = Piece(move.promotion, movingPiece.getColor());
+    }
+    
+    // Стандартное перемещение фигуры
+    setPiece(move.to, movingPiece);
+    setPiece(move.from, Piece());
+    
+    // Обновляем состояние игры (права рокировки, en passant и т.д.)
+    updateGameStateAfterMove(move);
+    
+    // Смена игрока
+    currentPlayer_ = Piece::oppositeColor(currentPlayer_);
+    
+    // Увеличиваем счетчик ходов если ходили черные
+    if (currentPlayer_ == Color::WHITE) {
+        moveCount_++;
+    }
+}
+
+void Board::updateGameStateAfterMove(const Move& move) {
+    Piece movingPiece = getPiece(move.to);
+    if (movingPiece.isEmpty()) return;
+
+    Color color = movingPiece.getColor();
+    int fromRank = rank(move.from);
+    int fromFile = file(move.from);
+    int toRank = rank(move.to);
+    int toFile = file(move.to);
+
+    // 1. Обновление прав на рокировку
+    // Если пошел король
+    if (movingPiece.getType() == PieceType::KING) {
+        if (color == Color::WHITE) {
+            whiteKingSideCastle_ = whiteQueenSideCastle_ = false;
+        } else {
+            blackKingSideCastle_ = blackQueenSideCastle_ = false;
+        }
+    }
+
+    // Если пошла ладья или ее съели
+    if (move.from == square(0, 0) || move.to == square(0, 0)) whiteQueenSideCastle_ = false;
+    if (move.from == square(7, 0) || move.to == square(7, 0)) whiteKingSideCastle_ = false;
+    if (move.from == square(0, 7) || move.to == square(0, 7)) blackQueenSideCastle_ = false;
+    if (move.from == square(7, 7) || move.to == square(7, 7)) blackKingSideCastle_ = false;
+
+    // 2. Обновление en passant square
+    if (movingPiece.getType() == PieceType::PAWN && std::abs(toRank - fromRank) == 2) {
+        enPassantSquare_ = square(fromFile, (fromRank + toRank) / 2);
+    } else {
+        enPassantSquare_ = INVALID_SQUARE;
+    }
+
+    // 3. Обновление счетчика полуходов
+    if (movingPiece.getType() == PieceType::PAWN || move.isCapture) {
+        halfMoveClock_ = 0;
+    } else {
+        halfMoveClock_++;
     }
 }
 
@@ -451,4 +552,134 @@ std::string Board::getFEN() const {
     fen << ' ' << moveCount_;
     
     return fen.str();
+}
+
+bool Board::isCheck(Color color) const {
+    // Находим короля указанного цвета
+    Square kingSquare = INVALID_SQUARE;
+    for (int square = 0; square < 64; square++) {
+        const Piece& piece = getPiece(square);
+        if (piece.getType() == PieceType::KING && piece.getColor() == color) {
+            kingSquare = square;
+            break;
+        }
+    }
+    
+    if (kingSquare == INVALID_SQUARE) return false;
+    
+    MoveGenerator moveGen(*this);
+    Color opponentColor = (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    return moveGen.isSquareAttacked(kingSquare, opponentColor);
+}
+
+bool Board::isCheckmate(Color color) const {
+    if (!isCheck(color)) return false;
+    
+    MoveGenerator moveGen(*this);
+    std::vector<Move> legalMoves = moveGen.generateLegalMoves();
+    
+    // Если нет легальных ходов (generateLegalMoves уже фильтрует те, что оставляют под шахом)
+    for (const Move& move : legalMoves) {
+        if (getPiece(move.from).getColor() == color) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool Board::isStalemate(Color color) const {
+    if (isCheck(color)) return false;
+    
+    MoveGenerator moveGen(*this);
+    std::vector<Move> legalMoves = moveGen.generateLegalMoves();
+    
+    for (const Move& move : legalMoves) {
+        if (getPiece(move.from).getColor() == color) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool Board::isGameOver() const {
+    return isCheckmate(currentPlayer_) || isStalemate(currentPlayer_) || halfMoveClock_ >= 100 || isRepetition();
+}
+
+void Board::initZobrist() {
+    std::mt19937_64 rng(123456789);
+    std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
+    
+    for (int i = 0; i < 64; i++) {
+        for (int j = 0; j < 12; j++) {
+            zobristTable[i][j] = dist(rng);
+        }
+    }
+    
+    zobristBlackToMove = dist(rng);
+    
+    for (int i = 0; i < 16; i++) {
+        zobristCastling[i] = dist(rng);
+    }
+    
+    for (int i = 0; i < 8; i++) {
+        zobristEnPassant[i] = dist(rng);
+    }
+}
+
+uint64_t Board::getZobristHash() const {
+    uint64_t hash = 0;
+    
+    for (int square = 0; square < 64; square++) {
+        const Piece& piece = getPiece(square);
+        if (!piece.isEmpty()) {
+            int pieceIdx = static_cast<int>(piece.getType()) - 1;
+            if (piece.getColor() == Color::BLACK) pieceIdx += 6;
+            hash ^= zobristTable[square][pieceIdx];
+        }
+    }
+    
+    if (currentPlayer_ == Color::BLACK) {
+        hash ^= zobristBlackToMove;
+    }
+    
+    int castlingIdx = 0;
+    if (whiteKingSideCastle_) castlingIdx |= 1;
+    if (whiteQueenSideCastle_) castlingIdx |= 2;
+    if (blackKingSideCastle_) castlingIdx |= 4;
+    if (blackQueenSideCastle_) castlingIdx |= 8;
+    hash ^= zobristCastling[castlingIdx];
+    
+    if (enPassantSquare_ != INVALID_SQUARE) {
+        hash ^= zobristEnPassant[file(enPassantSquare_)];
+    }
+    
+    return hash;
+}
+
+bool Board::isRepetition() const {
+    if (history_.empty()) return false;
+    
+    uint64_t currentHash = getZobristHash();
+    int count = 1;
+    
+    // Проверяем историю. Нам нужно найти 2 таких же хеша (для 3-кратного повторения)
+    // Но учитываем, что в истории хранятся хеши ПЕРЕД ходом.
+    for (int i = history_.size() - 1; i >= 0; i--) {
+        if (history_[i].hash == currentHash) {
+            count++;
+            if (count >= 3) return true;
+        }
+        
+        // Оптимизация: сброс при необратимых ходах (взятие или ход пешки)
+        // Если в истории был ход пешки или взятие, повторение до этого момента невозможно
+        const Piece& captured = history_[i].capturedPiece;
+        // Мы не знаем точно была ли это пешка, если только не сохранили тип двигавшейся фигуры
+        // Но мы можем посмотреть в history_[i].from на текущей доске? Нет, доска изменилась.
+        // Упростим: если halfMoveClock сбросился, то повторение невозможно.
+        if (history_[i].halfMoveClock == 0) break;
+    }
+    
+    return false;
 }

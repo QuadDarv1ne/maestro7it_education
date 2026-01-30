@@ -66,6 +66,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/comprehensive_test.cpp")
     add_executable(comprehensive_test src/comprehensive_test.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_special_moves.cpp")
+    add_executable(test_special_moves tests/test_special_moves.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
+    target_include_directories(test_special_moves PRIVATE include)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_game_states.cpp")
+    add_executable(test_game_states tests/test_game_states.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
+    target_include_directories(test_game_states PRIVATE include)
+endif()
+
 # Include directories
 target_include_directories(chess_engine PRIVATE include)
 

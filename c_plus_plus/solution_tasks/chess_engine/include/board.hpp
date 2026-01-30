@@ -4,6 +4,10 @@
 #include "piece.hpp"
 #include <vector>
 #include <string>
+#include <cstdint>
+
+// Предварительное объявление Move
+struct Move;
 
 // Позиция на доске (0-63, где 0 - a1, 63 - h8)
 typedef int Square;
@@ -43,6 +47,7 @@ private:
         bool isCastling;
         bool isEnPassant;
         PieceType promotion;
+        uint64_t hash;
     };
     std::vector<UndoInfo> history_;
 
@@ -72,24 +77,30 @@ public:
     void setHalfMoveClock(int clock);                  ///< Устанавливает счетчик полуходов
     
     // Операции с доской
+    void makeMove(const Move& move);                   ///< Выполняет полноценный ход со всеми правилами
     void makeMove(Square from, Square to);             ///< Выполняет ход с одной клетки на другую
     void makeMove(const std::string& algebraicNotation);  ///< Выполняет ход в алгебраической нотации
     void undoMove();                                   ///< Отменяет последний ход
     bool isValidMove(Square from, Square to) const;    ///< Проверяет корректность хода
     
+    // Обновление состояния после хода
+    void updateGameStateAfterMove(const Move& move);   ///< Обновляет права рокировки и ep после хода
+    
     // Сохранение/загрузка истории (для makeMove в GameRules)
-    void pushHistory(Square from, Square to, const Piece& captured, bool isCastling = false, bool isEnPassant = false, PieceType promotion = PieceType::EMPTY);
+    void pushHistory(Square from, Square to, const Piece& captured, bool isCastling = false, bool isEnPassant = false, PieceType promotion = PieceType::EMPTY, uint64_t hash = 0);
     
     // Вспомогательные методы
     Square algebraicToSquare(const std::string& algebraic) const;  ///< Преобразует алгебраическую нотацию в клетку
     std::string squareToAlgebraic(Square square) const;           ///< Преобразует клетку в алгебраическую нотацию
     void printBoard() const;                                      ///< Выводит доску в консоль
     std::string getFEN() const;                                   ///< Возвращает FEN-нотацию текущей позиции
+    uint64_t getZobristHash() const;                              ///< Возвращает Zobrist-хеш текущей позиции
     
     // Состояние игры
     bool isCheck(Color color) const;      ///< Проверяет, находится ли король под шахом
     bool isCheckmate(Color color) const;  ///< Проверяет, является ли позиция матом
     bool isStalemate(Color color) const;  ///< Проверяет, является ли позиция патом
+    bool isRepetition() const;            ///< Проверяет на троекратное повторение
     bool isGameOver() const;              ///< Проверяет, завершена ли игра
     
     // Вспомогательные методы (сделаны публичными для доступа из других классов)
@@ -100,6 +111,11 @@ public:
     Square square(int file, int rank) const;  ///< Создает клетку из вертикали и горизонтали
     
 private:
+    void initZobrist();
+    uint64_t zobristTable[64][12];
+    uint64_t zobristBlackToMove;
+    uint64_t zobristCastling[16];
+    uint64_t zobristEnPassant[8];
 };
 
 // Константы

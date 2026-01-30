@@ -1,5 +1,5 @@
-#include "../include/game_rules.hpp"
-#include "../include/move_generator.hpp"
+#include "../../include/game_rules.hpp"
+#include "../../include/move_generator.hpp"
 #include <algorithm>
 
 GameRules::GameRules(Board& board) : board_(board) {}
