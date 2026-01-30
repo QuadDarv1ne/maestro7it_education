@@ -585,30 +585,68 @@ class ChessEngineWrapper:
                     return best_move
                 
             except ImportError:
-                print("Продвинутый ИИ не доступен, используем базовый")
+                print("Продвинутый ИИ не доступен, используем улучшенный базовый")
                 pass
             
-            # Резервный вариант - случайный допустимый ход
+            # Улучшенный резервный вариант - с приоритетом взятий
             possible_moves = []
+            capture_moves = []
+            
+            # AI играет за черных (если current_turn=False)
+            ai_is_white = not self.current_turn
+            
             for row in range(8):
                 for col in range(8):
                     piece = self.board_state[row][col]
-                    if piece != '.' and ((piece.isupper() and not self.current_turn) or 
-                                       (piece.islower() and self.current_turn)):
-                        for to_row in range(8):
-                            for to_col in range(8):
-                                if self.is_valid_move_python((row, col), (to_row, to_col)):
-                                    possible_moves.append(((row, col), (to_row, to_col)))
+                    if piece == '.':
+                        continue
+                    
+                    # Проверяем, что это фигура AI
+                    piece_is_white = piece.isupper()
+                    if piece_is_white != ai_is_white:
+                        continue
+                    
+                    # Генерируем ходы только для фигур AI
+                    for to_row in range(8):
+                        for to_col in range(8):
+                            if (row, col) == (to_row, to_col):
+                                continue
+                            
+                            # Быстрая предварительная проверка
+                            target = self.board_state[to_row][to_col]
+                            if target != '.' and (target.isupper() == piece_is_white):
+                                continue  # Не можем съесть свою фигуру
+                            
+                            # Временно меняем очередь для проверки
+                            original_turn = self.current_turn
+                            self.current_turn = ai_is_white
+                            
+                            if self.is_valid_move_python((row, col), (to_row, to_col)):
+                                move = ((row, col), (to_row, to_col))
+                                if target != '.':
+                                    capture_moves.append(move)  # Приоритет взятиям
+                                else:
+                                    possible_moves.append(move)
+                            
+                            self.current_turn = original_turn
             
-            if not possible_moves:
+            # Приоритет взятиям, потом обычным ходам
+            all_moves = capture_moves + possible_moves
+            
+            if not all_moves:
                 return None
             
-            # Выбираем случайный допустимый ход
+            # Выбираем первый ход (лучше взятие если есть)
             import random
-            return random.choice(possible_moves)
+            if capture_moves:
+                return capture_moves[0]  # Берем первое взятие
+            else:
+                return random.choice(possible_moves)  # Случайный ход
             
         except Exception as e:
             print(f"Ошибка в get_best_move: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def is_king_in_check(self, king_color: bool) -> bool:

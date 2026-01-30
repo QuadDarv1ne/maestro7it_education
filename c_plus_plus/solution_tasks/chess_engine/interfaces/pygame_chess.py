@@ -494,11 +494,11 @@ class PygameChessGUI:
     
     def is_checkmate(self) -> bool:
         """Проверка мата"""
-        return self.engine.is_checkmate()
+        return self.engine.is_checkmate(self.white_turn)
     
     def is_stalemate(self) -> bool:
         """Проверка пата"""
-        return self.engine.is_stalemate()
+        return self.engine.is_stalemate(self.white_turn)
     
     def get_valid_moves(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         """Получение допустимых ходов"""
@@ -804,9 +804,9 @@ class PygameChessGUI:
                     self.pending_ai_move = ai_move
                     self.computer_move_delay = 0
                 elif not self.ai_calculating and self.pending_ai_move is None:
-                    # Запускаем AI вычисления
+                    # Запускаем AI вычисления с меньшей глубиной
                     ai_start_time = pygame.time.get_ticks()
-                    self.start_ai_calculation(depth=3)
+                    self.start_ai_calculation(depth=2)
                 
                 # Выполняем ход с визуальной задержкой
                 if self.pending_ai_move is not None and not self.animation.active:
