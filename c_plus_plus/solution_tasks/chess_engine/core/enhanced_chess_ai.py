@@ -397,25 +397,30 @@ class EnhancedChessAI:
         
         if maximizing_player:
             max_eval = float('-inf')
-            for move in ordered_moves:
+            for i, move in enumerate(ordered_moves):
                 new_board = self.make_move(board, move)
                 
-                # Late Move Reduction (LMR) - уменьшаем глубину для поздних ходов
-                reduction = 0
-                if moves_searched >= 3 and depth >= 3:
-                    # Не для взятий и не для ходов с шахом
-                    target = board[move[1][0]][move[1][1]]
-                    if target == '.':
-                        reduction = 1
-                
-                # Поиск с уменьшенной глубиной
-                if reduction > 0:
-                    eval_score, _ = self.minimax(new_board, depth - 1 - reduction, alpha, beta, False)
-                    # Если результат выглядит хорошо, перепроверяем с полной глубиной
-                    if eval_score > alpha:
-                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
-                else:
+                # Principal Variation Search (PVS)
+                if i == 0:
+                    # Первый ход - полный поиск
                     eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
+                else:
+                    # Late Move Reduction (LMR)
+                    reduction = 0
+                    if moves_searched >= 3 and depth >= 3:
+                        target = board[move[1][0]][move[1][1]]
+                        if target == '.':
+                            reduction = 1
+                    
+                    # PVS: узкое окно поиска
+                    eval_score, _ = self.minimax(new_board, depth - 1 - reduction, alpha, alpha + 1, False, allow_null_move)
+                    
+                    # Пере-поиск, если результат лучше alpha
+                    if alpha < eval_score < beta:
+                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
+                    elif reduction > 0 and eval_score > alpha:
+                        # Пере-поиск с полной глубиной
+                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
                 
                 if eval_score > max_eval:
                     max_eval = eval_score
@@ -433,32 +438,34 @@ class EnhancedChessAI:
                 
                 moves_searched += 1
             
-            # Сохраняем в транспозиционной таблице
-            self.transposition_table[board_hash] = {
-                'score': max_eval,
-                'move': best_move,
-                'depth': depth
-            }
+            # Сохраняем в транспозиционной таблице с управлением памятью
+            self.store_in_tt(board_hash, max_eval, best_move, depth)
             return max_eval, best_move
         else:
             min_eval = float('inf')
             moves_searched = 0
-            for move in ordered_moves:
+            for i, move in enumerate(ordered_moves):
                 new_board = self.make_move(board, move)
                 
-                # Late Move Reduction (LMR)
-                reduction = 0
-                if moves_searched >= 3 and depth >= 3:
-                    target = board[move[1][0]][move[1][1]]
-                    if target == '.':
-                        reduction = 1
-                
-                if reduction > 0:
-                    eval_score, _ = self.minimax(new_board, depth - 1 - reduction, alpha, beta, True)
-                    if eval_score < beta:
-                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
-                else:
+                # Principal Variation Search (PVS)
+                if i == 0:
                     eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
+                else:
+                    # Late Move Reduction
+                    reduction = 0
+                    if moves_searched >= 3 and depth >= 3:
+                        target = board[move[1][0]][move[1][1]]
+                        if target == '.':
+                            reduction = 1
+                    
+                    # PVS: узкое окно
+                    eval_score, _ = self.minimax(new_board, depth - 1 - reduction, beta - 1, beta, True, allow_null_move)
+                    
+                    # Пере-поиск
+                    if alpha < eval_score < beta:
+                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
+                    elif reduction > 0 and eval_score < beta:
+                        eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
                 
                 if eval_score < min_eval:
                     min_eval = eval_score
@@ -474,17 +481,36 @@ class EnhancedChessAI:
                 
                 moves_searched += 1
             
-            # Сохраняем в транспозиционной таблице
-            self.transposition_table[board_hash] = {
-                'score': min_eval,
-                'move': best_move,
-                'depth': depth
-            }
+            # Сохраняем с управлением памятью
+            self.store_in_tt(board_hash, min_eval, best_move, depth)
             return min_eval, best_move
     
+    def store_in_tt(self, board_hash: int, score: int, move: Tuple, depth: int):
+        """Сохранение в транспозиционной таблице с управлением памятью"""
+        # Если таблица переполнена, удаляем менее важные записи
+        if len(self.transposition_table) >= self.max_tt_size:
+            # Удаляем записи с наименьшей глубиной (replacement strategy)
+            min_depth_key = min(self.transposition_table.keys(), 
+                               key=lambda k: self.transposition_table[k]['depth'])
+            del self.transposition_table[min_depth_key]
+        
+        # Заменяем только если новая запись имеет большую глубину
+        if board_hash not in self.transposition_table or \
+           self.transposition_table[board_hash]['depth'] <= depth:
+            self.transposition_table[board_hash] = {
+                'score': score,
+                'move': move,
+                'depth': depth
+            }
+    
     def quiescence_search(self, board: List[List[str]], alpha: float, beta: float, 
-                           maximizing_player: bool) -> int:
+                           maximizing_player: bool, qs_depth: int = 0) -> int:
         """Поиск только взятий для избежания эффекта горизонта"""
+        # Ограничение глубины quiescence search
+        max_qs_depth = 8
+        if qs_depth >= max_qs_depth:
+            return self.evaluate_position(board)
+        
         stand_pat = self.evaluate_position(board)
         
         if maximizing_player:
@@ -499,7 +525,7 @@ class EnhancedChessAI:
             
             for move in ordered_captures:
                 new_board = self.make_move(board, move)
-                score = self.quiescence_search(new_board, alpha, beta, False)
+                score = self.quiescence_search(new_board, alpha, beta, False, qs_depth + 1)
                 if score >= beta:
                     return beta
                 alpha = max(alpha, score)
@@ -515,7 +541,7 @@ class EnhancedChessAI:
             
             for move in ordered_captures:
                 new_board = self.make_move(board, move)
-                score = self.quiescence_search(new_board, alpha, beta, True)
+                score = self.quiescence_search(new_board, alpha, beta, True, qs_depth + 1)
                 if score <= alpha:
                     return alpha
                 beta = min(beta, score)
