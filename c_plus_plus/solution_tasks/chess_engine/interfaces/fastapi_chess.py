@@ -102,6 +102,7 @@ class GameManager:
     def __init__(self):
         self.games: Dict[str, dict] = {}
         self.connections: Dict[str, List[WebSocket]] = {}
+        self.chat_history: Dict[str, List[Dict]] = defaultdict(list)  # История чата по играм
     
     def create_game(self, player_name: str = "Anonymous", game_mode: str = "ai", time_control: int = 0) -> str:
         game_id = str(uuid.uuid4())
@@ -138,7 +139,29 @@ class GameManager:
             del self.games[game_id]
         if game_id in self.connections:
             del self.connections[game_id]
+        if game_id in self.chat_history:
+            del self.chat_history[game_id]
         logger.info(f"Deleted game {game_id}")
+    
+    def add_chat_message(self, game_id: str, player_name: str, message: str):
+        """Добавление сообщения в чат"""
+        chat_message = {
+            'player': player_name,
+            'message': message,
+            'timestamp': datetime.now().isoformat()
+        }
+        self.chat_history[game_id].append(chat_message)
+        
+        # Ограничение истории чата (100 сообщений)
+        if len(self.chat_history[game_id]) > 100:
+            self.chat_history[game_id] = self.chat_history[game_id][-100:]
+        
+        return chat_message
+    
+    def get_chat_history(self, game_id: str, limit: int = 50) -> List[Dict]:
+        """Получение истории чата"""
+        messages = self.chat_history.get(game_id, [])
+        return messages[-limit:] if limit > 0 else messages
 
 game_manager = GameManager()
 
@@ -461,6 +484,254 @@ class GameAnalyzer:
             return "Critical position! Focus on defense and tactics."
 
 game_analyzer = GameAnalyzer()
+
+# Система рейтингов ELO
+class EloRatingSystem:
+    """Система расчета рейтингов ELO для игроков"""
+    def __init__(self, k_factor: int = 32, default_rating: int = 1200):
+        self.k_factor = k_factor  # Коэффициент изменения рейтинга
+        self.default_rating = default_rating  # Начальный рейтинг
+        self.ratings: Dict[str, int] = defaultdict(lambda: default_rating)
+        self.rating_history: Dict[str, List[Dict]] = defaultdict(list)
+    
+    def get_rating(self, player_name: str) -> int:
+        """Получение текущего рейтинга игрока"""
+        return self.ratings[player_name]
+    
+    def calculate_expected_score(self, rating_a: int, rating_b: int) -> float:
+        """Расчет ожидаемого результата по формуле ELO"""
+        return 1 / (1 + 10 ** ((rating_b - rating_a) / 400))
+    
+    def update_ratings(self, player_name: str, opponent_rating: int, 
+                       actual_score: float, game_id: str = None) -> Dict:
+        """Обновление рейтинга после игры
+        
+        Args:
+            player_name: Имя игрока
+            opponent_rating: Рейтинг противника
+            actual_score: Фактический результат (1.0 = победа, 0.5 = ничья, 0.0 = поражение)
+            game_id: ID игры для истории
+        
+        Returns:
+            Словарь с информацией об изменении рейтинга
+        """
+        current_rating = self.ratings[player_name]
+        expected_score = self.calculate_expected_score(current_rating, opponent_rating)
+        
+        # Расчет нового рейтинга
+        rating_change = round(self.k_factor * (actual_score - expected_score))
+        new_rating = current_rating + rating_change
+        
+        # Ограничение минимального рейтинга
+        new_rating = max(100, new_rating)
+        
+        # Сохранение истории
+        history_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'old_rating': current_rating,
+            'new_rating': new_rating,
+            'change': rating_change,
+            'opponent_rating': opponent_rating,
+            'actual_score': actual_score,
+            'game_id': game_id
+        }
+        self.rating_history[player_name].append(history_entry)
+        
+        # Обновление рейтинга
+        self.ratings[player_name] = new_rating
+        
+        return {
+            'player': player_name,
+            'old_rating': current_rating,
+            'new_rating': new_rating,
+            'change': rating_change,
+            'expected_score': round(expected_score, 3)
+        }
+    
+    def get_rating_history(self, player_name: str, limit: int = 10) -> List[Dict]:
+        """Получение истории изменений рейтинга"""
+        history = self.rating_history[player_name]
+        return history[-limit:] if limit > 0 else history
+    
+    def get_leaderboard(self, limit: int = 10) -> List[Dict]:
+        """Получение таблицы лидеров по рейтингу"""
+        leaderboard = [
+            {'player': name, 'rating': rating, 'games': len(self.rating_history[name])}
+            for name, rating in self.ratings.items()
+        ]
+        return sorted(leaderboard, key=lambda x: x['rating'], reverse=True)[:limit]
+    
+    def get_rank_title(self, rating: int) -> str:
+        """Получение звания на основе рейтинга"""
+        if rating >= 2400:
+            return "Grandmaster"
+        elif rating >= 2200:
+            return "Master"
+        elif rating >= 2000:
+            return "Expert"
+        elif rating >= 1800:
+            return "Class A"
+        elif rating >= 1600:
+            return "Class B"
+        elif rating >= 1400:
+            return "Class C"
+        elif rating >= 1200:
+            return "Class D"
+        else:
+            return "Novice"
+
+elo_system = EloRatingSystem()
+
+# База данных дебютов
+class OpeningBook:
+    """Определение шахматных дебютов по последовательности ходов"""
+    def __init__(self):
+        # Словарь дебютов: ключ - последовательность ходов, значение - название
+        self.openings = {
+            # Открытые дебюты (1.e4 e5)
+            "e2-e4 e7-e5": "King's Pawn Opening",
+            "e2-e4 e7-e5 g1-f3": "King's Knight Opening",
+            "e2-e4 e7-e5 g1-f3 b8-c6": "King's Knight Opening",
+            "e2-e4 e7-e5 g1-f3 b8-c6 f1-b5": "Ruy Lopez (Spanish Opening)",
+            "e2-e4 e7-e5 g1-f3 b8-c6 f1-c4": "Italian Game",
+            "e2-e4 e7-e5 g1-f3 b8-c6 f1-c4 f8-c5": "Italian Game: Giuoco Piano",
+            "e2-e4 e7-e5 g1-f3 b8-c6 d2-d4": "Scotch Game",
+            "e2-e4 e7-e5 g1-f3 g8-f6": "Petrov's Defense (Russian Game)",
+            "e2-e4 e7-e5 f2-f4": "King's Gambit",
+            
+            # Полуоткрытые дебюты
+            "e2-e4 c7-c5": "Sicilian Defense",
+            "e2-e4 c7-c5 g1-f3": "Sicilian Defense: Open",
+            "e2-e4 c7-c5 g1-f3 d7-d6": "Sicilian Defense: Najdorf Variation",
+            "e2-e4 c7-c6": "Caro-Kann Defense",
+            "e2-e4 e7-e6": "French Defense",
+            "e2-e4 d7-d5": "Scandinavian Defense",
+            "e2-e4 g8-f6": "Alekhine's Defense",
+            
+            # Закрытые дебюты (1.d4 d5)
+            "d2-d4 d7-d5": "Queen's Pawn Opening",
+            "d2-d4 d7-d5 c2-c4": "Queen's Gambit",
+            "d2-d4 d7-d5 c2-c4 d5-c4": "Queen's Gambit Accepted",
+            "d2-d4 d7-d5 c2-c4 e7-e6": "Queen's Gambit Declined",
+            "d2-d4 d7-d5 c2-c4 c7-c6": "Slav Defense",
+            "d2-d4 g8-f6 c2-c4 e7-e6": "Indian Defense",
+            "d2-d4 g8-f6 c2-c4 g7-g6": "King's Indian Defense",
+            "d2-d4 g8-f6 c2-c4 e7-e6 g1-f3 b7-b6": "Queen's Indian Defense",
+            
+            # Индийские защиты
+            "d2-d4 g8-f6": "Indian Defense",
+            "d2-d4 g8-f6 c2-c4 e7-e6 g1-f3 f8-b4": "Nimzo-Indian Defense",
+            "d2-d4 g8-f6 c2-c4 c7-c5": "Benoni Defense",
+            
+            # Фланговые дебюты
+            "c2-c4": "English Opening",
+            "g1-f3": "Reti Opening",
+            "g2-g3": "King's Fianchetto Opening",
+            "b2-b3": "Larsen's Opening",
+            
+            # Необычные дебюты
+            "e2-e4 g7-g6": "Modern Defense",
+            "e2-e4 b8-c6": "Nimzowitsch Defense",
+            "f2-f4": "Bird's Opening",
+        }
+    
+    def identify_opening(self, move_history: List[Dict]) -> Dict:
+        """Определение дебюта по истории ходов
+        
+        Args:
+            move_history: История ходов игры
+        
+        Returns:
+            Словарь с информацией о дебюте
+        """
+        if not move_history:
+            return {
+                'name': 'Starting Position',
+                'moves_count': 0,
+                'category': 'none'
+            }
+        
+        # Формирование последовательности ходов
+        move_sequence = []
+        for move in move_history[:10]:  # Проверяем первые 10 ходов
+            if 'notation' in move:
+                move_sequence.append(move['notation'])
+        
+        # Поиск самого длинного совпадения
+        best_match = None
+        max_moves = 0
+        
+        for i in range(len(move_sequence), 0, -1):
+            sequence = ' '.join(move_sequence[:i])
+            if sequence in self.openings:
+                best_match = self.openings[sequence]
+                max_moves = i
+                break
+        
+        if best_match:
+            # Определение категории дебюта
+            category = self._categorize_opening(move_sequence[0] if move_sequence else '')
+            
+            return {
+                'name': best_match,
+                'moves_count': max_moves,
+                'category': category,
+                'sequence': ' '.join(move_sequence[:max_moves])
+            }
+        else:
+            return {
+                'name': 'Unknown Opening',
+                'moves_count': len(move_sequence),
+                'category': 'custom',
+                'sequence': ' '.join(move_sequence[:3]) if len(move_sequence) >= 3 else ''
+            }
+    
+    def _categorize_opening(self, first_move: str) -> str:
+        """Категоризация дебюта по первому ходу"""
+        if first_move.startswith('e2-e4'):
+            return 'open'
+        elif first_move.startswith('d2-d4'):
+            return 'closed'
+        elif first_move in ['c2-c4', 'g1-f3', 'g2-g3', 'b2-b3']:
+            return 'flank'
+        else:
+            return 'other'
+    
+    def get_opening_stats(self, player_name: str, games: List[Dict]) -> Dict:
+        """Статистика использования дебютов игроком"""
+        opening_usage = defaultdict(int)
+        opening_results = defaultdict(lambda: {'wins': 0, 'total': 0})
+        
+        for game in games:
+            if game.get('player_name') == player_name:
+                opening_info = self.identify_opening(game.get('move_history', []))
+                opening_name = opening_info['name']
+                
+                opening_usage[opening_name] += 1
+                opening_results[opening_name]['total'] += 1
+                
+                if game.get('winner') == player_name:
+                    opening_results[opening_name]['wins'] += 1
+        
+        # Формирование статистики
+        stats = []
+        for opening, count in sorted(opening_usage.items(), key=lambda x: x[1], reverse=True)[:5]:
+            wins = opening_results[opening]['wins']
+            total = opening_results[opening]['total']
+            win_rate = (wins / total * 100) if total > 0 else 0
+            
+            stats.append({
+                'opening': opening,
+                'games': count,
+                'win_rate': round(win_rate, 1)
+            })
+        
+        return {
+            'most_played': stats,
+            'total_unique_openings': len(opening_usage)
+        }
+
+opening_book = OpeningBook()
 
 # Pydantic модели
 class MoveRequest(BaseModel):
@@ -973,11 +1244,29 @@ async def end_game(game_id: str, winner: Optional[str] = None):
     # Добавление в историю
     game_history.add_game(game)
     
+    # Обновление ELO рейтинга
+    rating_update = None
+    if game['game_mode'] == 'ai':
+        ai_ratings = {2: 1000, 3: 1400, 4: 1600, 5: 1800}
+        ai_depth = getattr(game.get('ai'), 'search_depth', 4) if game.get('ai') else 4
+        opponent_rating = ai_ratings.get(ai_depth, 1600)
+        
+        actual_score = 1.0 if winner == game['player_name'] else (0.5 if winner is None else 0.0)
+        
+        rating_update = elo_system.update_ratings(
+            player_name=game['player_name'],
+            opponent_rating=opponent_rating,
+            actual_score=actual_score,
+            game_id=game_id
+        )
+        rating_update['rank'] = elo_system.get_rank_title(rating_update['new_rating'])
+    
     return {
         "success": True,
         "winner": winner,
         "game_duration": (game['ended_at'] - game['created_at']).total_seconds(),
-        "total_moves": len(game['move_history'])
+        "total_moves": len(game['move_history']),
+        "rating_update": rating_update
     }
 
 @app.get("/api/game-history")
@@ -1055,6 +1344,162 @@ async def get_position_insights(game_id: str):
     except Exception as e:
         logger.error(f"Error getting position insights: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get insights: {str(e)}")
+
+@app.get("/api/elo-rating/{player_name}")
+async def get_elo_rating(player_name: str):
+    """Получение ELO рейтинга игрока"""
+    rating = elo_system.get_rating(player_name)
+    rank_title = elo_system.get_rank_title(rating)
+    history = elo_system.get_rating_history(player_name, limit=10)
+    
+    return {
+        "player": player_name,
+        "rating": rating,
+        "rank": rank_title,
+        "games_played": len(history),
+        "recent_history": history
+    }
+
+@app.get("/api/elo-leaderboard")
+async def get_elo_leaderboard(limit: int = 10):
+    """Получение таблицы лидеров по ELO"""
+    leaderboard = elo_system.get_leaderboard(limit)
+    
+    # Добавление званий
+    for entry in leaderboard:
+        entry['rank'] = elo_system.get_rank_title(entry['rating'])
+    
+    return {
+        "leaderboard": leaderboard,
+        "total_players": len(elo_system.ratings)
+    }
+
+@app.post("/api/update-elo/{game_id}")
+async def update_elo_rating(game_id: str, winner: Optional[str] = None):
+    """Обновление ELO рейтинга после игры"""
+    game = game_manager.get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    player_name = game['player_name']
+    
+    # Рейтинг AI в зависимости от сложности
+    ai_ratings = {
+        2: 1000,  # Novice
+        3: 1400,  # Casual
+        4: 1600,  # Pro
+        5: 1800   # Master
+    }
+    
+    ai_depth = 4  # По умолчанию
+    if game['ai']:
+        ai_depth = getattr(game['ai'], 'search_depth', 4)
+    
+    opponent_rating = ai_ratings.get(ai_depth, 1600)
+    
+    # Определение результата
+    if winner == player_name:
+        actual_score = 1.0
+    elif winner is None:
+        actual_score = 0.5  # Ничья
+    else:
+        actual_score = 0.0
+    
+    # Обновление рейтинга
+    rating_update = elo_system.update_ratings(
+        player_name=player_name,
+        opponent_rating=opponent_rating,
+        actual_score=actual_score,
+        game_id=game_id
+    )
+    
+    rating_update['rank'] = elo_system.get_rank_title(rating_update['new_rating'])
+    
+    return {
+        "success": True,
+        "rating_update": rating_update
+    }
+
+@app.get("/api/opening/{game_id}")
+async def get_opening_info(game_id: str):
+    """Получение информации о дебюте текущей игры"""
+    game = game_manager.get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    opening_info = opening_book.identify_opening(game['move_history'])
+    
+    return {
+        "success": True,
+        "opening": opening_info
+    }
+
+@app.get("/api/opening-stats/{player_name}")
+async def get_player_opening_stats(player_name: str):
+    """Статистика использования дебютов игроком"""
+    player_games = game_history.get_player_games(player_name, limit=100)
+    
+    if not player_games:
+        return {
+            "player": player_name,
+            "stats": {
+                "most_played": [],
+                "total_unique_openings": 0
+            }
+        }
+    
+    stats = opening_book.get_opening_stats(player_name, player_games)
+    
+    return {
+        "player": player_name,
+        "stats": stats
+    }
+
+@app.post("/api/chat/{game_id}")
+async def send_chat_message(game_id: str, player_name: str, message: str):
+    """Отправка сообщения в чат"""
+    game = game_manager.get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    # Фильтрация сообщения (максимум 200 символов)
+    message = message.strip()[:200]
+    
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    
+    chat_message = game_manager.add_chat_message(game_id, player_name, message)
+    
+    # Отправка всем подключенным клиентам через WebSocket
+    if game_id in game_manager.connections:
+        for connection in game_manager.connections[game_id]:
+            try:
+                await connection.send_json({
+                    'type': 'chat',
+                    'data': chat_message
+                })
+            except:
+                pass
+    
+    return {
+        "success": True,
+        "message": chat_message
+    }
+
+@app.get("/api/chat/{game_id}")
+async def get_chat_messages(game_id: str, limit: int = 50):
+    """Получение истории чата"""
+    game = game_manager.get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    messages = game_manager.get_chat_history(game_id, limit)
+    
+    return {
+        "success": True,
+        "messages": messages,
+        "total": len(messages)
+    }
 
 if __name__ == "__main__":
     import uvicorn

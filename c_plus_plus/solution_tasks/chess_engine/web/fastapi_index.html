@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Chess Master - FastAPI Powered</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -146,6 +149,8 @@
             position: relative;
             transition: all 0.2s ease;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .square.light { background-color: var(--square-light); color: #1e293b; }
@@ -327,6 +332,8 @@
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         button:hover { background: var(--primary); transform: translateY(-2px); }
@@ -405,6 +412,135 @@
             .container { grid-template-columns: 1fr; }
             .info-panel { order: 2; }
             .chess-section { order: 1; }
+        }
+
+        /* Улучшенная мобильная версия */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            header p {
+                font-size: 0.9rem;
+            }
+            
+            /* Уменьшенная доска для мобильных */
+            .board {
+                grid-template-columns: repeat(8, 45px);
+                grid-template-rows: repeat(8, 45px);
+            }
+            
+            .square {
+                width: 45px;
+                height: 45px;
+                font-size: 2.5rem;
+            }
+            
+            /* Кнопка темы */
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                top: 1rem;
+                left: 1rem;
+            }
+            
+            .theme-toggle i {
+                font-size: 1.2rem;
+            }
+            
+            /* Панель управления */
+            .controls {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+            
+            .controls button {
+                padding: 0.5rem;
+                font-size: 0.85rem;
+            }
+            
+            /* Карточки */
+            .card {
+                padding: 1rem;
+            }
+            
+            .card h3 {
+                font-size: 1rem;
+                margin-bottom: 0.75rem;
+            }
+            
+            /* Селекты и инпуты */
+            select, input {
+                font-size: 0.9rem;
+            }
+            
+            /* История ходов */
+            .history-list {
+                height: 200px;
+                font-size: 0.85rem;
+            }
+            
+            /* Статистика */
+            .stat-value {
+                font-size: 1.2rem;
+            }
+            
+            .stat-label {
+                font-size: 0.7rem;
+            }
+            
+            /* Уведомления */
+            .notification {
+                right: 1rem;
+                left: 1rem;
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Очень маленькие экраны */
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            /* Еще меньше доска */
+            .board {
+                grid-template-columns: repeat(8, 38px);
+                grid-template-rows: repeat(8, 38px);
+            }
+            
+            .square {
+                width: 38px;
+                height: 38px;
+                font-size: 2rem;
+            }
+            
+            /* Кнопки в одну колонку */
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls button {
+                padding: 0.6rem;
+            }
+            
+            /* Компактные карточки */
+            .card {
+                padding: 0.75rem;
+            }
+            
+            .stats-grid {
+                gap: 0.5rem;
+            }
         }
 
         /* Кнопка переключения темы */
@@ -503,15 +639,20 @@
             <div class="card">
                 <h3 style="margin-bottom: 1rem;"><i class="fas fa-cog"></i> Settings</h3>
                 <div class="config-group">
+                    <label>Player Name</label>
+                    <input type="text" id="playerName" placeholder="Enter your name" 
+                           onchange="saveSettings('player-name', this.value);" maxlength="20">
+                </div>
+                <div class="config-group">
                     <label>Game Mode</label>
-                    <select id="gameMode" onchange="newGame()">
+                    <select id="gameMode" onchange="saveSettings('mode', this.value); newGame();">
                         <option value="ai">Vs Computer (Enhanced AI)</option>
                         <option value="human">Local Multiplayer</option>
                     </select>
                 </div>
                 <div class="config-group">
                     <label>Time Control</label>
-                    <select id="timeControl" onchange="newGame()">
+                    <select id="timeControl" onchange="saveSettings('time', this.value); newGame();">
                         <option value="0">No Time Limit</option>
                         <option value="1">Bullet (1 min)</option>
                         <option value="3">Blitz (3 min)</option>
@@ -521,7 +662,7 @@
                 </div>
                 <div class="config-group">
                     <label>Difficulty</label>
-                    <select id="difficulty">
+                    <select id="difficulty" onchange="saveSettings('difficulty', this.value);">
                         <option value="2">Novice (Depth 2)</option>
                         <option value="3">Casual (Depth 3)</option>
                         <option value="4" selected>Pro (Depth 4)</option>
@@ -592,6 +733,31 @@
         let hintsEnabled = false;
         let currentHints = [];
         
+        // Загрузка настроек из localStorage
+        function loadSettings() {
+            const settings = {
+                sound: localStorage.getItem('chess-sound') === 'true',
+                difficulty: localStorage.getItem('chess-difficulty') || '4',
+                timeControl: localStorage.getItem('chess-time') || '0',
+                gameMode: localStorage.getItem('chess-mode') || 'ai',
+                playerName: localStorage.getItem('chess-player-name') || 'Player'
+            };
+            
+            soundEnabled = settings.sound;
+            document.getElementById('soundToggle').checked = settings.sound;
+            document.getElementById('difficulty').value = settings.difficulty;
+            document.getElementById('timeControl').value = settings.timeControl;
+            document.getElementById('gameMode').value = settings.gameMode;
+            document.getElementById('playerName').value = settings.playerName;
+            
+            return settings;
+        }
+        
+        // Сохранение настроек в localStorage
+        function saveSettings(key, value) {
+            localStorage.setItem(`chess-${key}`, value);
+        }
+        
         const pieceIcons = {
             'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
             'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
@@ -632,6 +798,8 @@
 
         function toggleSound() {
             soundEnabled = document.getElementById('soundToggle').checked;
+            saveSettings('sound', soundEnabled);
+            
             if (soundEnabled) {
                 showNotification('Sound effects enabled', 'success');
                 playMoveSound(); // Тестовый звук
@@ -668,6 +836,7 @@
         async function newGame() {
             const mode = document.getElementById('gameMode').value;
             const time = parseInt(document.getElementById('timeControl').value);
+            const playerName = document.getElementById('playerName').value || 'Player';
             
             // Сброс последнего хода
             lastMoveFrom = null;
@@ -677,7 +846,7 @@
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    player_name: 'Player', 
+                    player_name: playerName, 
                     game_mode: mode,
                     time_control: time
                 })
@@ -1109,6 +1278,7 @@
 
         // Init
         loadTheme();
+        loadSettings();
         newGame();
     </script>
 </body>
