@@ -1,29 +1,61 @@
 @echo off
-echo Building Chess Engine...
-echo ======================
+chcp 65001 >nul
+title Шахматы - Сборка проекта
 
-REM Create build directory
-if not exist build mkdir build
-cd build
+echo Сборка шахматного движка
+echo =========================
 
-REM Generate build files with CMake
-cmake .. -G "MinGW Makefiles"
-
-REM Build the project
-mingw32-make
-
-if %ERRORLEVEL% == 0 (
-    echo.
-    echo Build successful!
-    echo Executable created: chess_engine.exe
-    echo.
-    echo To run the chess engine:
-    echo   cd build
-    echo   chess_engine.exe
-) else (
-    echo.
-    echo Build failed!
-    echo Please check for compilation errors above.
+:: Проверка наличия CMake
+cmake --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Ошибка: CMake не найден
+    echo Пожалуйста, установите CMake с https://cmake.org
+    pause
+    exit /b 1
 )
 
+:: Проверка наличия компилятора
+g++ --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Ошибка: Компилятор g++ не найден
+    echo Пожалуйста, установите MinGW-w64
+    pause
+    exit /b 1
+)
+
+:: Создание директории сборки
+if exist build rmdir /s /q build
+mkdir build
+cd build
+
+:: Генерация файлов сборки
+echo Генерация файлов сборки...
+cmake .. -G "MinGW Makefiles"
+if %errorlevel% neq 0 (
+    echo Ошибка генерации CMake файлов
+    cd ..
+    pause
+    exit /b 1
+)
+
+:: Сборка проекта
+echo Сборка проекта...
+mingw32-make
+if %errorlevel% neq 0 (
+    echo Ошибка компиляции
+    cd ..
+    pause
+    exit /b 1
+)
+
+echo.
+echo Сборка успешна!
+echo Исполняемый файл: build\chess_engine.exe
+echo.
+echo Для запуска:
+echo   cd build
+echo   chess_engine.exe
+echo.
+
+cd ..
 pause

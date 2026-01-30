@@ -3,25 +3,15 @@
 
 import pygame
 import sys
+import threading
+import queue
+import time
 import random
 import math
-import queue
-import threading
 from typing import List, Tuple, Optional
-from dataclasses import dataclass
 from chess_engine_wrapper import chess_engine
 
-@dataclass
-class AnimationState:
-    """Состояние анимации перемещения фигуры"""
-    active: bool = False
-    piece: str = ''
-    from_pos: Tuple[int, int] = (0, 0)
-    to_pos: Tuple[int, int] = (0, 0)
-    progress: float = 0.0
-    duration: float = 300  # мс
-
-class PygameChessGUI:
+class UltraStableChessGUI:
     def __init__(self):
         pygame.init()
         
@@ -128,8 +118,8 @@ class PygameChessGUI:
         
         return pieces
     
-    def load_sounds(self):
-        """Загрузка звуков"""
+    def load_sounds(self) -> Dict[str, Optional[pygame.mixer.Sound]]:
+        """Загрузка звуковых эффектов"""
         return {}
     
     def ai_worker(self, depth: int = 3):
@@ -705,5 +695,5 @@ class PygameChessGUI:
         sys.exit()
 
 if __name__ == "__main__":
-    game = PygameChessGUI()
+    game = UltraStableChessGUI()
     game.run()

@@ -5,20 +5,20 @@ title Шахматы на Pygame
 echo Запуск шахматного интерфейса на Pygame
 echo ======================================
 
-:: Проверка наличия Python
-python --version >nul 2>&1
+:: Проверка наличия Python 3.13
+py -3.13 --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Ошибка: Python не найден в PATH
-    echo Пожалуйста, установите Python с https://python.org
+    echo Ошибка: Python 3.13 не найден
+    echo Пожалуйста, установите Python 3.13 с https://python.org
     pause
     exit /b 1
 )
 
 :: Проверка наличия Pygame
-python -c "import pygame" >nul 2>&1
+py -3.13 -c "import pygame" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Установка Pygame...
-    pip install pygame
+    echo Установка Pygame для Python 3.13...
+    py -3.13 -m pip install pygame
     if %errorlevel% neq 0 (
         echo Ошибка установки Pygame
         pause
@@ -31,11 +31,13 @@ echo ========================
 echo Управление:
 echo - Клик по фигуре для выбора
 echo - Клик по клетке для хода
-echo - Клавиша N - новая игра
+echo - Клавиша R - новая игра
+echo - Клавиша M - сменить режим
+echo - Пробел - вызов ИИ
 echo - ESC - выход
 echo ========================
 
-python pygame_chess.py
+py -3.13 pygame_chess.py
 
 echo Игра завершена
 pause
