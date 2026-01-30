@@ -176,6 +176,46 @@ class BitboardMoveGenerator:
         }
         return piece_map.get(piece.upper(), 'pawns')
     
+    def is_square_attacked(self, board: List[List[str]], square: int, by_white: bool) -> bool:
+        """Efficiently check if a square is attacked by a given color"""
+        bitboards = self.board_to_bitboards(board)
+        row, col = square // 8, square % 8
+        
+        # 1. Pawn attacks
+        pawn_bb = bitboards['white_pawns' if by_white else 'black_pawns']
+        if by_white:
+            # White pawns attack from below (larger row index for black king)
+            if col > 0 and (row < 7) and (board[row+1][col-1] == 'P'): return True
+            if col < 7 and (row < 7) and (board[row+1][col+1] == 'P'): return True
+        else:
+            # Black pawns attack from above (smaller row index for white king)
+            if col > 0 and (row > 0) and (board[row-1][col-1] == 'p'): return True
+            if col < 7 and (row > 0) and (board[row-1][col+1] == 'p'): return True
+            
+        # 2. Knight attacks
+        knight_bb = bitboards['white_knights' if by_white else 'black_knights']
+        if self.knight_moves[square] & knight_bb:
+            return True
+            
+        # 3. Sliding attacks (Rook/Queen)
+        rook_queen_bb = bitboards['white_rooks' if by_white else 'black_rooks'] | \
+                        bitboards['white_queens' if by_white else 'black_queens']
+        if self.compute_sliding_attacks(square, bitboards['occupied'], 'rook') & rook_queen_bb:
+            return True
+            
+        # 4. Sliding attacks (Bishop/Queen)
+        bishop_queen_bb = bitboards['white_bishops' if by_white else 'black_bishops'] | \
+                          bitboards['white_queens' if by_white else 'black_queens']
+        if self.compute_sliding_attacks(square, bitboards['occupied'], 'bishop') & bishop_queen_bb:
+            return True
+            
+        # 5. King attacks
+        king_bb = bitboards['white_king' if by_white else 'black_king']
+        if self.king_moves[square] & king_bb:
+            return True
+            
+        return False
+
     def generate_legal_moves(self, board: List[List[str]], color: bool) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
         """Generate all legal moves for given color using bitboards"""
         bitboards = self.board_to_bitboards(board)

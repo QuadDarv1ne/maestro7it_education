@@ -22,8 +22,15 @@ class EnhancedChessAI:
         self.search_depth = search_depth
         self.transposition_table = {}
         self.history_table = {}
-        self.initialize_evaluation_weights()
+        self.nodes_searched = 0
+        self.tt_hits = 0
         
+        # Reuse move generator
+        from core.optimized_move_generator import BitboardMoveGenerator
+        self.move_gen = BitboardMoveGenerator()
+        
+        self.initialize_evaluation_weights()
+    
     def initialize_evaluation_weights(self):
         """Initialize evaluation weights for different factors"""
         self.weights = {
@@ -173,11 +180,8 @@ class EnhancedChessAI:
     
     def evaluate_mobility(self, board: List[List[str]]) -> int:
         """Evaluate piece mobility"""
-        from optimized_move_generator import BitboardMoveGenerator
-        generator = BitboardMoveGenerator()
-        
-        white_moves = len(generator.generate_legal_moves(board, True))
-        black_moves = len(generator.generate_legal_moves(board, False))
+        white_moves = len(self.move_gen.generate_legal_moves(board, True))
+        black_moves = len(self.move_gen.generate_legal_moves(board, False))
         
         return (white_moves - black_moves) * 5  # Mobility bonus
     
@@ -320,29 +324,39 @@ class EnhancedChessAI:
     
     def minimax(self, board: List[List[str]], depth: int, alpha: float, beta: float, 
                 maximizing_player: bool) -> Tuple[int, Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Minimax algorithm with alpha-beta pruning"""
+        """Minimax algorithm with alpha-beta pruning, move ordering, and transposition table"""
+        self.nodes_searched += 1
+        
+        # Transposition Table Lookup
+        board_hash = self.get_board_hash(board, maximizing_player)
+        if board_hash in self.transposition_table:
+            entry = self.transposition_table[board_hash]
+            if entry['depth'] >= depth:
+                self.tt_hits += 1
+                return entry['score'], entry['move']
         
         # Terminal conditions
         if depth == 0:
-            return self.evaluate_position(board), None
+            return self.quiescence_search(board, alpha, beta, maximizing_player), None
         
         # Generate legal moves
-        from optimized_move_generator import BitboardMoveGenerator
-        generator = BitboardMoveGenerator()
-        moves = generator.generate_legal_moves(board, maximizing_player)
+        moves = self.move_gen.generate_legal_moves(board, maximizing_player)
         
         if not moves:
             # Check for checkmate or stalemate
             if self.is_in_check(board, maximizing_player):
-                return -100000 if maximizing_player else 100000, None
+                return -100000 - depth if maximizing_player else 100000 + depth, None
             else:
                 return 0, None  # Stalemate
+        
+        # Move Ordering
+        ordered_moves = self.order_moves(board, moves, maximizing_player)
         
         best_move = None
         
         if maximizing_player:
             max_eval = float('-inf')
-            for move in moves:
+            for move in ordered_moves:
                 new_board = self.make_move(board, move)
                 eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, False)
                 
@@ -352,12 +366,20 @@ class EnhancedChessAI:
                 
                 alpha = max(alpha, eval_score)
                 if beta <= alpha:
+                    # History heuristic: record successful cutoff
+                    self.update_history(move, depth)
                     break  # Beta cutoff
             
+            # Store in Transposition Table
+            self.transposition_table[board_hash] = {
+                'score': max_eval,
+                'move': best_move,
+                'depth': depth
+            }
             return max_eval, best_move
         else:
             min_eval = float('inf')
-            for move in moves:
+            for move in ordered_moves:
                 new_board = self.make_move(board, move)
                 eval_score, _ = self.minimax(new_board, depth - 1, alpha, beta, True)
                 
@@ -367,59 +389,98 @@ class EnhancedChessAI:
                 
                 beta = min(beta, eval_score)
                 if beta <= alpha:
+                    self.update_history(move, depth)
                     break  # Alpha cutoff
             
+            # Store in Transposition Table
+            self.transposition_table[board_hash] = {
+                'score': min_eval,
+                'move': best_move,
+                'depth': depth
+            }
             return min_eval, best_move
     
-    def make_move(self, board: List[List[str]], move: Tuple[Tuple[int, int], Tuple[int, int]]) -> List[List[str]]:
-        """Make a move on the board (returns new board)"""
-        from_pos, to_pos = move
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
+    def quiescence_search(self, board: List[List[str]], alpha: float, beta: float, 
+                           maximizing_player: bool) -> int:
+        """Search only captures to avoid horizon effect"""
+        stand_pat = self.evaluate_position(board)
         
-        # Create copy of board
-        new_board = [row[:] for row in board]
+        if maximizing_player:
+            if stand_pat >= beta:
+                return beta
+            alpha = max(alpha, stand_pat)
+            
+            # Only consider captures
+            moves = self.move_gen.generate_legal_moves(board, maximizing_player)
+            captures = [m for m in moves if board[m[1][0]][m[1][1]] != '.']
+            ordered_captures = self.order_moves(board, captures, maximizing_player)
+            
+            for move in ordered_captures:
+                new_board = self.make_move(board, move)
+                score = self.quiescence_search(new_board, alpha, beta, False)
+                if score >= beta:
+                    return beta
+                alpha = max(alpha, score)
+            return alpha
+        else:
+            if stand_pat <= alpha:
+                return alpha
+            beta = min(beta, stand_pat)
+            
+            moves = self.move_gen.generate_legal_moves(board, maximizing_player)
+            captures = [m for m in moves if board[m[1][0]][m[1][1]] != '.']
+            ordered_captures = self.order_moves(board, captures, maximizing_player)
+            
+            for move in ordered_captures:
+                new_board = self.make_move(board, move)
+                score = self.quiescence_search(new_board, alpha, beta, True)
+                if score <= alpha:
+                    return alpha
+                beta = min(beta, score)
+            return beta
+
+    def order_moves(self, board: List[List[str]], moves: List, is_white: bool) -> List:
+        """Sort moves to improve alpha-beta pruning performance"""
+        move_scores = []
+        for move in moves:
+            score = 0
+            from_pos, to_pos = move
+            piece = board[from_pos[0]][from_pos[1]]
+            target = board[to_pos[0]][to_pos[1]]
+            
+            # 1. MVV-LVA (Most Valuable Victim - Least Valuable Aggressor)
+            if target != '.':
+                score += 10 * abs(self.piece_values[target]) - abs(self.piece_values[piece]) // 10
+            
+            # 2. History heuristic
+            score += self.history_table.get(move, 0)
+            
+            # 3. Promotions are good
+            if piece.lower() == 'p' and (to_pos[0] == 0 or to_pos[0] == 7):
+                score += 800
+            
+            move_scores.append((score, move))
         
-        # Make move
-        piece = new_board[from_row][from_col]
-        new_board[to_row][to_col] = piece
-        new_board[from_row][from_col] = '.'
-        
-        return new_board
-    
-    def is_in_check(self, board: List[List[str]], is_white: bool) -> bool:
-        """Check if the king is in check"""
-        # Find king position
-        king_char = 'K' if is_white else 'k'
-        king_pos = None
-        
-        for row in range(8):
-            for col in range(8):
-                if board[row][col] == king_char:
-                    king_pos = (row, col)
-                    break
-            if king_pos:
-                break
-        
-        if not king_pos:
-            return False
-        
-        # Check if any opponent piece attacks the king
-        opponent_color = not is_white
-        from optimized_move_generator import BitboardMoveGenerator
-        generator = BitboardMoveGenerator()
-        opponent_moves = generator.generate_legal_moves(board, opponent_color)
-        
-        for move in opponent_moves:
-            _, to_pos = move
-            if to_pos == king_pos:
-                return True
-        
-        return False
-    
+        # Sort descending by score
+        move_scores.sort(key=lambda x: x[0], reverse=True)
+        return [m[1] for m in move_scores]
+
+    def update_history(self, move: Tuple, depth: int):
+        """Update history table for move ordering"""
+        self.history_table[move] = self.history_table.get(move, 0) + depth * depth
+
+    def get_board_hash(self, board: List[List[str]], turn: bool) -> int:
+        """Create a hash of the board state for the Transposition Table"""
+        # Simple string hash for now (could be Zobrist hash for better performance)
+        board_str = "".join("".join(row) for row in board)
+        return hash(board_str + str(turn))
+
     def get_best_move(self, board: List[List[str]], color: bool) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         """Get the best move for the given position"""
+        self.nodes_searched = 0
+        self.tt_hits = 0
         _, best_move = self.minimax(board, self.search_depth, float('-inf'), float('inf'), color)
+        print(f"Nodes searched: {self.nodes_searched}, TT hits: {self.tt_hits}")
         return best_move
 
 # Test the enhanced AI
