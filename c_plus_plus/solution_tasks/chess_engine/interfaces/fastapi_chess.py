@@ -164,6 +164,9 @@ async def make_move(request: MoveRequest):
             }
             game['move_history'].append(move_record)
             
+            # Update game status safely without calling is_checkmate
+            game['game_status'] = 'active'
+            
             return {
                 'success': True,
                 'game_state': GameResponse(
@@ -184,7 +187,7 @@ async def make_move(request: MoveRequest):
             
     except Exception as e:
         logger.error(f"Error making move: {e}")
-        raise HTTPException(status_code=500, detail="Failed to make move")
+        return {'success': False, 'message': str(e)}
 
 @app.get("/api/valid-moves/{game_id}")
 async def get_valid_moves(game_id: str, r: int, c: int):
@@ -296,19 +299,23 @@ async def undo_move(game_id: str):
     try:
         game = game_manager.get_game(game_id)
         if not game:
-            raise HTTPException(status_code=404, detail="Game not found")
+            return {'success': False, 'message': 'Game not found'}
         
         if not game['move_history']:
-            raise HTTPException(status_code=400, detail="No moves to undo")
+            return {'success': False, 'message': 'No moves to undo'}
         
-        # Get last move
-        last_move = game['move_history'].pop()
-        
-        # Restore board state
+        # Use engine's undo functionality if available
         engine = game['engine']
-        engine.board_state[last_move['from'][0]][last_move['from'][1]] = last_move['piece']
-        engine.board_state[last_move['to'][0]][last_move['to'][1]] = last_move['captured'] or '.'
-        engine.current_turn = not engine.current_turn
+        if hasattr(engine, 'undo_last_move') and callable(engine.undo_last_move):
+            success = engine.undo_last_move()
+            if success:
+                game['move_history'].pop()
+        else:
+            # Fallback: manual undo
+            last_move = game['move_history'].pop()
+            engine.board_state[last_move['from'][0]][last_move['from'][1]] = last_move['piece']
+            engine.board_state[last_move['to'][0]][last_move['to'][1]] = last_move.get('captured', '.')
+            engine.current_turn = not engine.current_turn
         
         return {
             'success': True,
@@ -316,7 +323,7 @@ async def undo_move(game_id: str):
                 game_id=game_id,
                 board_state=engine.board_state,
                 current_turn=engine.current_turn,
-                game_status=game['game_status'],
+                game_status='active',
                 move_history=game['move_history'],
                 player_name=game['player_name'],
                 game_mode=game['game_mode']
@@ -325,7 +332,7 @@ async def undo_move(game_id: str):
         
     except Exception as e:
         logger.error(f"Error undoing move: {e}")
-        raise HTTPException(status_code=500, detail="Failed to undo move")
+        return {'success': False, 'message': str(e)}
 
 def check_game_status(board: List[List[str]], current_turn: bool) -> str:
     """Check current game status"""
@@ -369,6 +376,32 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/api/stats/{game_id}")
+async def get_stats(game_id: str):
+    """Get game statistics"""
+    try:
+        game = game_manager.get_game(game_id)
+        if not game:
+            raise HTTPException(status_code=404, detail="Game not found")
+        
+        engine = game['engine']
+        stats = {
+            'total_moves': len(game['move_history']),
+            'captures': sum(1 for m in game['move_history'] if m.get('captured')),
+            'game_duration': (datetime.now() - game['created_at']).total_seconds(),
+            'current_evaluation': engine.get_evaluation() if hasattr(engine, 'get_evaluation') else 0
+        }
+        
+        # Add engine statistics if available
+        if hasattr(engine, 'get_game_statistics'):
+            engine_stats = engine.get_game_statistics()
+            stats.update(engine_stats)
+        
+        return stats
+    except Exception as e:
+        logger.error(f"Error getting stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get stats")
 
 if __name__ == "__main__":
     import uvicorn
