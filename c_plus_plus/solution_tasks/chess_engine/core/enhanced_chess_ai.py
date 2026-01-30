@@ -27,9 +27,17 @@ class EnhancedChessAI:
         self.tt_hits = 0
         self.max_tt_size = 1000000  # Максимум 1 миллион позиций в TT
         
-        # Переиспользуем генератор ходов
-        from core.optimized_move_generator import BitboardMoveGenerator
-        self.move_gen = BitboardMoveGenerator()
+        # Переиспользуем генератор ходов (ВРЕМЕННО ОТКЛЮЧЕНО)
+        # try:
+        #     from core.optimized_move_generator import BitboardMoveGenerator
+        #     self.move_gen = BitboardMoveGenerator()
+        # except ImportError:
+        #     self.move_gen = None
+        
+        # Используем ChessEngineWrapper для генерации ходов
+        from core.chess_engine_wrapper import ChessEngineWrapper
+        self.engine_wrapper = ChessEngineWrapper()
+        self.move_gen = None
         
         # Zobrist hashing для быстрых хэшей позиций
         self.zobrist_keys = self.initialize_zobrist_keys()

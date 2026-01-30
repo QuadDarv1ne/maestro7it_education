@@ -21,15 +21,17 @@ class ChessEngineWrapper:
         self.valid_moves = []
         
         # Интеграция оптимизированных компонентов
-        try:
-            from core.optimized_move_generator import BitboardMoveGenerator
-            self.move_gen = BitboardMoveGenerator()
-        except ImportError:
-            try:
-                from .optimized_move_generator import BitboardMoveGenerator
-                self.move_gen = BitboardMoveGenerator()
-            except ImportError:
-                self.move_gen = None
+        # ВРЕМЕННО ОТКЛЮЧЕНО: BitboardMoveGenerator вызывает проблемы с валидацией
+        # try:
+        #     from core.optimized_move_generator import BitboardMoveGenerator
+        #     self.move_gen = BitboardMoveGenerator()
+        # except ImportError:
+        #     try:
+        #         from .optimized_move_generator import BitboardMoveGenerator
+        #         self.move_gen = BitboardMoveGenerator()
+        #     except ImportError:
+        #         self.move_gen = None
+        self.move_gen = None  # Используем только Python валидацию
             
         try:
             from core.enhanced_chess_ai import EnhancedChessAI
@@ -440,11 +442,11 @@ class ChessEngineWrapper:
         self.valid_moves = []
         
         # Проверка окончания игры
-        if self.is_checkmate():
+        if self.is_checkmate(self.current_turn):
             self.game_active = False
             winner = "Черные" if self.current_turn else "Белые"
             print(f"МАТ! Победили {winner}")
-        elif self.is_stalemate():
+        elif self.is_stalemate(self.current_turn):
             self.game_active = False
             print("ПАТ! Ничья")
         
