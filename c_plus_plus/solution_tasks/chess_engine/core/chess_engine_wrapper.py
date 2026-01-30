@@ -163,10 +163,49 @@ class ChessEngineWrapper:
         
         # Проверяем, есть ли хоть один легальный ход
         if self.move_gen:
-            legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
-            return len(legal_moves) == 0
+            try:
+                legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
+                return len(legal_moves) == 0
+            except Exception as e:
+                print(f"Ошибка MoveGen в is_stalemate: {e}")
         
-        return False
+        # Резервная Python-реализация
+        return self._is_stalemate_python(is_white)
+    
+    def _is_stalemate_python(self, is_white: bool) -> bool:
+        """Резервная Python-реализация проверки пата"""
+        # Пат - когда король не под шахом, но нет легальных ходов
+        original_turn = self.current_turn
+        self.current_turn = is_white
+        
+        # Перебираем все фигуры текущего цвета
+        for from_row in range(8):
+            for from_col in range(8):
+                piece = self.board_state[from_row][from_col]
+                if piece == '.':
+                    continue
+                
+                piece_is_white = piece.isupper()
+                if piece_is_white != is_white:
+                    continue
+                
+                # Проверяем все возможные ходы этой фигуры
+                for to_row in range(8):
+                    for to_col in range(8):
+                        if (from_row, from_col) == (to_row, to_col):
+                            continue
+                        
+                        # Проверяем, является ли ход допустимым
+                        if self.is_valid_move_python((from_row, from_col), (to_row, to_col)):
+                            # Проверяем, не подставит ли ход короля под шах
+                            if not self.would_still_be_in_check((from_row, from_col), (to_row, to_col), is_white):
+                                # Нашли легальный ход - не пат!
+                                self.current_turn = original_turn
+                                return False
+        
+        # Не нашли ни одного легального хода - это пат!
+        self.current_turn = original_turn
+        return True
     
     def get_game_status(self) -> str:
         """Получение статуса игры (продолжается, мат, пат, ничья)"""
@@ -186,6 +225,18 @@ class ChessEngineWrapper:
             return "Шах!"
         
         return "Игра продолжается"
+    
+    def set_position(self, board_state: List[List[str]], current_turn: bool = True):
+        """Установка позиции на доске"""
+        self.board_state = [row[:] for row in board_state]  # Копируем
+        self.current_turn = current_turn
+        # Сбрасываем права рокировки (для тестовых позиций)
+        self.castling_rights = {
+            'white_kingside': False,
+            'white_queenside': False,
+            'black_kingside': False,
+            'black_queenside': False
+        }
     
     def board_to_fen(self) -> str:
         """Преобразование доски в FEN нотацию"""
