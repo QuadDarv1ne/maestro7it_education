@@ -184,17 +184,17 @@ void Board::undoMove() {
     
     // 3. Отмена рокировки
     if (info.isCastling) {
-        int rank = rank(info.from);
+        int kingRank = rank(info.from);
         int toFile = file(info.to);
         
         if (toFile == 6) { // Была короткая рокировка
-            Square rookFrom = square(7, rank);
-            Square rookTo = square(5, rank);
+            Square rookFrom = square(7, kingRank);
+            Square rookTo = square(5, kingRank);
             setPiece(rookFrom, getPiece(rookTo));
             setPiece(rookTo, Piece());
         } else if (toFile == 2) { // Была длинная рокировка
-            Square rookFrom = square(0, rank);
-            Square rookTo = square(3, rank);
+            Square rookFrom = square(0, kingRank);
+            Square rookTo = square(3, kingRank);
             setPiece(rookFrom, getPiece(rookTo));
             setPiece(rookTo, Piece());
         }

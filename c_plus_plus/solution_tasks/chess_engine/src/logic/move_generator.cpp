@@ -370,11 +370,11 @@ std::vector<Move> MoveGenerator::generateCastlingMoves() const {
 bool MoveGenerator::canCastleKingside(Color color) const {
     // Проверка прав на рокировку через Board API
     // Предполагается что Board имеет методы для отслеживания прав на рокировку
-    return board_.canCastleKingside(color);
+    return board_.canCastleKingSide(color);
 }
 
 bool MoveGenerator::canCastleQueenside(Color color) const {
-    return board_.canCastleQueenside(color);
+    return board_.canCastleQueenSide(color);
 }
 
 Square MoveGenerator::findKingSquare(Color color) const {

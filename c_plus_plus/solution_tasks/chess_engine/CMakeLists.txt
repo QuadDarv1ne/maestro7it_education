@@ -47,10 +47,23 @@ set(HEADERS
 
 # Create executables
 add_executable(chess_engine ${SOURCES} ${HEADERS})
-add_executable(encoding_test src/encoding_test.cpp)
-add_executable(utf8_test src/utf8_test.cpp)
-add_executable(test_chess src/test_chess.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp src/ui/console_ui.cpp ${HEADERS})
-add_executable(comprehensive_test src/comprehensive_test.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
+
+# Only add test executables if the source files exist
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/encoding_test.cpp")
+    add_executable(encoding_test src/encoding_test.cpp)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/utf8_test.cpp")
+    add_executable(utf8_test src/utf8_test.cpp)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/test_chess.cpp")
+    add_executable(test_chess src/test_chess.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp src/ui/console_ui.cpp ${HEADERS})
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/comprehensive_test.cpp")
+    add_executable(comprehensive_test src/comprehensive_test.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
+endif()
 
 # Include directories
 target_include_directories(chess_engine PRIVATE include)

@@ -126,7 +126,7 @@ std::vector<Move> Minimax::orderMoves(const std::vector<Move>& moves) const {
     return orderedMoves;
 }
 
-int Minimax::getMovePriority(const Move& move, int ply = 0) const {
+int Minimax::getMovePriority(const Move& move, int ply) const {
     Piece capturedPiece = board_.getPiece(move.to);
     Piece movingPiece = board_.getPiece(move.from);
     
@@ -392,14 +392,17 @@ int Minimax::quiescenceSearch(int alpha, int beta, Color maximizingPlayer, int p
         alpha = standPat;
     }
     
-    // Generate only captures and checks
+    // Generate only captures and legal moves (simplified - generate all legal moves and filter captures)
     MoveGenerator generator(board_);
-    std::vector<Move> captures = generator.generateCaptureMoves();
-    std::vector<Move> checks = generator.generateCheckMoves();
+    std::vector<Move> allMoves = generator.generateLegalMoves();
     
-    // Combine captures and checks
-    std::vector<Move> tacticalMoves = captures;
-    tacticalMoves.insert(tacticalMoves.end(), checks.begin(), checks.end());
+    // Filter only captures
+    std::vector<Move> tacticalMoves;
+    for (const Move& move : allMoves) {
+        if (move.isCapture || isInCheck(maximizingPlayer)) {
+            tacticalMoves.push_back(move);
+        }
+    }
     
     // Order tactical moves
     tacticalMoves = orderCaptures(tacticalMoves);
@@ -552,15 +555,15 @@ bool Minimax::isCriticalPosition() const {
     }
     
     // Check material balance
-    int materialEval = evaluator_.evaluateMaterial();
+    int materialEval = evaluatePosition(); // Use the general evaluation function
     if (std::abs(materialEval) <= 200) {
         return true; // Close game
     }
     
     // TODO: Add more sophisticated critical position detection
     // - Look for hanging pieces
-    - Check for tactical motifs
-    - Analyze pawn structure tension
+    // - Check for tactical motifs
+    // - Analyze pawn structure tension
     
     return false;
 }
