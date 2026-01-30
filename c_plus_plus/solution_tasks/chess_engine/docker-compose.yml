@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  chess-engine:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped
+    volumes:
+      - ./games_data:/app/games_data
+    networks:
+      - chess-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - chess-engine
+    networks:
+      - chess-network
+
+networks:
+  chess-network:
+    driver: bridge
+
+volumes:
+  games_data:
