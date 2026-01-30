@@ -135,17 +135,64 @@ class GameManager:
 
 game_manager = GameManager()
 
+# Кэш для AI ходов
+class MoveCache:
+    """Кэш для хранения вычисленных AI ходов"""
+    def __init__(self, max_size: int = 1000, ttl: int = 300):
+        self.cache = {}
+        self.max_size = max_size
+        self.ttl = ttl
+    
+    def get(self, key: str) -> Optional[Dict]:
+        """Получение хода из кэша"""
+        if key in self.cache:
+            data, timestamp = self.cache[key]
+            if time.time() - timestamp < self.ttl:
+                return data
+            else:
+                del self.cache[key]
+        return None
+    
+    def set(self, key: str, value: Dict):
+        """Сохранение хода в кэш"""
+        # Очистка старых записей
+        if len(self.cache) >= self.max_size:
+            oldest = min(self.cache.items(), key=lambda x: x[1][1])
+            del self.cache[oldest[0]]
+        
+        self.cache[key] = (value, time.time())
+    
+    def clear(self):
+        """Очистка всего кэша"""
+        self.cache.clear()
+
+move_cache = MoveCache()
+
 # Pydantic модели
 class MoveRequest(BaseModel):
-    game_id: str
-    from_pos: Tuple[int, int]
-    to_pos: Tuple[int, int]
-    player_color: bool  # True = white, False = black
+    game_id: str = Field(..., description="ID игры")
+    from_pos: Tuple[int, int] = Field(..., description="Начальная позиция (row, col)")
+    to_pos: Tuple[int, int] = Field(..., description="Конечная позиция (row, col)")
+    player_color: bool = Field(..., description="Цвет игрока (True=белые, False=черные)")
+    
+    @validator('from_pos', 'to_pos')
+    def validate_position(cls, v):
+        """Валидация позиции на доске"""
+        if not (0 <= v[0] < 8 and 0 <= v[1] < 8):
+            raise ValueError('Position must be between 0 and 7')
+        return v
 
 class GameRequest(BaseModel):
-    player_name: str = "Anonymous"
-    game_mode: str = "ai"  # "ai" or "human"
-    player_color: bool = True  # True = white, False = black
+    player_name: str = Field(default="Anonymous", max_length=50, description="Имя игрока")
+    game_mode: str = Field(default="ai", pattern="^(ai|human)$", description="Режим игры")
+    player_color: bool = Field(default=True, description="Цвет игрока")
+    
+    @validator('player_name')
+    def validate_player_name(cls, v):
+        """Валидация имени игрока"""
+        if not v or v.strip() == "":
+            return "Anonymous"
+        return v.strip()
 
 class GameResponse(BaseModel):
     game_id: str
@@ -270,7 +317,21 @@ async def get_ai_move(game_id: str, depth: int = 4):
             raise HTTPException(status_code=404, detail="Game not found")
         
         engine = game['engine']
+        
+        # Генерация ключа кэша на основе состояния доски
+        board_hash = hash(str(engine.board_state) + str(engine.current_turn) + str(depth))
+        cache_key = f"{game_id}_{board_hash}"
+        
+        # Проверка кэша
+        cached_result = move_cache.get(cache_key)
+        if cached_result:
+            logger.info(f"Cache hit for game {game_id}")
+            return cached_result
+        
+        # Вычисление нового хода
+        start_time = time.time()
         best_move = engine.get_best_move(depth=depth)
+        calculation_time = time.time() - start_time
         
         if best_move:
             from_pos, to_pos = best_move
@@ -286,9 +347,10 @@ async def get_ai_move(game_id: str, depth: int = 4):
             }
             game['move_history'].append(move_record)
             
-            return {
+            result = {
                 'success': True,
                 'move_notation': move_record['notation'],
+                'calculation_time': round(calculation_time, 3),
                 'ai_stats': engine.get_game_statistics(),
                 'game_state': GameResponse(
                     game_id=game_id,
@@ -300,6 +362,12 @@ async def get_ai_move(game_id: str, depth: int = 4):
                     game_mode=game['game_mode']
                 )
             }
+            
+            # Сохранение в кэш
+            move_cache.set(cache_key, result)
+            logger.info(f"AI move calculated in {calculation_time:.3f}s for game {game_id}")
+            
+            return result
         return {"success": False, "message": "No moves available"}
     except Exception as e:
         logger.error(f"AI Move Error: {e}")
@@ -423,7 +491,43 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 @app.get("/health")
 async def health_check():
     """Проверка здоровья системы"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "active_games": len(game_manager.games),
+        "cache_size": len(move_cache.cache),
+        "version": "2.0.0"
+    }
+
+@app.get("/api/games")
+async def list_active_games():
+    """Получение списка активных игр"""
+    games_list = []
+    for game_id, game_data in game_manager.games.items():
+        games_list.append({
+            'game_id': game_id,
+            'player_name': game_data['player_name'],
+            'game_mode': game_data['game_mode'],
+            'created_at': game_data['created_at'].isoformat(),
+            'moves_count': len(game_data['move_history']),
+            'status': game_data['game_status']
+        })
+    return {"games": games_list, "total": len(games_list)}
+
+@app.delete("/api/game/{game_id}")
+async def delete_game_endpoint(game_id: str):
+    """Удаление игры"""
+    if game_id not in game_manager.games:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    game_manager.delete_game(game_id)
+    return {"success": True, "message": f"Game {game_id} deleted"}
+
+@app.post("/api/clear-cache")
+async def clear_cache():
+    """Очистка кэша AI ходов"""
+    move_cache.clear()
+    return {"success": True, "message": "Cache cleared"}
 
 @app.get("/api/stats/{game_id}")
 async def get_stats(game_id: str):
