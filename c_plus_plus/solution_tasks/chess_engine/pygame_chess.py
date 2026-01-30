@@ -68,7 +68,9 @@ class PygameChessGUI:
         self.white_turn = True
         self.move_history: List[str] = []
         self.captured_pieces: Dict[str, List[str]] = {'white': [], 'black': []}
-        self.game_mode = 'computer'
+        self.game_mode = 'computer'  # 'computer' or 'human'
+        self.player_color = 'white'  # 'white' or 'black'
+        self.ai_color = 'black'      # 'white' or 'black'
         
         # Анимация
         self.animation = AnimationState()
@@ -321,6 +323,19 @@ class PygameChessGUI:
         self.screen.blit(turn_text, (650, y_offset))
         y_offset += 30
         
+        # Информация об игроках
+        if self.game_mode == 'computer':
+            player_color_text = "Вы: " + ("Белые" if self.player_color == 'white' else "Черные")
+            ai_color_text = "AI: " + ("Белые" if self.ai_color == 'white' else "Черные")
+            
+            player_render = self.small_font.render(player_color_text, True, self.BLACK)
+            ai_render = self.small_font.render(ai_color_text, True, self.BLACK)
+            
+            self.screen.blit(player_render, (650, y_offset))
+            y_offset += 25
+            self.screen.blit(ai_render, (650, y_offset))
+            y_offset += 35
+        
         # Индикатор обдумывания AI
         if self.ai_calculating:
             y_offset = self.draw_thinking_indicator(650, y_offset)
@@ -380,9 +395,9 @@ class PygameChessGUI:
         
         return y
     
-    def draw_control_buttons(self) -> Tuple[pygame.Rect, pygame.Rect, pygame.Rect]:
+    def draw_control_buttons(self) -> Tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
         """Отрисовка кнопок управления"""
-        button_y = self.HEIGHT - 150
+        button_y = self.HEIGHT - 190
         
         # Новая игра
         new_game_btn = pygame.Rect(650, button_y, 140, 35)
@@ -401,6 +416,24 @@ class PygameChessGUI:
         text = self.small_font.render(mode_text, True, self.WHITE)
         self.screen.blit(text, text.get_rect(center=mode_btn.center))
         
+        # Выбор цвета (только для режима vs AI)
+        button_y += 45
+        if self.game_mode == 'computer':
+            color_btn = pygame.Rect(650, button_y, 140, 35)
+            color_color = (100, 100, 200)
+            pygame.draw.rect(self.screen, color_color, color_btn)
+            pygame.draw.rect(self.screen, self.BLACK, color_btn, 2)
+            color_text = "Вы: " + ("Белые" if self.player_color == 'white' else "Черные")
+            text = self.small_font.render(color_text, True, self.WHITE)
+            self.screen.blit(text, text.get_rect(center=color_btn.center))
+        else:
+            # Пустая кнопка для режима 2 игрока
+            color_btn = pygame.Rect(650, button_y, 140, 35)
+            pygame.draw.rect(self.screen, (200, 200, 200), color_btn)
+            pygame.draw.rect(self.screen, self.BLACK, color_btn, 2)
+            text = self.small_font.render("---", True, self.GRAY)
+            self.screen.blit(text, text.get_rect(center=color_btn.center))
+        
         # Выход
         button_y += 45
         exit_btn = pygame.Rect(650, button_y, 140, 35)
@@ -409,7 +442,7 @@ class PygameChessGUI:
         text = self.small_font.render("Выход", True, self.BLACK)
         self.screen.blit(text, text.get_rect(center=exit_btn.center))
         
-        return new_game_btn, mode_btn, exit_btn
+        return new_game_btn, mode_btn, color_btn, exit_btn
     
     def get_square_from_mouse(self, pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """Преобразование координат мыши в координаты доски"""
@@ -485,6 +518,14 @@ class PygameChessGUI:
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         
+        # Проверяем, чья очередь хода
+        piece = self.engine.board_state[from_row][from_col]
+        is_white_piece = piece.isupper()
+        
+        if (is_white_piece and not self.white_turn) or (not is_white_piece and self.white_turn):
+            print(f"Неправильная очередь хода! Попытка хода {piece} когда очередь {'белых' if self.white_turn else 'черных'}")
+            return False
+        
         # Сохранение захваченной фигуры
         captured = self.engine.board_state[to_row][to_col]
         
@@ -537,22 +578,41 @@ class PygameChessGUI:
     
     def handle_button_click(self, pos: Tuple[int, int]) -> bool:
         """Обработка кликов по кнопкам"""
-        new_game_btn, mode_btn, exit_btn = self.draw_control_buttons()
+        new_game_btn, mode_btn, color_btn, exit_btn = self.draw_control_buttons()
         
         if new_game_btn.collidepoint(pos):
             self.new_game()
         elif mode_btn.collidepoint(pos):
-            self.game_mode = 'two_players' if self.game_mode == 'computer' else 'computer'
-            self.new_game()
+            self.toggle_game_mode()
+        elif color_btn.collidepoint(pos):
+            self.toggle_player_color()
         elif exit_btn.collidepoint(pos):
             return False
         
         return True
     
+    def toggle_game_mode(self):
+        """Переключение режима игры"""
+        self.game_mode = 'human' if self.game_mode == 'computer' else 'computer'
+        self.new_game()
+    
+    def toggle_player_color(self):
+        """Переключение цвета игрока (только для режима vs AI)"""
+        if self.game_mode == 'computer':
+            self.player_color = 'black' if self.player_color == 'white' else 'white'
+            self.ai_color = 'white' if self.player_color == 'black' else 'black'
+            self.new_game()
+    
     def handle_square_click(self, square: Tuple[int, int]):
         """Обработка клика по клетке"""
         if self.animation.active or self.ai_calculating:
             return
+        
+        # В режиме vs AI проверяем, что игрок ходит своими фигурами
+        if self.game_mode == 'computer':
+            if ((self.player_color == 'white' and not self.white_turn) or 
+                (self.player_color == 'black' and self.white_turn)):
+                return  # Не наш ход
         
         row, col = square
         piece = self.engine.board_state[row][col]
@@ -606,6 +666,12 @@ class PygameChessGUI:
             'game_start_time': pygame.time.get_ticks(),
             'ai_thinking_time': 0
         }
+        
+        # В режиме vs AI запускаем AI, если он должен ходить первым
+        if (self.game_mode == 'computer' and 
+            self.ai_color == 'white' and 
+            not self.animation.active):
+            pygame.time.set_timer(pygame.USEREVENT, 500)  # Задержка перед первым ходом AI
     
     def handle_events(self) -> bool:
         """Обработка событий"""
@@ -624,8 +690,9 @@ class PygameChessGUI:
                 if event.key == pygame.K_n:
                     self.new_game()
                 elif event.key == pygame.K_m:
-                    self.game_mode = 'two_players' if self.game_mode == 'computer' else 'computer'
-                    self.new_game()
+                    self.toggle_game_mode()
+                elif event.key == pygame.K_c:
+                    self.toggle_player_color()
                 elif event.key == pygame.K_ESCAPE:
                     return False
         
@@ -669,7 +736,9 @@ class PygameChessGUI:
                 self.update_animation(delta_time)
             
             # Логика AI хода
-            if (self.game_mode == 'computer' and not self.white_turn and
+            if (self.game_mode == 'computer' and 
+                ((self.ai_color == 'white' and self.white_turn) or 
+                 (self.ai_color == 'black' and not self.white_turn)) and
                 self.game_active and not self.animation.active):
                 
                 # Проверяем результат AI
