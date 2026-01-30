@@ -313,9 +313,33 @@ class ChessEngineWrapper:
         return True
     
     def get_best_move(self, depth: int = 3) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Получение лучшего хода для AI (простая реализация)"""
+        """Получение лучшего хода для AI (продвинутая реализация)"""
         try:
-            # Генерируем все возможные ходы
+            # Импортируем продвинутый ИИ
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+            
+            try:
+                from advanced_ai import AdvancedChessAI
+                ai = AdvancedChessAI(search_depth=depth, time_limit=3000)
+                
+                # Преобразуем доску в формат AI
+                ai_board = [[cell for cell in row] for row in self.board_state]
+                
+                # Получаем лучший ход
+                best_move = ai.get_best_move(ai_board, not self.current_turn)  # AI играет за черных
+                
+                if best_move:
+                    stats = ai.get_statistics()
+                    print(f"AI: Рассмотрено {stats['nodes_searched']:,} узлов, TT hits: {stats['tt_hits']}")
+                    return best_move
+                
+            except ImportError:
+                print("Продвинутый ИИ не доступен, используем базовый")
+                pass
+            
+            # Резервный вариант - случайный допустимый ход
             possible_moves = []
             for row in range(8):
                 for col in range(8):
@@ -330,9 +354,10 @@ class ChessEngineWrapper:
             if not possible_moves:
                 return None
             
-            # Выбираем случайный допустимый ход (временно)
+            # Выбираем случайный допустимый ход
             import random
             return random.choice(possible_moves)
+            
         except Exception as e:
             print(f"Ошибка в get_best_move: {e}")
             return None
