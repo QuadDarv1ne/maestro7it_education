@@ -144,47 +144,70 @@ std::vector<Move> Minimax::orderMoves(const std::vector<Move>& moves) const {
 int Minimax::getMovePriority(const Move& move, int ply) const {
     Piece capturedPiece = board_.getPiece(move.to);
     Piece movingPiece = board_.getPiece(move.from);
+    int priority = 0;
     
-    // Приоритет для killer moves
-    if (isKillerMove(move, ply)) {
-        return 2000; // Высокий приоритет для killer moves
-    }
-    
-    // Приоритет для взятий - MVV (Most Valuable Victim) / LVA (Least Valuable Attacker)
-    if (!capturedPiece.isEmpty()) {
-        // Взятие с высокой стоимостью жертвы и низкой стоимостью атакующей фигуры
-        int mvvLva = capturedPiece.getValue() - movingPiece.getValue() / 10;
-        return 1000 + mvvLva;
-    }
-    
-    // Приоритет для истории ходов
-    int historyScore = getHistoryScore(move);
-    if (historyScore > 0) {
-        return 800 + historyScore / 100; // Масштабируем для согласования
-    }
-    
-    // Приоритет для ходов пешки вперед
-    if (movingPiece.getType() == PieceType::PAWN) {
-        // Продвижение пешки
-        int rankDiff = (movingPiece.getColor() == Color::WHITE) ? 
-                      (board_.rank(move.to) - board_.rank(move.from)) : 
-                      (board_.rank(move.from) - board_.rank(move.to));
-        if (rankDiff > 0) {
-            return 500 + rankDiff * 10;
+    // 1. Превращение пешки (наивысший приоритет)
+    if (move.promotion != PieceType::EMPTY) {
+        priority += 10000;
+        if (move.promotion == PieceType::QUEEN) {
+            priority += 1000; // Бонус за превращение в ферзя
         }
     }
     
-    // Приоритет для ходов королевской пары (ферзь, король)
-    if (movingPiece.getType() == PieceType::QUEEN) {
-        return 400;
+    // 2. MVV-LVA для взятий (Most Valuable Victim / Least Valuable Attacker)
+    if (!capturedPiece.isEmpty()) {
+        int victimValue = capturedPiece.getValue();
+        int attackerValue = movingPiece.getValue();
+        // MVV-LVA: взятие ценной фигуры дешевой фигурой получает высокий приоритет
+        priority += 9000 + (victimValue * 10 - attackerValue);
     }
     
-    if (movingPiece.getType() == PieceType::KING) {
-        return 300;
+    // 3. Killer moves (тихие ходы, вызвавшие отсечение на этой глубине)
+    if (isKillerMove(move, ply)) {
+        priority += 8000;
     }
     
-    // Приоритет для других фигур
-    return movingPiece.getValue();
+    // 4. История ходов (успешные ходы из других веток)
+    int historyScore = getHistoryScore(move);
+    if (historyScore > 0) {
+        priority += 100 + std::min(historyScore / 10, 500); // Ограничиваем влияние истории
+    }
+    
+    // 5. Позиционные эвристики
+    // Развитие фигур в центр
+    int toFile = board_.file(move.to);
+    int toRank = board_.rank(move.to);
+    bool isCentral = (toFile >= 2 && toFile <= 5) && (toRank >= 2 && toRank <= 5);
+    bool isExtendedCenter = (toFile >= 1 && toFile <= 6) && (toRank >= 1 && toRank <= 6);
+    
+    if (movingPiece.getType() == PieceType::KNIGHT || 
+        movingPiece.getType() == PieceType::BISHOP) {
+        if (isCentral) {
+            priority += 80;
+        } else if (isExtendedCenter) {
+            priority += 40;
+        }
+    }
+    
+    // 6. Продвижение пешек
+    if (movingPiece.getType() == PieceType::PAWN) {
+        int forwardDirection = (movingPiece.getColor() == Color::WHITE) ? 1 : -1;
+        int rankProgress = (toRank - board_.rank(move.from)) * forwardDirection;
+        if (rankProgress > 0) {
+            priority += 50 + rankProgress * 20; // Бонус за продвижение
+            // Дополнительный бонус для проходных пешек
+            if (toRank == 6 || toRank == 1) {
+                priority += 100; // Пешка близка к превращению
+            }
+        }
+    }
+    
+    // 7. Рокировка (развитие короля в безопасность)
+    if (move.isCastling) {
+        priority += 60;
+    }
+    
+    return priority;
 }
 
 bool Minimax::isInCheck(Color color) const {

@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 from core.chess_engine_wrapper import ChessEngineWrapper
 from core.optimized_move_generator import BitboardMoveGenerator
 from core.enhanced_chess_ai import EnhancedChessAI
+from src.pgn_saver import PGNSaver, GameRecorder
 
 app = FastAPI(
     title="Chess Engine API",
@@ -109,11 +110,18 @@ class GameManager:
         self.chat_history: Dict[str, List[Dict]] = defaultdict(list)  # История чата по играм
         self.matchmaking_queue: List[Dict] = []  # Очередь на поиск игры
         self.lobbies: Dict[str, Dict] = {}  # Игровые лобби для мультиплеера
+        self.pgn_saver = PGNSaver()  # PGN сохранение
+        self.game_recorders: Dict[str, GameRecorder] = {}  # Рекордеры для каждой игры
     
     def create_game(self, player_name: str = "Anonymous", game_mode: str = "ai", time_control: int = 0) -> str:
         game_id = str(uuid.uuid4())
         # Конвертация времени из минут в секунды
         time_per_player = time_control * 60 if time_control > 0 else 0
+        
+        # Инициализация PGN рекордера
+        recorder = GameRecorder()
+        recorder.start_recording(white_player=player_name, black_player="AI" if game_mode == "ai" else "Opponent")
+        self.game_recorders[game_id] = recorder
         
         self.games[game_id] = {
             'id': game_id,
@@ -147,6 +155,8 @@ class GameManager:
             del self.connections[game_id]
         if game_id in self.chat_history:
             del self.chat_history[game_id]
+        if game_id in self.game_recorders:
+            del self.game_recorders[game_id]
         logger.info(f"Deleted game {game_id}")
     
     def add_chat_message(self, game_id: str, player_name: str, message: str):
@@ -1273,8 +1283,27 @@ async def make_move(request: MoveRequest):
             }
             game['move_history'].append(move_record)
             
-            # Обновление статуса игры безопасно без вызова is_checkmate
-            game['game_status'] = 'active'
+            # Запись в PGN рекордер
+            if request.game_id in game_manager.game_recorders:
+                recorder = game_manager.game_recorders[request.game_id]
+                recorder.add_move(move_record['notation'])
+            
+            # Определение статуса игры (мат, пат, ничья)
+            if engine.is_checkmate():
+                game['game_status'] = 'checkmate'
+                game['winner'] = 'black' if engine.current_turn else 'white'
+                # Запись результата в PGN
+                if request.game_id in game_manager.game_recorders:
+                    result = "0-1" if engine.current_turn else "1-0"
+                    game_manager.game_recorders[request.game_id].set_result(result)
+            elif engine.is_stalemate():
+                game['game_status'] = 'stalemate'
+                game['winner'] = 'draw'
+                # Запись результата в PGN
+                if request.game_id in game_manager.game_recorders:
+                    game_manager.game_recorders[request.game_id].set_result("1/2-1/2")
+            else:
+                game['game_status'] = 'active'
             
             # Сброс таймера для следующего хода
             if game['time_control'] > 0:
@@ -1519,6 +1548,167 @@ def convert_to_algebraic(from_pos: Tuple[int, int], to_pos: Tuple[int, int], pie
     
     piece_symbol = piece.upper() if piece.isupper() else piece.lower()
     return f"{piece_symbol}{from_square}-{to_square}"
+
+def calculate_material_balance(board_state: List[List[str]]) -> Dict:
+    """Расчет материального баланса"""
+    piece_values = {
+        'p': 1, 'P': 1,
+        'n': 3, 'N': 3,
+        'b': 3, 'B': 3,
+        'r': 5, 'R': 5,
+        'q': 9, 'Q': 9
+    }
+    
+    white_material = 0
+    black_material = 0
+    white_pieces = {'pawns': 0, 'knights': 0, 'bishops': 0, 'rooks': 0, 'queens': 0}
+    black_pieces = {'pawns': 0, 'knights': 0, 'bishops': 0, 'rooks': 0, 'queens': 0}
+    
+    for row in board_state:
+        for piece in row:
+            if piece in piece_values:
+                if piece.isupper():
+                    white_material += piece_values[piece]
+                    if piece == 'P': white_pieces['pawns'] += 1
+                    elif piece == 'N': white_pieces['knights'] += 1
+                    elif piece == 'B': white_pieces['bishops'] += 1
+                    elif piece == 'R': white_pieces['rooks'] += 1
+                    elif piece == 'Q': white_pieces['queens'] += 1
+                else:
+                    black_material += piece_values[piece]
+                    if piece == 'p': black_pieces['pawns'] += 1
+                    elif piece == 'n': black_pieces['knights'] += 1
+                    elif piece == 'b': black_pieces['bishops'] += 1
+                    elif piece == 'r': black_pieces['rooks'] += 1
+                    elif piece == 'q': black_pieces['queens'] += 1
+    
+    return {
+        'white': white_material,
+        'black': black_material,
+        'balance': white_material - black_material,
+        'white_pieces': white_pieces,
+        'black_pieces': black_pieces
+    }
+
+def determine_game_phase(board_state: List[List[str]], move_count: int) -> str:
+    """Определение фазы игры"""
+    material = calculate_material_balance(board_state)
+    total_material = material['white'] + material['black']
+    
+    if move_count < 10:
+        return 'opening'
+    elif total_material > 40:
+        return 'middlegame'
+    elif total_material > 20:
+        return 'late_middlegame'
+    else:
+        return 'endgame'
+
+def analyze_threats(board_state: List[List[str]], current_turn: bool) -> List[str]:
+    """Анализ тактических угроз"""
+    threats = []
+    
+    # Упрощенный анализ - можно расширить
+    # Проверка на открытые линии атаки
+    
+    return threats
+
+def analyze_center_control(board_state: List[List[str]]) -> Dict:
+    """Анализ контроля центра"""
+    # Центральные клетки (d4, d5, e4, e5)
+    center_squares = [(3, 3), (3, 4), (4, 3), (4, 4)]
+    extended_center = [(2, 2), (2, 3), (2, 4), (2, 5), 
+                       (3, 2), (3, 5), (4, 2), (4, 5),
+                       (5, 2), (5, 3), (5, 4), (5, 5)]
+    
+    white_center = 0
+    black_center = 0
+    
+    for r, c in center_squares:
+        piece = board_state[r][c]
+        if piece != '.':
+            if piece.isupper():
+                white_center += 2
+            else:
+                black_center += 2
+    
+    for r, c in extended_center:
+        piece = board_state[r][c]
+        if piece != '.':
+            if piece.isupper():
+                white_center += 1
+            else:
+                black_center += 1
+    
+    return {
+        'white': white_center,
+        'black': black_center,
+        'advantage': 'white' if white_center > black_center else 'black' if black_center > white_center else 'equal'
+    }
+
+def analyze_king_safety(board_state: List[List[str]]) -> Dict:
+    """Анализ безопасности короля"""
+    # Поиск королей
+    white_king_pos = None
+    black_king_pos = None
+    
+    for r in range(8):
+        for c in range(8):
+            if board_state[r][c] == 'K':
+                white_king_pos = (r, c)
+            elif board_state[r][c] == 'k':
+                black_king_pos = (r, c)
+    
+    def king_safety_score(king_pos, is_white):
+        if not king_pos:
+            return 0
+        
+        r, c = king_pos
+        safety = 5  # Базовая безопасность
+        
+        # Проверка пешечной защиты
+        pawn = 'P' if is_white else 'p'
+        direction = -1 if is_white else 1
+        
+        for dc in [-1, 0, 1]:
+            nr, nc = r + direction, c + dc
+            if 0 <= nr < 8 and 0 <= nc < 8:
+                if board_state[nr][nc] == pawn:
+                    safety += 1
+        
+        # Пенальти за центральное положение в миттельшпиле
+        if 2 <= r <= 5 and 2 <= c <= 5:
+            safety -= 2
+        
+        # Бонус за рокировку (король в углу)
+        if (c <= 2 or c >= 5) and ((is_white and r == 7) or (not is_white and r == 0)):
+            safety += 2
+        
+        return max(0, min(10, safety))  # Ограничение 0-10
+    
+    return {
+        'white': king_safety_score(white_king_pos, True),
+        'black': king_safety_score(black_king_pos, False),
+        'white_king_position': white_king_pos,
+        'black_king_position': black_king_pos
+    }
+
+def get_evaluation_text(evaluation: float) -> str:
+    """Преобразование числовой оценки в текст"""
+    if evaluation > 300:
+        return "White is winning"
+    elif evaluation > 100:
+        return "White has a significant advantage"
+    elif evaluation > 50:
+        return "White has a slight advantage"
+    elif evaluation > -50:
+        return "Equal position"
+    elif evaluation > -100:
+        return "Black has a slight advantage"
+    elif evaluation > -300:
+        return "Black has a significant advantage"
+    else:
+        return "Black is winning"
 
 # WebSocket endpoint для real-time обновлений
 @app.websocket("/ws/{game_id}")
@@ -1801,6 +1991,197 @@ async def get_stats(game_id: str):
     except Exception as e:
         logger.error(f"Error getting stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to get stats")
+
+@app.get("/api/game/{game_id}/export_pgn")
+async def export_pgn(game_id: str):
+    """Экспорт игры в формат PGN"""
+    try:
+        game = game_manager.get_game(game_id)
+        if not game:
+            raise HTTPException(status_code=404, detail="Game not found")
+        
+        # Получение PGN из рекордера
+        if game_id not in game_manager.game_recorders:
+            raise HTTPException(status_code=404, detail="PGN recorder not found for this game")
+        
+        recorder = game_manager.game_recorders[game_id]
+        pgn_content = recorder.get_pgn()
+        
+        # Возврат PGN как текстового файла
+        return PlainTextResponse(
+            content=pgn_content,
+            headers={
+                'Content-Disposition': f'attachment; filename="game_{game_id[:8]}.pgn"',
+                'Content-Type': 'application/x-chess-pgn'
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting PGN: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export PGN")
+
+@app.get("/api/game/{game_id}/analyze")
+async def analyze_position(game_id: str, depth: int = 3):
+    """Анализ текущей позиции с подробной информацией"""
+    try:
+        game = game_manager.get_game(game_id)
+        if not game:
+            raise HTTPException(status_code=404, detail="Game not found")
+        
+        engine = game['engine']
+        
+        # Получение базовой оценки
+        evaluation = engine.get_evaluation() if hasattr(engine, 'get_evaluation') else 0
+        
+        # Получение лучших ходов
+        best_moves = []
+        if hasattr(engine, 'get_best_move'):
+            best_move = engine.get_best_move(depth=depth)
+            if best_move:
+                best_moves.append({
+                    'from': best_move[0],
+                    'to': best_move[1],
+                    'notation': f"{best_move[0]}-{best_move[1]}"
+                })
+        
+        # Анализ материала
+        material_balance = calculate_material_balance(engine.board_state)
+        
+        # Определение фазы игры
+        game_phase = determine_game_phase(engine.board_state, len(game['move_history']))
+        
+        # Определение дебюта
+        opening_info = opening_book.identify_opening(game['move_history'])
+        
+        # Тактические угрозы
+        threats = analyze_threats(engine.board_state, engine.current_turn)
+        
+        # Контроль центра
+        center_control = analyze_center_control(engine.board_state)
+        
+        # Безопасность короля
+        king_safety = analyze_king_safety(engine.board_state)
+        
+        return {
+            'game_id': game_id,
+            'evaluation': evaluation,
+            'evaluation_text': get_evaluation_text(evaluation),
+            'best_moves': best_moves,
+            'material_balance': material_balance,
+            'game_phase': game_phase,
+            'opening': opening_info,
+            'threats': threats,
+            'center_control': center_control,
+            'king_safety': king_safety,
+            'move_count': len(game['move_history']),
+            'current_turn': 'white' if engine.current_turn else 'black'
+        }
+        
+    except Exception as e:
+        logger.error(f"Error analyzing position: {e}")
+        raise HTTPException(status_code=500, detail="Failed to analyze position")
+
+@app.post("/api/game/import_pgn")
+async def import_pgn(request: Request):
+    """Импорт игры из формата PGN"""
+    try:
+        # Получение содержимого PGN из тела запроса
+        body = await request.body()
+        pgn_content = body.decode('utf-8')
+        
+        if not pgn_content:
+            raise HTTPException(status_code=400, detail="Empty PGN content")
+        
+        # Парсинг PGN с помощью PGNSaver
+        parsed_game = game_manager.pgn_saver.parse_pgn(pgn_content)
+        
+        if not parsed_game:
+            raise HTTPException(status_code=400, detail="Failed to parse PGN")
+        
+        # Создание новой игры
+        new_game_id = str(uuid.uuid4())
+        white_player = parsed_game.get('white', 'Player1')
+        black_player = parsed_game.get('black', 'Player2')
+        
+        # Инициализация движка
+        engine = ChessEngineWrapper()
+        
+        # Создание игры
+        game_manager.games[new_game_id] = {
+            'id': new_game_id,
+            'player_name': white_player,
+            'game_mode': 'replay',
+            'engine': engine,
+            'ai': None,
+            'move_generator': BitboardMoveGenerator(),
+            'created_at': datetime.now(),
+            'last_move_time': datetime.now(),
+            'move_history': [],
+            'current_player': True,
+            'game_status': parsed_game.get('result', 'active'),
+            'winner': None,
+            'time_control': 0,
+            'white_time': 0,
+            'black_time': 0,
+            'move_start_time': None
+        }
+        game_manager.connections[new_game_id] = []
+        
+        # Инициализация PGN рекордера
+        recorder = GameRecorder()
+        recorder.start_recording(white_player=white_player, black_player=black_player)
+        game_manager.game_recorders[new_game_id] = recorder
+        
+        # Применение ходов из PGN
+        moves = parsed_game.get('moves', [])
+        game = game_manager.games[new_game_id]
+        
+        for move_notation in moves:
+            # Попытка применить ход (это упрощенная версия, может потребоваться доработка)
+            # В реальности нужен парсер алгебраической нотации
+            try:
+                # Добавляем ход в историю
+                move_record = {
+                    'notation': move_notation,
+                    'timestamp': datetime.now().isoformat()
+                }
+                game['move_history'].append(move_record)
+                recorder.add_move(move_notation)
+            except Exception as e:
+                logger.warning(f"Failed to apply move {move_notation}: {e}")
+                continue
+        
+        # Установка результата
+        result = parsed_game.get('result', '*')
+        if result != '*':
+            recorder.set_result(result)
+            if result == '1-0':
+                game['game_status'] = 'checkmate'
+                game['winner'] = 'white'
+            elif result == '0-1':
+                game['game_status'] = 'checkmate'
+                game['winner'] = 'black'
+            elif result == '1/2-1/2':
+                game['game_status'] = 'draw'
+                game['winner'] = 'draw'
+        
+        logger.info(f"PGN imported as game {new_game_id}")
+        return {
+            'success': True,
+            'game_id': new_game_id,
+            'message': f'Successfully imported PGN with {len(moves)} moves',
+            'white_player': white_player,
+            'black_player': black_player,
+            'result': result,
+            'moves_count': len(moves)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error importing PGN: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to import PGN: {str(e)}")
 
 @app.get("/api/player-stats/{player_name}")
 async def get_player_stats(player_name: str):

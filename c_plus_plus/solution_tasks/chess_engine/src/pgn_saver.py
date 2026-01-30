@@ -208,6 +208,30 @@ class PGNSaver:
         except Exception as e:
             print(f"❌ Ошибка валидации PGN: {e}")
             return False
+    
+    def parse_pgn(self, pgn_content: str) -> Optional[Dict[str, any]]:
+        """
+        Парсит PGN содержимое и возвращает структурированные данные
+        
+        Args:
+            pgn_content: Текст в формате PGN
+            
+        Returns:
+            Dict с ключами 'white', 'black', 'result', 'moves', 'metadata'
+        """
+        try:
+            moves, metadata = self._parse_pgn_content(pgn_content)
+            
+            return {
+                'white': metadata.get('White', 'Player1'),
+                'black': metadata.get('Black', 'Player2'),
+                'result': metadata.get('Result', '*'),
+                'moves': moves,
+                'metadata': metadata
+            }
+        except Exception as e:
+            print(f"❌ Ошибка парсинга PGN: {e}")
+            return None
 
 class GameRecorder:
     """Класс для записи партии в реальном времени"""
@@ -259,6 +283,10 @@ class GameRecorder:
             return ""
         
         return self.pgn_saver._create_pgn_content(self.moves, self.metadata)
+    
+    def get_pgn(self) -> str:
+        """Алиас для get_current_pgn для совместимости с API"""
+        return self.get_current_pgn()
 
 # Демонстрационные функции
 def demonstrate_pgn_saver():

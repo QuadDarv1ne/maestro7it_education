@@ -1,34 +1,20 @@
-#include "../include/parallel_search.hpp"
+#include "../../include/parallel_search.hpp"
+#include "../../include/move_generator.hpp"
 #include <iostream>
 #include <algorithm>
 #include <numeric>
 
-// Определение констант
-namespace ParallelConstants {
-    const int MIN_SPLIT_DEPTH = 3;
-    const int MAX_THREADS = 64;
-    const int THREAD_STACK_SIZE = 8192 * 1024; // 8MB
-    const int ASPIRATION_WINDOW = 50;
-}
-
-ParallelChessEngine::ParallelChessEngine(int numThreads) 
-    : evaluator_(board_), maxDepth_(6), numThreads_(numThreads), 
-      timeLimit_(std::chrono::milliseconds(10000)),
-      stopSearch_(false), bestScore_(0), searchDepth_(0) {
+ParallelSearch::ParallelSearch(const Bitboard& board, IncrementalEvaluator& evaluator, 
+                               int max_depth, int num_threads)
+    : board_(board), evaluator_(evaluator), max_depth_(max_depth), 
+      num_threads_(num_threads), time_limit_(std::chrono::milliseconds(10000)),
+      stop_search_(false), best_score_(0), nodes_searched_(0) {
     
-    // Инициализация транспозиционной таблицы
-    transpositionTable_.resize(TRANSPOSITION_TABLE_SIZE);
-    std::fill(transpositionTable_.begin(), transpositionTable_.end(), TranspositionEntry());
-    
-    // Инициализация таблицы истории
-    historyTable_.resize(HISTORY_SIZE, 0);
-    
-    // Установка начальной позиции
-    board_.setupStartPosition();
-}
-
-ParallelChessEngine::~ParallelChessEngine() {
-    stopAllThreads();
+    // Инициализация таблицы транспозиций
+    transposition_table_.resize(TT_SIZE);
+    for (size_t i = 0; i < TT_SIZE; ++i) {
+        transposition_table_[i] = TTEntry();
+    }
 }
 
 Move ParallelChessEngine::findBestMove(Color color, std::chrono::milliseconds timeLimit) {
