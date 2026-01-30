@@ -27,7 +27,16 @@ def test_zobrist_hashing():
     print(f"✅ Zobrist keys инициализированы для {pieces_count} типов фигур")
     
     # Тест хэширования
-    test_board = ai.move_gen.get_initial_board()
+    test_board = [
+        ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+        ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+        ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    ]
     hash1 = ai.get_board_hash(test_board, True)
     hash2 = ai.get_board_hash(test_board, True)
     
@@ -64,7 +73,16 @@ def test_null_move_pruning():
     print("=" * 50)
     
     ai = EnhancedChessAI(4)
-    test_board = ai.move_gen.get_initial_board()
+    test_board = [
+        ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+        ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+        ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    ]
     
     # Проверка, что функция принимает параметр allow_null_move
     try:
@@ -80,7 +98,16 @@ def test_aspiration_windows():
     print("=" * 50)
     
     ai = EnhancedChessAI(4)
-    test_board = ai.move_gen.get_initial_board()
+    test_board = [
+        ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+        ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+        ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    ]
     
     print("Запуск поиска с aspiration windows...")
     best_move = ai.get_best_move(test_board, True, time_limit=2.0)
@@ -120,7 +147,16 @@ def test_performance():
     import time
     
     ai = EnhancedChessAI(4)
-    test_board = ai.move_gen.get_initial_board()
+    test_board = [
+        ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+        ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+        ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    ]
     
     # Тест скорости хэширования
     start = time.perf_counter()
