@@ -111,10 +111,49 @@ class ChessEngineWrapper:
         
         # Проверяем, есть ли хоть один легальный ход
         if self.move_gen:
-            legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
-            return len(legal_moves) == 0
+            try:
+                legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
+                return len(legal_moves) == 0
+            except Exception as e:
+                print(f"Ошибка MoveGen в is_checkmate: {e}")
         
-        return False
+        # Резервная Python-реализация
+        return self._is_checkmate_python(is_white)
+    
+    def _is_checkmate_python(self, is_white: bool) -> bool:
+        """Резервная Python-реализация проверки мата"""
+        # Король уже под шахом, проверяем все возможные ходы
+        original_turn = self.current_turn
+        self.current_turn = is_white
+        
+        # Перебираем все фигуры текущего цвета
+        for from_row in range(8):
+            for from_col in range(8):
+                piece = self.board_state[from_row][from_col]
+                if piece == '.':
+                    continue
+                
+                piece_is_white = piece.isupper()
+                if piece_is_white != is_white:
+                    continue
+                
+                # Проверяем все возможные ходы этой фигуры
+                for to_row in range(8):
+                    for to_col in range(8):
+                        if (from_row, from_col) == (to_row, to_col):
+                            continue
+                        
+                        # Проверяем, является ли ход допустимым
+                        if self.is_valid_move_python((from_row, from_col), (to_row, to_col)):
+                            # Проверяем, не останется ли король под шахом
+                            if not self.would_still_be_in_check((from_row, from_col), (to_row, to_col), is_white):
+                                # Нашли легальный ход - не мат!
+                                self.current_turn = original_turn
+                                return False
+        
+        # Не нашли ни одного легального хода - это мат!
+        self.current_turn = original_turn
+        return True
     
     def is_stalemate(self, is_white: bool) -> bool:
         """Эффективная проверка пата"""
