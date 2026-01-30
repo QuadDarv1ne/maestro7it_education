@@ -83,6 +83,51 @@ class ChessEngineWrapper:
             stats['ai_tt_hits'] = getattr(self.ai, 'tt_hits', 0)
         return stats
     
+    def is_checkmate(self, is_white: bool) -> bool:
+        """Эффективная проверка мата"""
+        # Если нет шаха, то и мата нет
+        if not self.is_king_in_check(is_white):
+            return False
+        
+        # Проверяем, есть ли хоть один легальный ход
+        if self.move_gen:
+            legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
+            return len(legal_moves) == 0
+        
+        return False
+    
+    def is_stalemate(self, is_white: bool) -> bool:
+        """Эффективная проверка пата"""
+        # Если есть шах, то пата нет
+        if self.is_king_in_check(is_white):
+            return False
+        
+        # Проверяем, есть ли хоть один легальный ход
+        if self.move_gen:
+            legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
+            return len(legal_moves) == 0
+        
+        return False
+    
+    def get_game_status(self) -> str:
+        """Получение статуса игры (продолжается, мат, пат, ничья)"""
+        current_color = self.current_turn
+        
+        # Проверка мата
+        if self.is_checkmate(current_color):
+            winner = "Черные" if current_color else "Белые"
+            return f"Мат! Победа: {winner}"
+        
+        # Проверка пата
+        if self.is_stalemate(current_color):
+            return "Пат! Ничья"
+        
+        # Проверка шаха
+        if self.is_king_in_check(current_color):
+            return "Шах!"
+        
+        return "Игра продолжается"
+    
     def board_to_fen(self) -> str:
         """Преобразование доски в FEN нотацию"""
         fen = ""

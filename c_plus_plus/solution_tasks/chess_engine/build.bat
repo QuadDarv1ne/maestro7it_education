@@ -49,7 +49,7 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo Сборка успешна!
+echo Сборка успешна
 echo Исполняемый файл: build\chess_engine.exe
 echo.
 echo Для запуска:

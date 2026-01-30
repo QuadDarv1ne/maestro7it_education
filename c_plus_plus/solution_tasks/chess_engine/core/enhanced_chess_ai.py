@@ -344,7 +344,7 @@ class EnhancedChessAI:
         return score
     
     def minimax(self, board: List[List[str]], depth: int, alpha: float, beta: float, 
-                maximizing_player: bool) -> Tuple[int, Tuple[Tuple[int, int], Tuple[int, int]]]:
+                maximizing_player: bool, allow_null_move: bool = True) -> Tuple[int, Tuple[Tuple[int, int], Tuple[int, int]]]:
         """Алгоритм минимакс с альфа-бета отсечением, упорядочиванием ходов и транспозиционной таблицей"""
         self.nodes_searched += 1
         
@@ -354,6 +354,17 @@ class EnhancedChessAI:
             if time.time() - self.start_time > self.time_limit:
                 # Возвращаем текущую оценку, если время истекло
                 return self.evaluate_position(board), None
+
+        # Null Move Pruning - пропускаем ход для проверки угрозы
+        if allow_null_move and depth >= 3 and not self.is_in_check(board, maximizing_player):
+            # Делаем "пустой" ход (меняем только очередь)
+            R = 2  # Reduction factor
+            null_eval, _ = self.minimax(board, depth - 1 - R, -beta, -beta + 1, not maximizing_player, False)
+            null_eval = -null_eval
+            
+            if null_eval >= beta:
+                # Null move вызвало beta cutoff - позиция слишком хороша
+                return beta, None
 
         # Поиск в транспозиционной таблице
         board_hash = self.get_board_hash(board, maximizing_player)
@@ -613,7 +624,7 @@ class EnhancedChessAI:
         return self.move_gen.is_square_attacked(board, king_square, not is_white)
 
     def get_best_move(self, board: List[List[str]], color: bool, time_limit: float = 3.0) -> Tuple[Tuple[int, int], Tuple[int, int]]:
-        """Получение лучшего хода с использованием итеративного углубления"""
+        """Получение лучшего хода с использованием итеративного углубления и aspiration windows"""
         import time
         self.nodes_searched = 0
         self.tt_hits = 0
@@ -624,13 +635,29 @@ class EnhancedChessAI:
         self.killer_moves = [[None, None] for _ in range(64)]
         
         best_overall_move = None
+        prev_eval = 0
         
-        # Итеративное углубление
+        # Итеративное углубление с aspiration windows
         for current_depth in range(1, self.search_depth + 1):
-            eval_score, move = self.minimax(board, current_depth, float('-inf'), float('inf'), color)
+            # Aspiration window для ускорения поиска
+            if current_depth >= 3 and prev_eval is not None:
+                window = 50  # Размер окна
+                alpha = prev_eval - window
+                beta = prev_eval + window
+                
+                # Попытка поиска в узком окне
+                eval_score, move = self.minimax(board, current_depth, alpha, beta, color)
+                
+                # Если вышли за пределы окна, повторяем с полным окном
+                if eval_score <= alpha or eval_score >= beta:
+                    eval_score, move = self.minimax(board, current_depth, float('-inf'), float('inf'), color)
+            else:
+                # Для первых глубин используем полное окно
+                eval_score, move = self.minimax(board, current_depth, float('-inf'), float('inf'), color)
             
             if move:
                 best_overall_move = move
+                prev_eval = eval_score
             
             # Проверка, нужно ли прекратить углубление поиска
             if time.time() - self.start_time > self.time_limit:
@@ -638,6 +665,8 @@ class EnhancedChessAI:
                 
         print(f"Глубина поиска ИИ: {current_depth}")
         print(f"Узлов проверено: {self.nodes_searched}, Попаданий в TT: {self.tt_hits}")
+        if prev_eval is not None:
+            print(f"Оценка позиции: {prev_eval/100:.2f}")
         return best_overall_move
 
 # Тестирование улучшенного ИИ
