@@ -10,38 +10,38 @@
 
 class EncodingUtils {
 public:
-    // Set console encoding to UTF-8
+    // Установка кодировки консоли в UTF-8
     static void setConsoleEncoding() {
 #ifdef _WIN32
-        // Set console to UTF-8
-        SetConsoleOutputCP(65001); // UTF-8 code page
+        // Устанавливаем консоль в UTF-8
+        SetConsoleOutputCP(65001); // Кодовая страница UTF-8
         SetConsoleCP(65001);
 #endif
     }
 
-    // Convert UTF-8 string to wide string
+    // Преобразование строки UTF-8 в широкую строку
     static std::wstring utf8ToWide(const std::string& utf8) {
         std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
         return converter.from_bytes(utf8);
     }
 
-    // Convert wide string to UTF-8
+    // Преобразование широкой строки в UTF-8
     static std::string wideToUtf8(const std::wstring& wide) {
         std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
         return converter.to_bytes(wide);
     }
 
-    // Handle multi-byte character conversion for different encodings
+    // Обработка многобайтовой конверсии символов для различных кодировок
     static std::string convertToUtf8(const std::string& input, const std::string& fromEncoding = "auto") {
-        // This is a simplified version - in practice, you'd use iconv or similar
-        // For now, assume input is already in a compatible format
+        // Это упрощенная версия - на практике используется iconv или подобное
+        // Пока предполагаем, что входные данные уже в совместимом формате
         return input;
     }
 
-    // Normalize string for consistent processing
+    // Нормализация строки для согласованной обработки
     static std::string normalizeString(const std::string& input) {
         std::string result = input;
-        // Remove any problematic characters
+        // Удаляем любые проблемные символы
         return result;
     }
 };

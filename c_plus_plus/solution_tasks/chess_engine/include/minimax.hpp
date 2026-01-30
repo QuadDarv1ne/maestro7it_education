@@ -25,7 +25,7 @@ private:
     int maxDepth_;                    ///< Максимальная глубина поиска
     std::chrono::milliseconds timeLimit_;  ///< Ограничение времени на поиск
     
-    // Transposition table for caching evaluations
+    // Таблица транспозиций для кеширования оценок
     struct TTEntry {
         uint64_t hash;
         int depth;
@@ -37,20 +37,20 @@ private:
         TTEntry(uint64_t h, int d, int s, Move bm, char f) : hash(h), depth(d), score(s), bestMove(bm), flag(f) {}
     };
     
-    static const size_t HASH_TABLE_SIZE = 100000;  // Size of the hash table
+    static const size_t HASH_TABLE_SIZE = 100000;  // Размер хеш-таблицы
     std::vector<TTEntry> transpositionTable;
     
-    // Killer moves for move ordering
+    // Killer ходы для упорядочивания ходов
     static const int MAX_KILLER_MOVES = 2;
     static const int MAX_PLY = 100;
     std::vector<std::vector<Move>> killerMoves;
     
-    // History heuristic for move ordering
-    static const int HISTORY_SIZE = 64 * 64; // From-To square combinations
+    // Эвристика истории для упорядочивания ходов
+    static const int HISTORY_SIZE = 64 * 64; // Комбинации клеток From-To
     std::vector<int> historyTable;
     
-    // Zobrist hashing
-    uint64_t zobristTable[64][12]; // 64 squares, 12 pieces (6 types * 2 colors)
+    // Хеширование Zobrist
+    uint64_t zobristTable[64][12]; // 64 клетки, 12 фигур (6 типов * 2 цвета)
     uint64_t zobristBlackToMove;
     uint64_t zobristCastling[16];
     uint64_t zobristEnPassant[8];
