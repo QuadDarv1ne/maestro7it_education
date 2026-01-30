@@ -103,8 +103,11 @@ class GameManager:
         self.games: Dict[str, dict] = {}
         self.connections: Dict[str, List[WebSocket]] = {}
     
-    def create_game(self, player_name: str = "Anonymous", game_mode: str = "ai") -> str:
+    def create_game(self, player_name: str = "Anonymous", game_mode: str = "ai", time_control: int = 0) -> str:
         game_id = str(uuid.uuid4())
+        # Конвертация времени из минут в секунды
+        time_per_player = time_control * 60 if time_control > 0 else 0
+        
         self.games[game_id] = {
             'id': game_id,
             'player_name': player_name,
@@ -117,10 +120,14 @@ class GameManager:
             'move_history': [],
             'current_player': True,  # True = white, False = black
             'game_status': 'active',  # active, check, checkmate, stalemate
-            'winner': None
+            'winner': None,
+            'time_control': time_control,  # Время в минутах
+            'white_time': time_per_player,  # Оставшееся время белых в секундах
+            'black_time': time_per_player,  # Оставшееся время черных в секундах
+            'move_start_time': time.time() if time_control > 0 else None  # Время начала хода
         }
         self.connections[game_id] = []
-        logger.info(f"Created game {game_id} for player {player_name}")
+        logger.info(f"Created game {game_id} for player {player_name} with time control {time_control}min")
         return game_id
     
     def get_game(self, game_id: str) -> Optional[dict]:
@@ -186,6 +193,7 @@ class GameRequest(BaseModel):
     player_name: str = Field(default="Anonymous", max_length=50, description="Имя игрока")
     game_mode: str = Field(default="ai", pattern="^(ai|human)$", description="Режим игры")
     player_color: bool = Field(default=True, description="Цвет игрока")
+    time_control: int = Field(default=0, ge=0, le=60, description="Контроль времени в минутах (0=без ограничения)")
     
     @validator('player_name')
     def validate_player_name(cls, v):
@@ -202,6 +210,9 @@ class GameResponse(BaseModel):
     move_history: List[Dict]
     player_name: str
     game_mode: str
+    time_control: Optional[int] = 0
+    white_time: Optional[float] = 0
+    black_time: Optional[float] = 0
 
 # HTML шаблоны
 @app.get("/", response_class=HTMLResponse)
@@ -217,7 +228,11 @@ async def read_root():
 async def create_new_game(request: GameRequest):
     """Создание новой шахматной игры"""
     try:
-        game_id = game_manager.create_game(request.player_name, request.game_mode)
+        game_id = game_manager.create_game(
+            request.player_name, 
+            request.game_mode,
+            request.time_control
+        )
         game = game_manager.get_game(game_id)
         
         return GameResponse(
@@ -227,7 +242,10 @@ async def create_new_game(request: GameRequest):
             game_status=game['game_status'],
             move_history=game['move_history'],
             player_name=request.player_name,
-            game_mode=request.game_mode
+            game_mode=request.game_mode,
+            time_control=game['time_control'],
+            white_time=game['white_time'],
+            black_time=game['black_time']
         )
     except Exception as e:
         logger.error(f"Error creating game: {e}")
@@ -240,6 +258,32 @@ async def make_move(request: MoveRequest):
         game = game_manager.get_game(request.game_id)
         if not game:
             raise HTTPException(status_code=404, detail="Game not found")
+        
+        # Обновление времени
+        if game['time_control'] > 0 and game['move_start_time']:
+            elapsed = time.time() - game['move_start_time']
+            if game['engine'].current_turn:  # Белые
+                game['white_time'] = max(0, game['white_time'] - elapsed)
+                if game['white_time'] <= 0:
+                    game['game_status'] = 'time_out'
+                    game['winner'] = 'black'
+                    return {
+                        'success': False,
+                        'message': 'White time out',
+                        'game_status': 'time_out',
+                        'winner': 'black'
+                    }
+            else:  # Черные
+                game['black_time'] = max(0, game['black_time'] - elapsed)
+                if game['black_time'] <= 0:
+                    game['game_status'] = 'time_out'
+                    game['winner'] = 'white'
+                    return {
+                        'success': False,
+                        'message': 'Black time out',
+                        'game_status': 'time_out',
+                        'winner': 'white'
+                    }
         
         engine = game['engine']
         from_pos = tuple(request.from_pos)
@@ -262,6 +306,10 @@ async def make_move(request: MoveRequest):
             # Обновление статуса игры безопасно без вызова is_checkmate
             game['game_status'] = 'active'
             
+            # Сброс таймера для следующего хода
+            if game['time_control'] > 0:
+                game['move_start_time'] = time.time()
+            
             return {
                 'success': True,
                 'game_state': GameResponse(
@@ -271,7 +319,10 @@ async def make_move(request: MoveRequest):
                     game_status="active",
                     move_history=game['move_history'],
                     player_name=game['player_name'],
-                    game_mode=game['game_mode']
+                    game_mode=game['game_mode'],
+                    time_control=game['time_control'],
+                    white_time=game['white_time'],
+                    black_time=game['black_time']
                 )
             }
         else:
@@ -307,6 +358,31 @@ async def get_evaluation(game_id: str):
         return {"evaluation": 0}
     
     return {"evaluation": game['engine'].get_evaluation()}
+
+@app.get("/api/time/{game_id}")
+async def get_time(game_id: str):
+    """Получение текущего времени игроков"""
+    game = game_manager.get_game(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    # Обновление времени текущего игрока
+    if game['time_control'] > 0 and game['move_start_time']:
+        elapsed = time.time() - game['move_start_time']
+        if game['engine'].current_turn:
+            current_time = max(0, game['white_time'] - elapsed)
+        else:
+            current_time = max(0, game['black_time'] - elapsed)
+    else:
+        current_time = 0
+    
+    return {
+        "time_control": game['time_control'],
+        "white_time": game['white_time'],
+        "black_time": game['black_time'],
+        "current_turn": game['engine'].current_turn,
+        "elapsed": elapsed if game['time_control'] > 0 and game['move_start_time'] else 0
+    }
 
 @app.get("/api/ai-move/{game_id}")
 async def get_ai_move(game_id: str, depth: int = 4):
