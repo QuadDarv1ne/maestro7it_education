@@ -118,13 +118,17 @@ void UCIEngine::handleGo(const std::vector<std::string>& tokens) {
 
 void UCIEngine::startSearch() {
     minimax_.setMaxDepth(searchDepth_);
+    minimax_.resetInterrupt();
     if (searchTimeMs_ > 0) {
         minimax_.setTimeLimit(std::chrono::milliseconds(searchTimeMs_));
+    } else {
+        // Устанавливаем очень большое время для "бесконечного" поиска или поиска по глубине
+        minimax_.setTimeLimit(std::chrono::hours(1));
     }
     
     Move bestMove = minimax_.findBestMove(board_.getCurrentPlayer());
     
-    if (searching_) {
+    if (searching_ && !minimax_.isTimeUp()) {
         std::string moveStr = board_.squareToAlgebraic(bestMove.from) + board_.squareToAlgebraic(bestMove.to);
         if (bestMove.promotion != PieceType::EMPTY) {
             char p = 'q';
@@ -141,7 +145,7 @@ void UCIEngine::startSearch() {
 
 void UCIEngine::handleStop() {
     searching_ = false;
-    // В идеале minimax должен проверять флаг прерывания
+    minimax_.interrupt();
 }
 
 void UCIEngine::handleQuit() {

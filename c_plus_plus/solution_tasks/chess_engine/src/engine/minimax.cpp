@@ -6,7 +6,11 @@
 #include <functional>
 #include <iostream>
 
-Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), openingBook_(), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)), historyTable(HISTORY_SIZE, 0) {
+Minimax::Minimax(Board& board, int maxDepth) 
+    : board_(board), evaluator_(board), openingBook_(), maxDepth_(maxDepth), 
+      timeLimit_(std::chrono::seconds(10)), interrupted_(false),
+      transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)), 
+      historyTable(HISTORY_SIZE, 0) {
     initZobrist();
     // Инициализация таблицы транспозиций
     for(size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
@@ -29,15 +33,16 @@ Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board),
 Move Minimax::findBestMove(Color color) {
     Move bestMove;
     int bestValue = (color == Color::WHITE) ? INT_MIN : INT_MAX;
-    auto startTime = std::chrono::steady_clock::now();
+    startTime_ = std::chrono::steady_clock::now();
+    resetInterrupt();
     
     // Проверка книги дебютов
     // ... (код книги дебютов оставляем как есть) ...
     
     // Итеративное углубление
     for (int depth = 1; depth <= maxDepth_; depth++) {
-        // Проверяем время перед новой глубиной
-        if (isTimeUp(startTime)) {
+        // Проверяем время и флаг прерывания перед новой глубиной
+        if (shouldStop()) {
             break;
         }
 
@@ -48,6 +53,9 @@ Move Minimax::findBestMove(Color color) {
         int currentBestValue = (color == Color::WHITE) ? INT_MIN : INT_MAX;
 
         for (const Move& move : moves) {
+            // Проверка времени и флага прерывания внутри цикла по ходам
+            if (shouldStop()) break;
+
             // Выполняем ход
             board_.makeMove(move.from, move.to);
             
@@ -68,12 +76,9 @@ Move Minimax::findBestMove(Color color) {
                     currentBestMove = move;
                 }
             }
-            
-            // Проверка времени внутри цикла по ходам
-            if (isTimeUp(startTime)) break;
         }
 
-        if (!isTimeUp(startTime) || depth == 1) {
+        if (!shouldStop() || depth == 1) {
             bestMove = currentBestMove;
             bestValue = currentBestValue;
         }
@@ -89,7 +94,9 @@ Move Minimax::findBestMoveWithTimeLimit(Color color, std::chrono::milliseconds t
 
 int Minimax::minimaxWithTimeLimit(int depth, int alpha, int beta, Color maximizingPlayer, 
                                  std::chrono::steady_clock::time_point startTime) {
-    if (isTimeUp(startTime)) return evaluatePosition();
+    startTime_ = startTime;
+    resetInterrupt();
+    if (shouldStop()) return evaluatePosition();
     return minimaxWithTT(depth, alpha, beta, maximizingPlayer);
 }
 
@@ -99,6 +106,14 @@ void Minimax::setMaxDepth(int depth) {
 
 void Minimax::setTimeLimit(std::chrono::milliseconds limit) {
     timeLimit_ = limit;
+}
+
+void Minimax::interrupt() {
+    interrupted_ = true;
+}
+
+void Minimax::resetInterrupt() {
+    interrupted_ = false;
 }
 
 int Minimax::getMaxDepth() const {
@@ -568,10 +583,14 @@ bool Minimax::isCriticalPosition() const {
     return false;
 }
 
-bool Minimax::isTimeUp(std::chrono::steady_clock::time_point startTime) const {
+bool Minimax::isTimeUp() const {
     auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime);
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime_);
     return elapsed >= timeLimit_;
+}
+
+bool Minimax::shouldStop() const {
+    return interrupted_ || isTimeUp();
 }
 
 int Minimax::quiescenceSearch(int alpha, int beta, int depth) {
@@ -664,6 +683,8 @@ Minimax::TTEntry* Minimax::probeTT(uint64_t hash) {
 }
 
 int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlayer) {
+    if (shouldStop()) return evaluatePosition();
+    
     // Проверяем таблицу транспозиций
     uint64_t hash = hashPosition();
     TTEntry* entry = probeTT(hash);
@@ -713,6 +734,7 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
     if (maximizingPlayer == Color::WHITE) {
         int maxValue = INT_MIN;
         for (size_t i = 0; i < moves.size(); i++) {
+            if (shouldStop()) break;
             const Move& move = moves[i];
             
             // Выполняем ход
@@ -739,6 +761,7 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
     } else {
         int minValue = INT_MAX;
         for (size_t i = 0; i < moves.size(); i++) {
+            if (shouldStop()) break;
             const Move& move = moves[i];
             
             // Выполняем ход
@@ -780,6 +803,8 @@ int Minimax::minimaxWithTT(int depth, int alpha, int beta, Color maximizingPlaye
 }
 
 int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maximizingPlayer, bool isPVNode) {
+    if (shouldStop()) return evaluatePosition();
+    
     // Базовый случай: листовой узел
     if (depth <= 0) {
         return quiescenceSearch(alpha, beta, maximizingPlayer);
@@ -805,6 +830,7 @@ int Minimax::principalVariationSearch(int depth, int alpha, int beta, Color maxi
     bool firstMove = true;
     
     for (const Move& move : moves) {
+        if (shouldStop()) break;
         // Выполняем ход
         Piece capturedPiece = board_.getPiece(move.to);
         Piece movingPiece = board_.getPiece(move.from);

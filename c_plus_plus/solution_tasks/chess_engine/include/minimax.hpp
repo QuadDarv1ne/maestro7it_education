@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <vector>
+#include <atomic>
 
 /**
  * @brief Класс, реализующий алгоритм минимакс с альфа-бета отсечением
@@ -24,6 +25,8 @@ private:
     OpeningBook openingBook_;         ///< Книга дебютов
     int maxDepth_;                    ///< Максимальная глубина поиска
     std::chrono::milliseconds timeLimit_;  ///< Ограничение времени на поиск
+    std::atomic<bool> interrupted_;    ///< Флаг прерывания поиска
+    std::chrono::steady_clock::time_point startTime_; ///< Время начала поиска
     
     // Таблица транспозиций для кеширования оценок
     struct TTEntry {
@@ -71,6 +74,8 @@ public:
     // Настройки
     void setMaxDepth(int depth);                         ///< Устанавливает максимальную глубину поиска
     void setTimeLimit(std::chrono::milliseconds limit);  ///< Устанавливает ограничение времени
+    void interrupt();                                    ///< Прерывает текущий поиск
+    void resetInterrupt();                               ///< Сбрасывает флаг прерывания
     int getMaxDepth() const;                             ///< Возвращает текущую максимальную глубину поиска
     
     // Упорядочивание ходов для лучшего отсечения
@@ -79,7 +84,8 @@ public:
 private:
     // Вспомогательные методы
     int evaluatePosition() const;                                          ///< Оценивает текущую позицию на доске
-    bool isTimeUp(std::chrono::steady_clock::time_point startTime) const;  ///< Проверяет, истекло ли отведенное время
+    bool shouldStop() const;                                               ///< Проверяет, нужно ли остановить поиск (время или флаг)
+    bool isTimeUp() const;                                                 ///< Проверяет, истекло ли отведенное время
     int quiescenceSearch(int alpha, int beta, int depth);                  ///< Выполняет поиск в "тихих" позициях для избежания горизонтального эффекта
     
     // Методы для оптимизации
