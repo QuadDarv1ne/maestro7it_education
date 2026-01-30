@@ -215,6 +215,80 @@ class EnhancedChessAI:
         
         return int(score)
     
+    def quiescence_search(self, board: List[List[str]], alpha: float, beta: float, 
+                          maximizing_player: bool, depth: int = 0) -> int:
+        """НОВОЕ: Поиск только взятий для избежания эффекта горизонта"""
+        # Ограничение глубины поиска
+        max_depth = 4
+        if depth >= max_depth:
+            return self.evaluate_position(board)
+        
+        # Статическая оценка текущей позиции
+        stand_pat = self.evaluate_position(board)
+        
+        if maximizing_player:
+            if stand_pat >= beta:
+                return beta
+            alpha = max(alpha, stand_pat)
+        else:
+            if stand_pat <= alpha:
+                return alpha
+            beta = min(beta, stand_pat)
+        
+        # Генерируем только взятия
+        moves = self.generate_legal_moves(board, maximizing_player)
+        captures = []
+        for move in moves:
+            from_pos, to_pos = move
+            target = board[to_pos[0]][to_pos[1]]
+            if target != '.':  # Только взятия
+                captures.append(move)
+        
+        # Сортируем взятия по MVV-LVA
+        ordered_captures = self.order_capture_moves(board, captures, maximizing_player)
+        
+        for move in ordered_captures:
+            new_board = self.make_move(board, move)
+            score = self.quiescence_search(new_board, alpha, beta, not maximizing_player, depth + 1)
+            
+            if maximizing_player:
+                if score >= beta:
+                    return beta
+                alpha = max(alpha, score)
+            else:
+                if score <= alpha:
+                    return alpha
+                beta = min(beta, score)
+        
+        return stand_pat if maximizing_player else stand_pat
+    
+    def order_capture_moves(self, board: List[List[str]], moves: List, is_white: bool) -> List:
+        """Сортировка взятий по MVV-LVA (Most Valuable Victim - Least Valuable Aggressor)"""
+        move_scores = []
+        
+        for move in moves:
+            from_pos, to_pos = move
+            attacker = board[from_pos[0]][from_pos[1]]
+            victim = board[to_pos[0]][to_pos[1]]
+            
+            if victim == '.':
+                continue
+            
+            # MVV-LVA оценка
+            victim_value = abs(self.piece_values.get(victim, 0))
+            attacker_value = abs(self.piece_values.get(attacker, 0))
+            score = victim_value * 10 - attacker_value // 10
+            
+            # Бонус за выгодные взятия
+            if victim_value >= attacker_value:
+                score += 10000
+            
+            move_scores.append((score, move))
+        
+        # Сортировка по убыванию
+        move_scores.sort(key=lambda x: x[0], reverse=True)
+        return [m[1] for m in move_scores]
+
     def evaluate_passed_pawns(self, board: List[List[str]]) -> int:
         """НОВОЕ: Оценка проходных пешек"""
         score = 0

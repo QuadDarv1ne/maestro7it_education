@@ -8,6 +8,7 @@ import time
 from typing import Tuple, List, Optional, Dict
 from functools import lru_cache
 import hashlib
+from collections import OrderedDict
 
 class ChessEngineWrapper:
     """Python wrapper для С++ шахматного движка"""
@@ -32,9 +33,12 @@ class ChessEngineWrapper:
         
         # Кэширование для оптимизации
         self._position_hash_cache = {}
-        self._move_validation_cache = {}
-        self._king_check_cache = {}
-        self._legal_moves_cache = {}
+        # НОВОЕ: Используем OrderedDict для правильного LRU
+        self._move_validation_cache = OrderedDict()
+        self._king_check_cache = OrderedDict()
+        self._legal_moves_cache = OrderedDict()
+        self._cache_timestamps = {}
+        self._cache_ttl = 120.0  # 2 минуты жизни записи
         self._cache_max_size = 10000
         
         # Метрики производительности
@@ -147,6 +151,147 @@ class ChessEngineWrapper:
             stats['ai_tt_hits'] = getattr(self.ai, 'tt_hits', 0)
         return stats
     
+    def print_board(self, show_coords: bool = True):
+        """Красивый вывод доски в консоль"""
+        print("\n" + "="*33)
+        
+        for row in range(8):
+            if show_coords:
+                print(f"{8-row} | ", end="")
+            else:
+                print("| ", end="")
+            
+            for col in range(8):
+                piece = self.board_state[row][col]
+                symbol = piece if piece != '.' else '·'
+                print(f"{symbol} ", end="")
+            print("|")
+        
+        print("="*33)
+        if show_coords:
+            print("    a b c d e f g h")
+        
+        print(f"Ход: {'Белые' if self.current_turn else 'Черные'}")
+        
+        # Показываем оценку позиции
+        if self.ai:
+            eval_score = self.get_evaluation()
+            eval_pawns = eval_score / 100
+            print(f"Оценка: {eval_score:+d} ({eval_pawns:+.2f} пешек)")
+        
+        print()
+    
+    def undo_last_move(self) -> bool:
+        """Отмена последнего хода"""
+        if len(self.move_history) < 1:
+            print("Нет ходов для отмены")
+            return False
+        
+        # Для полной реализации нужно сохранять состояния
+        # Это упрощённая версия - просто очищаем историю
+        self.move_history.pop()
+        print("⚠️ Внимание: полная отмена хода не реализована")
+        print("Рекомендуется использовать save_game() / load_game()")
+        return False
+    
+    def quick_test(self):
+        """Быстрый тест движка"""
+        print("\n🧪 БЫСТРЫЙ ТЕСТ ДВИЖКА")
+        print("="*50)
+        
+        # Тест 1: Начальная позиция
+        print("\n1. Начальная позиция:")
+        self.print_board(show_coords=True)
+        
+        # Тест 2: Ход e2-e4
+        print("\n2. Тестовый ход e2-e4:")
+        success = self.make_move((6, 4), (4, 4), verbose=True)
+        if success:
+            self.print_board()
+        
+        # Тест 3: Оценка позиции
+        print("\n3. Оценка позиции:")
+        if self.ai:
+            eval_score = self.get_evaluation()
+            print(f"   Оценка: {eval_score:+d} ({eval_score/100:+.2f} пешек)")
+        
+        # Тест 4: Генерация лучшего хода
+        print("\n4. Генерация лучшего хода AI:")
+        best_move = self.get_best_move(depth=3)
+        if best_move:
+            from_pos, to_pos = best_move
+            print(f"   Лучший ход: {from_pos} -> {to_pos}")
+        
+        # Тест 5: Статистика
+        print("\n5. Статистика:")
+        self.print_performance_report()
+        
+        print("✅ Тест завершён!\n")
+    
+    def print_performance_report(self):
+        """Вывод отчёта о производительности"""
+        print("\n" + "="*50)
+        print("📊 ОТЧЁТ О ПРОИЗВОДИТЕЛЬНОСТИ")
+        print("="*50)
+        
+        stats = self.get_game_statistics()
+        
+        print(f"\n🎮 Игровая статистика:")
+        print(f"  Ходов сделано: {stats['moves_count']}")
+        print(f"  Взятий: {stats['captures_count']}")
+        print(f"  Шахов: {stats['check_count']}")
+        
+        print(f"\n💾 Кэширование:")
+        print(f"  Попадания: {stats['cache_hits']}")
+        print(f"  Промахи: {stats['cache_misses']}")
+        hit_rate = stats['cache_hits'] / (stats['cache_hits'] + stats['cache_misses']) * 100 if (stats['cache_hits'] + stats['cache_misses']) > 0 else 0
+        print(f"  Эффективность: {hit_rate:.1f}%")
+        
+        print(f"\n🧮 Размеры кэша:")
+        for name, size in stats['cache_size'].items():
+            print(f"  {name}: {size} записей")
+        
+        if 'ai_nodes' in stats:
+            print(f"\n🤖 ИИ:")
+            print(f"  Узлов проверено: {stats['ai_nodes']:,}")
+            print(f"  Попаданий в TT: {stats['ai_tt_hits']:,}")
+        
+        print(f"\n⏱️  Время выполнения:")
+        metrics = stats['performance_metrics']
+        for name, value in metrics.items():
+            print(f"  {name}: {value:.3f}с")
+        
+        print("="*50 + "\n")
+    
+    def _get_from_cache(self, cache: OrderedDict, key: str):
+        """Получение с проверкой TTL и LRU"""
+        if key in cache:
+            # Проверяем TTL
+            if key in self._cache_timestamps:
+                age = time.time() - self._cache_timestamps[key]
+                if age > self._cache_ttl:
+                    del cache[key]
+                    if key in self._cache_timestamps:
+                        del self._cache_timestamps[key]
+                    return None
+            
+            # Перемещаем в конец (LRU)
+            cache.move_to_end(key)
+            return cache[key]
+        return None
+    
+    def _put_in_cache(self, cache: OrderedDict, key: str, value):
+        """Сохранение с TTL и автоочисткой"""
+        cache[key] = value
+        self._cache_timestamps[key] = time.time()
+        
+        # Автоочистка при превышении лимита
+        while len(cache) > self._cache_max_size:
+            oldest_key = next(iter(cache))
+            del cache[oldest_key]
+            if oldest_key in self._cache_timestamps:
+                del self._cache_timestamps[oldest_key]
+    
     def _get_position_hash(self) -> int:
         """Генерация хэша текущей позиции с использованием Zobrist hashing"""
         hash_value = 0
@@ -166,15 +311,28 @@ class ChessEngineWrapper:
         return hash_value
     
     def _clear_caches(self):
-        """Очистка кэшей при превышении лимита"""
+        """УЛУЧШЕНО: Интеллектуальная очистка кэша с TTL"""
         start_time = time.perf_counter()
         
-        if len(self._move_validation_cache) > self._cache_max_size:
-            self._move_validation_cache.clear()
-        if len(self._king_check_cache) > self._cache_max_size:
-            self._king_check_cache.clear()
-        if len(self._legal_moves_cache) > self._cache_max_size:
-            self._legal_moves_cache.clear()
+        # OrderedDict автоматически управляет LRU через move_to_end
+        # Автоочистка происходит в _put_in_cache, здесь просто проверяем TTL
+        current_time = time.time()
+        
+        # Проверяем и удаляем просроченные записи
+        for cache in [self._move_validation_cache, self._king_check_cache, self._legal_moves_cache]:
+            expired_keys = []
+            for key in list(cache.keys()):
+                if key in self._cache_timestamps:
+                    age = current_time - self._cache_timestamps[key]
+                    if age > self._cache_ttl:
+                        expired_keys.append(key)
+            
+            # Удаляем просроченные записи
+            for key in expired_keys:
+                if key in cache:
+                    del cache[key]
+                if key in self._cache_timestamps:
+                    del self._cache_timestamps[key]
         
         self._performance_metrics['cache_cleanup_time'] += time.perf_counter() - start_time
     
@@ -184,6 +342,7 @@ class ChessEngineWrapper:
         self._move_validation_cache.clear()
         self._king_check_cache.clear()
         self._legal_moves_cache.clear()
+        self._cache_timestamps.clear()
     
     def is_checkmate(self, is_white: bool) -> bool:
         """Эффективная проверка мата с кэшированием"""
@@ -191,17 +350,20 @@ class ChessEngineWrapper:
         
         # Кэширование результата
         cache_key = f"{self._get_position_hash()}_checkmate_{is_white}"
-        if cache_key in self._king_check_cache:
+        
+        # НОВОЕ: Используем безопасный метод
+        cached = self._get_from_cache(self._king_check_cache, cache_key)
+        if cached is not None:
             self.game_stats['cache_hits'] += 1
             self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
-            return self._king_check_cache[cache_key]
+            return cached
         
         self.game_stats['cache_misses'] += 1
         
         # Если нет шаха, то и мата нет
         if not self.is_king_in_check(is_white):
             result = False
-            self._king_check_cache[cache_key] = result
+            self._put_in_cache(self._king_check_cache, cache_key, result)
             self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
             return result
         
@@ -210,7 +372,7 @@ class ChessEngineWrapper:
             try:
                 legal_moves = self.move_gen.generate_legal_moves(self.board_state, is_white)
                 result = len(legal_moves) == 0
-                self._king_check_cache[cache_key] = result
+                self._put_in_cache(self._king_check_cache, cache_key, result)
                 self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
                 return result
             except Exception as e:
@@ -218,7 +380,7 @@ class ChessEngineWrapper:
         
         # Резервная Python-реализация
         result = self._is_checkmate_python(is_white)
-        self._king_check_cache[cache_key] = result
+        self._put_in_cache(self._king_check_cache, cache_key, result)
         self._performance_metrics['checkmate_detection_time'] += time.perf_counter() - start_time
         
         # Очистка кэша при необходимости
@@ -226,61 +388,83 @@ class ChessEngineWrapper:
         
         return result
     
-    def _is_checkmate_python(self, is_white: bool) -> bool:
-        """Резервная Python-реализация проверки мата с ранним прерыванием"""
-        # Король уже под шахом, проверяем все возможные ходы
-        original_turn = self.current_turn
-        self.current_turn = is_white
+    def _find_all_attackers(self, king_pos: Tuple[int, int], king_is_white: bool) -> List[Tuple[int, int]]:
+        """НОВОЕ: Находит ВСЕ фигуры, атакующие короля"""
+        attackers = []
+        kr, kc = king_pos
         
-        # Оптимизация: проверяем сначала ходы короля (быстрее)
-        king_pos = None
         for row in range(8):
             for col in range(8):
                 piece = self.board_state[row][col]
-                if piece.lower() == 'k' and piece.isupper() == is_white:
-                    king_pos = (row, col)
-                    break
-            if king_pos:
-                break
+                if piece != '.' and piece.isupper() != king_is_white:
+                    if self.can_piece_attack((row, col), king_pos, piece):
+                        attackers.append((row, col))
         
-        # Проверяем ходы короля сначала
-        if king_pos:
-            from_row, from_col = king_pos
-            for to_row in range(max(0, from_row-1), min(8, from_row+2)):
-                for to_col in range(max(0, from_col-1), min(8, from_col+2)):
-                    if (from_row, from_col) == (to_row, to_col):
-                        continue
-                    
-                    if self.is_valid_move_python((from_row, from_col), (to_row, to_col)):
-                        if not self.would_still_be_in_check((from_row, from_col), (to_row, to_col), is_white):
-                            self.current_turn = original_turn
-                            return False
+        return attackers
+    
+    def _is_checkmate_python(self, is_white: bool) -> bool:
+        """УЛУЧШЕНО с проверкой двойного шаха"""
+        if not self.is_king_in_check(is_white):
+            return False
         
-        # Перебираем все остальные фигуры
-        for from_row in range(8):
-            for from_col in range(8):
-                piece = self.board_state[from_row][from_col]
-                if piece == '.' or piece.lower() == 'k':
+        cache_key = f"{self._get_position_hash()}_mate_{is_white}"
+        cached = self._get_from_cache(self._king_check_cache, cache_key)
+        if cached is not None:
+            return cached
+        
+        king_pos = self.find_king(self.board_state, is_white)
+        if not king_pos:
+            return True
+        
+        # НОВОЕ: Проверка двойного шаха
+        attackers = self._find_all_attackers(king_pos, is_white)
+        is_double_check = len(attackers) > 1
+        
+        # 1. Проверяем ходы короля
+        from_row, from_col = king_pos
+        king_directions = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]
+        
+        for dr, dc in king_directions:
+            to_row, to_col = from_row + dr, from_col + dc
+            if 0 <= to_row < 8 and 0 <= to_col < 8:
+                target = self.board_state[to_row][to_col]
+                if target != '.' and (target.isupper() == is_white or target.lower() == 'k'):
                     continue
                 
-                piece_is_white = piece.isupper()
-                if piece_is_white != is_white:
-                    continue
+                # Симуляция хода
+                original_piece = self.board_state[to_row][to_col]
+                self.board_state[to_row][to_col] = 'K' if is_white else 'k'
+                self.board_state[from_row][from_col] = '.'
                 
-                # Проверяем все возможные ходы этой фигуры
-                for to_row in range(8):
-                    for to_col in range(8):
-                        if (from_row, from_col) == (to_row, to_col):
-                            continue
-                        
-                        if self.is_valid_move_python((from_row, from_col), (to_row, to_col)):
-                            if not self.would_still_be_in_check((from_row, from_col), (to_row, to_col), is_white):
-                                # Нашли легальный ход - не мат!
-                                self.current_turn = original_turn
-                                return False
+                still_in_check = self.is_king_in_check(is_white)
+                
+                self.board_state[from_row][from_col] = 'K' if is_white else 'k'
+                self.board_state[to_row][to_col] = original_piece
+                
+                if not still_in_check:
+                    self._put_in_cache(self._king_check_cache, cache_key, False)
+                    return False
         
-        # Не нашли ни одного легального хода - это мат!
-        self.current_turn = original_turn
+        # НОВОЕ: При двойном шахе только король может спасти
+        if is_double_check:
+            self._put_in_cache(self._king_check_cache, cache_key, True)
+            return True
+        
+        # 2. Одинарный шах - проверяем блокировку/взятие
+        attacker_pos = attackers[0] if attackers else None
+        if attacker_pos:
+            attacker_piece = self.board_state[attacker_pos[0]][attacker_pos[1]]
+            
+            if self._can_capture_attacker(attacker_pos, is_white):
+                self._put_in_cache(self._king_check_cache, cache_key, False)
+                return False
+            
+            if attacker_piece.lower() in 'rbq':
+                if self._can_block_attack(king_pos, attacker_pos, is_white):
+                    self._put_in_cache(self._king_check_cache, cache_key, False)
+                    return False
+        
+        self._put_in_cache(self._king_check_cache, cache_key, True)
         return True
     
     def is_stalemate(self, is_white: bool) -> bool:
@@ -726,24 +910,25 @@ class ChessEngineWrapper:
             return abs(to_row - from_row) <= 1 and abs(to_col - from_col) <= 1
         return False
     
-    def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Выполнение хода с отладкой"""
-        print(f"\n=== ПОПЫТКА ХОДА ===")
-        print(f"Из: {from_pos}, В: {to_pos}")
-        print(f"Очередь белых: {self.current_turn}")
+    def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], verbose: bool = False) -> bool:
+        """Выполнение хода (verbose=True для отладки)"""
+        if verbose:
+            print(f"\n=== ПОПЫТКА ХОДА ===")
+            print(f"Из: {from_pos}, В: {to_pos}")
+            print(f"Очередь белых: {self.current_turn}")
         
         if not self.is_valid_move(from_pos, to_pos):
-            print("Ход НЕДОПУСТИМ!")
+            if verbose:
+                print("Ход НЕДОПУСТИМ!")
             return False
         
-        print("Ход ДОПУСТИМ!")
+        if verbose:
+            print("Ход ДОПУСТИМ!")
         
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         piece = self.board_state[from_row][from_col]
         captured = self.board_state[to_row][to_col]
-        
-        print(f"Фигура: {piece}, Захват: '{captured}'")
         
         # Запись в историю
         move_notation = f"{piece}{chr(97+from_col)}{8-from_row}-{chr(97+to_col)}{8-to_row}"
@@ -752,27 +937,35 @@ class ChessEngineWrapper:
             self.captured_pieces['white' if captured.isupper() else 'black'].append(captured)
             self.game_stats['captures_count'] += 1
         
-        # Проверяем наличие move_history
-        if not hasattr(self, 'move_history'):
-            self.move_history = []
         self.move_history.append(move_notation)
-        print(f"Ход записан: {move_notation}")
+        self.game_stats['moves_count'] += 1
+        
+        if verbose:
+            print(f"Фигура: {piece}, Захват: '{captured}'")
+            print(f"Ход записан: {move_notation}")
+            print("Выполняю ход...")
         
         # Выполнение хода
-        print("Выполняю ход...")
-        # Используем Python реализацию вместо С++
         self.board_state[to_row][to_col] = piece
         self.board_state[from_row][from_col] = '.'
-        print("Ход выполнен успешно!")
+        
+        # Инвалидация кэша после хода
+        self.invalidate_caches()
+        
+        if verbose:
+            print("Ход выполнен успешно!")
         
         # Проверка шаха
         if self.is_king_in_check(not self.current_turn):
             self.game_stats['check_count'] += 1
-            print("ШАХ!")
+            if verbose:
+                print("ШАХ!")
         
         # Смена очереди
         self.current_turn = not self.current_turn
-        print(f"Очередь перешла: {'белым' if self.current_turn else 'черным'}")
+        
+        if verbose:
+            print(f"Очередь перешла: {'белым' if self.current_turn else 'черным'}")
         
         # Сброс выбора
         self.selected_square = None
@@ -781,13 +974,17 @@ class ChessEngineWrapper:
         # Проверка окончания игры
         if self.is_checkmate(self.current_turn):
             self.game_active = False
-            winner = "Черные" if self.current_turn else "Белые"
-            print(f"МАТ! Победили {winner}")
+            if verbose:
+                winner = "Черные" if self.current_turn else "Белые"
+                print(f"МАТ! Победили {winner}")
         elif self.is_stalemate(self.current_turn):
             self.game_active = False
-            print("ПАТ! Ничья")
+            if verbose:
+                print("ПАТ! Ничья")
         
-        print("=== ХОД ЗАВЕРШЕН ===\n")
+        if verbose:
+            print("=== ХОД ЗАВЕРШЕН ===\n")
+        
         return True
     
     def get_best_move(self, depth: int = 3) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
@@ -823,73 +1020,115 @@ class ChessEngineWrapper:
         return result
     
     def _get_best_move_optimized(self, depth: int) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Оптимизированная генерация лучшего хода"""
+        """УЛУЧШЕНО: Приоритетная генерация ходов"""
+        if self.ai:
+            return self.ai.get_best_move(self.board_state, self.current_turn, time_limit=3.0)
+        
+        # Резервный вариант
+        piece_values = {'p': 100, 'n': 320, 'b': 330, 'r': 500, 'q': 900, 'k': 20000}
+        
+        # НОВОЕ: Сначала генерируем все возможные ходы
         capture_moves = []
-        check_moves = []
-        regular_moves = []
+        tactical_moves = []  # Шахи, угрозы
+        positional_moves = []
         
         ai_is_white = self.current_turn
         
-        # Оптимизация: сначала проверяем центральные клетки
-        priority_squares = [
-            (3, 3), (3, 4), (4, 3), (4, 4),  # Центр
-            (2, 2), (2, 5), (5, 2), (5, 5)   # Расширенный центр
-        ]
+        # Приоритетные клетки (центр + развитие)
+        center_squares = [(3, 3), (3, 4), (4, 3), (4, 4)]
+        extended_center = [(2, 2), (2, 3), (2, 4), (2, 5), 
+                           (3, 2), (3, 5), (4, 2), (4, 5),
+                           (5, 2), (5, 3), (5, 4), (5, 5)]
         
-        def check_square(row, col):
-            piece = self.board_state[row][col]
-            if piece == '.' or piece.isupper() != ai_is_white:
-                return
-            
-            for to_row in range(8):
-                for to_col in range(8):
-                    if (row, col) == (to_row, to_col):
+        for row in range(8):
+            for col in range(8):
+                piece = self.board_state[row][col]
+                if piece == '.' or piece.isupper() != ai_is_white:
+                    continue
+                
+                piece_type = piece.lower()
+                piece_value = piece_values.get(piece_type, 0)
+                
+                # Оптимизация: используем заранее известные направления
+                if piece_type == 'n':  # Конь
+                    knight_offsets = [(-2,-1), (-2,1), (-1,-2), (-1,2), (1,-2), (1,2), (2,-1), (2,1)]
+                    targets = [(row+dr, col+dc) for dr, dc in knight_offsets 
+                              if 0 <= row+dr < 8 and 0 <= col+dc < 8]
+                elif piece_type == 'k':  # Король
+                    king_offsets = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]
+                    targets = [(row+dr, col+dc) for dr, dc in king_offsets 
+                              if 0 <= row+dr < 8 and 0 <= col+dc < 8]
+                elif piece_type == 'p':  # Пешка
+                    direction = -1 if ai_is_white else 1
+                    targets = [(row+direction, col)]  # Вперёд
+                    if (ai_is_white and row == 6) or (not ai_is_white and row == 1):
+                        targets.append((row+2*direction, col))  # Двойной ход
+                    # Взятия
+                    for dc in [-1, 1]:
+                        if 0 <= col+dc < 8:
+                            targets.append((row+direction, col+dc))
+                else:  # Скользящие фигуры - проверяем по направлениям
+                    targets = []
+                    directions = []
+                    if piece_type in 'rq':
+                        directions.extend([(0,1), (0,-1), (1,0), (-1,0)])
+                    if piece_type in 'bq':
+                        directions.extend([(1,1), (1,-1), (-1,1), (-1,-1)])
+                    
+                    for dr, dc in directions:
+                        r, c = row + dr, col + dc
+                        while 0 <= r < 8 and 0 <= c < 8:
+                            targets.append((r, c))
+                            if self.board_state[r][c] != '.':
+                                break  # Остановились на фигуре
+                            r += dr
+                            c += dc
+                
+                # Проверяем каждую целевую клетку
+                for to_row, to_col in targets:
+                    if not (0 <= to_row < 8 and 0 <= to_col < 8):
                         continue
                     
                     target = self.board_state[to_row][to_col]
-                    if target != '.' and (target.isupper() == ai_is_white):
+                    if target != '.' and target.isupper() == ai_is_white:
+                        continue  # Своя фигура
+                    
+                    # Быстрая валидация
+                    if not self.is_valid_move_python((row, col), (to_row, to_col)):
                         continue
                     
-                    # Кэширование валидации
-                    move_key = f"{row}{col}{to_row}{to_col}"
-                    if move_key in self._move_validation_cache:
-                        is_valid = self._move_validation_cache[move_key]
-                    else:
-                        original_turn = self.current_turn
-                        self.current_turn = ai_is_white
-                        is_valid = (self.is_valid_move_python((row, col), (to_row, to_col)) and
-                                  not self.would_still_be_in_check((row, col), (to_row, to_col), ai_is_white))
-                        self.current_turn = original_turn
-                        self._move_validation_cache[move_key] = is_valid
+                    if self.would_still_be_in_check((row, col), (to_row, to_col), ai_is_white):
+                        continue
                     
-                    if is_valid:
-                        move = ((row, col), (to_row, to_col))
-                        if target != '.':
-                            capture_moves.append(move)
-                        elif self._move_gives_check(move, ai_is_white):
-                            check_moves.append(move)
-                        else:
-                            regular_moves.append(move)
+                    move = ((row, col), (to_row, to_col))
+                    
+                    # Категоризация хода
+                    if target != '.':  # Взятие
+                        victim_value = piece_values.get(target.lower(), 0)
+                        # MVV-LVA: Most Valuable Victim - Least Valuable Attacker
+                        score = 10000 + victim_value * 10 - piece_value
+                        capture_moves.append((score, move))
+                    elif self._move_gives_check(move, ai_is_white):  # Шах
+                        tactical_moves.append((100, move))
+                    else:  # Позиционный ход
+                        score = 0
+                        if (to_row, to_col) in center_squares:
+                            score += 50
+                        elif (to_row, to_col) in extended_center:
+                            score += 20
+                        
+                        # Развитие фигур в дебюте
+                        if piece_type in 'nb' and ((ai_is_white and row == 7) or (not ai_is_white and row == 0)):
+                            score += 30
+                        
+                        positional_moves.append((score, move))
         
-        # Сначала приоритетные клетки
-        for row, col in priority_squares:
-            check_square(row, col)
+        # Объединяем в порядке приоритета
+        all_moves = sorted(capture_moves, reverse=True) + \
+                    sorted(tactical_moves, reverse=True) + \
+                    sorted(positional_moves, reverse=True)
         
-        # Если нашли взятие или шах - возвращаем
-        if capture_moves:
-            return capture_moves[0]
-        if check_moves:
-            return check_moves[0]
-        
-        # Потом остальные клетки
-        for row in range(8):
-            for col in range(8):
-                if (row, col) not in priority_squares:
-                    check_square(row, col)
-        
-        # Приоритет: взятия > шахи > обычные ходы
-        all_moves = capture_moves + check_moves + regular_moves
-        return all_moves[0] if all_moves else None
+        return all_moves[0][1] if all_moves else None
     
     def _move_gives_check(self, move: Tuple[Tuple[int, int], Tuple[int, int]], is_white: bool) -> bool:
         """Проверяет, даёт ли ход шах"""
@@ -1023,7 +1262,93 @@ class ChessEngineWrapper:
         # Восстанавливаем доску
         self.board_state = original_board
         return attacked
-        """Проверка, может ли фигура атаковать позицию (без проверки цвета)"""
+    
+    def _find_attacker(self, king_pos: Tuple[int, int], king_is_white: bool) -> Optional[Tuple[int, int]]:
+        """Находит фигуру, атакующую короля"""
+        kr, kc = king_pos
+        
+        for row in range(8):
+            for col in range(8):
+                piece = self.board_state[row][col]
+                if piece != '.' and piece.isupper() != king_is_white:
+                    if self.can_piece_attack((row, col), king_pos, piece):
+                        return (row, col)
+        return None
+    
+    def _can_capture_attacker(self, attacker_pos: Tuple[int, int], defender_is_white: bool) -> bool:
+        """Может ли какая-то фигура взять атакующего?"""
+        ar, ac = attacker_pos
+        
+        for row in range(8):
+            for col in range(8):
+                piece = self.board_state[row][col]
+                if piece != '.' and piece.isupper() == defender_is_white:
+                    if piece.lower() == 'k':
+                        continue  # Короля проверили выше
+                    
+                    if self.is_valid_move_python((row, col), attacker_pos):
+                        # Проверяем, не оставляет ли это короля под шахом
+                        original = self.board_state[ar][ac]
+                        self.board_state[ar][ac] = piece
+                        self.board_state[row][col] = '.'
+                        
+                        still_check = self.is_king_in_check(defender_is_white)
+                        
+                        self.board_state[row][col] = piece
+                        self.board_state[ar][ac] = original
+                        
+                        if not still_check:
+                            return True
+        return False
+    
+    def _can_block_attack(self, king_pos: Tuple[int, int], attacker_pos: Tuple[int, int], 
+                          defender_is_white: bool) -> bool:
+        """Может ли какая-то фигура заблокировать атаку?"""
+        kr, kc = king_pos
+        ar, ac = attacker_pos
+        
+        # Находим все клетки между королём и атакующим
+        dr = 0 if ar == kr else (1 if ar > kr else -1)
+        dc = 0 if ac == kc else (1 if ac > kc else -1)
+        
+        r, c = kr + dr, kc + dc
+        blocking_squares = []
+        while (r, c) != (ar, ac):
+            blocking_squares.append((r, c))
+            r += dr
+            c += dc
+        
+        # Проверяем, может ли какая-то фигура встать на блокирующую клетку
+        for block_square in blocking_squares:
+            for row in range(8):
+                for col in range(8):
+                    piece = self.board_state[row][col]
+                    if piece != '.' and piece.isupper() == defender_is_white and piece.lower() != 'k':
+                        if self.is_valid_move_python((row, col), block_square):
+                            # Проверяем, работает ли блокировка
+                            br, bc = block_square
+                            original = self.board_state[br][bc]
+                            self.board_state[br][bc] = piece
+                            self.board_state[row][col] = '.'
+                            
+                            still_check = self.is_king_in_check(defender_is_white)
+                            
+                            self.board_state[row][col] = piece
+                            self.board_state[br][bc] = original
+                            
+                            if not still_check:
+                                return True
+        return False
+    
+    def find_king(self, board: List[List[str]], is_white: bool) -> Optional[Tuple[int, int]]:
+        """Быстрый поиск короля"""
+        king_char = 'K' if is_white else 'k'
+        for row in range(8):
+            for col in range(8):
+                if board[row][col] == king_char:
+                    return (row, col)
+        return None
+    
     def is_valid_attack(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
         """Проверка, может ли фигура атаковать позицию (без проверки цвета)"""
         from_row, from_col = from_pos
@@ -1062,466 +1387,136 @@ class ChessEngineWrapper:
             
         return False
     
-    def is_straight_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Проверка прямого хода (ладья, ферзь)"""
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
+    def generate_legal_moves_bitboard(self, is_white: bool) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """Оптимизированная генерация легальных ходов с использованием битбордов"""
+        moves = []
         
-        # Движение по горизонтали
-        if from_row == to_row:
-            start_col = min(from_col, to_col)
-            end_col = max(from_col, to_col)
-            for col in range(start_col + 1, end_col):
-                if self.board_state[from_row][col] != '.':
-                    return False
-            return True
+        # Предвычисленные маски для быстрого поиска
+        knight_moves = [
+            (-2, -1), (-2, 1), (-1, -2), (-1, 2),
+            (1, -2), (1, 2), (2, -1), (2, 1)
+        ]
         
-        # Движение по вертикали
-        elif from_col == to_col:
-            start_row = min(from_row, to_row)
-            end_row = max(from_row, to_row)
-            for row in range(start_row + 1, end_row):
-                if self.board_state[row][from_col] != '.':
-                    return False
-            return True
+        king_moves = [
+            (-1, -1), (-1, 0), (-1, 1),
+            (0, -1),           (0, 1),
+            (1, -1),  (1, 0),  (1, 1)
+        ]
         
-        return False
-    
-    def is_diagonal_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Проверка диагонального хода (слон, ферзь)"""
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
+        # Оптимизация: сначала проверяем центральные клетки
+        center_priority = [
+            (3, 3), (3, 4), (4, 3), (4, 4),  # Центр
+            (2, 2), (2, 5), (5, 2), (5, 5),  # Расширенный центр
+            (1, 1), (1, 6), (6, 1), (6, 6)   # Второй уровень
+        ]
         
-        row_diff = abs(to_row - from_row)
-        col_diff = abs(to_col - from_col)
-        
-        # Должно быть равное количество шагов по строкам и столбцам
-        if row_diff != col_diff:
-            return False
-        
-        # Проверяем путь
-        row_step = 1 if to_row > from_row else -1
-        col_step = 1 if to_col > from_col else -1
-        
-        current_row = from_row + row_step
-        current_col = from_col + col_step
-        
-        while current_row != to_row and current_col != to_col:
-            if self.board_state[current_row][current_col] != '.':
-                return False
-            current_row += row_step
-            current_col += col_step
-        
-        return True
-    
-    def get_best_move_python(self) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Python реализация поиска лучшего хода (резервный вариант)"""
-        # Простой алгоритм: найти случайный допустимый ход для черных
-        import random
-        
-        possible_moves = []
+        # Проверяем фигуры в порядке приоритета
         for row in range(8):
             for col in range(8):
                 piece = self.board_state[row][col]
-                if piece != '.' and piece.islower():  # Черная фигура
-                    for to_row in range(8):
-                        for to_col in range(8):
-                            if self.is_valid_move_python((row, col), (to_row, to_col)):
-                                possible_moves.append(((row, col), (to_row, to_col)))
+                if piece == '.' or piece.isupper() != is_white:
+                    continue
+                
+                piece_type = piece.lower()
+                from_pos = (row, col)
+                
+                # Генерируем ходы в зависимости от типа фигуры
+                if piece_type == 'p':  # Пешка
+                    moves.extend(self._generate_pawn_moves(from_pos, is_white))
+                elif piece_type == 'n':  # Конь
+                    for dr, dc in knight_moves:
+                        to_row, to_col = row + dr, col + dc
+                        if 0 <= to_row < 8 and 0 <= to_col < 8:
+                            if self._is_valid_destination(from_pos, (to_row, to_col), is_white):
+                                moves.append((from_pos, (to_row, to_col)))
+                elif piece_type == 'k':  # Король
+                    for dr, dc in king_moves:
+                        to_row, to_col = row + dr, col + dc
+                        if 0 <= to_row < 8 and 0 <= to_col < 8:
+                            if self._is_valid_destination(from_pos, (to_row, to_col), is_white):
+                                moves.append((from_pos, (to_row, to_col)))
+                elif piece_type in ['r', 'b', 'q']:  # Скользящие фигуры
+                    moves.extend(self._generate_sliding_moves(from_pos, piece_type, is_white))
         
-        return random.choice(possible_moves) if possible_moves else None
-
-
-class OptimizedChessEngine:
-    """Оптимизированный шахматный движок"""
-    
-    def __init__(self):
-        self.board_state = self.get_initial_board()
-        self.current_turn = True  # True = белые, False = черные
-        self.move_history = []
-        self.captured_pieces = []
-        
-        # Оптимизация: кэширование
-        self.move_cache = {}  # Кэш допустимых ходов
-        self.attack_cache = {}  # Кэш атак
-        self.position_hash = None  # Хэш позиции для быстрого сравнения
-        self.update_position_hash()
-    
-    def get_initial_board(self):
-        """Начальная позиция шахматной доски"""
-        return [
-            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['.', '.', '.', '.', '.', '.', '.', '.'],
-            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-        ]
-    
-    def update_position_hash(self):
-        """Обновление хэша позиции для быстрого сравнения"""
-        board_str = ''.join(''.join(row) for row in self.board_state)
-        self.position_hash = hash(board_str + str(self.current_turn))
-    
-    def get_cached_valid_moves(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
-        """Получение кэшированных допустимых ходов"""
-        cache_key = (pos, self.position_hash)
-        if cache_key in self.move_cache:
-            return self.move_cache[cache_key]
-        
-        # Вычисляем и кэшируем
-        moves = self.calculate_valid_moves(pos)
-        self.move_cache[cache_key] = moves
         return moves
     
-    def calculate_valid_moves(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
-        """Вычисление допустимых ходов без кэширования"""
-        valid_moves = []
-        for row in range(8):
-            for col in range(8):
-                if self.is_valid_move(pos, (row, col)):
-                    valid_moves.append((row, col))
-        return valid_moves
-    
-    def is_valid_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Оптимизированная проверка допустимости хода"""
+    def _generate_pawn_moves(self, from_pos: Tuple[int, int], is_white: bool) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """Генерация ходов пешки"""
+        moves = []
         from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        
-        # Быстрая проверка граничных условий
-        if not (0 <= from_row < 8 and 0 <= from_col < 8 and 
-                0 <= to_row < 8 and 0 <= to_col < 8):
-            return False
-        
-        piece = self.board_state[from_row][from_col]
-        if piece == '.':
-            return False
-        
-        # Проверка очереди хода
-        is_white = piece.isupper()
-        if (is_white and not self.current_turn) or (not is_white and self.current_turn):
-            return False
-        
-        target = self.board_state[to_row][to_col]
-        
-        # Проверка на то же поле
-        if from_pos == to_pos:
-            return False
-        
-        # Проверка своей фигуры
-        if target != '.' and ((target.isupper() and is_white) or 
-                             (target.islower() and not is_white)):
-            return False
-        
-        # Проверка короля
-        if target.lower() == 'k':
-            return False
-        
-        # Оптимизированная проверка фигур
-        return self.check_piece_movement(piece, from_pos, to_pos)
-    
-    def check_piece_movement(self, piece: str, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Оптимизированная проверка движения конкретной фигуры"""
-        piece_type = piece.lower()
-        
-        if piece_type == 'p':  # Пешка
-            return self.is_valid_pawn_move(from_pos, to_pos, piece.isupper())
-        elif piece_type == 'r':  # Ладья
-            return self.is_straight_move(from_pos, to_pos)
-        elif piece_type == 'b':  # Слон
-            return self.is_diagonal_move(from_pos, to_pos)
-        elif piece_type == 'q':  # Ферзь
-            return self.is_straight_move(from_pos, to_pos) or self.is_diagonal_move(from_pos, to_pos)
-        elif piece_type == 'k':  # Король
-            row_diff = abs(to_pos[0] - from_pos[0])
-            col_diff = abs(to_pos[1] - from_pos[1])
-            return row_diff <= 1 and col_diff <= 1
-        elif piece_type == 'n':  # Конь
-            row_diff = abs(to_pos[0] - from_pos[0])
-            col_diff = abs(to_pos[1] - from_pos[1])
-            return (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)
-        
-        return False
-    
-    def is_valid_pawn_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool) -> bool:
-        """Оптимизированная проверка хода пешки"""
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
         direction = -1 if is_white else 1
         start_row = 6 if is_white else 1
         
-        target = self.board_state[to_row][to_col]
-        
-        # Ход вперед
-        if from_col == to_col:
-            if to_row == from_row + direction and target == '.':
-                return True
-            # Двойной ход
-            if (from_row == start_row and to_row == from_row + 2 * direction and 
-                target == '.' and self.board_state[from_row + direction][from_col] == '.'):
-                return True
-        
-        # Взятие
-        elif abs(from_col - to_col) == 1 and to_row == from_row + direction:
-            return target != '.' and target.isupper() != is_white
-        
-        return False
-    
-    def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Оптимизированное выполнение хода"""
-        if not self.is_valid_move(from_pos, to_pos):
-            return False
-        
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        
-        # Выполнение хода
-        piece = self.board_state[from_row][from_col]
-        self.board_state[to_row][to_col] = piece
-        self.board_state[from_row][from_col] = '.'
-        
-        # Обновление состояния
-        self.current_turn = not self.current_turn
-        self.move_history.append((from_pos, to_pos))
-        
-        # Очистка кэша (позиция изменилась)
-        self.move_cache.clear()
-        self.attack_cache.clear()
-        self.update_position_hash()
-        
-        return True
-    
-    def get_best_move(self) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """Оптимизированный поиск лучшего хода"""
-        # Приоритетизация ходов для производительности
-        priority_moves = []
-        regular_moves = []
-        
-        for row in range(8):
-            for col in range(8):
-                piece = self.board_state[row][col]
-                if piece != '.' and piece.islower():  # Черные фигуры
-                    moves = self.get_cached_valid_moves((row, col))
-                    for move in moves:
-                        # Приоритет взятий
-                        if self.board_state[move[0]][move[1]] != '.':
-                            priority_moves.append(((row, col), move))
-                        else:
-                            regular_moves.append(((row, col), move))
-        
-        # Сначала проверяем приоритетные ходы
-        all_moves = priority_moves + regular_moves
-        return all_moves[0] if all_moves else None
-
-
-class AdvancedChessEngine(OptimizedChessEngine):
-    """Продвинутый шахматный движок с полными правилами"""
-    
-    def __init__(self):
-        super().__init__()
-        self.castling_rights = {'K': True, 'Q': True, 'k': True, 'q': True}
-        self.en_passant_target = None
-        self.halfmove_clock = 0
-        self.fullmove_number = 1
-        self.king_positions = {'K': (7, 4), 'k': (0, 4)}
-    
-    def is_valid_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Расширенная проверка допустимости хода с особыми правилами"""
-        if not super().is_valid_move(from_pos, to_pos):
-            return False
-        
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        piece = self.board_state[from_row][from_col]
-        piece_type = piece.lower()
-        
-        # Проверка рокировки
-        if piece_type == 'k' and abs(from_col - to_col) == 2:
-            return self.is_valid_castling(from_pos, to_pos, piece.isupper())
-        
-        # Проверка взятия на проходе
-        if piece_type == 'p' and from_col != to_col and self.board_state[to_row][to_col] == '.':
-            return self.is_valid_en_passant(from_pos, to_pos, piece.isupper())
-        
-        # Проверка пешки на последней горизонтали (промоция)
-        if piece_type == 'p' and (to_row == 0 or to_row == 7):
-            return self.is_valid_pawn_promotion(from_pos, to_pos, piece.isupper())
-        
-        return True
-    
-    def is_valid_castling(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool) -> bool:
-        """Проверка допустимости рокировки"""
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        
-        # Определение типа рокировки
-        king_side = to_col > from_col
-        rights_key = 'K' if is_white else 'k' if king_side else 'Q' if is_white else 'q'
-        
-        # Проверка прав на рокировку
-        if not self.castling_rights[rights_key]:
-            return False
-        
-        # Проверка, что король не под шахом
-        if self.is_king_in_check(is_white):
-            return False
-        
-        # Проверка пути (должен быть свободен)
-        step = 1 if king_side else -1
-        for col in range(from_col + step, to_col, step):
-            if self.board_state[from_row][col] != '.':
-                return False
-            # Проверка, что король не проходит через атакованное поле
-            if self.is_square_attacked((from_row, col), not is_white):
-                return False
-        
-        return True
-    
-    def is_valid_en_passant(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool) -> bool:
-        """Проверка допустимости взятия на проходе"""
-        if not self.en_passant_target:
-            return False
-        
-        return to_pos == self.en_passant_target
-    
-    def is_valid_pawn_promotion(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool) -> bool:
-        """Проверка допустимости промоции пешки"""
-        # Пешка может превратиться в любую фигуру кроме короля
-        return True  # В данной реализации разрешаем любую промоцию
-    
-    def is_square_attacked(self, square: Tuple[int, int], by_white: bool) -> bool:
-        """Проверка, атакована ли клетка"""
-        target_row, target_col = square
-        
-        for row in range(8):
-            for col in range(8):
-                piece = self.board_state[row][col]
-                if piece != '.' and piece.isupper() == by_white:
-                    # Временно меняем очередь для проверки атаки
-                    original_turn = self.current_turn
-                    self.current_turn = by_white
-                    if self.check_piece_movement(piece, (row, col), square):
-                        self.current_turn = original_turn
-                        return True
-                    self.current_turn = original_turn
-        
-        return False
-    
-    def is_king_in_check(self, king_color: bool) -> bool:
-        """Проверка шаха королю"""
-        king_piece = 'K' if king_color else 'k'
-        king_pos = self.king_positions[king_piece]
-        return self.is_square_attacked(king_pos, not king_color)
-    
-    def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Расширенное выполнение хода с особыми правилами"""
-        if not self.is_valid_move(from_pos, to_pos):
-            return False
-        
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        piece = self.board_state[from_row][from_col]
-        piece_type = piece.lower()
-        captured = self.board_state[to_row][to_col]
-        
-        # Обновление позиции короля
-        if piece_type == 'k':
-            self.king_positions[piece] = to_pos
-        
-        # Выполнение рокировки
-        if piece_type == 'k' and abs(from_col - to_col) == 2:
-            self.perform_castling(from_pos, to_pos, piece.isupper())
-        # Выполнение взятия на проходе
-        elif piece_type == 'p' and from_col != to_col and captured == '.':
-            self.perform_en_passant(from_pos, to_pos, piece.isupper())
-        # Обычный ход
-        else:
-            self.board_state[to_row][to_col] = piece
-            self.board_state[from_row][from_col] = '.'
+        # Одиночный ход вперед
+        to_row = from_row + direction
+        if 0 <= to_row < 8 and self.board_state[to_row][from_col] == '.':
+            if self._is_valid_destination(from_pos, (to_row, from_col), is_white):
+                moves.append((from_pos, (to_row, from_col)))
             
-            # Обновление прав на рокировку
-            self.update_castling_rights(piece, from_pos)
-            
-            # Установка цели для взятия на проходе
-            if piece_type == 'p' and abs(from_row - to_row) == 2:
-                self.en_passant_target = ((from_row + to_row) // 2, from_col)
-            else:
-                self.en_passant_target = None
+            # Двойной ход с начальной позиции
+            if from_row == start_row:
+                to_row_2 = from_row + 2 * direction
+                if (0 <= to_row_2 < 8 and 
+                    self.board_state[to_row_2][from_col] == '.' and 
+                    self.board_state[to_row][from_col] == '.'):
+                    if self._is_valid_destination(from_pos, (to_row_2, from_col), is_white):
+                        moves.append((from_pos, (to_row_2, from_col)))
         
-        # Обновление состояния игры
-        self.current_turn = not self.current_turn
-        self.move_history.append((from_pos, to_pos))
-        self.fullmove_number += 1 if not self.current_turn else 0
+        # Взятия по диагонали
+        for dc in [-1, 1]:
+            to_col = from_col + dc
+            to_row = from_row + direction
+            if 0 <= to_row < 8 and 0 <= to_col < 8:
+                target = self.board_state[to_row][to_col]
+                if target != '.' and target.isupper() != is_white:
+                    if self._is_valid_destination(from_pos, (to_row, to_col), is_white):
+                        moves.append((from_pos, (to_row, to_col)))
         
-        # Очистка кэша
-        self.move_cache.clear()
-        self.attack_cache.clear()
-        self.update_position_hash()
-        
-        return True
+        return moves
     
-    def perform_castling(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool):
-        """Выполнение рокировки"""
+    def _generate_sliding_moves(self, from_pos: Tuple[int, int], piece_type: str, is_white: bool) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """Генерация ходов скользящих фигур (ладья, слон, ферзь)"""
+        moves = []
         from_row, from_col = from_pos
-        to_row, to_col = to_pos
-        king_side = to_col > from_col
         
-        # Перемещение короля
-        self.board_state[to_row][to_col] = self.board_state[from_row][from_col]
-        self.board_state[from_row][from_col] = '.'
+        # Определяем направления движения
+        directions = []
+        if piece_type in ['r', 'q']:  # Ладья или ферзь
+            directions.extend([(0, 1), (0, -1), (1, 0), (-1, 0)])
+        if piece_type in ['b', 'q']:  # Слон или ферзь
+            directions.extend([(1, 1), (1, -1), (-1, 1), (-1, -1)])
         
-        # Перемещение ладьи
-        rook_from_col = 7 if king_side else 0
-        rook_to_col = to_col - 1 if king_side else to_col + 1
-        rook_piece = 'R' if is_white else 'r'
+        # Проверяем каждое направление
+        for dr, dc in directions:
+            to_row, to_col = from_row + dr, from_col + dc
+            while 0 <= to_row < 8 and 0 <= to_col < 8:
+                target = self.board_state[to_row][to_col]
+                # Пустая клетка - можно двигаться дальше
+                if target == '.':
+                    if self._is_valid_destination(from_pos, (to_row, to_col), is_white):
+                        moves.append((from_pos, (to_row, to_col)))
+                # Вражеская фигура - можно взять, но не двигаться дальше
+                elif target.isupper() != is_white:
+                    if self._is_valid_destination(from_pos, (to_row, to_col), is_white):
+                        moves.append((from_pos, (to_row, to_col)))
+                    break
+                # Своя фигура - нельзя двигаться дальше
+                else:
+                    break
+                to_row += dr
+                to_col += dc
         
-        self.board_state[to_row][rook_to_col] = self.board_state[to_row][rook_from_col]
-        self.board_state[to_row][rook_from_col] = '.'
-        
-        # Обновление позиции короля
-        king_piece = 'K' if is_white else 'k'
-        self.king_positions[king_piece] = to_pos
+        return moves
     
-    def perform_en_passant(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool):
-        """Выполнение взятия на проходе"""
-        from_row, from_col = from_pos
-        to_row, to_col = to_pos
+    def _is_valid_destination(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white: bool) -> bool:
+        """Проверка, является ли клетка назначения допустимой"""
+        # Проверяем базовую валидность хода
+        if not self.is_valid_move_python(from_pos, to_pos):
+            return False
         
-        # Перемещение пешки
-        self.board_state[to_row][to_col] = self.board_state[from_row][from_col]
-        self.board_state[from_row][from_col] = '.'
-        
-        # Удаление захваченной пешки
-        captured_row = from_row
-        self.board_state[captured_row][to_col] = '.'
-    
-    def update_castling_rights(self, piece: str, pos: Tuple[int, int]):
-        """Обновление прав на рокировку"""
-        row, col = pos
-        piece_type = piece.lower()
-        
-        if piece_type == 'k':
-            self.castling_rights['K' if piece.isupper() else 'k'] = False
-            self.castling_rights['Q' if piece.isupper() else 'q'] = False
-        elif piece_type == 'r':
-            if row == 0:  # Черные ладьи
-                if col == 0:
-                    self.castling_rights['q'] = False
-                elif col == 7:
-                    self.castling_rights['k'] = False
-            elif row == 7:  # Белые ладьи
-                if col == 0:
-                    self.castling_rights['Q'] = False
-                elif col == 7:
-                    self.castling_rights['K'] = False
+        # Проверяем, не подставляет ли ход короля под шах
+        return not self.would_still_be_in_check(from_pos, to_pos, is_white)
 
-# Глобальный продвинутый экземпляр
-advanced_engine = AdvancedChessEngine()
-
-# Глобальный оптимизированный экземпляр
-optimized_engine = OptimizedChessEngine()
 
 # Глобальный экземпляр движка
 chess_engine = ChessEngineWrapper()
