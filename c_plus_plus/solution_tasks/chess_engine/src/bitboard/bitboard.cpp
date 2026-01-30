@@ -1,6 +1,9 @@
 #include "../../include/bitboard.hpp"
 #include <cstring>
 #include <cassert>
+#include <sstream>
+#include <cctype>
+#include <cstdlib>
 
 // Инициализация констант
 const int BitboardUtils::KNIGHT_DELTAS[8] = {-17, -15, -10, -6, 6, 10, 15, 17};
@@ -117,6 +120,21 @@ Bitboard::PieceType Bitboard::movePiece(int from_square, int to_square) {
     if (piece == PIECE_TYPE_COUNT || color == COLOR_COUNT) return PIECE_TYPE_COUNT;
 
     PieceType captured = getPieceType(to_square);
+    
+    // Сохраняем состояние для отмены
+    MoveState state;
+    state.from_square = from_square;
+    state.to_square = to_square;
+    state.moved_piece = piece;
+    state.captured_piece = captured;
+    state.moved_color = color;
+    state.en_passant_square = en_passant_square_;
+    state.half_move_clock = half_move_clock_;
+    for (int c = 0; c < COLOR_COUNT; c++) {
+        state.castling_rights[c][0] = castling_rights_[c][0];
+        state.castling_rights[c][1] = castling_rights_[c][1];
+    }
+    move_history_.push_back(state);
 
     // 1. Обработка взятия на проходе
     if (piece == PAWN && to_square == en_passant_square_) {
@@ -127,7 +145,8 @@ Bitboard::PieceType Bitboard::movePiece(int from_square, int to_square) {
 
     // 2. Обработка рокировки (движение ладьи)
     if (piece == KING) {
-        if (std::abs(to_square % 8 - from_square % 8) > 1) {
+        int file_diff = (to_square % 8) - (from_square % 8);
+        if (file_diff > 1 || file_diff < -1) {
             int rank = from_square / 8;
             if (to_square % 8 == 6) { // Короткая рокировка
                 movePiece(rank * 8 + 7, rank * 8 + 5);
@@ -147,7 +166,8 @@ Bitboard::PieceType Bitboard::movePiece(int from_square, int to_square) {
     }
 
     // 3. Обновление en passant square
-    if (piece == PAWN && std::abs(to_square / 8 - from_square / 8) == 2) {
+    int rank_diff = (to_square / 8) - (from_square / 8);
+    if (piece == PAWN && (rank_diff == 2 || rank_diff == -2)) {
         en_passant_square_ = (from_square + to_square) / 2;
     } else {
         en_passant_square_ = -1;
@@ -528,6 +548,81 @@ std::string Bitboard::toFen() const {
     fen += std::to_string(full_move_number_);
     
     return fen;
+}
+
+void Bitboard::loadFromFEN(const std::string& fen) {
+    // Очистка всех bitboards
+    for (int c = 0; c < COLOR_COUNT; c++) {
+        for (int p = 0; p < PIECE_TYPE_COUNT; p++) {
+            pieces_[c][p] = 0ULL;
+        }
+        occupancy_[c] = 0ULL;
+    }
+    all_pieces_ = 0ULL;
+    
+    std::istringstream ss(fen);
+    std::string board_part, side_part, castling_part, ep_part;
+    int half_move_clock, full_move_number;
+    
+    // Разбор FEN: позиция стороны рокировки en-passant полуходы полныеходы
+    ss >> board_part >> side_part >> castling_part >> ep_part >> half_move_clock >> full_move_number;
+    
+    // 1. Расстановка фигур на доске
+    int square = 56; // Начинаем с a8 (rank 7, file 0)
+    for (char c : board_part) {
+        if (c == '/') {
+            square -= 16; // Переход на следующую горизонталь (rank)
+        } else if (c >= '1' && c <= '8') {
+            square += (c - '0'); // Пропуск пустых клеток
+        } else {
+            // Определяем цвет и тип фигуры
+            Color color = isupper(c) ? WHITE : BLACK;
+            char piece_char = tolower(c);
+            PieceType piece_type;
+            
+            switch (piece_char) {
+                case 'p': piece_type = PAWN; break;
+                case 'n': piece_type = KNIGHT; break;
+                case 'b': piece_type = BISHOP; break;
+                case 'r': piece_type = ROOK; break;
+                case 'q': piece_type = QUEEN; break;
+                case 'k': piece_type = KING; break;
+                default: square++; continue; // Некорректный символ
+            }
+            
+            setPiece(square, piece_type, color);
+            square++;
+        }
+    }
+    
+    // 2. Определение стороны
+    side_to_move_ = (side_part == "w" || side_part == "W") ? WHITE : BLACK;
+    
+    // 3. Права на рокировку
+    castling_rights_[WHITE][0] = castling_rights_[WHITE][1] = false;
+    castling_rights_[BLACK][0] = castling_rights_[BLACK][1] = false;
+    
+    if (castling_part != "-") {
+        for (char c : castling_part) {
+            if (c == 'K') castling_rights_[WHITE][0] = true; // White kingside
+            if (c == 'Q') castling_rights_[WHITE][1] = true; // White queenside
+            if (c == 'k') castling_rights_[BLACK][0] = true; // Black kingside
+            if (c == 'q') castling_rights_[BLACK][1] = true; // Black queenside
+        }
+    }
+    
+    // 4. Взятие на проходе
+    if (ep_part != "-" && ep_part.length() >= 2) {
+        int file = ep_part[0] - 'a';
+        int rank = ep_part[1] - '1';
+        en_passant_square_ = rank * 8 + file;
+    } else {
+        en_passant_square_ = -1;
+    }
+    
+    // 5. Счетчики
+    half_move_clock_ = half_move_clock;
+    full_move_number_ = full_move_number;
 }
 
 bool Bitboard::operator==(const Bitboard& other) const {

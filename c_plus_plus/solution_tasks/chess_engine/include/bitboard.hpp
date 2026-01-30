@@ -50,6 +50,27 @@ private:
     int half_move_clock_;
     int full_move_number_;
     
+    // История ходов для отмены
+    struct MoveState {
+        int from_square;
+        int to_square;
+        PieceType moved_piece;
+        PieceType captured_piece;
+        Color moved_color;
+        bool castling_rights[COLOR_COUNT][2];
+        int en_passant_square;
+        int half_move_clock;
+        
+        MoveState() : from_square(-1), to_square(-1), moved_piece(PIECE_TYPE_COUNT),
+                      captured_piece(PIECE_TYPE_COUNT), moved_color(WHITE),
+                      en_passant_square(-1), half_move_clock(0) {
+            for (int c = 0; c < COLOR_COUNT; c++) {
+                castling_rights[c][0] = castling_rights[c][1] = false;
+            }
+        }
+    };
+    std::vector<MoveState> move_history_;
+    
     // Вспомогательные функции
     static constexpr int squareToIndex(int rank, int file) {
         return rank * 8 + file;
@@ -108,6 +129,10 @@ public:
     // Отладочные функции
     void printBoard() const;
     std::string toFen() const;
+    void loadFromFEN(const std::string& fen);
+    
+    // История ходов
+    void undoMove();
     
     // Операторы
     bool operator==(const Bitboard& other) const;
