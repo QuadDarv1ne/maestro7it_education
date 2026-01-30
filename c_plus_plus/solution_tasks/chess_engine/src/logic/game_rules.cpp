@@ -31,21 +31,42 @@ bool GameRules::isValidMove(const std::string& algebraicNotation) const {
 }
 
 bool GameRules::isCheck(Color color) const {
-    // TODO: реализовать проверку шаха
-    // Найти короля указанного цвета и проверить, атакован ли он
-    return false;
+    // Находим короля указанного цвета
+    Square kingSquare = INVALID_SQUARE;
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() == PieceType::KING && piece.getColor() == color) {
+            kingSquare = square;
+            break;
+        }
+    }
+    
+    if (kingSquare == INVALID_SQUARE) {
+        return false; // Король не найден (некорректная позиция)
+    }
+    
+    // Проверяем, атакована ли клетка короля противником
+    MoveGenerator moveGen(board_);
+    Color opponentColor = (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    return moveGen.isSquareAttacked(kingSquare, opponentColor);
 }
 
 bool GameRules::isCheckmate(Color color) const {
-    // TODO: реализовать проверку мата
-    // Король под шахом и нет легальных ходов для спасения
-    return false;
+    // Мат = король под шахом И нет легальных ходов
+    if (!isCheck(color)) {
+        return false;
+    }
+    
+    return !hasLegalMoves(color);
 }
 
 bool GameRules::isStalemate(Color color) const {
-    // TODO: реализовать проверку пата
-    // Король не под шахом, но нет легальных ходов
-    return false;
+    // Пат = король НЕ под шахом И нет легальных ходов
+    if (isCheck(color)) {
+        return false;
+    }
+    
+    return !hasLegalMoves(color);
 }
 
 bool GameRules::isDrawByRepetition() const {
@@ -59,8 +80,78 @@ bool GameRules::isDrawByFiftyMoveRule() const {
 }
 
 bool GameRules::isInsufficientMaterial() const {
-    // TODO: реализовать проверку недостатка материала
-    // Только короли, король + слон, король + конь и т.д.
+    // Подсчитываем материал на доске
+    int whiteKnights = 0, blackKnights = 0;
+    int whiteBishops = 0, blackBishops = 0;
+    int whitePawns = 0, blackPawns = 0;
+    int whiteRooks = 0, blackRooks = 0;
+    int whiteQueens = 0, blackQueens = 0;
+    
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.isEmpty()) continue;
+        
+        Color color = piece.getColor();
+        PieceType type = piece.getType();
+        
+        if (type == PieceType::PAWN) {
+            color == Color::WHITE ? whitePawns++ : blackPawns++;
+        } else if (type == PieceType::KNIGHT) {
+            color == Color::WHITE ? whiteKnights++ : blackKnights++;
+        } else if (type == PieceType::BISHOP) {
+            color == Color::WHITE ? whiteBishops++ : blackBishops++;
+        } else if (type == PieceType::ROOK) {
+            color == Color::WHITE ? whiteRooks++ : blackRooks++;
+        } else if (type == PieceType::QUEEN) {
+            color == Color::WHITE ? whiteQueens++ : blackQueens++;
+        }
+    }
+    
+    // Случаи недостаточного материала:
+    // 1. Только короли
+    if (whiteKnights == 0 && blackKnights == 0 &&
+        whiteBishops == 0 && blackBishops == 0 &&
+        whitePawns == 0 && blackPawns == 0 &&
+        whiteRooks == 0 && blackRooks == 0 &&
+        whiteQueens == 0 && blackQueens == 0) {
+        return true;
+    }
+    
+    // 2. Король + конь против короля
+    if ((whiteKnights == 1 && blackKnights == 0 && 
+         whiteBishops == 0 && blackBishops == 0) ||
+        (blackKnights == 1 && whiteKnights == 0 && 
+         whiteBishops == 0 && blackBishops == 0)) {
+        if (whitePawns == 0 && blackPawns == 0 &&
+            whiteRooks == 0 && blackRooks == 0 &&
+            whiteQueens == 0 && blackQueens == 0) {
+            return true;
+        }
+    }
+    
+    // 3. Король + слон против короля
+    if ((whiteBishops == 1 && blackBishops == 0 && 
+         whiteKnights == 0 && blackKnights == 0) ||
+        (blackBishops == 1 && whiteBishops == 0 && 
+         whiteKnights == 0 && blackKnights == 0)) {
+        if (whitePawns == 0 && blackPawns == 0 &&
+            whiteRooks == 0 && blackRooks == 0 &&
+            whiteQueens == 0 && blackQueens == 0) {
+            return true;
+        }
+    }
+    
+    // 4. Король + слон против короля + слон (одноцветные слоны)
+    if (whiteBishops == 1 && blackBishops == 1 &&
+        whiteKnights == 0 && blackKnights == 0 &&
+        whitePawns == 0 && blackPawns == 0 &&
+        whiteRooks == 0 && blackRooks == 0 &&
+        whiteQueens == 0 && blackQueens == 0) {
+        // TODO: проверить что слоны на одноцветных полях
+        // Упрощенная версия - считаем что это недостаточный материал
+        return true;
+    }
+    
     return false;
 }
 
@@ -71,18 +162,46 @@ bool GameRules::makeMove(const Move& move) {
     
     // Выполняем ход
     Piece movingPiece = board_.getPiece(move.from);
-    Piece capturedPiece = board_.getPiece(move.to);
     
-    // Обновляем доску
+    // 1. Обработка рокировки
+    if (move.isCastling) {
+        int rank = board_.rank(move.from);
+        int fromFile = board_.file(move.from);
+        int toFile = board_.file(move.to);
+        
+        // Перемещаем ладью
+        if (toFile == 6) { // Короткая рокировка
+            Square rookFrom = board_.square(7, rank);
+            Square rookTo = board_.square(5, rank);
+            board_.setPiece(rookTo, board_.getPiece(rookFrom));
+            board_.setPiece(rookFrom, Piece());
+        } else if (toFile == 2) { // Длинная рокировка
+            Square rookFrom = board_.square(0, rank);
+            Square rookTo = board_.square(3, rank);
+            board_.setPiece(rookTo, board_.getPiece(rookFrom));
+            board_.setPiece(rookFrom, Piece());
+        }
+    }
+    
+    // 2. Обработка взятия на проходе
+    if (move.isEnPassant) {
+        int fromFile = board_.file(move.from);
+        int toFile = board_.file(move.to);
+        int fromRank = board_.rank(move.from);
+        Square capturedPawnSquare = board_.square(toFile, fromRank);
+        board_.setPiece(capturedPawnSquare, Piece());
+    }
+    
+    // 3. Обработка превращения пешки
+    if (move.promotion != PieceType::EMPTY) {
+        movingPiece = Piece(move.promotion, movingPiece.getColor());
+    }
+    
+    // Стандартное перемещение фигуры
     board_.setPiece(move.to, movingPiece);
-    board_.setPiece(move.from, Piece()); // Очищаем исходную клетку
+    board_.setPiece(move.from, Piece());
     
-    // TODO: обработать специальные ходы
-    // - Рокировка
-    // - Взятие на проходе
-    // - Превращение пешки
-    
-    // Обновляем состояние игры
+    // Обновляем состояние игры (права рокировки, en passant и т.д.)
     updateGameStateAfterMove(move);
     
     // Меняем текущего игрока
@@ -168,10 +287,19 @@ void GameRules::updateGameStateAfterMove(const Move& move) {
 }
 
 bool GameRules::hasLegalMoves(Color color) const {
-    // TODO: проверить, есть ли у игрока легальные ходы
-    Board tempBoard = board_; // Создаем копию для проверки
-    // Это временная реализация
-    return true;
+    // Генерируем все легальные ходы для данного цвета
+    MoveGenerator moveGen(board_);
+    std::vector<Move> legalMoves = moveGen.generateLegalMoves();
+    
+    // Фильтруем ходы, оставляя только ходы текущего игрока
+    for (const Move& move : legalMoves) {
+        Piece piece = board_.getPiece(move.from);
+        if (piece.getColor() == color) {
+            return true; // Найден хотя бы один легальный ход
+        }
+    }
+    
+    return false; // Нет легальных ходов
 }
 
 int GameRules::countPieces(Color color) const {

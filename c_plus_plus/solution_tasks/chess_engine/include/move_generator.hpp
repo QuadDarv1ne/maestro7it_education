@@ -11,13 +11,17 @@ struct Move {
     PieceType promotion;  // Для pawn promotion
     bool isCapture;
     bool isCheck;
+    bool isCastling;      // Для рокировки
+    bool isEnPassant;     // Для взятия на проходе
     
     Move() : from(INVALID_SQUARE), to(INVALID_SQUARE), 
-             promotion(PieceType::EMPTY), isCapture(false), isCheck(false) {}
+             promotion(PieceType::EMPTY), isCapture(false), isCheck(false),
+             isCastling(false), isEnPassant(false) {}
     
     Move(Square from, Square to) : from(from), to(to), 
                                    promotion(PieceType::EMPTY), 
-                                   isCapture(false), isCheck(false) {}
+                                   isCapture(false), isCheck(false),
+                                   isCastling(false), isEnPassant(false) {}
     
     std::string toString() const;
 };
@@ -63,6 +67,8 @@ public:
     // Validation helpers
     bool wouldBeInCheck(Square from, Square to) const;
     bool isSquareAttacked(Square square, Color byColor) const;
+    bool isSquareAttackedOnBoard(const Board& board, Square square, Color byColor) const;
+    bool isAttackedInDirection(const Board& board, Square square, int rankDelta, int fileDelta, Color byColor, bool diagonal) const;
     
 private:
     // Helper methods
@@ -70,6 +76,12 @@ private:
     bool isValidSquare(Square square) const;
     bool isOpponentPiece(Square square) const;
     bool isEmptySquare(Square square) const;
+    
+    // Castling helpers
+    bool canCastleKingside(Color color) const;
+    bool canCastleQueenside(Color color) const;
+    Square findKingSquare(Color color) const;
+    Color oppositeColor(Color color) const;
 };
 
 #endif // MOVE_GENERATOR_HPP

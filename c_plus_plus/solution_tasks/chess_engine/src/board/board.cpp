@@ -164,3 +164,167 @@ void Board::printBoard() const {
     std::cout << "  a b c d e f g h\n";
     std::cout << "\nCurrent player: " << (currentPlayer_ == Color::WHITE ? "White" : "Black") << "\n";
 }
+
+// Загрузка позиции из FEN-нотации
+void Board::setupFromFEN(const std::string& fen) {
+    initializeEmptyBoard();
+    
+    std::istringstream fenStream(fen);
+    std::string boardPart, turn, castling, enPassant, halfMove, fullMove;
+    
+    // Разбираем FEN на части
+    fenStream >> boardPart >> turn >> castling >> enPassant >> halfMove >> fullMove;
+    
+    // 1. Разбор расположения фигур
+    int rank = 7; // Начинаем с 8-й горизонтали
+    int file = 0;
+    
+    for (char c : boardPart) {
+        if (c == '/') {
+            rank--;
+            file = 0;
+        } else if (std::isdigit(c)) {
+            // Пропускаем пустые клетки
+            file += (c - '0');
+        } else {
+            // Определяем цвет и тип фигуры
+            Color color = std::isupper(c) ? Color::WHITE : Color::BLACK;
+            char pieceChar = std::toupper(c);
+            
+            PieceType type = PieceType::EMPTY;
+            switch (pieceChar) {
+                case 'P': type = PieceType::PAWN; break;
+                case 'N': type = PieceType::KNIGHT; break;
+                case 'B': type = PieceType::BISHOP; break;
+                case 'R': type = PieceType::ROOK; break;
+                case 'Q': type = PieceType::QUEEN; break;
+                case 'K': type = PieceType::KING; break;
+            }
+            
+            if (type != PieceType::EMPTY && file < 8) {
+                setPiece(square(file, rank), Piece(type, color));
+                file++;
+            }
+        }
+    }
+    
+    // 2. Разбор очередности хода
+    if (turn == "w" || turn == "W") {
+        currentPlayer_ = Color::WHITE;
+    } else {
+        currentPlayer_ = Color::BLACK;
+    }
+    
+    // 3. Разбор прав на рокировку
+    whiteKingSideCastle_ = false;
+    whiteQueenSideCastle_ = false;
+    blackKingSideCastle_ = false;
+    blackQueenSideCastle_ = false;
+    
+    for (char c : castling) {
+        if (c == 'K') whiteKingSideCastle_ = true;
+        if (c == 'Q') whiteQueenSideCastle_ = true;
+        if (c == 'k') blackKingSideCastle_ = true;
+        if (c == 'q') blackQueenSideCastle_ = true;
+    }
+    
+    // 4. Разбор клетки для взятия на проходе
+    if (enPassant != "-") {
+        enPassantSquare_ = algebraicToSquare(enPassant);
+    } else {
+        enPassantSquare_ = INVALID_SQUARE;
+    }
+    
+    // 5. Разбор счетчиков
+    try {
+        if (!halfMove.empty()) {
+            halfMoveClock_ = std::stoi(halfMove);
+        }
+        if (!fullMove.empty()) {
+            moveCount_ = std::stoi(fullMove);
+        }
+    } catch (...) {
+        // Если не удалось разобрать счетчики, оставляем значения по умолчанию
+    }
+}
+
+// Генерация FEN-нотации из текущей позиции
+std::string Board::getFEN() const {
+    std::ostringstream fen;
+    
+    // 1. Расположение фигур
+    for (int rank = 7; rank >= 0; rank--) {
+        int emptyCount = 0;
+        
+        for (int file = 0; file < 8; file++) {
+            Square sq = square(file, rank);
+            const Piece& piece = getPiece(sq);
+            
+            if (piece.isEmpty()) {
+                emptyCount++;
+            } else {
+                if (emptyCount > 0) {
+                    fen << emptyCount;
+                    emptyCount = 0;
+                }
+                
+                char pieceChar = ' ';
+                switch (piece.getType()) {
+                    case PieceType::PAWN: pieceChar = 'P'; break;
+                    case PieceType::KNIGHT: pieceChar = 'N'; break;
+                    case PieceType::BISHOP: pieceChar = 'B'; break;
+                    case PieceType::ROOK: pieceChar = 'R'; break;
+                    case PieceType::QUEEN: pieceChar = 'Q'; break;
+                    case PieceType::KING: pieceChar = 'K'; break;
+                    default: break;
+                }
+                
+                // Черные фигуры в нижнем регистре
+                if (piece.getColor() == Color::BLACK) {
+                    pieceChar = std::tolower(pieceChar);
+                }
+                
+                fen << pieceChar;
+            }
+        }
+        
+        if (emptyCount > 0) {
+            fen << emptyCount;
+        }
+        
+        if (rank > 0) {
+            fen << '/';
+        }
+    }
+    
+    // 2. Очередность хода
+    fen << ' ' << (currentPlayer_ == Color::WHITE ? 'w' : 'b');
+    
+    // 3. Права на рокировку
+    fen << ' ';
+    std::string castling = "";
+    if (whiteKingSideCastle_) castling += 'K';
+    if (whiteQueenSideCastle_) castling += 'Q';
+    if (blackKingSideCastle_) castling += 'k';
+    if (blackQueenSideCastle_) castling += 'q';
+    
+    if (castling.empty()) {
+        fen << '-';
+    } else {
+        fen << castling;
+    }
+    
+    // 4. Клетка для взятия на проходе
+    fen << ' ';
+    if (enPassantSquare_ == INVALID_SQUARE) {
+        fen << '-';
+    } else {
+        fen << squareToAlgebraic(enPassantSquare_);
+    }
+    
+    // 5. Счетчики
+    fen << ' ' << halfMoveClock_;
+    fen << ' ' << moveCount_;
+    
+    return fen.str();
+}
