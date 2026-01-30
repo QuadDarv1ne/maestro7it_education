@@ -4,6 +4,7 @@
 #include "board.hpp"
 #include "move_generator.hpp"
 #include "position_evaluator.hpp"
+#include "opening_book.hpp"
 #include <limits>
 #include <chrono>
 #include <unordered_map>
@@ -20,6 +21,7 @@ class Minimax {
 private:
     Board& board_;                    ///< Ссылка на текущую игровую доску
     PositionEvaluator evaluator_;     ///< Оценщик позиции
+    OpeningBook openingBook_;         ///< Книга дебютов
     int maxDepth_;                    ///< Максимальная глубина поиска
     std::chrono::milliseconds timeLimit_;  ///< Ограничение времени на поиск
     

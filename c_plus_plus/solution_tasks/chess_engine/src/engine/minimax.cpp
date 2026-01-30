@@ -1,10 +1,12 @@
 #include "../include/minimax.hpp"
+#include "../include/board.hpp"
 #include <algorithm>
 #include <climits>
 #include <random>
 #include <functional>
+#include <iostream>
 
-Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)), historyTable(HISTORY_SIZE, 0) {
+Minimax::Minimax(Board& board, int maxDepth) : board_(board), evaluator_(board), openingBook_(), maxDepth_(maxDepth), timeLimit_(std::chrono::seconds(10)), transpositionTable(HASH_TABLE_SIZE), killerMoves(MAX_PLY, std::vector<Move>(MAX_KILLER_MOVES)), historyTable(HISTORY_SIZE, 0) {
     // Initialize the transposition table
     for(size_t i = 0; i < HASH_TABLE_SIZE; ++i) {
         transpositionTable[i] = TTEntry();
@@ -27,6 +29,18 @@ Move Minimax::findBestMove(Color color) {
     Move bestMove;
     int bestValue = 0;
     bool firstIteration = true;
+    
+    // Проверка книги дебютов
+    std::string fen = board_.toFen();
+    std::string openingMove = openingBook_.getMove(fen);
+    if (!openingMove.empty()) {
+        // Конвертируем ход из книги в формат Move
+        Move move = board_.algebraicToMove(openingMove);
+        if (move.from != INVALID_SQUARE && move.to != INVALID_SQUARE) {
+            std::cout << "Использован ход из книги дебютов: " << openingMove << std::endl;
+            return move;
+        }
+    }
     
     // Итеративное углубление с aspiration search
     for (int depth = 1; depth <= maxDepth_; depth++) {
