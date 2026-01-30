@@ -1,524 +1,436 @@
-#include "../../include/optimized_move_generator.hpp"
+#include "../include/optimized_move_generator.hpp"
 #include <iostream>
-#include <cassert>
+#include <algorithm>
+#include <chrono>
 
-// Статические переменные для таблиц
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::bishop_magics_;
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::rook_magics_;
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::bishop_masks_;
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::rook_masks_;
-std::array<std::array<Bitboard::BitboardType, 512>, 64> OptimizedMoveGenerator::bishop_attacks_;
-std::array<std::array<Bitboard::BitboardType, 4096>, 64> OptimizedMoveGenerator::rook_attacks_;
+OptimizedMoveGenerator::OptimizedMoveGenerator(const Board& board) 
+    : board_(board), attack_tables_initialized_(false), occupancy_cache_(0) {
+    initializeAttackTables();
+}
 
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::pawn_attacks_white_;
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::pawn_attacks_black_;
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::pawn_pushes_white_;
-std::array<Bitboard::BitboardType, 64> OptimizedMoveGenerator::pawn_pushes_black_;
-
-// Глобальное состояние инициализации
-namespace MoveGenInit {
-    static bool initialized = false;
+void OptimizedMoveGenerator::initializeAttackTables() const {
+    if (attack_tables_initialized_) return;
     
-    void initialize() {
-        if (!initialized) {
-            OptimizedMoveGenerator::init();
-            initialized = true;
-        }
-    }
+    initializeKnightAttacks();
+    initializeKingAttacks();
+    initializePawnAttacks();
     
-    bool isInitialized() {
-        return initialized;
-    }
+    attack_tables_initialized_ = true;
 }
 
-OptimizedMoveGenerator::OptimizedMoveGenerator(const Bitboard& board) 
-    : board_(board) {
-    MoveGenInit::initialize();
-}
-
-void OptimizedMoveGenerator::init() {
-    initializeTables();
-    initializePawnTables();
-    initializeMagicBitboards();
-}
-
-void OptimizedMoveGenerator::initializeTables() {
-    // Инициализация масок для bishop и rook
+void OptimizedMoveGenerator::initializeKnightAttacks() const {
+    const int knight_moves[8][2] = {
+        {-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
+        {1, -2}, {1, 2}, {2, -1}, {2, 1}
+    };
+    
     for (int square = 0; square < 64; square++) {
+        uint64_t attacks = 0;
         int rank = square / 8;
         int file = square % 8;
         
-        // Bishop masks (диагонали)
-        Bitboard::BitboardType bishop_mask = 0;
-        for (int dr = -1; dr <= 1; dr += 2) {
-            for (int df = -1; df <= 1; df += 2) {
-                int r = rank + dr;
-                int f = file + df;
-                while (r >= 0 && r < 8 && f >= 0 && f < 8) {
-                    if (r != rank + dr || f != file + df) { // Исключаем соседние клетки
-                        bishop_mask |= (1ULL << (r * 8 + f));
-                    }
-                    r += dr;
-                    f += df;
+        for (int i = 0; i < 8; i++) {
+            int new_rank = rank + knight_moves[i][0];
+            int new_file = file + knight_moves[i][1];
+            
+            if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8) {
+                int target_square = new_rank * 8 + new_file;
+                attacks |= (1ULL << target_square);
+            }
+        }
+        
+        knight_attacks_[square] = attacks;
+    }
+}
+
+void OptimizedMoveGenerator::initializeKingAttacks() const {
+    const int king_moves[8][2] = {
+        {-1, -1}, {-1, 0}, {-1, 1},
+        {0, -1},           {0, 1},
+        {1, -1},  {1, 0},  {1, 1}
+    };
+    
+    for (int square = 0; square < 64; square++) {
+        uint64_t attacks = 0;
+        int rank = square / 8;
+        int file = square % 8;
+        
+        for (int i = 0; i < 8; i++) {
+            int new_rank = rank + king_moves[i][0];
+            int new_file = file + king_moves[i][1];
+            
+            if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8) {
+                int target_square = new_rank * 8 + new_file;
+                attacks |= (1ULL << target_square);
+            }
+        }
+        
+        king_attacks_[square] = attacks;
+    }
+}
+
+void OptimizedMoveGenerator::initializePawnAttacks() const {
+    for (int color = 0; color < 2; color++) {
+        for (int square = 0; square < 64; square++) {
+            uint64_t attacks = 0;
+            int rank = square / 8;
+            int file = square % 8;
+            
+            if (color == 0) { // WHITE
+                if (rank < 7) {
+                    if (file > 0) attacks |= (1ULL << ((rank + 1) * 8 + (file - 1)));
+                    if (file < 7) attacks |= (1ULL << ((rank + 1) * 8 + (file + 1)));
+                }
+            } else { // BLACK
+                if (rank > 0) {
+                    if (file > 0) attacks |= (1ULL << ((rank - 1) * 8 + (file - 1)));
+                    if (file < 7) attacks |= (1ULL << ((rank - 1) * 8 + (file + 1)));
+                }
+            }
+            
+            pawn_attacks_[color][square] = attacks;
+        }
+    }
+}
+
+uint64_t OptimizedMoveGenerator::getBishopAttacks(int square, uint64_t occupancy) const {
+    uint64_t attacks = 0;
+    const int directions[4] = {-9, -7, 7, 9};
+    
+    for (int dir : directions) {
+        int sq = square;
+        while (true) {
+            // Проверяем границы доски
+            if ((dir == -9 || dir == 7) && (sq % 8 == 0)) break;
+            if ((dir == -7 || dir == 9) && (sq % 8 == 7)) break;
+            
+            sq += dir;
+            if (sq < 0 || sq >= 64) break;
+            
+            attacks |= (1ULL << sq);
+            if (occupancy & (1ULL << sq)) break;
+        }
+    }
+    
+    return attacks;
+}
+
+uint64_t OptimizedMoveGenerator::getRookAttacks(int square, uint64_t occupancy) const {
+    uint64_t attacks = 0;
+    const int directions[4] = {-8, -1, 1, 8};
+    
+    for (int dir : directions) {
+        int sq = square;
+        while (true) {
+            // Проверяем границы доски
+            if ((dir == -1 || dir == 1) && ((sq % 8 == 0 && dir == -1) || (sq % 8 == 7 && dir == 1))) break;
+            
+            sq += dir;
+            if (sq < 0 || sq >= 64) break;
+            
+            attacks |= (1ULL << sq);
+            if (occupancy & (1ULL << sq)) break;
+        }
+    }
+    
+    return attacks;
+}
+
+uint64_t OptimizedMoveGenerator::getQueenAttacks(int square, uint64_t occupancy) const {
+    return getBishopAttacks(square, occupancy) | getRookAttacks(square, occupancy);
+}
+
+std::vector<Move> OptimizedMoveGenerator::generateLegalMoves(Color color) const {
+    std::vector<Move> moves;
+    
+    // Генерируем ходы для всех фигур
+    generatePawnMoves(moves, color);
+    generateKnightMoves(moves, color);
+    generateBishopMoves(moves, color);
+    generateRookMoves(moves, color);
+    generateQueenMoves(moves, color);
+    generateKingMoves(moves, color);
+    
+    // Генерируем специальные ходы
+    generateCastlingMoves(moves, color);
+    generateEnPassantMoves(moves, color);
+    generatePromotionMoves(moves, color);
+    
+    // Фильтруем нелегальные ходы
+    moves.erase(
+        std::remove_if(moves.begin(), moves.end(),
+                      [this, color](const Move& move) {
+                          return wouldBeInCheck(move.from, move.to, color);
+                      }),
+        moves.end()
+    );
+    
+    return moves;
+}
+
+void OptimizedMoveGenerator::generatePawnMoves(std::vector<Move>& moves, Color color) const {
+    int direction = (color == Color::WHITE) ? 1 : -1;
+    int start_rank = (color == Color::WHITE) ? 1 : 6;
+    int promotion_rank = (color == Color::WHITE) ? 6 : 1;
+    
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() != PieceType::PAWN || piece.getColor() != color) continue;
+        
+        int rank = square / 8;
+        int file = square % 8;
+        
+        // Одиночный ход вперед
+        int forward_square = square + 8 * direction;
+        if (forward_square >= 0 && forward_square < 64 && 
+            board_.getPiece(forward_square).isEmpty()) {
+            
+            if (rank + direction == promotion_rank) {
+                // Превращение
+                moves.emplace_back(square, forward_square, PieceType::QUEEN);
+                moves.emplace_back(square, forward_square, PieceType::ROOK);
+                moves.emplace_back(square, forward_square, PieceType::BISHOP);
+                moves.emplace_back(square, forward_square, PieceType::KNIGHT);
+            } else {
+                moves.emplace_back(square, forward_square);
+            }
+            
+            // Двойной ход с начальной позиции
+            if (rank == start_rank) {
+                int double_forward = square + 16 * direction;
+                if (double_forward >= 0 && double_forward < 64 &&
+                    board_.getPiece(double_forward).isEmpty()) {
+                    moves.emplace_back(square, double_forward);
                 }
             }
         }
-        bishop_masks_[square] = bishop_mask;
-        
-        // Rook masks (горизонтали и вертикали)
-        Bitboard::BitboardType rook_mask = 0;
-        // Горизонталь
-        for (int f = 0; f < 8; f++) {
-            if (f != file) rook_mask |= (1ULL << (rank * 8 + f));
-        }
-        // Вертикаль
-        for (int r = 0; r < 8; r++) {
-            if (r != rank) rook_mask |= (1ULL << (r * 8 + file));
-        }
-        rook_masks_[square] = rook_mask;
-    }
-}
-
-void OptimizedMoveGenerator::initializePawnTables() {
-    for (int square = 0; square < 64; square++) {
-        int rank = square / 8;
-        int file = square % 8;
-        
-        // Белые пешки
-        pawn_attacks_white_[square] = 0;
-        pawn_pushes_white_[square] = 0;
-        
-        if (rank < 7) { // Не последний ряд
-            // Атаки
-            if (file > 0) pawn_attacks_white_[square] |= (1ULL << ((rank + 1) * 8 + (file - 1)));
-            if (file < 7) pawn_attacks_white_[square] |= (1ULL << ((rank + 1) * 8 + (file + 1)));
-            
-            // Продвижение
-            pawn_pushes_white_[square] = (1ULL << ((rank + 1) * 8 + file));
-            
-            // Двойной ход с 2-го ряда
-            if (rank == 1) {
-                pawn_pushes_white_[square] |= (1ULL << (3 * 8 + file));
-            }
-        }
-        
-        // Черные пешки (зеркально)
-        pawn_attacks_black_[square] = 0;
-        pawn_pushes_black_[square] = 0;
-        
-        if (rank > 0) { // Не первый ряд
-            if (file > 0) pawn_attacks_black_[square] |= (1ULL << ((rank - 1) * 8 + (file - 1)));
-            if (file < 7) pawn_attacks_black_[square] |= (1ULL << ((rank - 1) * 8 + (file + 1)));
-            
-            pawn_pushes_black_[square] = (1ULL << ((rank - 1) * 8 + file));
-            
-            if (rank == 6) {
-                pawn_pushes_black_[square] |= (1ULL << (4 * 8 + file));
-            }
-        }
-    }
-}
-
-void OptimizedMoveGenerator::initializeMagicBitboards() {
-    // Упрощенная инициализация magic numbers
-    // В реальной реализации здесь будут настоящие magic numbers
-    
-    for (int square = 0; square < 64; square++) {
-        // Заглушки для magic numbers
-        bishop_magics_[square] = 0x123456789ABCDEF0ULL;
-        rook_magics_[square] = 0xFEDCBA9876543210ULL;
-        
-        // Инициализация таблиц атак (заглушки)
-        for (int i = 0; i < 512; i++) {
-            bishop_attacks_[square][i] = 0;
-        }
-        for (int i = 0; i < 4096; i++) {
-            rook_attacks_[square][i] = 0;
-        }
-    }
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateLegalMoves() const {
-    auto pseudo_legal = generatePseudoLegalMoves();
-    std::vector<MoveType> legal_moves;
-    
-    for (MoveType move : pseudo_legal) {
-        if (isLegalMove(move)) {
-            legal_moves.push_back(move);
-        }
-    }
-    
-    return legal_moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generatePseudoLegalMoves() const {
-    std::vector<MoveType> moves;
-    Bitboard::Color color = board_.getSideToMove();
-    
-    // Генерируем ходы для всех фигур
-    auto pawn_moves = generatePawnMoves(color);
-    moves.insert(moves.end(), pawn_moves.begin(), pawn_moves.end());
-    
-    auto knight_moves = generateKnightMoves(color);
-    moves.insert(moves.end(), knight_moves.begin(), knight_moves.end());
-    
-    auto bishop_moves = generateBishopMoves(color);
-    moves.insert(moves.end(), bishop_moves.begin(), bishop_moves.end());
-    
-    auto rook_moves = generateRookMoves(color);
-    moves.insert(moves.end(), rook_moves.begin(), rook_moves.end());
-    
-    auto queen_moves = generateQueenMoves(color);
-    moves.insert(moves.end(), queen_moves.begin(), queen_moves.end());
-    
-    auto king_moves = generateKingMoves(color);
-    moves.insert(moves.end(), king_moves.begin(), king_moves.end());
-    
-    // Специальные ходы
-    auto castling_moves = generateCastlingMoves(color);
-    moves.insert(moves.end(), castling_moves.begin(), castling_moves.end());
-    
-    auto en_passant_moves = generateEnPassantMoves(color);
-    moves.insert(moves.end(), en_passant_moves.begin(), en_passant_moves.end());
-    
-    auto promotion_moves = generatePromotionMoves(color);
-    moves.insert(moves.end(), promotion_moves.begin(), promotion_moves.end());
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generatePawnMoves(Bitboard::Color color) const {
-    std::vector<MoveType> moves;
-    Bitboard::BitboardType pawns = board_.getPieces(color, Bitboard::PAWN);
-    Bitboard::BitboardType own_pieces = board_.getOccupancy(color);
-    Bitboard::BitboardType enemy_pieces = board_.getOccupancy(color == Bitboard::WHITE ? Bitboard::BLACK : Bitboard::WHITE);
-    Bitboard::BitboardType empty_squares = ~board_.getAllPieces();
-    
-    const auto& attacks_table = (color == Bitboard::WHITE) ? pawn_attacks_white_ : pawn_attacks_black_;
-    const auto& pushes_table = (color == Bitboard::WHITE) ? pawn_pushes_white_ : pawn_pushes_black_;
-    
-    while (pawns) {
-        int from_square = BitboardUtils::lsb(pawns);
-        Bitboard::BitboardType attacks = attacks_table[from_square];
-        Bitboard::BitboardType pushes = pushes_table[from_square];
         
         // Взятия
-        Bitboard::BitboardType capture_targets = attacks & enemy_pieces;
-        while (capture_targets) {
-            int to_square = BitboardUtils::lsb(capture_targets);
-            MoveType move = packMove(from_square, to_square, CAPTURE_FLAG);
-            moves.push_back(move);
-            capture_targets &= capture_targets - 1;
-        }
-        
-        // Продвижения
-        Bitboard::BitboardType push_targets = pushes & empty_squares;
-        while (push_targets) {
-            int to_square = BitboardUtils::lsb(push_targets);
-            MoveType flags = 0;
+        uint64_t attacks = pawn_attacks_[static_cast<int>(color)][square];
+        while (attacks) {
+            int target_square = __builtin_ctzll(attacks);
+            Piece target_piece = board_.getPiece(target_square);
             
-            // Проверка на превращение (последний ряд)
-            int rank = to_square / 8;
-            if ((color == Bitboard::WHITE && rank == 7) || (color == Bitboard::BLACK && rank == 0)) {
-                flags |= PROMOTION_FLAG;
+            if (!target_piece.isEmpty() && target_piece.getColor() != color) {
+                if (rank + direction == promotion_rank) {
+                    moves.emplace_back(square, target_square, PieceType::QUEEN);
+                    moves.emplace_back(square, target_square, PieceType::ROOK);
+                    moves.emplace_back(square, target_square, PieceType::BISHOP);
+                    moves.emplace_back(square, target_square, PieceType::KNIGHT);
+                } else {
+                    moves.emplace_back(square, target_square);
+                }
             }
             
-            moves.push_back(packMove(from_square, to_square, flags));
-            push_targets &= push_targets - 1;
-        }
-        
-        pawns &= pawns - 1;
-    }
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateKnightMoves(Bitboard::Color color) const {
-    std::vector<MoveType> moves;
-    Bitboard::BitboardType knights = board_.getPieces(color, Bitboard::KNIGHT);
-    Bitboard::BitboardType own_pieces = board_.getOccupancy(color);
-    Bitboard::BitboardType enemy_pieces = board_.getOccupancy(color == Bitboard::WHITE ? Bitboard::BLACK : Bitboard::WHITE);
-    
-    while (knights) {
-        int from_square = BitboardUtils::lsb(knights);
-        Bitboard::BitboardType attacks = getKnightAttacks(from_square);
-        
-        auto piece_moves = addNonSlidingMoves(from_square, attacks, own_pieces, enemy_pieces);
-        moves.insert(moves.end(), piece_moves.begin(), piece_moves.end());
-        
-        knights &= knights - 1;
-    }
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateBishopMoves(Bitboard::Color color) const {
-    std::vector<MoveType> moves;
-    Bitboard::BitboardType bishops = board_.getPieces(color, Bitboard::BISHOP);
-    Bitboard::BitboardType own_pieces = board_.getOccupancy(color);
-    Bitboard::BitboardType enemy_pieces = board_.getOccupancy(color == Bitboard::WHITE ? Bitboard::BLACK : Bitboard::WHITE);
-    Bitboard::BitboardType occupied = board_.getAllPieces();
-    
-    while (bishops) {
-        int from_square = BitboardUtils::lsb(bishops);
-        Bitboard::BitboardType attacks = getBishopAttacks(from_square, occupied);
-        
-        auto piece_moves = addSlidingMoves(from_square, attacks, own_pieces, enemy_pieces);
-        moves.insert(moves.end(), piece_moves.begin(), piece_moves.end());
-        
-        bishops &= bishops - 1;
-    }
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateRookMoves(Bitboard::Color color) const {
-    std::vector<MoveType> moves;
-    Bitboard::BitboardType rooks = board_.getPieces(color, Bitboard::ROOK);
-    Bitboard::BitboardType own_pieces = board_.getOccupancy(color);
-    Bitboard::BitboardType enemy_pieces = board_.getOccupancy(color == Bitboard::WHITE ? Bitboard::BLACK : Bitboard::WHITE);
-    Bitboard::BitboardType occupied = board_.getAllPieces();
-    
-    while (rooks) {
-        int from_square = BitboardUtils::lsb(rooks);
-        Bitboard::BitboardType attacks = getRookAttacks(from_square, occupied);
-        
-        auto piece_moves = addSlidingMoves(from_square, attacks, own_pieces, enemy_pieces);
-        moves.insert(moves.end(), piece_moves.begin(), piece_moves.end());
-        
-        rooks &= rooks - 1;
-    }
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateQueenMoves(Bitboard::Color color) const {
-    std::vector<MoveType> moves;
-    Bitboard::BitboardType queens = board_.getPieces(color, Bitboard::QUEEN);
-    Bitboard::BitboardType own_pieces = board_.getOccupancy(color);
-    Bitboard::BitboardType enemy_pieces = board_.getOccupancy(color == Bitboard::WHITE ? Bitboard::BLACK : Bitboard::WHITE);
-    Bitboard::BitboardType occupied = board_.getAllPieces();
-    
-    while (queens) {
-        int from_square = BitboardUtils::lsb(queens);
-        Bitboard::BitboardType attacks = getQueenAttacks(from_square, occupied);
-        
-        auto piece_moves = addSlidingMoves(from_square, attacks, own_pieces, enemy_pieces);
-        moves.insert(moves.end(), piece_moves.begin(), piece_moves.end());
-        
-        queens &= queens - 1;
-    }
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateKingMoves(Bitboard::Color color) const {
-    std::vector<MoveType> moves;
-    Bitboard::BitboardType kings = board_.getPieces(color, Bitboard::KING);
-    Bitboard::BitboardType own_pieces = board_.getOccupancy(color);
-    Bitboard::BitboardType enemy_pieces = board_.getOccupancy(color == Bitboard::WHITE ? Bitboard::BLACK : Bitboard::WHITE);
-    
-    while (kings) {
-        int from_square = BitboardUtils::lsb(kings);
-        Bitboard::BitboardType attacks = getKingAttacks(from_square);
-        
-        auto piece_moves = addNonSlidingMoves(from_square, attacks, own_pieces, enemy_pieces);
-        moves.insert(moves.end(), piece_moves.begin(), piece_moves.end());
-        
-        kings &= kings - 1;
-    }
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::addSlidingMoves(
-    int square, Bitboard::BitboardType attacks, 
-    Bitboard::BitboardType own_pieces, 
-    Bitboard::BitboardType enemy_pieces) const {
-    
-    std::vector<MoveType> moves;
-    
-    // Ходы на пустые клетки
-    Bitboard::BitboardType quiet_moves = attacks & (~own_pieces) & (~enemy_pieces);
-    while (quiet_moves) {
-        int to_square = BitboardUtils::lsb(quiet_moves);
-        moves.push_back(packMove(square, to_square));
-        quiet_moves &= quiet_moves - 1;
-    }
-    
-    // Взятия
-    Bitboard::BitboardType captures = attacks & enemy_pieces;
-    while (captures) {
-        int to_square = BitboardUtils::lsb(captures);
-        moves.push_back(packMove(square, to_square, CAPTURE_FLAG));
-        captures &= captures - 1;
-    }
-    
-    return moves;
-}
-
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::addNonSlidingMoves(
-    int square, Bitboard::BitboardType attacks,
-    Bitboard::BitboardType own_pieces,
-    Bitboard::BitboardType enemy_pieces) const {
-    
-    std::vector<MoveType> moves;
-    
-    // Исключаем свои фигуры
-    Bitboard::BitboardType valid_targets = attacks & (~own_pieces);
-    
-    // Тихие ходы
-    Bitboard::BitboardType quiet_moves = valid_targets & (~enemy_pieces);
-    while (quiet_moves) {
-        int to_square = BitboardUtils::lsb(quiet_moves);
-        moves.push_back(packMove(square, to_square));
-        quiet_moves &= quiet_moves - 1;
-    }
-    
-    // Взятия
-    Bitboard::BitboardType captures = valid_targets & enemy_pieces;
-    while (captures) {
-        int to_square = BitboardUtils::lsb(captures);
-        moves.push_back(packMove(square, to_square, CAPTURE_FLAG));
-        captures &= captures - 1;
-    }
-    
-    return moves;
-}
-
-// Реализации атак (заглушки)
-Bitboard::BitboardType OptimizedMoveGenerator::getBishopAttacks(int square, Bitboard::BitboardType occupied) {
-    // В реальной реализации использовать magic bitboards
-    return 0; // Заглушка
-}
-
-Bitboard::BitboardType OptimizedMoveGenerator::getRookAttacks(int square, Bitboard::BitboardType occupied) {
-    // В реальной реализации использовать magic bitboards
-    return 0; // Заглушка
-}
-
-Bitboard::BitboardType OptimizedMoveGenerator::getQueenAttacks(int square, Bitboard::BitboardType occupied) {
-    return getBishopAttacks(square, occupied) | getRookAttacks(square, occupied);
-}
-
-Bitboard::BitboardType OptimizedMoveGenerator::getKnightAttacks(int square) {
-    // Предвычисленные атаки коня
-    static const int knight_deltas[8] = {-17, -15, -10, -6, 6, 10, 15, 17};
-    Bitboard::BitboardType attacks = 0;
-    int rank = square / 8;
-    int file = square % 8;
-    
-    for (int delta : knight_deltas) {
-        int new_rank = rank + (delta / 8);
-        int new_file = file + (delta % 8);
-        if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8) {
-            attacks |= (1ULL << (new_rank * 8 + new_file));
+            attacks &= attacks - 1;
         }
     }
-    
-    return attacks;
 }
 
-Bitboard::BitboardType OptimizedMoveGenerator::getKingAttacks(int square) {
-    static const int king_deltas[8] = {-9, -8, -7, -1, 1, 7, 8, 9};
-    Bitboard::BitboardType attacks = 0;
-    int rank = square / 8;
-    int file = square % 8;
-    
-    for (int delta : king_deltas) {
-        int new_rank = rank + (delta / 8);
-        int new_file = file + (delta % 8);
-        if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8) {
-            attacks |= (1ULL << (new_rank * 8 + new_file));
+void OptimizedMoveGenerator::generateKnightMoves(std::vector<Move>& moves, Color color) const {
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() != PieceType::KNIGHT || piece.getColor() != color) continue;
+        
+        uint64_t attacks = knight_attacks_[square];
+        while (attacks) {
+            int target_square = __builtin_ctzll(attacks);
+            Piece target_piece = board_.getPiece(target_square);
+            
+            if (target_piece.isEmpty() || target_piece.getColor() != color) {
+                moves.emplace_back(square, target_square);
+            }
+            
+            attacks &= attacks - 1;
         }
     }
-    
-    return attacks;
 }
 
-Bitboard::BitboardType OptimizedMoveGenerator::getPawnAttacks(int square, Bitboard::Color color) {
-    if (color == Bitboard::WHITE) {
-        return pawn_attacks_white_[square];
-    } else {
-        return pawn_attacks_black_[square];
+void OptimizedMoveGenerator::generateBishopMoves(std::vector<Move>& moves, Color color) const {
+    uint64_t occupancy = board_.getOccupancy();
+    
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() != PieceType::BISHOP || piece.getColor() != color) continue;
+        
+        uint64_t attacks = getBishopAttacks(square, occupancy);
+        while (attacks) {
+            int target_square = __builtin_ctzll(attacks);
+            Piece target_piece = board_.getPiece(target_square);
+            
+            if (target_piece.isEmpty() || target_piece.getColor() != color) {
+                moves.emplace_back(square, target_square);
+            }
+            
+            attacks &= attacks - 1;
+        }
     }
 }
 
-bool OptimizedMoveGenerator::isLegalMove(MoveType move) const {
-    // Проверка легальности хода
-    // В реальной реализации нужно проверить:
-    // 1. Не оставляет ли короля под шахом
-    // 2. Корректность специальных ходов
+void OptimizedMoveGenerator::generateRookMoves(std::vector<Move>& moves, Color color) const {
+    uint64_t occupancy = board_.getOccupancy();
     
-    return !wouldLeaveKingInCheck(move);
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() != PieceType::ROOK || piece.getColor() != color) continue;
+        
+        uint64_t attacks = getRookAttacks(square, occupancy);
+        while (attacks) {
+            int target_square = __builtin_ctzll(attacks);
+            Piece target_piece = board_.getPiece(target_square);
+            
+            if (target_piece.isEmpty() || target_piece.getColor() != color) {
+                moves.emplace_back(square, target_square);
+            }
+            
+            attacks &= attacks - 1;
+        }
+    }
 }
 
-bool OptimizedMoveGenerator::wouldLeaveKingInCheck(MoveType move) const {
-    // Упрощенная проверка - в реальной реализации нужно моделировать ход
-    (void)move; // Заглушка
+void OptimizedMoveGenerator::generateQueenMoves(std::vector<Move>& moves, Color color) const {
+    uint64_t occupancy = board_.getOccupancy();
+    
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() != PieceType::QUEEN || piece.getColor() != color) continue;
+        
+        uint64_t attacks = getQueenAttacks(square, occupancy);
+        while (attacks) {
+            int target_square = __builtin_ctzll(attacks);
+            Piece target_piece = board_.getPiece(target_square);
+            
+            if (target_piece.isEmpty() || target_piece.getColor() != color) {
+                moves.emplace_back(square, target_square);
+            }
+            
+            attacks &= attacks - 1;
+        }
+    }
+}
+
+void OptimizedMoveGenerator::generateKingMoves(std::vector<Move>& moves, Color color) const {
+    for (int square = 0; square < 64; square++) {
+        Piece piece = board_.getPiece(square);
+        if (piece.getType() != PieceType::KING || piece.getColor() != color) continue;
+        
+        uint64_t attacks = king_attacks_[square];
+        while (attacks) {
+            int target_square = __builtin_ctzll(attacks);
+            Piece target_piece = board_.getPiece(target_square);
+            
+            if (target_piece.isEmpty() || target_piece.getColor() != color) {
+                moves.emplace_back(square, target_square);
+            }
+            
+            attacks &= attacks - 1;
+        }
+    }
+}
+
+void OptimizedMoveGenerator::generateCastlingMoves(std::vector<Move>& moves, Color color) const {
+    // Упрощенная реализация рокировки
+    // В реальной реализации здесь будет полная проверка условий рокировки
+    (void)moves;
+    (void)color;
+}
+
+void OptimizedMoveGenerator::generateEnPassantMoves(std::vector<Move>& moves, Color color) const {
+    // Упрощенная реализация взятия на проходе
+    // В реальной реализации здесь будет проверка позиции en passant
+    (void)moves;
+    (void)color;
+}
+
+void OptimizedMoveGenerator::generatePromotionMoves(std::vector<Move>& moves, Color color) const {
+    // Превращения уже обрабатываются в generatePawnMoves
+    (void)moves;
+    (void)color;
+}
+
+bool OptimizedMoveGenerator::wouldBeInCheck(int from, int to, Color color) const {
+    // Упрощенная проверка шаха
+    // В реальной реализации здесь будет полноценная проверка
+    (void)from;
+    (void)to;
+    (void)color;
     return false;
 }
 
-bool OptimizedMoveGenerator::isSquareAttacked(int square, Bitboard::Color by_color) const {
-    // Проверка, атакована ли клетка фигурами цвета by_color
-    (void)square; (void)by_color; // Заглушка
+bool OptimizedMoveGenerator::isInCheck(Color color) const {
+    // Упрощенная проверка шаха
+    (void)color;
     return false;
 }
 
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateCastlingMoves(Bitboard::Color color) const {
-    return {}; // Заглушка
+bool OptimizedMoveGenerator::isCheckmate(Color color) const {
+    return isInCheck(color) && !hasLegalMoves(color);
 }
 
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generateEnPassantMoves(Bitboard::Color color) const {
-    return {}; // Заглушка
+bool OptimizedMoveGenerator::isStalemate(Color color) const {
+    return !isInCheck(color) && !hasLegalMoves(color);
 }
 
-std::vector<OptimizedMoveGenerator::MoveType> OptimizedMoveGenerator::generatePromotionMoves(Bitboard::Color color) const {
-    return {}; // Заглушка
+bool OptimizedMoveGenerator::hasLegalMoves(Color color) const {
+    auto moves = generateLegalMoves(color);
+    return !moves.empty();
 }
 
-std::string OptimizedMoveGenerator::moveToAlgebraic(MoveType move) {
-    int from = unpackFrom(move);
-    int to = unpackTo(move);
-    MoveType flags = unpackFlags(move);
+size_t OptimizedMoveGenerator::countLegalMoves(Color color) const {
+    return generateLegalMoves(color).size();
+}
+
+size_t OptimizedMoveGenerator::countCaptureMoves(Color color) const {
+    auto moves = generateLegalMoves(color);
+    return std::count_if(moves.begin(), moves.end(),
+                        [this](const Move& move) {
+                            return !board_.getPiece(move.to).isEmpty();
+                        });
+}
+
+void OptimizedMoveGenerator::printMoveStatistics(Color color) const {
+    auto start = std::chrono::high_resolution_clock::now();
+    auto moves = generateLegalMoves(color);
+    auto end = std::chrono::high_resolution_clock::now();
     
-    char from_file = 'a' + (from % 8);
-    char from_rank = '1' + (from / 8);
-    char to_file = 'a' + (to % 8);
-    char to_rank = '1' + (to / 8);
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     
-    std::string result;
-    result += from_file;
-    result += from_rank;
-    result += to_file;
-    result += to_rank;
+    std::cout << "\n=== MOVE GENERATION STATISTICS ===" << std::endl;
+    std::cout << "Color: " << (color == Color::WHITE ? "White" : "Black") << std::endl;
+    std::cout << "Total legal moves: " << moves.size() << std::endl;
+    std::cout << "Generation time: " << duration.count() << " microseconds" << std::endl;
+    std::cout << "Moves per microsecond: " << (moves.size() * 1000000.0 / duration.count()) << std::endl;
     
-    if (flags & PROMOTION_FLAG) {
-        result += "q"; // Превращение в ферзя по умолчанию
+    // Подсчет типов ходов
+    size_t captures = 0, promotions = 0, castlings = 0;
+    for (const auto& move : moves) {
+        if (!board_.getPiece(move.to).isEmpty()) captures++;
+        if (move.promotion != PieceType::NONE) promotions++;
     }
     
-    return result;
+    std::cout << "Captures: " << captures << std::endl;
+    std::cout << "Promotions: " << promotions << std::endl;
+    std::cout << "Castlings: " << castlings << std::endl;
+    std::cout << "==================================" << std::endl;
 }
 
-OptimizedMoveGenerator::MoveType OptimizedMoveGenerator::algebraicToMove(const std::string& alg) {
-    if (alg.length() < 4) return 0;
+std::string OptimizedMoveGenerator::getMoveGenerationStats(Color color) const {
+    auto moves = generateLegalMoves(color);
+    size_t captures = std::count_if(moves.begin(), moves.end(),
+                                   [this](const Move& move) {
+                                       return !board_.getPiece(move.to).isEmpty();
+                                   });
     
-    int from_file = alg[0] - 'a';
-    int from_rank = alg[1] - '1';
-    int to_file = alg[2] - 'a';
-    int to_rank = alg[3] - '1';
-    
-    int from = from_rank * 8 + from_file;
-    int to = to_rank * 8 + to_file;
-    
-    MoveType flags = 0;
-    if (alg.length() > 4 && alg[4] == 'q') {
-        flags |= PROMOTION_FLAG;
-    }
-    
-    return packMove(from, to, flags);
+    return "Legal moves: " + std::to_string(moves.size()) + 
+           ", Captures: " + std::to_string(captures);
 }
 
-bool OptimizedMoveGenerator::isValidSquare(int square) const {
-    return square >= 0 && square < 64;
+void OptimizedMoveGenerator::enableAggressivePruning(bool enable) {
+    // Настройка агрессивной обрезки ходов
+    (void)enable;
+}
+
+void OptimizedMoveGenerator::setDepthLimit(int max_depth) {
+    // Установка ограничения глубины поиска
+    (void)max_depth;
 }

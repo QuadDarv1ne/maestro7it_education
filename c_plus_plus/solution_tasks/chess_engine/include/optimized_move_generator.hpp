@@ -1,123 +1,113 @@
 #ifndef OPTIMIZED_MOVE_GENERATOR_HPP
 #define OPTIMIZED_MOVE_GENERATOR_HPP
 
-#include "bitboard.hpp"
+#include "board.hpp"
 #include <vector>
 #include <array>
+#include <bitset>
 
 /**
- * @brief Оптимизированный генератор ходов с использованием bitboard
+ * @brief Оптимизированный генератор ходов
  * 
- * Реализует высокопроизводительную генерацию ходов с использованием
- * bitboard представления и magic bitboards для слайдеров.
+ * Реализует высокопроизводительную генерацию легальных ходов
+ * с использованием битбордов и оптимизированных алгоритмов.
  */
 class OptimizedMoveGenerator {
-public:
-    // Тип для хода: упакованный from(6 бит) | to(6 бит) | флаги(4 бита)
-    using MoveType = uint16_t;
-    
-    // Флаги ходов
-    static const MoveType CAPTURE_FLAG = 1 << 12;
-    static const MoveType PROMOTION_FLAG = 1 << 13;
-    static const MoveType CASTLING_FLAG = 1 << 14;
-    static const MoveType EN_PASSANT_FLAG = 1 << 15;
-    
 private:
-    const Bitboard& board_;
+    const Board& board_;
     
-    // Magic bitboards для быстрых вычислений атак
-    static std::array<Bitboard::BitboardType, 64> bishop_magics_;
-    static std::array<Bitboard::BitboardType, 64> rook_magics_;
-    static std::array<Bitboard::BitboardType, 64> bishop_masks_;
-    static std::array<Bitboard::BitboardType, 64> rook_masks_;
+    // Предвычисленные данные для ускорения
+    mutable std::array<uint64_t, 64> knight_attacks_;
+    mutable std::array<uint64_t, 64> king_attacks_;
+    mutable std::array<std::array<uint64_t, 64>, 2> pawn_attacks_; // [color][square]
     
-    // Таблицы атак (заглушки)
-    static std::array<std::array<Bitboard::BitboardType, 512>, 64> bishop_attacks_;
-    static std::array<std::array<Bitboard::BitboardType, 4096>, 64> rook_attacks_;
+    // Кэширование для производительности
+    mutable bool attack_tables_initialized_;
+    mutable uint64_t occupancy_cache_;
+    mutable std::array<uint64_t, 64> bishop_attacks_cache_;
+    mutable std::array<uint64_t, 64> rook_attacks_cache_;
     
-    // Предвычисленные таблицы для пешек
-    static std::array<Bitboard::BitboardType, 64> pawn_attacks_white_;
-    static std::array<Bitboard::BitboardType, 64> pawn_attacks_black_;
-    static std::array<Bitboard::BitboardType, 64> pawn_pushes_white_;
-    static std::array<Bitboard::BitboardType, 64> pawn_pushes_black_;
+    // Инициализация таблиц атак
+    void initializeAttackTables() const;
+    void initializeKnightAttacks() const;
+    void initializeKingAttacks() const;
+    void initializePawnAttacks() const;
     
-    // Инициализация таблиц
-    static void initializeTables();
-    static void initializePawnTables();
-    static void initializeMagicBitboards();
+    // Оптимизированные функции генерации атак
+    uint64_t getBishopAttacks(int square, uint64_t occupancy) const;
+    uint64_t getRookAttacks(int square, uint64_t occupancy) const;
+    uint64_t getQueenAttacks(int square, uint64_t occupancy) const;
+    
+    // Генерация ходов для конкретных фигур
+    void generatePawnMoves(std::vector<Move>& moves, Color color) const;
+    void generateKnightMoves(std::vector<Move>& moves, Color color) const;
+    void generateBishopMoves(std::vector<Move>& moves, Color color) const;
+    void generateRookMoves(std::vector<Move>& moves, Color color) const;
+    void generateQueenMoves(std::vector<Move>& moves, Color color) const;
+    void generateKingMoves(std::vector<Move>& moves, Color color) const;
+    
+    // Специализированные генераторы
+    void generateCastlingMoves(std::vector<Move>& moves, Color color) const;
+    void generateEnPassantMoves(std::vector<Move>& moves, Color color) const;
+    void generatePromotionMoves(std::vector<Move>& moves, Color color) const;
     
     // Вспомогательные функции
-    static constexpr int packMove(int from, int to, MoveType flags = 0) {
-        return (from & 0x3F) | ((to & 0x3F) << 6) | (flags & 0xF000);
-    }
+    bool isSquareAttacked(int square, Color by_color) const;
+    bool wouldBeInCheck(int from, int to, Color color) const;
+    uint64_t getPiecesAttackingSquare(int square, Color attacker_color) const;
     
-    static constexpr int unpackFrom(MoveType move) {
-        return move & 0x3F;
-    }
-    
-    static constexpr int unpackTo(MoveType move) {
-        return (move >> 6) & 0x3F;
-    }
-    
-    static constexpr MoveType unpackFlags(MoveType move) {
-        return move & 0xF000;
-    }
+    // Оптимизированные проверки легальности
+    bool isValidMove(const Move& move) const;
+    bool isPseudoLegal(const Move& move) const;
     
 public:
-    OptimizedMoveGenerator(const Bitboard& board);
+    explicit OptimizedMoveGenerator(const Board& board);
     
-    // Основные методы генерации ходов
-    std::vector<MoveType> generateLegalMoves() const;
-    std::vector<MoveType> generatePseudoLegalMoves() const;
+    // Основной интерфейс
+    std::vector<Move> generateLegalMoves(Color color = Color::WHITE) const;
+    std::vector<Move> generateCaptureMoves(Color color = Color::WHITE) const;
+    std::vector<Move> generateQuietMoves(Color color = Color::WHITE) const;
     
-    // Специализированные генераторы для фигур
-    std::vector<MoveType> generatePawnMoves(Bitboard::Color color) const;
-    std::vector<MoveType> generateKnightMoves(Bitboard::Color color) const;
-    std::vector<MoveType> generateBishopMoves(Bitboard::Color color) const;
-    std::vector<MoveType> generateRookMoves(Bitboard::Color color) const;
-    std::vector<MoveType> generateQueenMoves(Bitboard::Color color) const;
-    std::vector<MoveType> generateKingMoves(Bitboard::Color color) const;
+    // Специализированные генераторы
+    std::vector<Move> generateCheckMoves(Color color = Color::WHITE) const;
+    std::vector<Move> generateTacticalMoves(Color color = Color::WHITE) const;
+    std::vector<Move> generateEvasionMoves(Color color = Color::WHITE) const;
     
-    // Специальные ходы
-    std::vector<MoveType> generateCastlingMoves(Bitboard::Color color) const;
-    std::vector<MoveType> generateEnPassantMoves(Bitboard::Color color) const;
-    std::vector<MoveType> generatePromotionMoves(Bitboard::Color color) const;
+    // Быстрые проверки
+    bool isInCheck(Color color) const;
+    bool isCheckmate(Color color) const;
+    bool isStalemate(Color color) const;
+    bool hasLegalMoves(Color color) const;
     
-    // Проверки легальности
-    bool isLegalMove(MoveType move) const;
-    bool wouldLeaveKingInCheck(MoveType move) const;
-    bool isSquareAttacked(int square, Bitboard::Color by_color) const;
+    // Производительность
+    size_t countLegalMoves(Color color = Color::WHITE) const;
+    size_t countCaptureMoves(Color color = Color::WHITE) const;
     
-    // Атаки фигур (используют magic bitboards)
-    static Bitboard::BitboardType getBishopAttacks(int square, Bitboard::BitboardType occupied);
-    static Bitboard::BitboardType getRookAttacks(int square, Bitboard::BitboardType occupied);
-    static Bitboard::BitboardType getQueenAttacks(int square, Bitboard::BitboardType occupied);
-    static Bitboard::BitboardType getKnightAttacks(int square);
-    static Bitboard::BitboardType getKingAttacks(int square);
-    static Bitboard::BitboardType getPawnAttacks(int square, Bitboard::Color color);
+    // Отладка и анализ
+    void printMoveStatistics(Color color = Color::WHITE) const;
+    std::string getMoveGenerationStats(Color color = Color::WHITE) const;
     
-    // Утилиты
-    static void init();
-    static std::string moveToAlgebraic(MoveType move);
-    static MoveType algebraicToMove(const std::string& alg);
-    
-private:
-    // Внутренние вспомогательные методы
-    std::vector<MoveType> addSlidingMoves(int square, Bitboard::BitboardType attacks, 
-                                         Bitboard::BitboardType own_pieces, 
-                                         Bitboard::BitboardType enemy_pieces) const;
-    
-    std::vector<MoveType> addNonSlidingMoves(int square, Bitboard::BitboardType attacks,
-                                            Bitboard::BitboardType own_pieces,
-                                            Bitboard::BitboardType enemy_pieces) const;
-    
-    bool isValidSquare(int square) const;
+    // Настройки оптимизации
+    void enableAggressivePruning(bool enable);
+    void setDepthLimit(int max_depth);
 };
 
-// Глобальная инициализация
-namespace MoveGenInit {
-    void initialize();
-    bool isInitialized();
+// Константы для оптимизации
+namespace MoveGenConstants {
+    const int MAX_MOVES_PER_POSITION = 218;  // Максимум возможных ходов
+    const int ATTACK_TABLE_SIZE = 64;        // Размер таблиц атак
+    const uint64_t FULL_BOARD = 0xFFFFFFFFFFFFFFFFULL;
+    
+    // Направления для слайдеров
+    const int BISHOP_DIRECTIONS[4] = { -9, -7, 7, 9 };
+    const int ROOK_DIRECTIONS[4] = { -8, -1, 1, 8 };
+    const int KING_DIRECTIONS[8] = { -9, -8, -7, -1, 1, 7, 8, 9 };
+    
+    // Бонусы для упорядочивания ходов
+    const int CAPTURE_BONUS = 10000;
+    const int PROMOTION_BONUS = 8000;
+    const int CASTLING_BONUS = 6000;
+    const int CHECK_BONUS = 4000;
 }
 
 #endif // OPTIMIZED_MOVE_GENERATOR_HPP

@@ -4,11 +4,11 @@
 
 int main() {
     try {
-        std::cout << "=== Тестирование шахматного движка ===" << std::endl;
+        std::cout << "=== CHESS ENGINE TESTING ===" << std::endl;
         
         // Создаем доску
         Board board;
-        std::cout << "Начальная позиция:" << std::endl;
+        std::cout << "Starting position:" << std::endl;
         board.printBoard();
         
         // Создаем генератор ходов
@@ -16,18 +16,18 @@ int main() {
         
         // Генерируем легальные ходы
         std::vector<Move> legalMoves = generator.generateLegalMoves();
-        std::cout << "\nКоличество легальных ходов из начальной позиции: " 
+        std::cout << "\nNumber of legal moves from starting position: " 
                   << legalMoves.size() << std::endl;
         
         // Показываем первые 10 ходов
-        std::cout << "\nПервые 10 легальных ходов:" << std::endl;
+        std::cout << "\nFirst 10 legal moves:" << std::endl;
         for (size_t i = 0; i < std::min(legalMoves.size(), size_t(10)); i++) {
             const Move& move = legalMoves[i];
             std::cout << i + 1 << ". " << move.toString() << std::endl;
         }
         
         // Тестируем конкретные ходы
-        std::cout << "\n=== Тестирование конкретных ходов ===" << std::endl;
+        std::cout << "\n=== TESTING SPECIFIC MOVES ===" << std::endl;
         
         // Проверяем ход пешки e2-e4
         Square e2 = board.algebraicToSquare("e2");
@@ -36,7 +36,7 @@ int main() {
         if (e2 != INVALID_SQUARE && e4 != INVALID_SQUARE) {
             Move pawnMove(e2, e4);
             bool isLegal = generator.isLegalMove(pawnMove);
-            std::cout << "Ход e2-e4 легален: " << (isLegal ? "Да" : "Нет") << std::endl;
+            std::cout << "Move e2-e4 is legal: " << (isLegal ? "Yes" : "No") << std::endl;
         }
         
         // Проверяем ход коня Ng1-f3
@@ -46,17 +46,17 @@ int main() {
         if (g1 != INVALID_SQUARE && f3 != INVALID_SQUARE) {
             Move knightMove(g1, f3);
             bool isLegal = generator.isLegalMove(knightMove);
-            std::cout << "Ход Ng1-f3 легален: " << (isLegal ? "Да" : "Нет") << std::endl;
+            std::cout << "Move Ng1-f3 is legal: " << (isLegal ? "Yes" : "No") << std::endl;
         }
         
-        std::cout << "\n=== Тест завершен успешно ===" << std::endl;
+        std::cout << "\n=== TEST COMPLETED SUCCESSFULLY ===" << std::endl;
         return 0;
         
     } catch (const std::exception& e) {
-        std::cerr << "Ошибка: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     } catch (...) {
-        std::cerr << "Неизвестная ошибка!" << std::endl;
+        std::cerr << "Unknown error!" << std::endl;
         return 1;
     }
 }
