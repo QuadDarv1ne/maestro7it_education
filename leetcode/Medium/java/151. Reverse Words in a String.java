@@ -14,3 +14,36 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+    public String reverseWords(String s) {
+        /*
+        Разворачивает порядок слов в строке.
+        
+        Параметры:
+        s - строка, которая может содержать лишние пробелы
+        
+        Возвращает:
+        Строку с обратным порядком слов, где слова разделены одним пробелом
+        
+        Алгоритм:
+        - Удаляем лишние пробелы с помощью trim() и split()
+        - Собираем слова в обратном порядке через StringBuilder
+        */
+        
+        // Удаляем пробелы по краям и разбиваем на слова
+        String[] words = s.trim().split("\\s+");
+        
+        // Создаем StringBuilder для эффективной конкатенации
+        StringBuilder result = new StringBuilder();
+        
+        // Добавляем слова в обратном порядке
+        for (int i = words.length - 1; i >= 0; i--) {
+            result.append(words[i]);
+            if (i > 0) {
+                result.append(" ");
+            }
+        }
+        
+        return result.toString();
+    }
+}

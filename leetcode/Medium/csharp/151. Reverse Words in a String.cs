@@ -14,3 +14,25 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+public class Solution {
+    public string ReverseWords(string s) {
+        /*
+        Разворачивает порядок слов в строке.
+        
+        Параметры:
+        s - строка, которая может содержать лишние пробелы
+        
+        Возвращает:
+        Строку с обратным порядком слов, где слова разделены одним пробелом
+        */
+        
+        // Разбиваем строку на слова, игнорируя пустые записи
+        string[] words = s.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        
+        // Разворачиваем массив слов
+        Array.Reverse(words);
+        
+        // Объединяем слова через пробел
+        return string.Join(" ", words);
+    }
+}
