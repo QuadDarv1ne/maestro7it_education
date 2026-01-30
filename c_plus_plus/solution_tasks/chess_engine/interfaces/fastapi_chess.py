@@ -435,9 +435,16 @@ async def get_ai_move(game_id: str, depth: int = 4):
                     game_status="active",
                     move_history=game['move_history'],
                     player_name=game['player_name'],
-                    game_mode=game['game_mode']
+                    game_mode=game['game_mode'],
+                    time_control=game['time_control'],
+                    white_time=game['white_time'],
+                    black_time=game['black_time']
                 )
             }
+            
+            # Сброс таймера для следующего хода
+            if game['time_control'] > 0:
+                game['move_start_time'] = time.time()
             
             # Сохранение в кэш
             move_cache.set(cache_key, result)

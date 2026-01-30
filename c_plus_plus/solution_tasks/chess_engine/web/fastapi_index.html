@@ -346,6 +346,20 @@
                         <span class="stat-label">Total Moves</span>
                     </div>
                 </div>
+                
+                <div id="timerSection" style="margin-top: 1rem; display: none;">
+                    <h3 style="margin-bottom: 0.5rem;"><i class="fas fa-clock"></i> Time Control</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="whiteTimer" style="color: #e0e0e0;">--:--</span>
+                            <span class="stat-label">White Time</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="blackTimer" style="color: #666;">--:--</span>
+                            <span class="stat-label">Black Time</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="card">
@@ -355,6 +369,16 @@
                     <select id="gameMode" onchange="newGame()">
                         <option value="ai">Vs Computer (Enhanced AI)</option>
                         <option value="human">Local Multiplayer</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label>Time Control</label>
+                    <select id="timeControl" onchange="newGame()">
+                        <option value="0">No Time Limit</option>
+                        <option value="1">Bullet (1 min)</option>
+                        <option value="3">Blitz (3 min)</option>
+                        <option value="5">Rapid (5 min)</option>
+                        <option value="10">Classical (10 min)</option>
                     </select>
                 </div>
                 <div class="config-group">
@@ -394,6 +418,11 @@
         let currentTurn = true; // true = white
         let selectedSquare = null;
         let validMoves = [];
+        let timeControl = 0;
+        let whiteTime = 0;
+        let blackTime = 0;
+        let timerInterval = null;
+        
         const pieceIcons = {
             'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
             'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
@@ -401,27 +430,110 @@
 
         async function newGame() {
             const mode = document.getElementById('gameMode').value;
+            const time = parseInt(document.getElementById('timeControl').value);
+            
             const response = await fetch('/api/new-game', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({player_name: 'Player', game_mode: mode})
+                body: JSON.stringify({
+                    player_name: 'Player', 
+                    game_mode: mode,
+                    time_control: time
+                })
             });
             const data = await response.json();
             gameId = data.game_id;
+            timeControl = data.time_control || 0;
+            whiteTime = data.white_time || 0;
+            blackTime = data.black_time || 0;
+            
             updateUI(data);
             showNotification('New game started!');
+            
+            // Запуск таймера если есть контроль времени
+            if (timeControl > 0) {
+                startTimer();
+            }
         }
 
         function updateUI(data) {
             boardState = data.board_state;
             currentTurn = data.current_turn;
+            timeControl = data.time_control || 0;
+            whiteTime = data.white_time || 0;
+            blackTime = data.black_time || 0;
+            
             document.getElementById('turnDisplay').textContent = currentTurn ? 'White' : 'Black';
             document.getElementById('moveCount').textContent = data.move_history.length;
             document.getElementById('gameStatus').textContent = data.game_status.toUpperCase();
             
+            // Отображение таймеров
+            if (timeControl > 0) {
+                document.getElementById('timerSection').style.display = 'block';
+                updateTimerDisplay();
+            } else {
+                document.getElementById('timerSection').style.display = 'none';
+            }
+            
             renderBoard();
             updateHistory(data.move_history);
             updateEvaluation();
+        }
+        
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function updateTimerDisplay() {
+            const whiteEl = document.getElementById('whiteTimer');
+            const blackEl = document.getElementById('blackTimer');
+            
+            whiteEl.textContent = formatTime(whiteTime);
+            blackEl.textContent = formatTime(blackTime);
+            
+            // Подсветка активного таймера
+            if (currentTurn) {
+                whiteEl.style.color = '#818cf8';
+                whiteEl.style.fontWeight = 'bold';
+                blackEl.style.color = '#666';
+                blackEl.style.fontWeight = 'normal';
+            } else {
+                whiteEl.style.color = '#666';
+                whiteEl.style.fontWeight = 'normal';
+                blackEl.style.color = '#818cf8';
+                blackEl.style.fontWeight = 'bold';
+            }
+            
+            // Предупреждение при малом времени
+            if (whiteTime < 10) whiteEl.style.color = '#f43f5e';
+            if (blackTime < 10) blackEl.style.color = '#f43f5e';
+        }
+        
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(async () => {
+                if (timeControl > 0) {
+                    // Уменьшение времени текущего игрока
+                    if (currentTurn) {
+                        whiteTime = Math.max(0, whiteTime - 0.1);
+                    } else {
+                        blackTime = Math.max(0, blackTime - 0.1);
+                    }
+                    
+                    updateTimerDisplay();
+                    
+                    // Проверка окончания времени
+                    if (whiteTime <= 0 || blackTime <= 0) {
+                        clearInterval(timerInterval);
+                        const winner = whiteTime <= 0 ? 'Black' : 'White';
+                        showNotification(`Time out! ${winner} wins!`, 'error');
+                        document.getElementById('gameStatus').textContent = `TIME OUT - ${winner.toUpperCase()} WINS`;
+                    }
+                }
+            }, 100);
         }
 
         function renderBoard() {
