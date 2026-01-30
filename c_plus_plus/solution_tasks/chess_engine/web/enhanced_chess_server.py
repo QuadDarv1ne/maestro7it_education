@@ -13,12 +13,16 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import json
 import os
+import sys
 import threading
 import time
 from datetime import datetime
 from collections import defaultdict
 
 # Import chess engine components
+# Add parent directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 try:
     from chess_engine_wrapper import chess_engine
     ENGINE_AVAILABLE = True
@@ -263,12 +267,12 @@ class EnhancedWebChess:
 @app.route('/')
 def index():
     """Serve the enhanced chess interface"""
-    return send_from_directory('web', 'enhanced_chess.html')
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'enhanced_chess.html')
 
 @app.route('/classic')
 def classic_interface():
     """Serve the classic interface"""
-    return send_from_directory('web', 'index.html')
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
 @app.route('/api/game-state/<game_id>')
 def get_game_state(game_id):

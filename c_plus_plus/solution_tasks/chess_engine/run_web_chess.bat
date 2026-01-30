@@ -32,6 +32,6 @@ echo.
 echo Нажмите Ctrl+C для остановки сервера
 echo.
 
-python web\enhanced_chess_server.py
+python web\simple_server.py
 
 pause
