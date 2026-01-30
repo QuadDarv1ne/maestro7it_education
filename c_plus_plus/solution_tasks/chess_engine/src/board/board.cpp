@@ -255,6 +255,40 @@ bool Board::isValidMove(Square from, Square to) const {
     return true;
 }
 
+void Board::printBoard() const {
+    std::cout << "\n  a b c d e f g h\n";
+    for (int rank = 7; rank >= 0; rank--) {
+        std::cout << rank + 1 << " ";
+        for (int file = 0; file < 8; file++) {
+            Square sq = square(file, rank);
+            const Piece& piece = getPiece(sq);
+            
+            if (piece.isEmpty()) {
+                std::cout << ". ";
+            } else {
+                char symbol = ' ';
+                switch (piece.getType()) {
+                    case PieceType::PAWN: symbol = 'P'; break;
+                    case PieceType::KNIGHT: symbol = 'N'; break;
+                    case PieceType::BISHOP: symbol = 'B'; break;
+                    case PieceType::ROOK: symbol = 'R'; break;
+                    case PieceType::QUEEN: symbol = 'Q'; break;
+                    case PieceType::KING: symbol = 'K'; break;
+                    default: symbol = '?'; break;
+                }
+                
+                if (piece.getColor() == Color::BLACK) {
+                    symbol = std::tolower(symbol);
+                }
+                
+                std::cout << symbol << " ";
+            }
+        }
+        std::cout << rank + 1 << "\n";
+    }
+    std::cout << "  a b c d e f g h\n\n";
+}
+
 // Загрузка позиции из FEN-нотации
 void Board::setupFromFEN(const std::string& fen) {
     initializeEmptyBoard();

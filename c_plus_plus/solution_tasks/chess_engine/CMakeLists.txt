@@ -31,6 +31,7 @@ set(SOURCES
     src/logic/game_rules.cpp
     src/engine/minimax.cpp
     src/engine/position_evaluator.cpp
+    src/engine/opening_book.cpp
     src/ui/console_ui.cpp
 )
 
