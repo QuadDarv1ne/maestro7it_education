@@ -241,7 +241,7 @@ class BitboardMoveGenerator:
         return moves
     
     def generate_pawn_moves(self, bitboards: dict, is_white: bool, occupied_bb: int, opponent_bb: int) -> List:
-        """Generate pawn moves using bitboard operations"""
+        """Генерация ходов пешек с использованием битбордовых операций"""
         moves = []
         direction = -1 if is_white else 1
         start_rank = 6 if is_white else 1
@@ -271,7 +271,7 @@ class BitboardMoveGenerator:
         return moves
     
     def generate_knight_moves(self, bitboards: dict, piece_prefix: str, occupied_bb: int, opponent_bb: int) -> List:
-        """Generate knight moves using precomputed attack tables"""
+        """Генерация ходов коня с использованием предвычисленных таблиц атак"""
         moves = []
         knight_bb = bitboards[f"{piece_prefix}knights"]
         
@@ -293,7 +293,7 @@ class BitboardMoveGenerator:
         return moves
     
     def generate_bishop_moves(self, bitboards: dict, piece_prefix: str, occupied_bb: int, opponent_bb: int) -> List:
-        """Generate bishop moves using ray attacks"""
+        """Генерация ходов слона с использованием лучевых атак"""
         moves = []
         bishop_bb = bitboards[f"{piece_prefix}bishops"]
         
@@ -313,7 +313,7 @@ class BitboardMoveGenerator:
         return moves
     
     def generate_rook_moves(self, bitboards: dict, piece_prefix: str, occupied_bb: int, opponent_bb: int) -> List:
-        """Generate rook moves using ray attacks"""
+        """Генерация ходов ладьи с использованием лучевых атак"""
         moves = []
         rook_bb = bitboards[f"{piece_prefix}rooks"]
         
@@ -333,7 +333,7 @@ class BitboardMoveGenerator:
         return moves
     
     def generate_queen_moves(self, bitboards: dict, piece_prefix: str, occupied_bb: int, opponent_bb: int) -> List:
-        """Generate queen moves (combination of rook and bishop)"""
+        """Генерация ходов ферзя (комбинация ладьи и слона)"""
         moves = []
         queen_bb = bitboards[f"{piece_prefix}queens"]
         
@@ -353,7 +353,7 @@ class BitboardMoveGenerator:
         return moves
     
     def generate_king_moves(self, bitboards: dict, piece_prefix: str, occupied_bb: int, opponent_bb: int) -> List:
-        """Generate king moves using precomputed attack table"""
+        """Генерация ходов короля с использованием предвычисленных таблиц атак"""
         moves = []
         king_bb = bitboards[f"{piece_prefix}king"]
         
@@ -373,7 +373,7 @@ class BitboardMoveGenerator:
         return moves
     
     def compute_sliding_attacks(self, square: int, occupied_bb: int, piece_type: str) -> int:
-        """Compute sliding piece attacks using occupancy information"""
+        """Вычисление атак скользящей фигуры с использованием информации о занятости"""
         attack_mask = 0
         row, col = square // 8, square % 8
         
@@ -393,7 +393,7 @@ class BitboardMoveGenerator:
         return attack_mask
     
     def bitboard_to_moves(self, move_bb: int, direction: int, move_type: str) -> List:
-        """Convert bitboard moves to coordinate format"""
+        """Преобразование битбордовых ходов в координатный формат"""
         moves = []
         square = 0
         while move_bb:
@@ -406,7 +406,7 @@ class BitboardMoveGenerator:
         return moves
     
     def bitboard_to_captures(self, capture_bb: int, direction: int, is_white: bool) -> List:
-        """Convert bitboard captures to coordinate format"""
+        """Преобразование битбордовых взятий в координатный формат"""
         moves = []
         square = 0
         while capture_bb:
@@ -421,7 +421,7 @@ class BitboardMoveGenerator:
         return moves
     
     def square_moves_to_coords(self, from_square: int, move_bb: int, move_type: str) -> List:
-        """Convert moves from a square to coordinate format"""
+        """Преобразование ходов с клетки в координатный формат"""
         moves = []
         from_row, from_col = from_square // 8, from_square % 8
         
@@ -437,7 +437,7 @@ class BitboardMoveGenerator:
 
 # Performance test function
 def test_bitboard_performance():
-    """Test the performance of bitboard move generator"""
+    """Тестирование производительности битбордового генератора ходов"""
     import time
     
     # Test position

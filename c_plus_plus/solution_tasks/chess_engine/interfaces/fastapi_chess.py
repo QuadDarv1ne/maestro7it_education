@@ -206,7 +206,7 @@ async def get_valid_moves(game_id: str, r: int, c: int):
 
 @app.get("/api/evaluation/{game_id}")
 async def get_evaluation(game_id: str):
-    """Get position evaluation"""
+    """Получение оценки позиции"""
     game = game_manager.get_game(game_id)
     if not game:
         return {"evaluation": 0}
@@ -215,7 +215,7 @@ async def get_evaluation(game_id: str):
 
 @app.get("/api/ai-move/{game_id}")
 async def get_ai_move(game_id: str, depth: int = 4):
-    """Get AI move for the current position"""
+    """Получение хода AI для текущей позиции"""
     try:
         game = game_manager.get_game(game_id)
         if not game:
@@ -228,7 +228,7 @@ async def get_ai_move(game_id: str, depth: int = 4):
             from_pos, to_pos = best_move
             engine.make_move(from_pos, to_pos)
             
-            # Record move
+            # Запись хода
             move_record = {
                 'from': from_pos,
                 'to': to_pos,
@@ -259,7 +259,7 @@ async def get_ai_move(game_id: str, depth: int = 4):
 
 @app.post("/api/save-game/{game_id}")
 async def save_game(game_id: str):
-    """Save the current game state to a file"""
+    """Сохранение текущего состояния игры в файл"""
     game = game_manager.get_game(game_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
@@ -269,14 +269,14 @@ async def save_game(game_id: str):
 
 @app.post("/api/load-game")
 async def load_game():
-    """Load game state from file"""
-    # For now, we load into a new game session
+    """Загрузка состояния игры из файла"""
+    # На данный момент загружаем в новую сессию игры
     game_id = game_manager.create_game("Loaded Player", "ai")
     game = game_manager.get_game(game_id)
     
     success = game['engine'].load_game("web_chess_save.json")
     if success:
-        # Update move history from engine if needed
+        # Обновление истории ходов из движка при необходимости
         game['move_history'] = [] # Need to reconstruct if necessary, or engine handles it
         return {
             "success": True, 
@@ -295,7 +295,7 @@ async def load_game():
 
 @app.post("/api/undo-move/{game_id}")
 async def undo_move(game_id: str):
-    """Undo the last move"""
+    """Отмена последнего хода"""
     try:
         game = game_manager.get_game(game_id)
         if not game:
@@ -304,14 +304,14 @@ async def undo_move(game_id: str):
         if not game['move_history']:
             return {'success': False, 'message': 'No moves to undo'}
         
-        # Use engine's undo functionality if available
+        # Используем функционал отмены движка, если доступен
         engine = game['engine']
         if hasattr(engine, 'undo_last_move') and callable(engine.undo_last_move):
             success = engine.undo_last_move()
             if success:
                 game['move_history'].pop()
         else:
-            # Fallback: manual undo
+            # Fallback: ручная отмена
             last_move = game['move_history'].pop()
             engine.board_state[last_move['from'][0]][last_move['from'][1]] = last_move['piece']
             engine.board_state[last_move['to'][0]][last_move['to'][1]] = last_move.get('captured', '.')
@@ -335,13 +335,13 @@ async def undo_move(game_id: str):
         return {'success': False, 'message': str(e)}
 
 def check_game_status(board: List[List[str]], current_turn: bool) -> str:
-    """Check current game status"""
-    # This is a simplified implementation
-    # In a full implementation, you'd check for check, checkmate, stalemate
+    """Проверка текущего статуса игры"""
+    # Это упрощенная реализация
+    # В полной реализации нужно проверять шах, мат, пат
     return "active"
 
 def convert_to_algebraic(from_pos: Tuple[int, int], to_pos: Tuple[int, int], piece: str) -> str:
-    """Convert move coordinates to algebraic notation"""
+    """Преобразование координат хода в алгебраическую нотацию"""
     files = 'abcdefgh'
     ranks = '87654321'
     
@@ -351,35 +351,35 @@ def convert_to_algebraic(from_pos: Tuple[int, int], to_pos: Tuple[int, int], pie
     piece_symbol = piece.upper() if piece.isupper() else piece.lower()
     return f"{piece_symbol}{from_square}-{to_square}"
 
-# WebSocket endpoint for real-time updates
+# WebSocket endpoint для real-time обновлений
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
-    """WebSocket endpoint for real-time game updates"""
+    """WebSocket endpoint для real-time обновлений игры"""
     await websocket.accept()
     
     try:
-        # Add connection to game
+        # Добавление подключения к игре
         if game_id in game_manager.connections:
             game_manager.connections[game_id].append(websocket)
         
         while True:
-            # Keep connection alive
+            # Поддержание соединения активным
             await asyncio.sleep(1)
             
     except WebSocketDisconnect:
-        # Remove connection
+        # Удаление подключения
         if game_id in game_manager.connections:
             if websocket in game_manager.connections[game_id]:
                 game_manager.connections[game_id].remove(websocket)
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Проверка здоровья системы"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.get("/api/stats/{game_id}")
 async def get_stats(game_id: str):
-    """Get game statistics"""
+    """Получение статистики игры"""
     try:
         game = game_manager.get_game(game_id)
         if not game:
@@ -393,7 +393,7 @@ async def get_stats(game_id: str):
             'current_evaluation': engine.get_evaluation() if hasattr(engine, 'get_evaluation') else 0
         }
         
-        # Add engine statistics if available
+        # Добавление статистики движка, если доступно
         if hasattr(engine, 'get_game_statistics'):
             engine_stats = engine.get_game_statistics()
             stats.update(engine_stats)

@@ -317,7 +317,7 @@ def generate_api_documentation():
     return doc
 
 def main():
-    """Main testing function"""
+    """Главная функция тестирования"""
     # Generate documentation
     print("Generating API documentation...")
     generate_api_documentation()

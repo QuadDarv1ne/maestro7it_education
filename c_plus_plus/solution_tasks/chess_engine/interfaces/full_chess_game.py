@@ -216,7 +216,7 @@ class FullChessGame:
             return None
     
     def get_valid_moves(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
-        """Get valid moves for a piece"""
+        """Получение допустимых ходов для фигуры"""
         valid_moves = []
         from_row, from_col = pos
         piece = self.state.board[from_row][from_col]
@@ -235,7 +235,7 @@ class FullChessGame:
         return valid_moves
     
     def make_move(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> bool:
-        """Execute a move"""
+        """Выполнение хода"""
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         

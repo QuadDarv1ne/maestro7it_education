@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def original_move_generation(board: List[List[str]], color: bool) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
-    """Original move generation (as used in current implementation)"""
+    """Оригинальная генерация ходов (используемая в текущей реализации)"""
     moves = []
     
     for row in range(8):
@@ -28,7 +28,7 @@ def original_move_generation(board: List[List[str]], color: bool) -> List[Tuple[
     return moves
 
 def is_valid_move_original(board: List[List[str]], from_pos: Tuple[int, int], to_pos: Tuple[int, int], is_white_turn: bool) -> bool:
-    """Original move validation logic"""
+    """Оригинальная логика валидации ходов"""
     from_row, from_col = from_pos
     to_row, to_col = to_pos
     
