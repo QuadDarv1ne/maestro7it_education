@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Chess Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #2c3e50, #34495e);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .chess-board {
+            border: 3px solid #2c3e50;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .panel h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .input-group input, .input-group button {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .input-group button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .input-group button:hover {
+            background: #2980b9;
+        }
+        
+        .input-group button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .status-indicator {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-waiting {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .moves-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+        }
+        
+        .chat-messages {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .chat-input button {
+            padding: 8px 15px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .opponent-info {
+            text-align: center;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 8px;
+        }
+        
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .controls button {
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-resign {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-draw {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-offer-draw {
+            background: #3498db;
+            color: white;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .notif-success {
+            background: #27ae60;
+        }
+        
+        .notif-error {
+            background: #e74c3c;
+        }
+        
+        .notif-info {
+            background: #3498db;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>♟️ Network Chess</h1>
+            <p>Play chess online with players worldwide</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="game-area">
+                <canvas id="chessBoard" class="chess-board" width="480" height="480"></canvas>
+                
+                <div class="timer" id="timer">Waiting for game...</div>
+                
+                <div class="controls">
+                    <button id="resignBtn" class="btn-resign" disabled>Resign</button>
+                    <button id="drawBtn" class="btn-draw" disabled>Offer Draw</button>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="panel">
+                    <h3>🔌 Connection</h3>
+                    <div class="input-group">
+                        <label for="serverUrl">Server URL:</label>
+                        <input type="text" id="serverUrl" value="ws://localhost:8766" placeholder="WebSocket server URL">
+                    </div>
+                    <div class="input-group">
+                        <label for="playerName">Your Name:</label>
+                        <input type="text" id="playerName" placeholder="Enter your name">
+                    </div>
+                    <div class="input-group">
+                        <button id="connectBtn">Connect to Server</button>
+                    </div>
+                    <div id="connectionStatus" class="status-indicator status-disconnected">
+                        Disconnected
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>🎮 Game Lobby</h3>
+                    <div class="input-group">
+                        <button id="joinQueueBtn" disabled>Join Matchmaking Queue</button>
+                    </div>
+                    <div class="input-group">
+                        <button id="leaveQueueBtn" disabled>Leave Queue</button>
+                    </div>
+                    <div id="lobbyInfo">
+                        <p>Players waiting: <span id="waitingCount">0</span></p>
+                        <p>Active games: <span id="activeGames">0</span></p>
+                        <p>Players online: <span id="onlinePlayers">0</span></p>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>♟️ Current Game</h3>
+                    <div id="gameInfo">
+                        <p>Status: <span id="gameStatus">Not in game</span></p>
+                        <div id="opponentInfo" class="opponent-info" style="display: none;">
+                            <p>Playing against: <strong id="opponentName"></strong></p>
+                            <p>Rating: <span id="opponentRating"></span></p>
+                            <p>Your color: <span id="yourColor"></span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>📜 Move History</h3>
+                    <div id="movesList" class="moves-list">
+                        No game in progress
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>💬 Chat</h3>
+                    <div id="chatMessages" class="chat-messages">
+                        <p>Welcome to Network Chess!</p>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Type your message..." disabled>
+                        <button id="sendChatBtn" disabled>Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class NetworkChessClient {
+            constructor() {
+                this.websocket = null;
+                this.playerId = null;
+                this.playerName = null;
+                this.gameId = null;
+                this.isMyTurn = false;
+                this.selectedPiece = null;
+                this.validMoves = [];
+                this.board = this.initializeBoard();
+                this.moveHistory = [];
+                
+                this.canvas = document.getElementById('chessBoard');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.initializeEventListeners();
+                this.drawBoard();
+            }
+            
+            initializeBoard() {
+                // Standard chess starting position
+                return [
+                    ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                    ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                    [null, null, null, null, null, null, null, null],
+                    [null, null, null, null, null, null, null, null],
+                    [null, null, null, null, null, null, null, null],
+                    [null, null, null, null, null, null, null, null],
+                    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+                ];
+            }
+            
+            initializeEventListeners() {
+                // Connection controls
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectToServer());
+                document.getElementById('playerName').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.connectToServer();
+                });
+                
+                // Game controls
+                document.getElementById('joinQueueBtn').addEventListener('click', () => this.joinQueue());
+                document.getElementById('leaveQueueBtn').addEventListener('click', () => this.leaveQueue());
+                document.getElementById('resignBtn').addEventListener('click', () => this.resign());
+                document.getElementById('drawBtn').addEventListener('click', () => this.offerDraw());
+                
+                // Chat
+                document.getElementById('sendChatBtn').addEventListener('click', () => this.sendChat());
+                document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendChat();
+                });
+                
+                // Canvas click handler
+                this.canvas.addEventListener('click', (e) => this.handleBoardClick(e));
+            }
+            
+            connectToServer() {
+                const serverUrl = document.getElementById('serverUrl').value;
+                this.playerName = document.getElementById('playerName').value || `Player_${Math.random().toString(36).substr(2, 8)}`;
+                
+                try {
+                    this.websocket = new WebSocket(serverUrl);
+                    
+                    this.websocket.onopen = () => {
+                        this.updateConnectionStatus('Connected', 'status-connected');
+                        this.enableGameControls();
+                        this.showNotification('Connected to server!', 'success');
+                    };
+                    
+                    this.websocket.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleServerMessage(data);
+                    };
+                    
+                    this.websocket.onclose = () => {
+                        this.updateConnectionStatus('Disconnected', 'status-disconnected');
+                        this.disableGameControls();
+                        this.showNotification('Disconnected from server', 'error');
+                    };
+                    
+                    this.websocket.onerror = (error) => {
+                        this.showNotification('Connection error occurred', 'error');
+                    };
+                    
+                } catch (error) {
+                    this.showNotification('Failed to connect: ' + error.message, 'error');
+                }
+            }
+            
+            handleServerMessage(data) {
+                switch (data.type) {
+                    case 'welcome':
+                        this.playerId = data.player_id;
+                        this.playerName = data.player_name;
+                        document.getElementById('playerName').value = this.playerName;
+                        this.sendMessage({type: 'set_name', name: this.playerName});
+                        break;
+                        
+                    case 'queue_joined':
+                        this.updateQueueButtons(true);
+                        this.showNotification(`Joined queue (position: ${data.position})`, 'info');
+                        break;
+                        
+                    case 'queue_left':
+                        this.updateQueueButtons(false);
+                        this.showNotification('Left matchmaking queue', 'info');
+                        break;
+                        
+                    case 'game_start':
+                        this.gameId = data.game_id;
+                        this.isMyTurn = data.color === 'white';
+                        this.updateGameStatus('Active');
+                        this.enableGamePlay();
+                        this.updateOpponentInfo(data.opponent, data.opponent_rating, data.color);
+                        this.showNotification(`Game started! You play ${data.color}`, 'success');
+                        break;
+                        
+                    case 'move_made':
+                        this.applyMove(data.move);
+                        this.isMyTurn = data.your_turn;
+                        this.updateTurnIndicator();
+                        this.showNotification(`Opponent moved: ${data.move}`, 'info');
+                        break;
+                        
+                    case 'game_won':
+                        this.updateGameStatus('Won');
+                        this.disableGamePlay();
+                        this.showNotification(`You won! (${data.reason})`, 'success');
+                        break;
+                        
+                    case 'game_lost':
+                        this.updateGameStatus('Lost');
+                        this.disableGamePlay();
+                        this.showNotification(`You lost (${data.reason})`, 'error');
+                        break;
+                        
+                    case 'game_drawn':
+                        this.updateGameStatus('Draw');
+                        this.disableGamePlay();
+                        this.showNotification('Game drawn', 'info');
+                        break;
+                        
+                    case 'draw_offered':
+                        if (confirm('Opponent offers a draw. Accept?')) {
+                            this.sendMessage({type: 'offer_draw', accept: true});
+                        }
+                        break;
+                        
+                    case 'chat_message':
+                        this.addChatMessage(data.sender_name, data.message);
+                        break;
+                        
+                    case 'lobby_update':
+                        this.updateLobbyInfo(data);
+                        break;
+                        
+                    case 'error':
+                        this.showNotification(data.message, 'error');
+                        break;
+                }
+            }
+            
+            sendMessage(message) {
+                if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                    this.websocket.send(JSON.stringify(message));
+                }
+            }
+            
+            joinQueue() {
+                this.sendMessage({type: 'join_queue'});
+            }
+            
+            leaveQueue() {
+                this.sendMessage({type: 'leave_queue'});
+            }
+            
+            resign() {
+                if (confirm('Are you sure you want to resign?')) {
+                    this.sendMessage({type: 'resign'});
+                }
+            }
+            
+            offerDraw() {
+                this.sendMessage({type: 'offer_draw', offer: true});
+                this.showNotification('Draw offer sent', 'info');
+            }
+            
+            sendChat() {
+                const input = document.getElementById('chatInput');
+                const message = input.value.trim();
+                if (message && this.gameId) {
+                    this.sendMessage({type: 'chat', message: message});
+                    input.value = '';
+                }
+            }
+            
+            handleBoardClick(event) {
+                if (!this.isMyTurn || !this.gameId) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                
+                const squareSize = this.canvas.width / 8;
+                const file = Math.floor(x / squareSize);
+                const rank = 7 - Math.floor(y / squareSize); // Invert for chess notation
+                
+                if (this.selectedPiece) {
+                    // Attempt to move
+                    const from = this.selectedPiece;
+                    const to = [file, rank];
+                    
+                    if (this.isValidMove(from, to)) {
+                        const moveNotation = this.moveToAlgebraic(from, to);
+                        this.sendMessage({type: 'make_move', move: moveNotation});
+                        this.selectedPiece = null;
+                        this.validMoves = [];
+                        this.drawBoard();
+                    } else {
+                        this.selectedPiece = null;
+                        this.validMoves = [];
+                        this.drawBoard();
+                    }
+                } else {
+                    // Select piece
+                    const piece = this.board[rank][file];
+                    if (piece && this.isOwnPiece(piece)) {
+                        this.selectedPiece = [file, rank];
+                        this.validMoves = this.calculateValidMoves(file, rank);
+                        this.drawBoard();
+                    }
+                }
+            }
+            
+            isOwnPiece(piece) {
+                // Assuming white pieces are uppercase
+                const isWhite = piece === piece.toUpperCase();
+                return (document.getElementById('yourColor').textContent === 'white') === isWhite;
+            }
+            
+            isValidMove(from, to) {
+                return this.validMoves.some(move => move[0] === to[0] && move[1] === to[1]);
+            }
+            
+            calculateValidMoves(file, rank) {
+                // Simplified move validation - in a real implementation, 
+                // this would use the chess engine's move generation
+                const piece = this.board[rank][file];
+                const moves = [];
+                
+                if (!piece) return moves;
+                
+                // Basic movement patterns (simplified)
+                switch (piece.toLowerCase()) {
+                    case 'p': // pawn
+                        const direction = this.isOwnPiece(piece) ? -1 : 1;
+                        const startRank = this.isOwnPiece(piece) ? 6 : 1;
+                        
+                        // Forward move
+                        if (rank + direction >= 0 && rank + direction < 8 && 
+                            !this.board[rank + direction][file]) {
+                            moves.push([file, rank + direction]);
+                            
+                            // Double move from starting position
+                            if (rank === startRank && !this.board[rank + 2 * direction][file]) {
+                                moves.push([file, rank + 2 * direction]);
+                            }
+                        }
+                        
+                        // Captures
+                        [-1, 1].forEach(offset => {
+                            const newFile = file + offset;
+                            if (newFile >= 0 && newFile < 8 && rank + direction >= 0 && rank + direction < 8) {
+                                const target = this.board[rank + direction][newFile];
+                                if (target && !this.isOwnPiece(target)) {
+                                    moves.push([newFile, rank + direction]);
+                                }
+                            }
+                        });
+                        break;
+                        
+                    // Add other piece movements here...
+                }
+                
+                return moves;
+            }
+            
+            moveToAlgebraic(from, to) {
+                const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                const fromNotation = files[from[0]] + (8 - from[1]);
+                const toNotation = files[to[0]] + (8 - to[1]);
+                return fromNotation + toNotation;
+            }
+            
+            applyMove(move) {
+                // Parse algebraic notation and update board
+                // This is a simplified implementation
+                this.moveHistory.push(move);
+                this.updateMoveList();
+                // In a real implementation, this would properly parse and apply the move
+            }
+            
+            drawBoard() {
+                const squareSize = this.canvas.width / 8;
+                
+                for (let rank = 0; rank < 8; rank++) {
+                    for (let file = 0; file < 8; file++) {
+                        // Draw square
+                        const x = file * squareSize;
+                        const y = (7 - rank) * squareSize; // Invert for proper orientation
+                        
+                        // Alternate square colors
+                        this.ctx.fillStyle = (rank + file) % 2 === 0 ? '#f0d9b5' : '#b58863';
+                        this.ctx.fillRect(x, y, squareSize, squareSize);
+                        
+                        // Highlight selected piece and valid moves
+                        if (this.selectedPiece && this.selectedPiece[0] === file && this.selectedPiece[1] === rank) {
+                            this.ctx.fillStyle = 'rgba(144, 238, 144, 0.6)';
+                            this.ctx.fillRect(x, y, squareSize, squareSize);
+                        }
+                        
+                        if (this.validMoves.some(move => move[0] === file && move[1] === rank)) {
+                            this.ctx.fillStyle = 'rgba(144, 238, 144, 0.4)';
+                            this.ctx.beginPath();
+                            this.ctx.arc(x + squareSize/2, y + squareSize/2, squareSize/4, 0, 2 * Math.PI);
+                            this.ctx.fill();
+                        }
+                        
+                        // Draw piece
+                        const piece = this.board[rank][file];
+                        if (piece) {
+                            this.drawPiece(piece, x + squareSize/2, y + squareSize/2, squareSize * 0.8);
+                        }
+                    }
+                }
+            }
+            
+            drawPiece(piece, x, y, size) {
+                // Simplified piece drawing using Unicode characters
+                this.ctx.font = `${size}px Arial`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                
+                // Unicode chess pieces
+                const pieceMap = {
+                    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+                    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+                };
+                
+                this.ctx.fillStyle = piece === piece.toUpperCase() ? '#000000' : '#ffffff';
+                this.ctx.fillText(pieceMap[piece] || '', x, y);
+            }
+            
+            // UI Update Methods
+            updateConnectionStatus(text, className) {
+                const statusEl = document.getElementById('connectionStatus');
+                statusEl.textContent = text;
+                statusEl.className = `status-indicator ${className}`;
+            }
+            
+            updateQueueButtons(inQueue) {
+                document.getElementById('joinQueueBtn').disabled = inQueue;
+                document.getElementById('leaveQueueBtn').disabled = !inQueue;
+            }
+            
+            updateGameStatus(status) {
+                document.getElementById('gameStatus').textContent = status;
+            }
+            
+            updateOpponentInfo(name, rating, color) {
+                document.getElementById('opponentName').textContent = name;
+                document.getElementById('opponentRating').textContent = rating;
+                document.getElementById('yourColor').textContent = color;
+                document.getElementById('opponentInfo').style.display = 'block';
+            }
+            
+            updateLobbyInfo(data) {
+                document.getElementById('waitingCount').textContent = data.players_waiting;
+                document.getElementById('activeGames').textContent = data.active_games;
+                document.getElementById('onlinePlayers').textContent = data.players_online;
+            }
+            
+            updateMoveList() {
+                const movesList = document.getElementById('movesList');
+                if (this.moveHistory.length === 0) {
+                    movesList.innerHTML = 'No moves yet';
+                    return;
+                }
+                
+                movesList.innerHTML = this.moveHistory.map((move, index) => {
+                    const moveNumber = Math.floor(index / 2) + 1;
+                    const isWhite = index % 2 === 0;
+                    return `${isWhite ? moveNumber + '.' : '&nbsp;&nbsp;'} ${move}`;
+                }).join('<br>');
+            }
+            
+            addChatMessage(sender, message) {
+                const chatDiv = document.getElementById('chatMessages');
+                const timestamp = new Date().toLocaleTimeString();
+                chatDiv.innerHTML += `<p><strong>${sender}</strong> (${timestamp}): ${message}</p>`;
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+            }
+            
+            updateTurnIndicator() {
+                const timer = document.getElementById('timer');
+                timer.textContent = this.isMyTurn ? 'Your Turn' : 'Opponent\'s Turn';
+                timer.style.color = this.isMyTurn ? '#27ae60' : '#e74c3c';
+            }
+            
+            enableGameControls() {
+                document.getElementById('joinQueueBtn').disabled = false;
+                document.getElementById('playerName').disabled = true;
+                document.getElementById('serverUrl').disabled = true;
+            }
+            
+            disableGameControls() {
+                document.getElementById('joinQueueBtn').disabled = true;
+                document.getElementById('leaveQueueBtn').disabled = true;
+                document.getElementById('playerName').disabled = false;
+                document.getElementById('serverUrl').disabled = false;
+                this.disableGamePlay();
+            }
+            
+            enableGamePlay() {
+                document.getElementById('resignBtn').disabled = false;
+                document.getElementById('drawBtn').disabled = false;
+                document.getElementById('chatInput').disabled = false;
+                document.getElementById('sendChatBtn').disabled = false;
+            }
+            
+            disableGamePlay() {
+                document.getElementById('resignBtn').disabled = true;
+                document.getElementById('drawBtn').disabled = true;
+                document.getElementById('chatInput').disabled = true;
+                document.getElementById('sendChatBtn').disabled = true;
+                this.isMyTurn = false;
+                this.selectedPiece = null;
+                this.validMoves = [];
+                this.drawBoard();
+            }
+            
+            showNotification(message, type) {
+                const notification = document.createElement('div');
+                notification.className = `notification notif-${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 3000);
+            }
+        }
+        
+        // Initialize the client when page loads
+        window.addEventListener('load', () => {
+            new NetworkChessClient();
+        });
+    </script>
+</body>
+</html>

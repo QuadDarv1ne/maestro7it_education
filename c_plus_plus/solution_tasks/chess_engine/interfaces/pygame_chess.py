@@ -874,13 +874,17 @@ class PygameChessGUI:
         # Сохранение захваченной фигуры
         captured = self.engine.board_state[to_row][to_col]
         
-        # Запуск анимации (только если не во время AI расчетов)
-        if not self.ai_calculating:
+        # Запуск анимации (только если не во время AI расчетов И не AI ход)
+        is_ai_move = (self.game_mode == 'computer' and 
+                     ((self.ai_color == 'white' and self.white_turn) or 
+                      (self.ai_color == 'black' and not self.white_turn)))
+        
+        if not self.ai_calculating and not is_ai_move:
             self.start_move_animation(from_pos, to_pos)
         
         # Выполнение хода в движке
         if not self.engine.make_move(from_pos, to_pos):
-            if not self.ai_calculating:
+            if not self.ai_calculating and not is_ai_move:
                 self.animation.active = False
             return False
         
@@ -1193,8 +1197,12 @@ class PygameChessGUI:
             delta_time = self.clock.tick(60)
             running = self.handle_events()
             
-            # Обновление анимации (только если не во время AI расчетов)
-            if self.animation.active and not self.ai_calculating:
+            # Обновление анимации (только если не во время AI расчетов и не AI ход)
+            is_current_ai_move = (self.game_mode == 'computer' and 
+                                ((self.ai_color == 'white' and self.white_turn) or 
+                                 (self.ai_color == 'black' and not self.white_turn)))
+            
+            if self.animation.active and not self.ai_calculating and not is_current_ai_move:
                 self.update_animation(delta_time)
             
             # Логика AI хода
