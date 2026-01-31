@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <utility>  // for std::move
 
 // Предварительное объявление Move
 struct Move;
@@ -37,63 +38,67 @@ class Board {
     
 public:
     // Конструктор
-    Board();
+    Board() noexcept;
+    Board(Board&& other) noexcept = default;  // Move constructor
+    Board& operator=(Board&& other) noexcept = default;  // Move assignment
+    Board(const Board&) = default;  // Copy constructor
+    Board& operator=(const Board&) = default;  // Copy assignment
     
     // Методы настройки
-    void setupStartPosition();              ///< Устанавливает начальную позицию
-    void setupFromFEN(const std::string& fen);  ///< Загружает позицию из FEN-нотации
+    void setupStartPosition() noexcept;              ///< Устанавливает начальную позицию
+    void setupFromFEN(const std::string& fen);       ///< Загружает позицию из FEN-нотации
     
     // Геттеры
-    const Piece& getPiece(Square square) const;  ///< Возвращает фигуру на указанной клетке
-    Color getCurrentPlayer() const;              ///< Возвращает текущего игрока
-    int getMoveCount() const;                    ///< Возвращает счетчик ходов
-    bool canCastleKingSide(Color color) const;   ///< Проверяет право на короткую рокировку
-    bool canCastleQueenSide(Color color) const;  ///< Проверяет право на длинную рокировку
-    Square getEnPassantSquare() const;           ///< Возвращает клетку для взятия на проходе
-    int getHalfMoveClock() const;                ///< Возвращает счетчик полуходов
-    const std::vector<UndoInfo>& getHistory() const;  ///< Возвращает историю ходов
+    [[nodiscard]] const Piece& getPiece(Square square) const noexcept;  ///< Возвращает фигуру на указанной клетке
+    [[nodiscard]] Color getCurrentPlayer() const noexcept;              ///< Возвращает текущего игрока
+    [[nodiscard]] int getMoveCount() const noexcept;                    ///< Возвращает счетчик ходов
+    [[nodiscard]] bool canCastleKingSide(Color color) const noexcept;   ///< Проверяет право на короткую рокировку
+    [[nodiscard]] bool canCastleQueenSide(Color color) const noexcept;  ///< Проверяет право на длинную рокировку
+    [[nodiscard]] Square getEnPassantSquare() const noexcept;           ///< Возвращает клетку для взятия на проходе
+    [[nodiscard]] int getHalfMoveClock() const noexcept;                ///< Возвращает счетчик полуходов
+    [[nodiscard]] const std::vector<UndoInfo>& getHistory() const noexcept;  ///< Возвращает историю ходов
     
     // Сеттеры
-    void setPiece(Square square, const Piece& piece);  ///< Устанавливает фигуру на клетку
-    void setCurrentPlayer(Color color);                ///< Устанавливает текущего игрока
+    void setPiece(Square square, const Piece& piece) noexcept;  ///< Устанавливает фигуру на клетку
+    void setCurrentPlayer(Color color) noexcept;                ///< Устанавливает текущего игрока
     void setCastlingRights(bool whiteKingSide, bool whiteQueenSide, 
-                          bool blackKingSide, bool blackQueenSide);  ///< Устанавливает права на рокировку
-    void setEnPassantSquare(Square square);            ///< Устанавливает клетку для взятия на проходе
-    void setHalfMoveClock(int clock);                  ///< Устанавливает счетчик полуходов
+                          bool blackKingSide, bool blackQueenSide) noexcept;  ///< Устанавливает права на рокировку
+    void setEnPassantSquare(Square square) noexcept;            ///< Устанавливает клетку для взятия на проходе
+    void setHalfMoveClock(int clock) noexcept;                  ///< Устанавливает счетчик полуходов
     
     // Операции с доской
-    void makeMove(const Move& move);                   ///< Выполняет полноценный ход со всеми правилами
-    void makeMove(Square from, Square to);             ///< Выполняет ход с одной клетки на другую
-    void makeMove(const std::string& algebraicNotation);  ///< Выполняет ход в алгебраической нотации
-    void undoMove();                                   ///< Отменяет последний ход
-    bool isValidMove(Square from, Square to) const;    ///< Проверяет корректность хода
+    void makeMove(const Move& move);                           ///< Выполняет полноценный ход со всеми правилами
+    void makeMove(Square from, Square to);                     ///< Выполняет ход с одной клетки на другую
+    void makeMove(const std::string& algebraicNotation);       ///< Выполняет ход в алгебраической нотации
+    void undoMove();                                           ///< Отменяет последний ход
+    [[nodiscard]] bool isValidMove(Square from, Square to) const noexcept;    ///< Проверяет корректность хода
     
     // Обновление состояния после хода
-    void updateGameStateAfterMove(const Move& move);   ///< Обновляет права рокировки и ep после хода
+    void updateGameStateAfterMove(const Move& move) noexcept;   ///< Обновляет права рокировки и ep после хода
     
     // Сохранение/загрузка истории (для makeMove в GameRules)
     void pushHistory(Square from, Square to, const Piece& captured, bool isCastling = false, bool isEnPassant = false, PieceType promotion = PieceType::EMPTY, uint64_t hash = 0);
     
     // Вспомогательные методы
-    Square algebraicToSquare(const std::string& algebraic) const;  ///< Преобразует алгебраическую нотацию в клетку
-    std::string squareToAlgebraic(Square square) const;           ///< Преобразует клетку в алгебраическую нотацию
-    void printBoard() const;                                      ///< Выводит доску в консоль
-    std::string getFEN() const;                                   ///< Возвращает FEN-нотацию текущей позиции
-    uint64_t getZobristHash() const;                              ///< Возвращает Zobrist-хеш текущей позиции
+    [[nodiscard]] Square algebraicToSquare(const std::string& algebraic) const;  ///< Преобразует алгебраическую нотацию в клетку
+    [[nodiscard]] std::string squareToAlgebraic(Square square) const noexcept;   ///< Преобразует клетку в алгебраическую нотацию
+    void printBoard() const;                                                    ///< Выводит доску в консоль
+    [[nodiscard]] std::string getFEN() const;                                   ///< Возвращает FEN-нотацию текущей позиции
+    [[nodiscard]] uint64_t getZobristHash() const noexcept;                     ///< Возвращает Zobrist-хеш текущей позиции
     
     // Состояние игры
-    bool isCheck(Color color) const;      ///< Проверяет, находится ли король под шахом
-    bool isCheckmate(Color color) const;  ///< Проверяет, является ли позиция матом
-    bool isStalemate(Color color) const;  ///< Проверяет, является ли позиция патом
-    bool isRepetition() const;            ///< Проверяет на троекратное повторение
-    bool isGameOver() const;              ///< Проверяет, завершена ли игра
+    [[nodiscard]] bool isCheck(Color color) const noexcept;      ///< Проверяет, находится ли король под шахом
+    [[nodiscard]] bool isCheckmate(Color color) const noexcept;  ///< Проверяет, является ли позиция матом
+    [[nodiscard]] bool isStalemate(Color color) const noexcept;  ///< Проверяет, является ли позиция патом
+    [[nodiscard]] bool isRepetition() const noexcept;            ///< Проверяет на троекратное повторение
+    [[nodiscard]] bool isGameOver() const noexcept;              ///< Проверяет, завершена ли игра
     
     // Вспомогательные методы (публичные для доступа из других классов)
-    void initializeEmptyBoard();          ///< Инициализирует пустую доску
-    bool isInBounds(Square square) const; ///< Проверяет, находится ли клетка в пределах доски
-    int rank(Square square) const;        ///< Возвращает горизонталь (0-7, где 0 - первая горизонталь)
-    int file(Square square) const;        ///< Возвращает вертикаль (0-7, где 0 - вертикаль 'a')
-    Square square(int file, int rank) const;  ///< Создает клетку из вертикали и горизонтали
+    void initializeEmptyBoard() noexcept;          ///< Инициализирует пустую доску
+    [[nodiscard]] bool isInBounds(Square square) const noexcept; ///< Проверяет, находится ли клетка в пределах доски
+    [[nodiscard]] int rank(Square square) const noexcept;        ///< Возвращает горизонталь (0-7, где 0 - первая горизонталь)
+    [[nodiscard]] int file(Square square) const noexcept;        ///< Возвращает вертикаль (0-7, где 0 - вертикаль 'a')
+    [[nodiscard]] Square square(int file, int rank) const noexcept;  ///< Создает клетку из вертикали и горизонтали
     
 private:
     std::vector<Piece> squares_;  ///< 64 клетки доски (8x8)

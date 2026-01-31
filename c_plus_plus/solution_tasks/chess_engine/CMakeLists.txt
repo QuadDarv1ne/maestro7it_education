@@ -101,6 +101,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_game_states.cpp")
     target_include_directories(test_game_states PRIVATE include)
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tools/performance_benchmark.cpp")
+    add_executable(performance_benchmark tools/performance_benchmark.cpp src/board/board.cpp src/board/piece.cpp src/logic/move_generator.cpp src/logic/game_rules.cpp ${HEADERS})
+    target_include_directories(performance_benchmark PRIVATE include)
+endif()
+
 # Include directories
 target_include_directories(chess_engine PRIVATE include)
 
