@@ -114,6 +114,18 @@ class ChessEngineWrapper:
                 print("Предупреждение: EnhancedNeuralEvaluator не найден")
                 self.nnue_eval = None
                 
+        # Добавляем профессиональную эндшпильную таблицу
+        try:
+            from core.professional_endgame_tablebase import EndgameMaster
+            self.endgame_master = EndgameMaster()
+        except ImportError:
+            try:
+                from .professional_endgame_tablebase import EndgameMaster
+                self.endgame_master = EndgameMaster()
+            except ImportError:
+                print("Предупреждение: EndgameMaster не найден")
+                self.endgame_master = None
+                
         # Zobrist hashing для быстрой проверки позиций (синхронизируем с AI)
         if self.ai:
             self.zobrist_keys = self.ai.zobrist_keys

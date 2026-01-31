@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chess Master Pro - Mobile Chess Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .board-container {
+            position: relative;
+            width: 100%;
+            margin: 0 auto 20px;
+            touch-action: none;
+        }
+
+        .chess-board {
+            width: 100%;
+            aspect-ratio: 1/1;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            border: 3px solid #8B4513;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(2vw + 12px);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            user-select: none;
+        }
+
+        .square.light {
+            background-color: #f0d9b5;
+        }
+
+        .square.dark {
+            background-color: #b58863;
+        }
+
+        .square.selected {
+            background-color: #aec6cf !important;
+            box-shadow: inset 0 0 0 3px #4682b4;
+        }
+
+        .square.valid-move {
+            background-color: #90ee90 !important;
+        }
+
+        .square.valid-move::after {
+            content: "";
+            position: absolute;
+            width: 25%;
+            height: 25%;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+        }
+
+        .square.check {
+            background-color: #ff6b6b !important;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+
+        .piece {
+            font-size: calc(3vw + 15px);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s ease;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .piece.dragging {
+            transform: scale(1.2);
+            z-index: 1000;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #4CAF50, #45a049);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(to right, #2196F3, #1976D2);
+        }
+
+        .btn-warning {
+            background: linear-gradient(to right, #FF9800, #F57C00);
+        }
+
+        .btn-danger {
+            background: linear-gradient(to right, #f44336, #d32f2f);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .evaluation-bar {
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .eval-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            background: linear-gradient(to right, #ff4444, #ff6b6b, #4CAF50, #45a049);
+        }
+
+        .eval-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .move-history {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .move-history h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .moves-list {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .move-number {
+            display: inline-block;
+            width: 25px;
+            font-weight: bold;
+        }
+
+        .status-bar {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .thinking-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .thinking-indicator.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 8px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .difficulty-btn.active {
+            background: #4CAF50;
+            border-color: #45a049;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .notification.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { top: -50px; opacity: 0; }
+            to { top: 20px; opacity: 1; }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 400px) {
+            .square {
+                font-size: calc(1.5vw + 10px);
+            }
+            
+            .piece {
+                font-size: calc(2.5vw + 12px);
+            }
+            
+            .btn {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (min-width: 600px) {
+            .container {
+                max-width: 600px;
+            }
+            
+            .square {
+                font-size: 24px;
+            }
+            
+            .piece {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♚ Chess Master Pro ♛</h1>
+            <div class="subtitle">Professional Chess Engine</div>
+        </header>
+
+        <div class="game-info">
+            <div class="info-item">
+                <div class="info-label">TURN</div>
+                <div class="info-value" id="current-turn">WHITE</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">DIFFICULTY</div>
+                <div class="info-value" id="difficulty">MEDIUM</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">MOVES</div>
+                <div class="info-value" id="move-count">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">STATUS</div>
+                <div class="info-value" id="game-status">PLAYING</div>
+            </div>
+        </div>
+
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" data-level="1">Easy</button>
+            <button class="difficulty-btn" data-level="2">Medium</button>
+            <button class="difficulty-btn" data-level="3">Hard</button>
+            <button class="difficulty-btn" data-level="4">Expert</button>
+        </div>
+
+        <div class="board-container">
+            <div class="chess-board" id="chess-board"></div>
+        </div>
+
+        <div class="evaluation-bar">
+            <div class="eval-fill" id="eval-bar" style="width: 50%;"></div>
+            <div class="eval-text" id="eval-text">0.00</div>
+        </div>
+
+        <div class="status-bar" id="status-message">
+            Select a piece to move
+        </div>
+
+        <div class="thinking-indicator" id="thinking-indicator">
+            <div class="spinner"></div>
+            <span>Engine thinking...</span>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="new-game">New Game</button>
+            <button class="btn btn-secondary" id="undo-move">Undo</button>
+            <button class="btn btn-warning" id="hint-btn">Hint</button>
+            <button class="btn btn-danger" id="resign-btn">Resign</button>
+        </div>
+
+        <div class="move-history">
+            <h3>Move History</h3>
+            <div class="moves-list" id="moves-list">No moves yet</div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        class MobileChessEngine {
+            constructor() {
+                this.board = this.getInitialBoard();
+                this.currentPlayer = 'white';
+                this.selectedSquare = null;
+                this.validMoves = [];
+                this.moveHistory = [];
+                this.gameOver = false;
+                this.difficulty = 2; // Medium
+                this.inCheck = false;
+                
+                this.initializeBoard();
+                this.setupEventListeners();
+                this.updateDisplay();
+            }
+
+            getInitialBoard() {
+                return [
+                    ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                    ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                    ['.', '.', '.', '.', '.', '.', '.', '.'],
+                    ['.', '.', '.', '.', '.', '.', '.', '.'],
+                    ['.', '.', '.', '.', '.', '.', '.', '.'],
+                    ['.', '.', '.', '.', '.', '.', '.', '.'],
+                    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+                ];
+            }
+
+            initializeBoard() {
+                const boardElement = document.getElementById('chess-board');
+                boardElement.innerHTML = '';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                        square.dataset.row = row;
+                        square.dataset.col = col;
+                        
+                        const piece = this.board[row][col];
+                        if (piece !== '.') {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = 'piece';
+                            pieceElement.textContent = this.getPieceSymbol(piece);
+                            pieceElement.dataset.piece = piece;
+                            square.appendChild(pieceElement);
+                        }
+                        
+                        boardElement.appendChild(square);
+                    }
+                }
+            }
+
+            getPieceSymbol(piece) {
+                const symbols = {
+                    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+                    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+                };
+                return symbols[piece] || '';
+            }
+
+            setupEventListeners() {
+                // Board clicks
+                document.getElementById('chess-board').addEventListener('click', (e) => {
+                    const square = e.target.closest('.square');
+                    if (square && !this.gameOver) {
+                        this.handleSquareClick(parseInt(square.dataset.row), parseInt(square.dataset.col));
+                    }
+                });
+
+                // Control buttons
+                document.getElementById('new-game').addEventListener('click', () => this.newGame());
+                document.getElementById('undo-move').addEventListener('click', () => this.undoMove());
+                document.getElementById('hint-btn').addEventListener('click', () => this.getHint());
+                document.getElementById('resign-btn').addEventListener('click', () => this.resign());
+
+                // Difficulty buttons
+                document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.difficulty = parseInt(btn.dataset.level);
+                        this.updateDifficultyDisplay();
+                    });
+                });
+
+                // Touch events for better mobile experience
+                let touchStartX, touchStartY;
+                document.getElementById('chess-board').addEventListener('touchstart', (e) => {
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
+                }, { passive: true });
+            }
+
+            handleSquareClick(row, col) {
+                const piece = this.board[row][col];
+                
+                // If we have a selected piece and clicked on a valid move
+                if (this.selectedSquare && this.isValidMove(this.selectedSquare.row, this.selectedSquare.col, row, col)) {
+                    this.makeMove(this.selectedSquare.row, this.selectedSquare.col, row, col);
+                    this.clearSelection();
+                    return;
+                }
+
+                // Clear previous selection
+                this.clearSelection();
+
+                // Select new piece if it belongs to current player
+                if (piece !== '.' && 
+                    ((this.currentPlayer === 'white' && piece === piece.toUpperCase()) ||
+                     (this.currentPlayer === 'black' && piece === piece.toLowerCase()))) {
+                    this.selectedSquare = { row, col };
+                    this.validMoves = this.getValidMoves(row, col);
+                    this.highlightSquare(row, col, 'selected');
+                    this.validMoves.forEach(move => {
+                        this.highlightSquare(move.toRow, move.toCol, 'valid-move');
+                    });
+                }
+            }
+
+            isValidMove(fromRow, fromCol, toRow, toCol) {
+                const moves = this.getValidMoves(fromRow, fromCol);
+                return moves.some(move => move.toRow === toRow && move.toCol === toCol);
+            }
+
+            getValidMoves(row, col) {
+                // Simplified move generation for demo
+                const piece = this.board[row][col];
+                const moves = [];
+                
+                if (piece === 'P') { // White pawn
+                    if (row > 0 && this.board[row-1][col] === '.') {
+                        moves.push({ toRow: row-1, toCol: col });
+                    }
+                    // Add more pawn moves...
+                } else if (piece === 'p') { // Black pawn
+                    if (row < 7 && this.board[row+1][col] === '.') {
+                        moves.push({ toRow: row+1, toCol: col });
+                    }
+                }
+                // Add other piece moves...
+                
+                return moves;
+            }
+
+            makeMove(fromRow, fromCol, toRow, toCol) {
+                const piece = this.board[fromRow][col];
+                const captured = this.board[toRow][toCol];
+                
+                // Execute move
+                this.board[toRow][toCol] = piece;
+                this.board[fromRow][fromCol] = '.';
+                
+                // Record move
+                this.moveHistory.push({
+                    from: [fromRow, fromCol],
+                    to: [toRow, toCol],
+                    piece: piece,
+                    captured: captured
+                });
+                
+                // Switch turns
+                this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+                
+                // Update display
+                this.updateDisplay();
+                this.updateMoveHistory();
+                
+                // Make AI move if game continues
+                if (!this.gameOver && this.currentPlayer === 'black') {
+                    setTimeout(() => this.makeAIMove(), 500);
+                }
+            }
+
+            makeAIMove() {
+                // Simplified AI for demo
+                const moves = this.getAllValidMoves('black');
+                if (moves.length > 0) {
+                    const move = moves[Math.floor(Math.random() * moves.length)];
+                    this.makeMove(move.fromRow, move.fromCol, move.toRow, move.toCol);
+                }
+            }
+
+            getAllValidMoves(player) {
+                const moves = [];
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece !== '.' && 
+                            ((player === 'white' && piece === piece.toUpperCase()) ||
+                             (player === 'black' && piece === piece.toLowerCase()))) {
+                            const pieceMoves = this.getValidMoves(row, col);
+                            pieceMoves.forEach(move => {
+                                moves.push({
+                                    fromRow: row,
+                                    fromCol: col,
+                                    toRow: move.toRow,
+                                    toCol: move.toCol
+                                });
+                            });
+                        }
+                    }
+                }
+                return moves;
+            }
+
+            clearSelection() {
+                document.querySelectorAll('.square').forEach(sq => {
+                    sq.classList.remove('selected', 'valid-move', 'check');
+                });
+                this.selectedSquare = null;
+                this.validMoves = [];
+            }
+
+            highlightSquare(row, col, className) {
+                const squares = document.querySelectorAll('.square');
+                const index = row * 8 + col;
+                squares[index].classList.add(className);
+            }
+
+            updateDisplay() {
+                this.initializeBoard();
+                document.getElementById('current-turn').textContent = this.currentPlayer.toUpperCase();
+                document.getElementById('move-count').textContent = this.moveHistory.length;
+                document.getElementById('game-status').textContent = this.gameOver ? 'GAME OVER' : 'PLAYING';
+                
+                // Update evaluation (simplified)
+                const evalScore = this.calculateEvaluation();
+                this.updateEvaluationBar(evalScore);
+            }
+
+            calculateEvaluation() {
+                // Simplified evaluation
+                let score = 0;
+                const pieceValues = { 'p': -1, 'n': -3, 'b': -3, 'r': -5, 'q': -9, 'k': -100,
+                                    'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 100 };
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece !== '.') {
+                            score += pieceValues[piece] || 0;
+                        }
+                    }
+                }
+                return score;
+            }
+
+            updateEvaluationBar(score) {
+                const bar = document.getElementById('eval-bar');
+                const text = document.getElementById('eval-text');
+                const percentage = Math.min(100, Math.max(0, 50 + score * 3));
+                bar.style.width = `${percentage}%`;
+                text.textContent = score.toFixed(2);
+            }
+
+            updateMoveHistory() {
+                const movesList = document.getElementById('moves-list');
+                if (this.moveHistory.length === 0) {
+                    movesList.textContent = 'No moves yet';
+                    return;
+                }
+
+                let html = '';
+                for (let i = 0; i < this.moveHistory.length; i += 2) {
+                    const moveNum = Math.floor(i/2) + 1;
+                    const whiteMove = this.formatMove(this.moveHistory[i]);
+                    const blackMove = i + 1 < this.moveHistory.length ? this.formatMove(this.moveHistory[i + 1]) : '';
+                    
+                    html += `<div><span class="move-number">${moveNum}.</span> ${whiteMove} ${blackMove}</div>`;
+                }
+                movesList.innerHTML = html;
+            }
+
+            formatMove(move) {
+                const piece = move.piece.toUpperCase();
+                const from = String.fromCharCode(97 + move.from[1]) + (8 - move.from[0]);
+                const to = String.fromCharCode(97 + move.to[1]) + (8 - move.to[0]);
+                const capture = move.captured !== '.' ? 'x' : '';
+                return `${piece}${capture}${to}`;
+            }
+
+            updateDifficultyDisplay() {
+                const difficulties = ['EASY', 'MEDIUM', 'HARD', 'EXPERT'];
+                document.getElementById('difficulty').textContent = difficulties[this.difficulty - 1];
+            }
+
+            newGame() {
+                this.board = this.getInitialBoard();
+                this.currentPlayer = 'white';
+                this.selectedSquare = null;
+                this.validMoves = [];
+                this.moveHistory = [];
+                this.gameOver = false;
+                this.inCheck = false;
+                this.clearSelection();
+                this.updateDisplay();
+                this.showNotification('New game started!');
+            }
+
+            undoMove() {
+                if (this.moveHistory.length > 0) {
+                    const lastMove = this.moveHistory.pop();
+                    this.board[lastMove.from[0]][lastMove.from[1]] = lastMove.piece;
+                    this.board[lastMove.to[0]][lastMove.to[1]] = lastMove.captured;
+                    this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+                    this.updateDisplay();
+                    this.updateMoveHistory();
+                    this.showNotification('Move undone');
+                }
+            }
+
+            getHint() {
+                const moves = this.getAllValidMoves(this.currentPlayer);
+                if (moves.length > 0) {
+                    const move = moves[Math.floor(Math.random() * moves.length)];
+                    this.highlightSquare(move.fromRow, move.fromCol, 'selected');
+                    this.highlightSquare(move.toRow, move.toCol, 'valid-move');
+                    setTimeout(() => this.clearSelection(), 2000);
+                    this.showNotification('Hint shown');
+                }
+            }
+
+            resign() {
+                this.gameOver = true;
+                this.updateDisplay();
+                this.showNotification(`${this.currentPlayer.toUpperCase()} resigned`);
+            }
+
+            showNotification(message) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.chessGame = new MobileChessEngine();
+        });
+    </script>
+</body>
+</html>
