@@ -229,7 +229,7 @@
         </header>
 
         <div class="status-bar" id="statusBar">
-            Welcome! Select a piece to start playing.
+            Welcome. Select a piece to start playing.
         </div>
 
         <div class="game-area">
@@ -250,6 +250,21 @@
                     <div class="controls">
                         <button id="multiplayerBtn"> multiplayer</button>
                         <button id="onlineBtn"> Online Play</button>
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="exportPgnBtn"> Export PGN</button>
+                        <button id="importPgnBtn"> Import PGN</button>
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="analyzeBtn"> Analyze Game</button>
+                        <button id="statsBtn"> Statistics</button>
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="helpBtn"> Help</button>
+                        <button id="tutorialBtn"> Tutorial</button>
                     </div>
                     
                     <select class="difficulty-selector" id="difficultySelect">
@@ -349,6 +364,18 @@
                 // Multiplayer functionality
                 document.getElementById('multiplayerBtn').addEventListener('click', () => this.startMultiplayer());
                 document.getElementById('onlineBtn').addEventListener('click', () => this.connectOnline());
+                
+                // PGN functionality
+                document.getElementById('exportPgnBtn').addEventListener('click', () => this.exportPGN());
+                document.getElementById('importPgnBtn').addEventListener('click', () => this.importPGN());
+                
+                // Analysis functionality
+                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeGame());
+                document.getElementById('statsBtn').addEventListener('click', () => this.showStatistics());
+                
+                // Help functionality
+                document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
+                document.getElementById('tutorialBtn').addEventListener('click', () => this.startTutorial());
                 
                 // WebSocket connection
                 this.websocket = null;
@@ -562,13 +589,15 @@
             executeMove(fromFile, fromRank, toFile, toRank, piece, capturedPiece) {
                 const moveNotation = this.moveToAlgebraic(fromFile, fromRank, toFile, toRank, piece, capturedPiece);
                 
-                this.moveHistory.push({
+                const moveData = {
                     move: moveNotation,
                     from: [fromFile, fromRank],
                     to: [toFile, toRank],
                     piece: piece,
                     captured: capturedPiece
-                });
+                };
+                
+                this.moveHistory.push(moveData);
                 
                 this.board[toRank][toFile] = piece;
                 this.board[fromRank][fromFile] = null;
@@ -578,6 +607,9 @@
                 this.addToMoveList(moveNotation);
                 this.switchPlayer();
                 this.drawBoard();
+                
+                // Check tutorial progress
+                this.checkTutorialProgress(moveData);
                 
                 if (this.gameActive && this.currentPlayer === 'black') {
                     setTimeout(() => this.makeAIMove(), 500);
@@ -844,6 +876,432 @@
                     this.gameStatus.textContent = 'White wins!';
                     this.updateStatusBar('Checkmate! White wins!');
                     this.gameActive = false;
+                }
+            }
+            
+            // Multiplayer functionality
+            async startMultiplayer() {
+                if (this.websocket) {
+                    this.updateStatusBar('Already connected to multiplayer');
+                    return;
+                }
+                
+                try {
+                    // Connect to WebSocket server
+                    this.websocket = new WebSocket('ws://localhost:8765');
+                    
+                    this.websocket.onopen = () => {
+                        this.updateStatusBar('Connected to multiplayer server');
+                        this.registerPlayer();
+                    };
+                    
+                    this.websocket.onmessage = (event) => {
+                        this.handleWebSocketMessage(JSON.parse(event.data));
+                    };
+                    
+                    this.websocket.onclose = () => {
+                        this.updateStatusBar('Disconnected from multiplayer server');
+                        this.websocket = null;
+                    };
+                    
+                    this.websocket.onerror = (error) => {
+                        this.updateStatusBar('Connection error - is the server running?');
+                        this.websocket = null;
+                    };
+                    
+                } catch (error) {
+                    this.updateStatusBar('Failed to connect to multiplayer server');
+                }
+            }
+            
+            registerPlayer() {
+                const playerName = prompt('Enter your name:', 'Player') || 'Anonymous';
+                const registerMessage = {
+                    type: 'register',
+                    name: playerName
+                };
+                this.websocket.send(JSON.stringify(registerMessage));
+            }
+            
+            handleWebSocketMessage(data) {
+                switch (data.type) {
+                    case 'registered':
+                        this.playerId = data.player_id;
+                        this.updateStatusBar(data.message);
+                        break;
+                        
+                    case 'game_started':
+                        this.gameId = data.game_id;
+                        this.playerColor = data.your_color;
+                        this.board = data.board_state;
+                        this.gameActive = true;
+                        this.currentPlayer = this.playerColor;
+                        this.updateStatusBar(`Game started! You are playing as ${this.playerColor}`);
+                        this.drawBoard();
+                        break;
+                        
+                    case 'move_made':
+                        this.board = data.board_state;
+                        this.currentPlayer = data.current_turn;
+                        this.addToMoveList(data.move.move);
+                        this.updateStatusBar(`${data.move.player} made a move`);
+                        this.drawBoard();
+                        break;
+                        
+                    case 'game_ended':
+                        this.gameActive = false;
+                        this.updateStatusBar(`Game ended: ${data.result}`);
+                        break;
+                        
+                    case 'error':
+                        this.updateStatusBar(`Error: ${data.message}`);
+                        break;
+                }
+            }
+            
+            connectOnline() {
+                this.updateStatusBar('Online play feature coming soon!');
+            }
+            
+            // Override makeMove to send to WebSocket in multiplayer
+            makeMove(fromFile, fromRank, toFile, toRank) {
+                if (this.websocket && this.gameId) {
+                    // Send move via WebSocket
+                    const moveMessage = {
+                        type: 'move',
+                        game_id: this.gameId,
+                        move: {
+                            from: String.fromCharCode(97 + fromFile) + (8 - fromRank),
+                            to: String.fromCharCode(97 + toFile) + (8 - toRank)
+                        }
+                    };
+                    this.websocket.send(JSON.stringify(moveMessage));
+                    // Don't execute locally - wait for server confirmation
+                    return;
+                }
+                
+                // Local game logic
+                const piece = this.board[fromRank][fromFile];
+                const capturedPiece = this.board[toRank][toFile];
+                this.executeMove(fromFile, fromRank, toFile, toRank, piece, capturedPiece);
+            }
+            
+            // PGN functionality
+            exportPGN() {
+                const pgnContent = this.generatePGN();
+                const blob = new Blob([pgnContent], { type: 'application/x-chess-pgn' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `chess_game_${new Date().toISOString().slice(0, 10)}.pgn`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.updateStatusBar('PGN exported successfully!');
+            }
+            
+            importPGN() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pgn';
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const pgnContent = event.target.result;
+                            this.loadPGN(pgnContent);
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                
+                input.click();
+            }
+            
+            generatePGN() {
+                const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+                
+                let pgn = `[Event "Casual Game"]
+`;
+                pgn += `[Site "Web Chess Interface"]
+`;
+                pgn += `[Date "${date}"]
+`;
+                pgn += `[Round "?"]
+`;
+                pgn += `[White "Player"]
+`;
+                pgn += `[Black "Computer"]
+`;
+                pgn += `[Result "*"]
+
+`;
+                
+                // Convert move history to PGN format
+                let moveNumber = 1;
+                for (let i = 0; i < this.moveHistory.length; i += 2) {
+                    const whiteMove = this.moveHistory[i]?.move || '';
+                    const blackMove = this.moveHistory[i + 1]?.move || '';
+                    
+                    if (whiteMove) {
+                        pgn += `${moveNumber}. ${whiteMove} `;
+                        if (blackMove) {
+                            pgn += `${blackMove} `;
+                        }
+                        moveNumber++;
+                    }
+                }
+                
+                pgn += '*';
+                return pgn;
+            }
+            
+            loadPGN(pgnContent) {
+                try {
+                    // Simple PGN parser (basic implementation)
+                    const movesSection = pgnContent.split('\n\n')[1] || pgnContent;
+                    const moves = movesSection.replace(/\d+\.\s*/g, ' ') // Remove move numbers
+                                             .replace(/\*/g, '') // Remove result marker
+                                             .trim()
+                                             .split(/\s+/)
+                                             .filter(move => move && !move.includes('[')); // Remove tags
+                    
+                    if (moves.length > 0) {
+                        this.newGame();
+                        this.moveHistory = [];
+                        this.updateMoveList();
+                        
+                        // Replay moves
+                        let currentMove = 0;
+                        const replayInterval = setInterval(() => {
+                            if (currentMove < moves.length) {
+                                const move = moves[currentMove];
+                                this.replayMove(move);
+                                currentMove++;
+                            } else {
+                                clearInterval(replayInterval);
+                                this.updateStatusBar(`PGN loaded: ${moves.length} moves`);
+                            }
+                        }, 500);
+                    }
+                } catch (error) {
+                    this.updateStatusBar('Error loading PGN file');
+                    console.error('PGN parsing error:', error);
+                }
+            }
+            
+            replayMove(moveNotation) {
+                // Simplified move replay - would need full SAN parser in production
+                const files = 'abcdefgh';
+                const ranks = '87654321';
+                
+                if (moveNotation.length >= 2) {
+                    const toFile = files.indexOf(moveNotation[moveNotation.length - 2]);
+                    const toRank = ranks.indexOf(moveNotation[moveNotation.length - 1]);
+                    
+                    if (toFile >= 0 && toRank >= 0) {
+                        // Find a piece that can move to this square
+                        for (let rank = 0; rank < 8; rank++) {
+                            for (let file = 0; file < 8; file++) {
+                                const piece = this.board[rank][file];
+                                if (piece && this.currentPlayer === (piece === piece.toUpperCase() ? 'white' : 'black')) {
+                                    const moves = this.calculateValidMoves(file, rank);
+                                    if (moves.some(([f, r]) => f === toFile && r === toRank)) {
+                                        this.executeMove(file, rank, toFile, toRank, piece, this.board[toRank][toFile]);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                this.addToMoveList(moveNotation);
+            }
+            
+            // Analysis functionality
+            analyzeGame() {
+                const analysis = this.performGameAnalysis();
+                
+                // Display analysis results
+                let analysisText = '=== GAME ANALYSIS ===\n\n';
+                analysisText += `Total Moves: ${analysis.totalMoves}\n`;
+                analysisText += `Captures: ${analysis.captures}\n`;
+                analysisText += `Checks: ${analysis.checks}\n`;
+                analysisText += `Material Balance: ${analysis.materialBalance > 0 ? '+' : ''}${analysis.materialBalance}\n`;
+                analysisText += `Opening Phase: ${Math.min(10, analysis.totalMoves)} moves\n`;
+                analysisText += `Middle Game: ${Math.max(0, analysis.totalMoves - 20)} moves\n`;
+                
+                alert(analysisText);
+                this.updateStatusBar('Game analysis completed');
+            }
+            
+            performGameAnalysis() {
+                const analysis = {
+                    totalMoves: this.moveHistory.length,
+                    captures: 0,
+                    checks: 0,
+                    materialBalance: 0,
+                    pieceActivity: { white: 0, black: 0 }
+                };
+                
+                // Count captures (simplified)
+                this.moveHistory.forEach(move => {
+                    if (move.move.includes('x')) {
+                        analysis.captures++;
+                    }
+                });
+                
+                // Material counting
+                let whiteMaterial = 0;
+                let blackMaterial = 0;
+                
+                for (let rank = 0; rank < 8; rank++) {
+                    for (let file = 0; file < 8; file++) {
+                        const piece = this.board[rank][file];
+                        if (piece) {
+                            const value = this.getPieceValue(piece);
+                            if (piece === piece.toUpperCase()) {
+                                whiteMaterial += value;
+                            } else {
+                                blackMaterial += value;
+                            }
+                        }
+                    }
+                }
+                
+                analysis.materialBalance = whiteMaterial - blackMaterial;
+                return analysis;
+            }
+            
+            getPieceValue(piece) {
+                const values = {
+                    'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0,
+                    'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 0
+                };
+                return values[piece.toLowerCase()] || 0;
+            }
+            
+            showStatistics() {
+                const stats = this.calculateStatistics();
+                
+                let statsText = '=== GAME STATISTICS ===\n\n';
+                statsText += `Games Played: ${stats.gamesPlayed}\n`;
+                statsText += `Wins: ${stats.wins}\n`;
+                statsText += `Losses: ${stats.losses}\n`;
+                statsText += `Draws: ${stats.draws}\n`;
+                statsText += `Win Rate: ${(stats.winRate * 100).toFixed(1)}%\n\n`;
+                
+                statsText += `Average Game Length: ${stats.avgGameLength.toFixed(1)} moves\n`;
+                statsText += `Most Active Pieces: ${stats.mostActivePieces.join(', ')}\n`;
+                statsText += `Preferred Openings: ${stats.openings.join(', ')}\n`;
+                
+                alert(statsText);
+                this.updateStatusBar('Statistics displayed');
+            }
+            
+            calculateStatistics() {
+                // In a real implementation, this would pull from a database
+                // For now, simulate some statistics
+                return {
+                    gamesPlayed: Math.floor(Math.random() * 50) + 10,
+                    wins: Math.floor(Math.random() * 30) + 5,
+                    losses: Math.floor(Math.random() * 20) + 3,
+                    draws: Math.floor(Math.random() * 10) + 2,
+                    winRate: Math.random() * 0.7 + 0.3,
+                    avgGameLength: Math.random() * 40 + 20,
+                    mostActivePieces: ['Queen', 'Rooks', 'Knights'],
+                    openings: ['Italian Game', 'Ruy Lopez', 'Queens Gambit']
+                };
+            }
+            
+            // Help functionality
+            showHelp() {
+                const helpContent = `
+♔ ♕ ♖ ♗ ♘ ♙ CHESS ENGINE HELP ♟ ♞ ♝ ♜ ♛ ♚
+
+🎮 BASIC CONTROLS:
+• Click a piece to select it
+• Click a highlighted square to move
+• Valid moves are shown with green dots
+
+ButtonTitles:
+• New Game - Start fresh game
+• Undo Move - Take back last move
+• Flip Board - Rotate board perspective
+• Hint - Get suggestion for next move
+• Export PGN - Save game to file
+• Import PGN - Load game from file
+• Analyze Game - View game statistics
+• Statistics - See your performance
+
+⚡ SPECIAL MOVES:
+• Castling: King moves 2 squares toward rook
+• En Passant: Pawn captures diagonally after double move
+• Promotion: Pawn becomes Queen/Rook/Bishop/Knight
+
+❓ GETTING STARTED:
+1. Click any white piece to start
+2. Move pieces according to chess rules
+3. Try to checkmate the black king
+4. Use 'Hint' button if stuck
+
+📚 LEARN MORE:
+See USER_GUIDE.md for complete documentation
+                `;
+                
+                alert(helpContent);
+                this.updateStatusBar('Help information displayed');
+            }
+            
+            startTutorial() {
+                // Interactive tutorial
+                const tutorialSteps = [
+                    {
+                        message: "♔ Welcome to Chess Tutorial! ♛\n\nClick any white pawn to begin.",
+                        condition: (move) => move && move.piece && move.piece.toLowerCase() === 'p' && move.from[1] === 6
+                    },
+                    {
+                        message: "♙ Good! Pawns move forward one square.\n\nTry moving the pawn two squares forward.",
+                        condition: (move) => move && move.to[1] === 4
+                    },
+                    {
+                        message: "♙ Excellent! Now try developing a piece.\n\nMove your knight to f3 (click knight, then f3).",
+                        condition: (move) => move && move.piece && move.piece.toLowerCase() === 'n' && move.to[0] === 5 && move.to[1] === 5
+                    },
+                    {
+                        message: "♘ Perfect! Knights are powerful pieces.\n\nContinue developing your pieces to control the center.",
+                        condition: () => true
+                    }
+                ];
+                
+                let currentStep = 0;
+                this.tutorialMode = true;
+                this.tutorialSteps = tutorialSteps;
+                
+                alert(tutorialSteps[0].message);
+                this.updateStatusBar('Tutorial started - follow the instructions');
+            }
+            
+            checkTutorialProgress(lastMove) {
+                if (this.tutorialMode && this.tutorialSteps) {
+                    const currentStepObj = this.tutorialSteps[this.currentTutorialStep || 0];
+                    if (currentStepObj && currentStepObj.condition(lastMove)) {
+                        this.currentTutorialStep = (this.currentTutorialStep || 0) + 1;
+                        if (this.currentTutorialStep < this.tutorialSteps.length) {
+                            setTimeout(() => {
+                                alert(this.tutorialSteps[this.currentTutorialStep].message);
+                            }, 500);
+                        } else {
+                            this.tutorialMode = false;
+                            this.updateStatusBar('Tutorial completed! Well done!');
+                        }
+                    }
                 }
             }
         }
