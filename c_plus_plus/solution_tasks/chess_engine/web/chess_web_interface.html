@@ -247,6 +247,11 @@
                         <button id="hintBtn">Hint</button>
                     </div>
                     
+                    <div class="controls">
+                        <button id="multiplayerBtn"> multiplayer</button>
+                        <button id="onlineBtn"> Online Play</button>
+                    </div>
+                    
                     <select class="difficulty-selector" id="difficultySelect">
                         <option value="1">Beginner (Depth 1)</option>
                         <option value="2">Easy (Depth 2)</option>
@@ -340,6 +345,16 @@
                 document.getElementById('flipBtn').addEventListener('click', () => this.flipBoard());
                 document.getElementById('hintBtn').addEventListener('click', () => this.getHint());
                 document.getElementById('difficultySelect').addEventListener('change', (e) => this.setDifficulty(e.target.value));
+                
+                // Multiplayer functionality
+                document.getElementById('multiplayerBtn').addEventListener('click', () => this.startMultiplayer());
+                document.getElementById('onlineBtn').addEventListener('click', () => this.connectOnline());
+                
+                // WebSocket connection
+                this.websocket = null;
+                this.gameId = null;
+                this.playerId = null;
+                this.playerColor = null;
             }
             
             handleCanvasClick(event) {
