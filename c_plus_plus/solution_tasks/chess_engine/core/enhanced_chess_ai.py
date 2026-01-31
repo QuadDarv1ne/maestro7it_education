@@ -601,7 +601,7 @@ class EnhancedChessAI:
         return moves
     
     def see_capture(self, board: List[List[str]], move: Tuple) -> int:
-        """НОВОЕ: Static Exchange Evaluation - оценка размена"""
+        """УЛУЧШЕНО: Static Exchange Evaluation - точная оценка размена"""
         from_pos, to_pos = move
         target = board[to_pos[0]][to_pos[1]]
         
@@ -609,15 +609,95 @@ class EnhancedChessAI:
             return 0
         
         attacker = board[from_pos[0]][from_pos[1]]
-        victim_value = abs(self.piece_values.get(target, 0))
-        attacker_value = abs(self.piece_values.get(attacker, 0))
+        victim_value = self.piece_values.get(target, 0)
+        attacker_value = self.piece_values.get(attacker, 0)
         
-        # Упрощённая SEE: если берём дороже или равное - хорошо
-        if victim_value >= attacker_value:
-            return victim_value - attacker_value
+        # УЛУЧШЕНО: Реализация полноценного SEE алгоритма
+        # Создаем временную доску для моделирования размена
+        temp_board = [row[:] for row in board]
         
-        # Если берём дешёвой что-то дорогое, но можем быть съедены - пессимистично
-        return victim_value - attacker_value
+        # Убираем атакующую фигуру
+        temp_board[from_pos[0]][from_pos[1]] = '.'
+        temp_board[to_pos[0]][to_pos[1]] = attacker
+        
+        # Получаем список фигур, атакующих целевую клетку
+        attackers = self.get_attackers(temp_board, to_pos[0] * 8 + to_pos[1], not attacker.isupper())
+        
+        if not attackers:
+            # Никто не может атаковать обратно
+            return victim_value
+        
+        # Рекурсивный SEE
+        gain = [victim_value]  # Первый выигрыш
+        turn = not attacker.isupper()  # Чей следующий ход
+        
+        while attackers:
+            # Находим лучшего атакующего (минимальная ценность)
+            best_attacker = min(attackers, key=lambda x: abs(self.piece_values.get(x[0], 0)))
+            piece, attack_pos = best_attacker
+            
+            # Добавляем в gain
+            gain.append(-gain[-1] + self.piece_values.get(piece, 0))
+            
+            # Убираем атакующую фигуру
+            temp_board[attack_pos[0]][attack_pos[1]] = '.'
+            temp_board[to_pos[0]][to_pos[1]] = piece
+            
+            # Переключаем цвет
+            turn = not turn
+            
+            # Получаем новых атакующих
+            attackers = self.get_attackers(temp_board, to_pos[0] * 8 + to_pos[1], turn)
+            
+            if not attackers:
+                break
+        
+        # Минимакс по gains
+        while len(gain) > 1:
+            gain[-2] = max(gain[-2], gain[-1])
+            gain.pop()
+        
+        return gain[0]
+    
+    def get_attackers(self, board: List[List[str]], square_index: int, by_white: bool) -> List[Tuple[str, Tuple[int, int]]]:
+        """Получение списка атакующих фигур"""
+        attackers = []
+        target_row = square_index // 8
+        target_col = square_index % 8
+        
+        # Проверяем каждую клетку доски
+        for from_row in range(8):
+            for from_col in range(8):
+                piece = board[from_row][from_col]
+                if piece != '.' and piece.isupper() == by_white:
+                    # Проверяем, может ли эта фигура атаковать целевую клетку
+                    if self.can_attack_square(board, (from_row, from_col), (target_row, target_col), piece):
+                        attackers.append((piece, (from_row, from_col)))
+        
+        return attackers
+    
+    def can_attack_square(self, board: List[List[str]], from_pos: Tuple[int, int], 
+                         to_pos: Tuple[int, int], piece: str) -> bool:
+        """Проверка, может ли фигура атаковать клетку"""
+        if not self.engine_wrapper:
+            return False
+        
+        # Сохраняем оригинальное состояние
+        original_board = self.engine_wrapper.board_state
+        original_turn = self.engine_wrapper.current_turn
+        
+        # Устанавливаем временное состояние
+        self.engine_wrapper.board_state = [row[:] for row in board]
+        self.engine_wrapper.current_turn = piece.isupper()
+        
+        # Проверяем возможность атаки
+        result = self.engine_wrapper.is_valid_attack(from_pos, to_pos)
+        
+        # Восстанавливаем оригинальное состояние
+        self.engine_wrapper.board_state = original_board
+        self.engine_wrapper.current_turn = original_turn
+        
+        return result
     
     def calculate_lmr_reduction(self, depth: int, moves_searched: int, move: Tuple, board: List[List[str]]) -> int:
         """НОВОЕ: Улучшенная формула Late Move Reduction"""
@@ -682,6 +762,37 @@ class EnhancedChessAI:
                 return entry['score'], entry['move']
             pv_move = entry.get('move')
         
+        # УЛУЧШЕНО: Razoring для тактических позиций
+        if depth <= 3 and not self.is_in_check(board, maximizing_player):
+            static_eval = self.evaluate_position(board)
+            razor_margin = depth * 150  # Более агрессивный порог для razoring
+            
+            if maximizing_player:
+                if static_eval + razor_margin <= alpha:
+                    # Проверяем, есть ли хорошие тактические ходы
+                    tactical_moves = [m for m in self.generate_legal_moves(board, maximizing_player) 
+                                    if board[m[1][0]][m[1][1]] != '.']  # Только взятия
+                    if not tactical_moves:
+                        return static_eval, None
+            else:
+                if static_eval - razor_margin >= beta:
+                    tactical_moves = [m for m in self.generate_legal_moves(board, maximizing_player) 
+                                    if board[m[1][0]][m[1][1]] != '.']
+                    if not tactical_moves:
+                        return static_eval, None
+        
+        # УЛУЧШЕНО: Futility Pruning
+        if depth <= 3 and not self.is_in_check(board, maximizing_player):
+            static_eval = self.evaluate_position(board)
+            futility_margin = depth * 100  # ~1 пешка за уровень
+            
+            if maximizing_player:
+                if static_eval + futility_margin <= alpha:
+                    return static_eval, None
+            else:
+                if static_eval - futility_margin >= beta:
+                    return static_eval, None
+        
         # Терминальные условия
         if depth == 0:
             return self.quiescence_search(board, alpha, beta, maximizing_player), None
@@ -695,6 +806,38 @@ class EnhancedChessAI:
         
         # УЛУЧШЕНО: Упорядочивание с PV move
         ordered_moves = self.order_moves(board, moves, maximizing_player, depth, pv_move)
+        
+        # НОВОЕ: Singular Extensions (после получения PV move)
+        if pv_move and depth >= 6 and board_hash in self.transposition_table:
+            entry = self.transposition_table[board_hash]
+            singular_margin = 80
+            singular_beta = entry['score'] - singular_margin
+            singular_depth = depth - 2
+            
+            # Проверяем, является ли PV ход единственным хорошим ходом
+            exclude_move = pv_move
+            best_excluded_score = float('-inf') if maximizing_player else float('inf')
+            
+            excluded_moves = [m for m in moves if m != exclude_move]
+            if excluded_moves:
+                # Поиск без PV хода
+                for move in excluded_moves[:5]:  # Ограничиваем для скорости
+                    new_board = self.make_move(board, move)
+                    score, _ = self.minimax(new_board, singular_depth, singular_beta - 1, singular_beta, 
+                                          not maximizing_player, False)
+                    if maximizing_player:
+                        best_excluded_score = max(best_excluded_score, score)
+                    else:
+                        best_excluded_score = min(best_excluded_score, score)
+                    
+                    if (maximizing_player and best_excluded_score >= singular_beta) or \
+                       (not maximizing_player and best_excluded_score <= singular_beta):
+                        break
+                
+                # Если все другие ходы плохие, расширяем PV ход
+                if (maximizing_player and best_excluded_score < singular_beta) or \
+                   (not maximizing_player and best_excluded_score > singular_beta):
+                    depth += 1  # Расширяем глубину
         
         best_move = None
         moves_searched = 0
@@ -828,7 +971,25 @@ class EnhancedChessAI:
     
     def order_moves(self, board: List[List[str]], moves: List, is_white: bool, 
                    depth: int = 0, pv_move: Optional[Tuple] = None) -> List:
-        """УЛУЧШЕНО: Упорядочивание ходов с PV move"""
+        """УЛУЧШЕНО: Упорядочивание ходов с PV move и Internal Iterative Deepening"""
+        
+        # НОВОЕ: Internal Iterative Deepening для лучшего упорядочивания
+        if depth >= 4 and len(moves) > 10 and pv_move is None:
+            # Быстрый поиск на малой глубине для определения лучшего хода
+            iid_depth = max(2, depth // 3)
+            temp_alpha = float('-inf')
+            temp_beta = float('inf')
+            
+            iid_scores = []
+            for move in moves[:15]:  # Ограничиваем для скорости
+                new_board = self.make_move(board, move)
+                score, _ = self.minimax(new_board, iid_depth, temp_alpha, temp_beta, not is_white, False)
+                iid_scores.append((score, move))
+                temp_alpha = max(temp_alpha, score)
+            
+            # Сортируем по IID результатам
+            iid_scores.sort(key=lambda x: x[0], reverse=not is_white)
+            pv_move = iid_scores[0][1] if iid_scores else None
         move_scores = []
         
         for move in moves:
@@ -999,17 +1160,32 @@ class EnhancedChessAI:
         prev_eval = 0
         current_depth = 1
         
-        # Итеративное углубление с aspiration windows
+        # УЛУЧШЕНО: Итеративное углубление с улучшенными aspiration windows
         for current_depth in range(1, self.search_depth + 1):
             if current_depth >= 3 and prev_eval is not None:
-                window = 50
+                # Адаптивное окно на основе глубины и нестабильности позиции
+                base_window = 50 + (current_depth * 10)  # Увеличиваем окно с глубиной
+                instability_factor = 1.0 + (abs(prev_eval) / 1000)  # Больше окно для нестабильных позиций
+                window = int(base_window * instability_factor)
+                
                 alpha = prev_eval - window
                 beta = prev_eval + window
                 
+                # Первый поиск с узким окном
                 eval_score, move = self.minimax(board, current_depth, alpha, beta, color)
                 
+                # Если результат вне окна, расширяем и повторяем
                 if eval_score <= alpha or eval_score >= beta:
-                    eval_score, move = self.minimax(board, current_depth, float('-inf'), float('inf'), color)
+                    # Увеличиваем окно и повторяем
+                    expanded_window = window * 2
+                    alpha = prev_eval - expanded_window
+                    beta = prev_eval + expanded_window
+                    
+                    eval_score, move = self.minimax(board, current_depth, alpha, beta, color)
+                    
+                    # Если и сейчас вне окна, делаем полный поиск
+                    if eval_score <= alpha or eval_score >= beta:
+                        eval_score, move = self.minimax(board, current_depth, float('-inf'), float('inf'), color)
             else:
                 eval_score, move = self.minimax(board, current_depth, float('-inf'), float('inf'), color)
             
