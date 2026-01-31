@@ -6,6 +6,7 @@
 #include <cctype>
 #include <random>
 #include <limits>
+#include <vector>
 
 Board::Board() {
     initZobrist();
@@ -83,6 +84,10 @@ Square Board::getEnPassantSquare() const {
 
 int Board::getHalfMoveClock() const {
     return halfMoveClock_;
+}
+
+const std::vector<Board::UndoInfo>& Board::getHistory() const {
+    return history_;
 }
 
 void Board::setPiece(Square square, const Piece& piece) {

@@ -19,6 +19,7 @@ typedef int Square;
  * правилами рокировки, взятием на проходе и историей ходов
  */
 class Board {
+    friend class GameRules;  // Разрешаем GameRules доступ к приватным членам
 private:
     std::vector<Piece> squares_;  ///< 64 клетки доски (8x8)
     Color currentPlayer_;         ///< Текущий игрок, чей ход
@@ -50,14 +51,6 @@ private:
         uint64_t hash;
     };
     std::vector<UndoInfo> history_;
-
-public:
-    // Конструктор
-    Board();
-    
-    // Методы настройки
-    void setupStartPosition();              ///< Устанавливает начальную позицию
-    void setupFromFEN(const std::string& fen);  ///< Загружает позицию из FEN-нотации
     
     // Геттеры
     const Piece& getPiece(Square square) const;  ///< Возвращает фигуру на указанной клетке

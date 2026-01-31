@@ -1,11 +1,40 @@
 #include "../../include/game_rules.hpp"
 #include "../../include/move_generator.hpp"
 #include <algorithm>
+#include <iostream>
+#include <string>
+#include <cstdint>
 
 GameRules::GameRules(Board& board) : board_(board) {}
 
 bool GameRules::isValidMove(const Move& move) const {
+    // Проверка базовых условий
     if (move.from == INVALID_SQUARE || move.to == INVALID_SQUARE) {
+        return false;
+    }
+    
+    if (move.from == move.to) {
+        return false; // Нельзя ходить на ту же клетку
+    }
+    
+    // Проверяем, что клетки находятся в пределах доски
+    if (!board_.isInBounds(move.from) || !board_.isInBounds(move.to)) {
+        return false;
+    }
+    
+    // Проверяем наличие фигуры на исходной клетке
+    Piece movingPiece = board_.getPiece(move.from);
+    if (movingPiece.isEmpty()) {
+        return false;
+    }
+    
+    // Проверяем, что фигура принадлежит текущему игроку
+    if (movingPiece.getColor() != board_.getCurrentPlayer()) {
+        return false;
+    }
+    
+    // Проверяем, не оставляет ли ход короля под шахом
+    if (wouldLeaveKingInCheck(move)) {
         return false;
     }
     
@@ -16,12 +45,34 @@ bool GameRules::isValidMove(const Move& move) const {
     // Проверяем, есть ли наш ход в списке легальных
     for (const Move& legalMove : legalMoves) {
         if (legalMove.from == move.from && legalMove.to == move.to) {
-            // Если это превращение, проверяем тип фигуры
-            if (move.promotion != PieceType::EMPTY) {
+            // Для пешки на последней горизонтали обязательно должно быть превращение
+            PieceType pieceType = movingPiece.getType();
+            int toRank = board_.rank(move.to);
+            bool isPawnOnLastRank = (pieceType == PieceType::PAWN && 
+                                   ((movingPiece.getColor() == Color::WHITE && toRank == 7) ||
+                                    (movingPiece.getColor() == Color::BLACK && toRank == 0)));
+            
+            if (isPawnOnLastRank) {
+                // Должно быть указано превращение
+                if (move.promotion == PieceType::EMPTY) {
+                    return false;
+                }
+                // Превращение должно быть в допустимую фигуру
+                if (move.promotion != PieceType::QUEEN && 
+                    move.promotion != PieceType::ROOK && 
+                    move.promotion != PieceType::BISHOP && 
+                    move.promotion != PieceType::KNIGHT) {
+                    return false;
+                }
+                // Проверяем, что сгенерированный ход имеет такое же превращение
                 if (legalMove.promotion == move.promotion) {
                     return true;
                 }
             } else {
+                // Для обычных ходов превращение не должно быть указано
+                if (move.promotion != PieceType::EMPTY) {
+                    return false;
+                }
                 return true;
             }
         }
@@ -93,6 +144,7 @@ bool GameRules::isStalemate(Color color) const {
 
 bool GameRules::isDrawByRepetition() const {
     // TODO: реализовать правило тройного повторения
+    // Пока возвращаем false для простоты
     return false;
 }
 
@@ -169,9 +221,32 @@ bool GameRules::isInsufficientMaterial() const {
         whitePawns == 0 && blackPawns == 0 &&
         whiteRooks == 0 && blackRooks == 0 &&
         whiteQueens == 0 && blackQueens == 0) {
-        // TODO: проверить что слоны на одноцветных полях
-        // Упрощенная версия - считаем что это недостаточный материал
-        return true;
+        // Проверяем цвета слонов
+        Square whiteBishopSquare = INVALID_SQUARE;
+        Square blackBishopSquare = INVALID_SQUARE;
+        
+        for (int square = 0; square < 64; square++) {
+            Piece piece = board_.getPiece(square);
+            if (piece.getType() == PieceType::BISHOP) {
+                if (piece.getColor() == Color::WHITE) {
+                    whiteBishopSquare = square;
+                } else {
+                    blackBishopSquare = square;
+                }
+            }
+        }
+        
+        if (whiteBishopSquare != INVALID_SQUARE && blackBishopSquare != INVALID_SQUARE) {
+            // Проверяем, находятся ли слоны на полях одного цвета
+            // Сумма координат (file + rank) четная для одного цвета, нечетная для другого
+            int whiteBishopColor = (board_.file(whiteBishopSquare) + board_.rank(whiteBishopSquare)) % 2;
+            int blackBishopColor = (board_.file(blackBishopSquare) + board_.rank(blackBishopSquare)) % 2;
+            
+            if (whiteBishopColor == blackBishopColor) {
+                // Слоны на полях одного цвета - недостаточный материал
+                return true;
+            }
+        }
     }
     
     return false;
@@ -192,7 +267,6 @@ bool GameRules::makeMove(const Move& move) {
     // 1. Обработка рокировки
     if (move.isCastling) {
         int rank = board_.rank(move.from);
-        int fromFile = board_.file(move.from);
         int toFile = board_.file(move.to);
         
         // Перемещаем ладью
@@ -321,9 +395,68 @@ bool GameRules::isDraw() const {
 // Приватные методы
 
 bool GameRules::wouldLeaveKingInCheck(const Move& move) const {
-    // TODO: реализовать проверку, оставляет ли ход короля под шахом
-    // Создать временную копию доски, выполнить ход и проверить шах
-    return false;
+    // Создаем временную копию доски
+    Board tempBoard = board_;
+    
+    // Выполняем ход на временной доске
+    Piece movingPiece = tempBoard.getPiece(move.from);
+    
+    // 1. Обработка рокировки на временной доске
+    if (move.isCastling) {
+        int rank = tempBoard.rank(move.from);
+        int toFile = tempBoard.file(move.to);
+        
+        // Перемещаем ладью
+        if (toFile == 6) { // Короткая рокировка
+            Square rookFrom = tempBoard.square(7, rank);
+            Square rookTo = tempBoard.square(5, rank);
+            tempBoard.setPiece(rookTo, tempBoard.getPiece(rookFrom));
+            tempBoard.setPiece(rookFrom, Piece());
+        } else if (toFile == 2) { // Длинная рокировка
+            Square rookFrom = tempBoard.square(0, rank);
+            Square rookTo = tempBoard.square(3, rank);
+            tempBoard.setPiece(rookTo, tempBoard.getPiece(rookFrom));
+            tempBoard.setPiece(rookFrom, Piece());
+        }
+    }
+    
+    // 2. Обработка взятия на проходе на временной доске
+    if (move.isEnPassant) {
+        int toFile = tempBoard.file(move.to);
+        int fromRank = tempBoard.rank(move.from);
+        Square capturedPawnSquare = tempBoard.square(toFile, fromRank);
+        tempBoard.setPiece(capturedPawnSquare, Piece());
+    }
+    
+    // 3. Обработка превращения пешки на временной доске
+    if (move.promotion != PieceType::EMPTY) {
+        movingPiece = Piece(move.promotion, movingPiece.getColor());
+    }
+    
+    // Стандартное перемещение фигуры на временной доске
+    tempBoard.setPiece(move.to, movingPiece);
+    tempBoard.setPiece(move.from, Piece());
+    
+    // Находим короля того же цвета, что и двигающаяся фигура
+    Square kingSquare = INVALID_SQUARE;
+    Color kingColor = movingPiece.getColor();
+    
+    for (int square = 0; square < 64; square++) {
+        Piece piece = tempBoard.getPiece(square);
+        if (piece.getType() == PieceType::KING && piece.getColor() == kingColor) {
+            kingSquare = square;
+            break;
+        }
+    }
+    
+    if (kingSquare == INVALID_SQUARE) {
+        return true; // Король не найден - некорректная позиция
+    }
+    
+    // Проверяем, атакована ли клетка короля после хода
+    MoveGenerator moveGen(tempBoard);
+    Color opponentColor = (kingColor == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    return moveGen.isSquareAttacked(kingSquare, opponentColor);
 }
 
 void GameRules::updateGameStateAfterMove(const Move& move) {
