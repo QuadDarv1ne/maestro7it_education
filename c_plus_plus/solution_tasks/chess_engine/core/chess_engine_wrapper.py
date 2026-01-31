@@ -90,6 +90,30 @@ class ChessEngineWrapper:
                 print("Предупреждение: EnhancedChessAI не найден, используем базовый AI")
                 self.ai = None
                 
+        # Добавляем инкрементальный оценщик
+        try:
+            from core.incremental_evaluator import IncrementalEvaluator
+            self.incremental_eval = IncrementalEvaluator(self.board_state)
+        except ImportError:
+            try:
+                from .incremental_evaluator import IncrementalEvaluator
+                self.incremental_eval = IncrementalEvaluator(self.board_state)
+            except ImportError:
+                print("Предупреждение: IncrementalEvaluator не найден")
+                self.incremental_eval = None
+                
+        # Добавляем Stockfish NNUE оценщик
+        try:
+            from core.stockfish_nnue import EnhancedNeuralEvaluator
+            self.nnue_eval = EnhancedNeuralEvaluator()
+        except ImportError:
+            try:
+                from .stockfish_nnue import EnhancedNeuralEvaluator
+                self.nnue_eval = EnhancedNeuralEvaluator()
+            except ImportError:
+                print("Предупреждение: EnhancedNeuralEvaluator не найден")
+                self.nnue_eval = None
+                
         # Zobrist hashing для быстрой проверки позиций (синхронизируем с AI)
         if self.ai:
             self.zobrist_keys = self.ai.zobrist_keys
@@ -724,6 +748,10 @@ class ChessEngineWrapper:
                 target_piece == '.' and self.board_state[from_row + direction][from_col] == '.'):
                 if debug:
                     print("Допустимый двойной ход пешки")
+                # Установим en passant square
+                self.en_passant_target = (from_row + direction, from_col)
+                if debug:
+                    print(f"Установлен en passant square: {self.en_passant_target}")
                 return True
                 
             # Взятие по диагонали
@@ -731,6 +759,13 @@ class ChessEngineWrapper:
                 target_piece != '.' and target_piece.isupper() != is_white_piece):
                 if debug:
                     print("Допустимое взятие пешкой")
+                return True
+                
+            # Взятие на проходе
+            if (abs(from_col - to_col) == 1 and to_row == from_row + direction and 
+                target_piece == '.' and self.en_passant_target == (to_row, to_col)):
+                if debug:
+                    print("Допустимое взятие на проходе")
                 return True
                 
         # Логика для ладьи
@@ -949,8 +984,40 @@ class ChessEngineWrapper:
         self.board_state[to_row][to_col] = piece
         self.board_state[from_row][from_col] = '.'
         
+        # Обработка взятия на проходе
+        if piece.lower() == 'p' and self.en_passant_target == (to_row, to_col):
+            # Удаляем взятую пешку
+            captured_row = from_row  # Пешка была на исходной строке
+            captured_col = to_col    # В том же столбце, куда пошла атакующая пешка
+            captured_pawn = self.board_state[captured_row][captured_col]
+            self.board_state[captured_row][captured_col] = '.'
+            if verbose:
+                print(f"Взята пешка на проходе на {chr(97+captured_col)}{8-captured_row}")
+                print(f"Захваченная пешка: {captured_pawn}")
+            
+            # Записываем взятие в историю
+            self.captured_pieces['white' if captured_pawn.isupper() else 'black'].append(captured_pawn)
+            self.game_stats['captures_count'] += 1
+            move_notation += f"x{captured_pawn} e.p."
+        
+        # Обновляем en passant target
+        if piece.lower() == 'p' and abs(from_row - to_row) == 2:
+            # Двойной ход пешки - устанавливаем en passant square
+            self.en_passant_target = (from_row + (1 if piece.islower() else -1), from_col)
+            if verbose:
+                print(f"Установлен en passant square: {self.en_passant_target}")
+        else:
+            # Сбрасываем en passant square после любого другого хода
+            self.en_passant_target = None
+            if verbose:
+                print("Сброшен en passant square")
+        
         # Инвалидация кэша после хода
         self.invalidate_caches()
+        
+        # Обновляем инкрементальный оценщик
+        if self.incremental_eval:
+            self.incremental_eval.update_on_move(from_pos, to_pos, captured if captured != '.' else None)
         
         if verbose:
             print("Ход выполнен успешно!")
