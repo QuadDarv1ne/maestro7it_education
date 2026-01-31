@@ -7,14 +7,39 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Compiler-specific flags
 if(MSVC)
+    # Enable maximum optimizations
+    add_compile_options(/O2 /Ob2 /Oi /Ot /Oy /GL)
+    add_compile_options(/fp:fast)  # Fast floating-point math
+    add_compile_options(/arch:SSE2)  # Enable SSE2 instructions
+    
+    # Warning levels
     add_compile_options(/W4)
+    
     # Add UTF-8 support for MSVC
     add_compile_options(/utf-8)
     add_compile_options(/D_WIN32_WINNT=0x0601)
+    
+    # Link-time optimization
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LTCG")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /LTCG")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /LTCG")
 else()
+    # GCC/Clang optimizations
+    add_compile_options(-O3)  # Maximum optimization
+    add_compile_options(-march=native)  # Optimize for current architecture
+    add_compile_options(-mtune=native)
+    add_compile_options(-ffast-math)  # Fast floating-point math
+    add_compile_options(-funroll-loops)  # Loop unrolling
+    add_compile_options(-flto)  # Link-time optimization
+    
+    # Warning levels
     add_compile_options(-Wall -Wextra -pedantic)
+    
     # Add UTF-8 encoding support
     add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
+    
+    # Link-time optimization flags
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto")
 endif()
 
 # Add Windows-specific definitions for encoding

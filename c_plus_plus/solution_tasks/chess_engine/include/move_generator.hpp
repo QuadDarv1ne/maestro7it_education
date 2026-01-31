@@ -4,6 +4,7 @@
 #include "board.hpp"
 #include <vector>
 #include <string>
+#include <utility>  // for std::move
 
 struct Move {
     Square from;
@@ -56,47 +57,47 @@ private:
     const Board& board_;
     
 public:
-    MoveGenerator(const Board& board);
+    explicit MoveGenerator(const Board& board) noexcept;
     
     // Генерация всех легальных ходов для текущего игрока
-    std::vector<Move> generateLegalMoves() const;
+    [[nodiscard]] std::vector<Move> generateLegalMoves() const;
     
     // Генерация псевдо-легальных ходов (может включать ходы, оставляющие короля под шахом)
-    std::vector<Move> generatePseudoLegalMoves() const;
+    [[nodiscard]] std::vector<Move> generatePseudoLegalMoves() const;
     
     // Проверка, является ли ход легальным
-    bool isLegalMove(const Move& move) const;
+    [[nodiscard]] bool isLegalMove(const Move& move) const noexcept;
     
     // Генераторы ходов для конкретных фигур
-    std::vector<Move> generatePawnMoves(Square from) const;
-    std::vector<Move> generateKnightMoves(Square from) const;
-    std::vector<Move> generateBishopMoves(Square from) const;
-    std::vector<Move> generateRookMoves(Square from) const;
-    std::vector<Move> generateQueenMoves(Square from) const;
-    std::vector<Move> generateKingMoves(Square from) const;
+    [[nodiscard]] std::vector<Move> generatePawnMoves(Square from) const;
+    [[nodiscard]] std::vector<Move> generateKnightMoves(Square from) const;
+    [[nodiscard]] std::vector<Move> generateBishopMoves(Square from) const;
+    [[nodiscard]] std::vector<Move> generateRookMoves(Square from) const;
+    [[nodiscard]] std::vector<Move> generateQueenMoves(Square from) const;
+    [[nodiscard]] std::vector<Move> generateKingMoves(Square from) const;
     
     // Специальные ходы
-    std::vector<Move> generateCastlingMoves() const;
-    std::vector<Move> generateEnPassantMoves() const;
+    [[nodiscard]] std::vector<Move> generateCastlingMoves() const;
+    [[nodiscard]] std::vector<Move> generateEnPassantMoves() const;
     
     // Вспомогательные методы валидации
-    bool wouldBeInCheck(const Move& move) const;
-    bool isSquareAttacked(Square square, Color byColor) const;
-    bool isSquareAttackedOnBoard(const Board& board, Square square, Color byColor) const;
-    bool isAttackedInDirection(const Board& board, Square square, int rankDelta, int fileDelta, Color byColor, bool diagonal) const;
+    [[nodiscard]] bool wouldBeInCheck(const Move& move) const;
+    [[nodiscard]] bool isSquareAttacked(Square square, Color byColor) const noexcept;
+    [[nodiscard]] bool isSquareAttackedOnBoard(const Board& board, Square square, Color byColor) const noexcept;
+    [[nodiscard]] bool isAttackedInDirection(const Board& board, Square square, int rankDelta, int fileDelta, Color byColor, bool diagonal) const noexcept;
     
 private:
     // Вспомогательные методы
-    std::vector<Move> addMovesInDirection(Square from, int fileDelta, int rankDelta) const;
-    bool isValidSquare(Square square) const;
-    bool isOpponentPiece(Square square) const;
-    bool isEmptySquare(Square square) const;
+    [[nodiscard]] std::vector<Move> addMovesInDirection(Square from, int fileDelta, int rankDelta) const;
+    [[nodiscard]] bool isValidSquare(Square square) const noexcept;
+    [[nodiscard]] bool isOpponentPiece(Square square) const noexcept;
+    [[nodiscard]] bool isEmptySquare(Square square) const noexcept;
     
     // Вспомогательные методы для рокировки
-    bool canCastleKingside(Color color) const;
-    bool canCastleQueenside(Color color) const;
-    Square findKingSquare(Color color) const;
-    Color oppositeColor(Color color) const;
+    [[nodiscard]] bool canCastleKingside(Color color) const noexcept;
+    [[nodiscard]] bool canCastleQueenside(Color color) const noexcept;
+    [[nodiscard]] Square findKingSquare(Color color) const noexcept;
+    [[nodiscard]] Color oppositeColor(Color color) const noexcept;
 };
 
 #endif // MOVE_GENERATOR_HPP

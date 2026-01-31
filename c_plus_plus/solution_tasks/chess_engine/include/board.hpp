@@ -20,24 +20,8 @@ typedef int Square;
  */
 class Board {
     friend class GameRules;  // Разрешаем GameRules доступ к приватным членам
-private:
-    std::vector<Piece> squares_;  ///< 64 клетки доски (8x8)
-    Color currentPlayer_;         ///< Текущий игрок, чей ход
-    int moveCount_;               ///< Счетчик ходов
     
-    // Права на рокировку
-    bool whiteKingSideCastle_;   ///< Право белых на короткую рокировку
-    bool whiteQueenSideCastle_;  ///< Право белых на длинную рокировку
-    bool blackKingSideCastle_;   ///< Право черных на короткую рокировку
-    bool blackQueenSideCastle_;  ///< Право черных на длинную рокировку
-    
-    // Клетка для взятия на проходе
-    Square enPassantSquare_;     ///< Клетка, где возможно взятие на проходе
-    
-    // Счетчик полуходов для правила 50 ходов
-    int halfMoveClock_;          ///< Счетчик полуходов без взятия и движения пешек
-
-    // История ходов для функции отмены
+    // Структура для хранения информации об отмене хода
     struct UndoInfo {
         Square from;
         Square to;
@@ -50,7 +34,14 @@ private:
         PieceType promotion;
         uint64_t hash;
     };
-    std::vector<UndoInfo> history_;
+    
+public:
+    // Конструктор
+    Board();
+    
+    // Методы настройки
+    void setupStartPosition();              ///< Устанавливает начальную позицию
+    void setupFromFEN(const std::string& fen);  ///< Загружает позицию из FEN-нотации
     
     // Геттеры
     const Piece& getPiece(Square square) const;  ///< Возвращает фигуру на указанной клетке
@@ -60,6 +51,7 @@ private:
     bool canCastleQueenSide(Color color) const;  ///< Проверяет право на длинную рокировку
     Square getEnPassantSquare() const;           ///< Возвращает клетку для взятия на проходе
     int getHalfMoveClock() const;                ///< Возвращает счетчик полуходов
+    const std::vector<UndoInfo>& getHistory() const;  ///< Возвращает историю ходов
     
     // Сеттеры
     void setPiece(Square square, const Piece& piece);  ///< Устанавливает фигуру на клетку
@@ -96,12 +88,33 @@ private:
     bool isRepetition() const;            ///< Проверяет на троекратное повторение
     bool isGameOver() const;              ///< Проверяет, завершена ли игра
     
-    // Вспомогательные методы (сделаны публичными для доступа из других классов)
+    // Вспомогательные методы (публичные для доступа из других классов)
     void initializeEmptyBoard();          ///< Инициализирует пустую доску
     bool isInBounds(Square square) const; ///< Проверяет, находится ли клетка в пределах доски
     int rank(Square square) const;        ///< Возвращает горизонталь (0-7, где 0 - первая горизонталь)
     int file(Square square) const;        ///< Возвращает вертикаль (0-7, где 0 - вертикаль 'a')
     Square square(int file, int rank) const;  ///< Создает клетку из вертикали и горизонтали
+    
+private:
+    std::vector<Piece> squares_;  ///< 64 клетки доски (8x8)
+    Color currentPlayer_;         ///< Текущий игрок, чей ход
+    int moveCount_;               ///< Счетчик ходов
+    
+    // Права на рокировку
+    bool whiteKingSideCastle_;   ///< Право белых на короткую рокировку
+    bool whiteQueenSideCastle_;  ///< Право белых на длинную рокировку
+    bool blackKingSideCastle_;   ///< Право черных на короткую рокировку
+    bool blackQueenSideCastle_;  ///< Право черных на длинную рокировку
+    
+    // Клетка для взятия на проходе
+    Square enPassantSquare_;     ///< Клетка, где возможно взятие на проходе
+    
+    // Счетчик полуходов для правила 50 ходов
+    int halfMoveClock_;          ///< Счетчик полуходов без взятия и движения пешек
+
+    std::vector<UndoInfo> history_;
+    
+
     
 private:
     void initZobrist();

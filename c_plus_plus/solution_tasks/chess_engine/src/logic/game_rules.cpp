@@ -143,14 +143,52 @@ bool GameRules::isStalemate(Color color) const {
 }
 
 bool GameRules::isDrawByRepetition() const {
-    // TODO: реализовать правило тройного повторения
-    // Пока возвращаем false для простоты
+    // Получаем текущий хеш позиции
+    uint64_t currentHash = board_.getZobristHash();
+    
+    // Подсчитываем сколько раз встречалась эта позиция
+    int repetitions = 1; // Текущая позиция уже одна
+    
+    // Проходим по истории в обратном порядке
+    const auto& history = board_.getHistory();
+    
+    // Ищем позиции с тем же хешем и тем же игроком на ходу
+    Color currentPlayer = board_.getCurrentPlayer();
+    
+    for (int i = history.size() - 1; i >= 0; i--) {
+        const Board::UndoInfo& info = history[i];
+        
+        // Проверяем, совпадает ли хеш
+        if (info.hash == currentHash) {
+            // Проверяем, тот же ли игрок на ходу
+            // Игрок меняется после каждого хода, поэтому
+            // позиции с одинаковым хешем и одинаковым игроком
+            // встречаются каждые 2 хода в истории
+            int movesBack = history.size() - i;
+            Color playerAtThatTime = (movesBack % 2 == 0) ? 
+                Piece::oppositeColor(currentPlayer) : currentPlayer;
+            
+            if (playerAtThatTime == currentPlayer) {
+                repetitions++;
+                if (repetitions >= 3) {
+                    return true; // Троекратное повторение
+                }
+            }
+        }
+        
+        // Ограничиваем поиск последними 100 полуходами (для оптимизации)
+        if (history.size() - i > 100) {
+            break;
+        }
+    }
+    
     return false;
 }
 
 bool GameRules::isDrawByFiftyMoveRule() const {
-    // TODO: реализовать правило 50 ходов
-    return board_.getHalfMoveClock() >= 100; // 50 полных ходов = 100 полуходов
+    // Правило 50 ходов: если за последние 50 полных ходов (100 полуходов)
+    // не было ни одного взятия и ни одного хода пешкой, партия считается ничьей
+    return board_.getHalfMoveClock() >= 100;
 }
 
 bool GameRules::isInsufficientMaterial() const {
@@ -285,7 +323,6 @@ bool GameRules::makeMove(const Move& move) {
     
     // 2. Обработка взятия на проходе
     if (move.isEnPassant) {
-        int fromFile = board_.file(move.from);
         int toFile = board_.file(move.to);
         int fromRank = board_.rank(move.from);
         Square capturedPawnSquare = board_.square(toFile, fromRank);
@@ -465,7 +502,6 @@ void GameRules::updateGameStateAfterMove(const Move& move) {
     int fromRank = board_.rank(move.from);
     int fromFile = board_.file(move.from);
     int toRank = board_.rank(move.to);
-    int toFile = board_.file(move.to);
 
     // 1. Обновление прав на рокировку
     bool whiteKS = board_.canCastleKingSide(Color::WHITE);
