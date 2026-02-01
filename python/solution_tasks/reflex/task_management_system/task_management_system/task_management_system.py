@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
+import json
 
 
 class Priority(str, Enum):
@@ -23,6 +24,16 @@ class TaskStatus(str, Enum):
     CANCELLED = "Cancelled"
 
 
+class Category(str, Enum):
+    """Категории задач."""
+    WORK = "Work"
+    PERSONAL = "Personal"
+    HEALTH = "Health"
+    FINANCE = "Finance"
+    EDUCATION = "Education"
+    OTHER = "Other"
+
+
 class Task(BaseModel):
     """Модель задачи."""
     id: int
@@ -34,6 +45,18 @@ class Task(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     assigned_to: str = ""
     updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    category: str = Field(default=Category.OTHER)
+    
+    # Dependency tracking
+    dependencies: List[int] = []  # List of task IDs that this task depends on
+    dependent_tasks: List[int] = []  # List of task IDs that depend on this task
+    
+    # Sub-task functionality
+    parent_id: Optional[int] = None  # ID of parent task if this is a sub-task
+    sub_tasks: List[int] = []  # List of sub-task IDs
+    
+    # Progress tracking for tasks with sub-tasks
+    progress: int = 0  # 0-100% completion for sub-tasks
 
     class Config:
         arbitrary_types_allowed = True
@@ -42,13 +65,259 @@ class Task(BaseModel):
 class State(rx.State):
     """Состояние приложения управления задачами."""
     
+    # User authentication
+    current_user: str = "Гость"
+    is_authenticated: bool = False
+    show_login_dialog: bool = False
+    login_username: str = ""
+    login_password: str = ""
+    
+    # User management
+    users: Dict[str, str] = {
+        "admin": "admin123",
+        "user1": "password1",
+        "user2": "password2"
+    }
+    
+    # Explicit setters to avoid deprecation warnings
+    def set_new_task_title(self, value: str):
+        self.new_task_title = value
+    
+    def set_new_task_description(self, value: str):
+        self.new_task_description = value
+    
+    def set_new_task_priority(self, value: str):
+        self.new_task_priority = value
+    
+    def set_new_task_category(self, value: str):
+        self.new_task_category = value
+    
+    def set_new_task_due_date(self, value: str):
+        self.new_task_due_date = value
+    
+    def set_new_task_assigned_to(self, value: str):
+        self.new_task_assigned_to = value
+    
+    def set_edit_title(self, value: str):
+        self.edit_title = value
+    
+    def set_edit_description(self, value: str):
+        self.edit_description = value
+    
+    def set_edit_priority(self, value: str):
+        self.edit_priority = value
+    
+    def set_edit_category(self, value: str):
+        self.edit_category = value
+    
+    def set_edit_due_date(self, value: str):
+        self.edit_due_date = value
+    
+    def set_edit_assigned_to(self, value: str):
+        self.edit_assigned_to = value
+    
+    def set_show_edit_dialog(self, value: bool):
+        self.show_edit_dialog = value
+    
+    def set_search_query(self, value: str):
+        self.search_query = value
+    
+    def set_filter_status(self, value: str):
+        self.filter_status = value
+    
+    def set_filter_priority(self, value: str):
+        self.filter_priority = value
+    
+    def set_filter_category(self, value: str):
+        self.filter_category = value
+    
+    def set_filter_assigned_to(self, value: str):
+        self.filter_assigned_to = value
+    
+    def set_show_completed(self, value: bool):
+        self.show_completed = value
+    
+    def set_filter_date_from(self, value: str):
+        self.filter_date_from = value
+    
+    def set_filter_date_to(self, value: str):
+        self.filter_date_to = value
+    
+    def set_filter_created_today(self, value: bool):
+        self.filter_created_today = value
+    
+    def set_filter_due_today(self, value: bool):
+        self.filter_due_today = value
+    
+    def set_filter_search_in_description(self, value: bool):
+        self.filter_search_in_description = value
+    
+    def set_filter_search_in_assignee(self, value: bool):
+        self.filter_search_in_assignee = value
+    
+    def set_filter_overdue_only(self, value: bool):
+        self.filter_overdue_only = value
+    
+    def set_filter_completed_only(self, value: bool):
+        self.filter_completed_only = value
+    
+    def set_sort_by(self, value: str):
+        self.sort_by = value
+    
+    def set_search_in_description(self, value: bool):
+        self.search_in_description = value
+    
+    def set_search_in_comments(self, value: bool):
+        self.search_in_comments = value
+    
+    def set_search_in_subtasks(self, value: bool):
+        self.search_in_subtasks = value
+    
+    def set_search_exact_match(self, value: bool):
+        self.search_exact_match = value
+    
+    def set_show_notifications(self, value: bool):
+        self.show_notifications = value
+    
+    def set_theme(self, value: str):
+        self.theme = value
+    
+    def toggle_theme(self):
+        """Переключить тему между светлой и темной."""
+        self.theme = "dark" if self.theme == "light" else "light"
+        self.add_notification(f"🎨 Тема изменена на: {self.theme}", "info")
+    
+    def add_notification(self, message: str, notification_type: str = "info"):
+        """Добавить уведомление."""
+        notification = {
+            "id": str(datetime.now().timestamp()),
+            "message": message,
+            "type": notification_type,
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "read": False
+        }
+        self.notifications = [notification] + self.notifications
+        
+        # Ограничиваем количество уведомлений
+        if len(self.notifications) > 10:
+            self.notifications = self.notifications[:10]
+    
+    def remove_notification(self, notification_id: str):
+        """Удалить уведомление."""
+        self.notifications = [
+            n for n in self.notifications 
+            if n["id"] != notification_id
+        ]
+    
+    def mark_notification_as_read(self, notification_id: str):
+        """Пометить уведомление как прочитанное."""
+        for notification in self.notifications:
+            if notification["id"] == notification_id:
+                notification["read"] = True
+                break
+    
+    def clear_all_notifications(self):
+        """Очистить все уведомления."""
+        self.notifications = []
+    
+    def check_task_notifications(self):
+        """Проверить задачи и создать соответствующие уведомления."""
+        today = datetime.now().date()
+        tomorrow = today + timedelta(days=1)
+        
+        for task in self.tasks:
+            if not task.due_date:
+                continue
+                
+            try:
+                due_date = datetime.strptime(task.due_date, "%Y-%m-%d").date()
+                
+                # Уведомление о просроченных задачах
+                if due_date < today and task.status not in [TaskStatus.COMPLETED, TaskStatus.CANCELLED]:
+                    self.add_notification(
+                        f"⚠️ Задача просрочена: {task.title}",
+                        "error"
+                    )
+                
+                # Уведомление о задачах на завтра
+                elif due_date == tomorrow and task.status not in [TaskStatus.COMPLETED, TaskStatus.CANCELLED]:
+                    self.add_notification(
+                        f"📅 Задача на завтра: {task.title}",
+                        "warning"
+                    )
+                
+                # Уведомление о задачах, назначенных пользователю
+                elif task.assigned_to == self.current_user and task.status == TaskStatus.PENDING:
+                    self.add_notification(
+                        f"📌 Новая задача назначена: {task.title}",
+                        "info"
+                    )
+                    
+            except ValueError:
+                continue
+    
+    # User authentication methods
+    def set_login_username(self, value: str):
+        self.login_username = value
+    
+    def set_login_password(self, value: str):
+        self.login_password = value
+    
+    def set_show_login_dialog(self, value: bool):
+        self.show_login_dialog = value
+    
+    def login(self):
+        """User login."""
+        if self.login_username in self.users and self.users[self.login_username] == self.login_password:
+            self.current_user = self.login_username
+            self.is_authenticated = True
+            self.show_login_dialog = False
+            self.login_username = ""
+            self.login_password = ""
+            # Load user-specific tasks
+            self.load_user_tasks()
+        else:
+            # Show error message
+            pass
+    
+    def logout(self):
+        """User logout."""
+        # Save current user's tasks
+        self.save_tasks()
+        self.current_user = "Гость"
+        self.is_authenticated = False
+        self.tasks = []
+        self.task_counter = 0
+    
+    def load_user_tasks(self):
+        """Load tasks for current user."""
+        try:
+            # Используем клиентский скрипт для загрузки из localStorage
+            pass  # Загрузка будет происходить через клиентский JavaScript
+        except Exception as e:
+            print(f"Error loading user tasks: {e}")
+            self.tasks = []
+            self.task_counter = 0
+    
+    def save_user_tasks(self):
+        """Save tasks for current user."""
+        try:
+            # Сохраняем в состояние для доступа из JavaScript
+            self.tasks_json = json.dumps([task.dict() for task in self.tasks])
+        except Exception as e:
+            print(f"Error saving user tasks: {e}")
+    
     # Список задач
     tasks: List[Task] = []
+    
+    # Список членов команды
+    team_members: List[str] = ["Алексей", "Мария", "Иван", "Елена", "Дмитрий", "Ольга", "Сергей", "Анна"]
     
     # Поля для новой задачи
     new_task_title: str = ""
     new_task_description: str = ""
     new_task_priority: str = Priority.NORMAL
+    new_task_category: str = Category.WORK
     new_task_due_date: str = ""
     new_task_assigned_to: str = ""
     
@@ -57,6 +326,7 @@ class State(rx.State):
     edit_title: str = ""
     edit_description: str = ""
     edit_priority: str = Priority.NORMAL
+    edit_category: str = Category.WORK
     edit_due_date: str = ""
     edit_assigned_to: str = ""
     show_edit_dialog: bool = False
@@ -64,9 +334,37 @@ class State(rx.State):
     # Поля для фильтрации и сортировки
     filter_status: str = "All"
     filter_priority: str = "All"
+    filter_category: str = "All"
+    filter_assigned_to: str = "All"
     search_query: str = ""
     sort_by: str = "created_at"
     sort_ascending: bool = False
+    
+    # Расширенный поиск
+    search_in_description: bool = True
+    search_in_comments: bool = False
+    search_in_subtasks: bool = False
+    search_exact_match: bool = False
+    
+    # Расширенные фильтры
+    filter_date_from: str = ""
+    filter_date_to: str = ""
+    filter_created_today: bool = False
+    filter_due_today: bool = False
+    filter_search_in_description: bool = True
+    filter_search_in_assignee: bool = False
+    filter_overdue_only: bool = False
+    filter_completed_only: bool = False
+    
+    # Расширенные фильтры
+    filter_date_from: str = ""
+    filter_date_to: str = ""
+    filter_overdue_only: bool = False
+    filter_completed_only: bool = False
+    filter_created_today: bool = False
+    filter_due_today: bool = False
+    filter_search_in_description: bool = True
+    filter_search_in_assignee: bool = True
     
     # Счетчик для генерации ID
     task_counter: int = 0
@@ -75,38 +373,261 @@ class State(rx.State):
     show_completed: bool = True
     is_loading: bool = False
     
+    # Для работы с localStorage через JavaScript
+    tasks_json: str = ""
+    
+    # Тема приложения
+    theme: str = "light"  # "light" или "dark"
+    
+    # Система уведомлений
+    notifications: List[Dict[str, str]] = []
+    show_notifications: bool = True
+    
+    # Bulk operations
+    selected_tasks: List[int] = []
+    show_bulk_actions: bool = False
+    
+    # Notifications
+    show_notifications: bool = True
+    notification_message: str = ""
+    
+    # Calendar view
+    show_calendar: bool = False
+    calendar_current_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
+    calendar_view_type: str = "month"  # month, week, day
+    
+    # Task dependencies and sub-tasks
+    show_dependencies: bool = False
+    selected_dependency_task: Optional[int] = None
+    show_subtasks: bool = False
+    selected_parent_task: Optional[int] = None
+    
+    # Quick actions and context menu
+    context_menu_task_id: Optional[int] = None
+    show_context_menu: bool = False
+    context_menu_position: Dict[str, int] = {"x": 0, "y": 0}
+    
+    def load_tasks(self):
+        """Загрузить задачи из локального хранилища."""
+        self.load_user_tasks()
+        # Проверяем уведомления
+        self.check_task_notifications()
+    
+    def save_tasks(self):
+        """Сохранить задачи в локальное хранилище."""
+        self.save_user_tasks()
+    
+    def on_load(self):
+        """Вызывается при загрузке приложения."""
+        self.load_tasks()
+        self.check_overdue_tasks()
+    
+    @rx.event
+    def export_tasks_csv(self):
+        """Экспортировать задачи в CSV."""
+        import csv
+        import io
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(["ID", "Title", "Description", "Priority", "Status", "Due Date", "Created At", "Assigned To", "Category"])
+        
+        # Write tasks
+        for task in self.tasks:
+            writer.writerow([
+                task.id,
+                task.title,
+                task.description,
+                task.priority,
+                task.status,
+                task.due_date,
+                task.created_at,
+                task.assigned_to,
+                task.category
+            ])
+        
+        csv_content = output.getvalue()
+        output.close()
+        
+        # Return the CSV as a downloadable file
+        return rx.download(data=csv_content.encode('utf-8'), filename=f"tasks_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    
+    @rx.event
+    def export_filtered_tasks_csv(self):
+        """Экспортировать отфильтрованные задачи в CSV."""
+        import csv
+        import io
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(["ID", "Title", "Description", "Priority", "Status", "Due Date", "Created At", "Assigned To", "Category"])
+        
+        # Write filtered tasks
+        for task in self.filtered_tasks:
+            writer.writerow([
+                task.id,
+                task.title,
+                task.description,
+                task.priority,
+                task.status,
+                task.due_date,
+                task.created_at,
+                task.assigned_to,
+                task.category
+            ])
+        
+        csv_content = output.getvalue()
+        output.close()
+        
+        # Return the CSV as a downloadable file
+        return rx.download(data=csv_content.encode('utf-8'), filename=f"filtered_tasks_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    
+    @rx.event
+    def export_tasks_json(self):
+        """Экспортировать задачи в JSON."""
+        import json
+        
+        tasks_data = []
+        for task in self.tasks:
+            task_dict = task.dict()
+            tasks_data.append(task_dict)
+        
+        json_content = json.dumps(tasks_data, indent=2, ensure_ascii=False)
+        
+        # Return the JSON as a downloadable file
+        return rx.download(data=json_content.encode('utf-8'), filename=f"tasks_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    
+    @rx.event
+    def export_filtered_tasks_json(self):
+        """Экспортировать отфильтрованные задачи в JSON."""
+        import json
+        
+        tasks_data = []
+        for task in self.filtered_tasks:
+            task_dict = task.dict()
+            tasks_data.append(task_dict)
+        
+        json_content = json.dumps(tasks_data, indent=2, ensure_ascii=False)
+        
+        # Return the JSON as a downloadable file
+        return rx.download(data=json_content.encode('utf-8'), filename=f"filtered_tasks_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    
+    def advanced_search_matches(self, task: Task, query: str) -> bool:
+        """Проверить совпадение задачи с расширенным поиском."""
+        if not query:
+            return True
+            
+        query_lower = query.lower()
+        search_fields = []
+        
+        # Поиск в заголовке
+        search_fields.append(task.title.lower())
+        
+        # Поиск в описании (если включено)
+        if self.search_in_description and task.description:
+            search_fields.append(task.description.lower())
+        
+        # Поиск в исполнителе (если включено)
+        if self.filter_search_in_assignee and task.assigned_to:
+            search_fields.append(task.assigned_to.lower())
+        
+        # Поиск в категории
+        search_fields.append(task.category.lower())
+        
+        search_text = " ".join(search_fields)
+        
+        if self.search_exact_match:
+            return query_lower in search_text
+        else:
+            # Частичное совпадение
+            return any(word in search_text for word in query_lower.split())
+    
     @rx.var
     def filtered_tasks(self) -> List[Task]:
         """Получить отфильтрованные и отсортированные задачи."""
         result = self.tasks
         
+        # Расширенный поиск
         if self.search_query.strip():
-            query = self.search_query.lower()
             result = [
                 task for task in result 
-                if query in task.title.lower() 
-                or query in task.description.lower()
-                or query in task.assigned_to.lower()
+                if self.advanced_search_matches(task, self.search_query)
             ]
         
+        # Базовые фильтры
         if self.filter_status != "All":
             result = [task for task in result if task.status == self.filter_status]
         
         if self.filter_priority != "All":
             result = [task for task in result if task.priority == self.filter_priority]
         
-        if not self.show_completed:
+        if self.filter_category != "All":
+            result = [task for task in result if task.category == self.filter_category]
+        
+        if self.filter_assigned_to != "All":
+            result = [task for task in result if task.assigned_to == self.filter_assigned_to]
+        
+        # Расширенные фильтры по датам
+        today = datetime.now().strftime("%Y-%m-%d")
+        
+        if self.filter_date_from:
+            from_date = datetime.strptime(self.filter_date_from, "%Y-%m-%d")
+            result = [
+                task for task in result 
+                if datetime.strptime(task.created_at.split()[0], "%Y-%m-%d") >= from_date
+            ]
+        
+        if self.filter_date_to:
+            to_date = datetime.strptime(self.filter_date_to, "%Y-%m-%d")
+            result = [
+                task for task in result 
+                if datetime.strptime(task.created_at.split()[0], "%Y-%m-%d") <= to_date
+            ]
+        
+        if self.filter_created_today:
+            result = [
+                task for task in result 
+                if task.created_at.split()[0] == today
+            ]
+        
+        if self.filter_due_today:
+            result = [task for task in result if task.due_date == today]
+        
+        if self.filter_overdue_only:
+            result = [
+                task for task in result
+                if task.due_date and task.due_date < today
+                and task.status not in [TaskStatus.COMPLETED, TaskStatus.CANCELLED]
+            ]
+        
+        if self.filter_completed_only:
+            result = [task for task in result if task.status == TaskStatus.COMPLETED]
+        
+        if not self.show_completed and not self.filter_completed_only:
             result = [task for task in result if task.status != TaskStatus.COMPLETED]
         
+        # Сортировка
         if self.sort_by == "priority":
             priority_order = {Priority.CRITICAL: 0, Priority.HIGH: 1, Priority.NORMAL: 2, Priority.LOW: 3}
             result.sort(key=lambda t: priority_order.get(t.priority, 4), reverse=not self.sort_ascending)
         elif self.sort_by == "due_date":
-            result.sort(key=lambda t: t.due_date or "9999-12-31", reverse=not self.sort_ascending)
+            def due_key(t):
+                if not t.due_date:
+                    return datetime.max if self.sort_ascending else datetime.min
+                return datetime.strptime(t.due_date, "%Y-%m-%d")
+            result.sort(key=due_key, reverse=not self.sort_ascending)
         elif self.sort_by == "title":
             result.sort(key=lambda t: t.title.lower(), reverse=not self.sort_ascending)
         elif self.sort_by == "status":
             result.sort(key=lambda t: t.status, reverse=not self.sort_ascending)
+        elif self.sort_by == "category":
+            result.sort(key=lambda t: t.category.lower(), reverse=not self.sort_ascending)
+        elif self.sort_by == "assigned_to":
+            result.sort(key=lambda t: t.assigned_to.lower(), reverse=not self.sort_ascending)
         else:
             result.sort(key=lambda t: t.created_at, reverse=not self.sort_ascending)
             
@@ -124,7 +645,57 @@ class State(rx.State):
             "cancelled": sum(1 for t in self.tasks if t.status == TaskStatus.CANCELLED),
             "overdue": sum(1 for t in self.tasks 
                           if t.due_date and t.due_date < today
-                          and t.status not in [TaskStatus.COMPLETED, TaskStatus.CANCELLED])
+                          and t.status not in [TaskStatus.COMPLETED, TaskStatus.CANCELLED]),
+            "work": sum(1 for t in self.tasks if t.category == Category.WORK),
+            "personal": sum(1 for t in self.tasks if t.category == Category.PERSONAL),
+            "health": sum(1 for t in self.tasks if t.category == Category.HEALTH),
+            "finance": sum(1 for t in self.tasks if t.category == Category.FINANCE),
+            "education": sum(1 for t in self.tasks if t.category == Category.EDUCATION),
+            "other": sum(1 for t in self.tasks if t.category == Category.OTHER)
+        }
+    
+    @rx.var
+    def productivity_stats(self) -> Dict[str, str]:
+        """Получить статистику продуктивности."""
+        if not self.tasks:
+            return {
+                "completion_rate": "0",
+                "avg_completion_time": "0",
+                "tasks_per_day": "0",
+                "most_productive_day": "Нет данных",
+                "busiest_category": "Нет данных"
+            }
+        
+        # Completion rate
+        completed_tasks = sum(1 for t in self.tasks if t.status == TaskStatus.COMPLETED)
+        completion_rate = (completed_tasks / len(self.tasks)) * 100 if self.tasks else 0
+        
+        # Average completion time
+        completed_with_dates = [
+            t for t in self.tasks 
+            if t.status == TaskStatus.COMPLETED and t.created_at and t.updated_at
+        ]
+        avg_completion_time = 0
+        if completed_with_dates:
+            # This is a simplified calculation
+            avg_completion_time = len(completed_with_dates)  # Just count for now
+        
+        # Tasks per day (simplified)
+        tasks_per_day = len(self.tasks) / max(1, 7)  # Assume 7 days for demo
+        
+        # Most productive day and category (simplified)
+        most_productive_day = "Сегодня"
+        category_counts = {}
+        for task in self.tasks:
+            category_counts[task.category] = category_counts.get(task.category, 0) + 1
+        busiest_category = max(category_counts, key=category_counts.get) if category_counts else "Нет данных"
+        
+        return {
+            "completion_rate": str(round(completion_rate, 1)),
+            "avg_completion_time": str(avg_completion_time),
+            "tasks_per_day": str(round(tasks_per_day, 1)),
+            "most_productive_day": most_productive_day,
+            "busiest_category": busiest_category
         }
     
     def add_task(self):
@@ -137,6 +708,7 @@ class State(rx.State):
             title=self.new_task_title.strip(),
             description=self.new_task_description.strip(),
             priority=self.new_task_priority,
+            category=self.new_task_category,
             due_date=self.new_task_due_date if self.new_task_due_date else None,
             assigned_to=self.new_task_assigned_to.strip()
         )
@@ -144,6 +716,10 @@ class State(rx.State):
         self.tasks.append(task)
         self.task_counter += 1
         self.clear_form()
+        self.save_tasks()
+        
+        # Добавляем уведомление
+        self.add_notification(f"✅ Задача создана: {task.title}", "success")
     
     def clear_form(self):
         """Очистить форму добавления задачи."""
@@ -156,6 +732,7 @@ class State(rx.State):
     def delete_task(self, task_id: int):
         """Удалить задачу по ID."""
         self.tasks = [task for task in self.tasks if task.id != task_id]
+        self.save_tasks()
     
     def update_task_status(self, task_id: int, new_status: str):
         """Обновить статус задачи."""
@@ -164,6 +741,7 @@ class State(rx.State):
                 task.status = new_status
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
+        self.save_tasks()
     
     def toggle_task_completion(self, task_id: int):
         """Переключить статус выполнения задачи."""
@@ -172,6 +750,7 @@ class State(rx.State):
                 task.status = TaskStatus.COMPLETED if task.status != TaskStatus.COMPLETED else TaskStatus.PENDING
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
+        self.save_tasks()
     
     def open_edit_dialog(self, task_id: int):
         """Открыть диалог редактирования."""
@@ -201,18 +780,438 @@ class State(rx.State):
                 task.title = self.edit_title.strip()
                 task.description = self.edit_description.strip()
                 task.priority = self.edit_priority
+                task.category = self.edit_category
                 task.due_date = self.edit_due_date if self.edit_due_date else None
                 task.assigned_to = self.edit_assigned_to.strip()
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
         
         self.close_edit_dialog()
+        self.save_tasks()
     
     def clear_all_filters(self):
         """Сбросить все фильтры."""
         self.filter_status = "All"
         self.filter_priority = "All"
+        self.filter_category = "All"
+        self.filter_assigned_to = "All"
         self.search_query = ""
+        
+        # Сброс расширенных фильтров
+        self.filter_date_from = ""
+        self.filter_date_to = ""
+        self.filter_overdue_only = False
+        self.filter_completed_only = False
+        self.filter_created_today = False
+        self.filter_due_today = False
+        self.filter_search_in_description = True
+        self.filter_search_in_assignee = True
+    
+    def assign_task_to_member(self, task_id: int, member_name: str):
+        """Назначить задачу члену команды."""
+        for task in self.tasks:
+            if task.id == task_id:
+                task.assigned_to = member_name
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        self.save_tasks()
+    
+    def unassign_task(self, task_id: int):
+        """Отменить назначение задачи."""
+        for task in self.tasks:
+            if task.id == task_id:
+                task.assigned_to = ""
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        self.save_tasks()
+    
+    # Bulk operations methods
+    def toggle_task_selection(self, task_id: int):
+        """Переключить выбор задачи для массовых операций."""
+        if task_id in self.selected_tasks:
+            self.selected_tasks.remove(task_id)
+        else:
+            self.selected_tasks.append(task_id)
+        
+        # Show bulk actions if any tasks are selected
+        self.show_bulk_actions = len(self.selected_tasks) > 0
+    
+    def select_all_filtered_tasks(self):
+        """Выбрать все отфильтрованные задачи."""
+        self.selected_tasks = [task.id for task in self.filtered_tasks]
+        self.show_bulk_actions = len(self.selected_tasks) > 0
+    
+    def clear_selection(self):
+        """Очистить выбор задач."""
+        self.selected_tasks = []
+        self.show_bulk_actions = False
+    
+    def bulk_delete_tasks(self):
+        """Удалить все выбранные задачи."""
+        self.tasks = [task for task in self.tasks if task.id not in self.selected_tasks]
+        self.selected_tasks = []
+        self.show_bulk_actions = False
+        self.save_tasks()
+    
+    def bulk_update_status(self, new_status: str):
+        """Обновить статус всех выбранных задач."""
+        for task in self.tasks:
+            if task.id in self.selected_tasks:
+                task.status = new_status
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.selected_tasks = []
+        self.show_bulk_actions = False
+        self.save_tasks()
+    
+    def bulk_assign_to_member(self, member_name: str):
+        """Назначить все выбранные задачи члену команды."""
+        for task in self.tasks:
+            if task.id in self.selected_tasks:
+                task.assigned_to = member_name
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.selected_tasks = []
+        self.show_bulk_actions = False
+        self.save_tasks()
+    
+    # Notification methods
+    def check_overdue_tasks(self):
+        """Проверить просроченные задачи и показать уведомления."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        overdue_tasks = [
+            task for task in self.tasks
+            if task.due_date and task.due_date < today
+            and task.status not in [TaskStatus.COMPLETED, TaskStatus.CANCELLED]
+        ]
+        
+        if overdue_tasks:
+            self.notification_message = f"⚠️ У вас {len(overdue_tasks)} просроченных задач!"
+            self.show_notifications = True
+        else:
+            self.notification_message = ""
+            self.show_notifications = False
+    
+    def dismiss_notification(self):
+        """Отключить показ уведомлений."""
+        self.show_notifications = False
+        self.notification_message = ""
+    
+    # Calendar methods
+    def toggle_calendar_view(self):
+        """Переключить вид календаря."""
+        self.show_calendar = not self.show_calendar
+    
+    def set_calendar_date(self, date_str: str):
+        """Установить текущую дату календаря."""
+        self.calendar_current_date = date_str
+    
+    def set_calendar_view_type(self, view_type: str):
+        """Установить тип представления календаря."""
+        self.calendar_view_type = view_type
+    
+    def get_tasks_for_date(self, date_str: str) -> List[Task]:
+        """Получить задачи для конкретной даты."""
+        return [
+            task for task in self.tasks
+            if task.due_date == date_str
+            or task.created_at.startswith(date_str)
+        ]
+    
+    # Quick actions and context menu methods
+    def show_context_menu_for_task(self, task_id: int, x: int, y: int):
+        """Показать контекстное меню для задачи."""
+        self.context_menu_task_id = task_id
+        self.show_context_menu = True
+        self.context_menu_position = {"x": x, "y": y}
+    
+    def hide_context_menu(self):
+        """Скрыть контекстное меню."""
+        self.show_context_menu = False
+        self.context_menu_task_id = None
+    
+    def quick_assign_task(self, task_id: int, member_name: str):
+        """Быстро назначить задачу члену команды."""
+        self.assign_task_to_member(task_id, member_name)
+        self.add_notification(f"📌 Задача назначена: {member_name}", "info")
+        self.hide_context_menu()
+    
+    def quick_change_priority(self, task_id: int, new_priority: str):
+        """Быстро изменить приоритет задачи."""
+        for task in self.tasks:
+            if task.id == task_id:
+                task.priority = new_priority
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        self.save_tasks()
+        self.add_notification(f"⚡ Приоритет изменен на: {new_priority}", "info")
+        self.hide_context_menu()
+    
+    def quick_change_status(self, task_id: int, new_status: str):
+        """Быстро изменить статус задачи."""
+        self.update_task_status(task_id, new_status)
+        self.add_notification(f"🔄 Статус изменен на: {new_status}", "info")
+        self.hide_context_menu()
+    
+    def quick_duplicate_task(self, task_id: int):
+        """Быстро дублировать задачу."""
+        original_task = next((task for task in self.tasks if task.id == task_id), None)
+        if original_task:
+            new_task = Task(
+                id=self.task_counter,
+                title=f"{original_task.title} (копия)",
+                description=original_task.description,
+                priority=original_task.priority,
+                category=original_task.category,
+                due_date=original_task.due_date,
+                assigned_to=original_task.assigned_to
+            )
+            self.tasks.append(new_task)
+            self.task_counter += 1
+            self.save_tasks()
+            self.add_notification(f"📋 Задача дублирована: {new_task.title}", "success")
+        self.hide_context_menu()
+    
+    def quick_set_due_date(self, task_id: int, days_from_now: int):
+        """Быстро установить дату выполнения."""
+        due_date = (datetime.now() + timedelta(days=days_from_now)).strftime("%Y-%m-%d")
+        for task in self.tasks:
+            if task.id == task_id:
+                task.due_date = due_date
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        self.save_tasks()
+        self.add_notification(f"📅 Срок установлен на: {due_date}", "info")
+        self.hide_context_menu()
+    
+    def quick_add_subtask(self, task_id: int):
+        """Быстро добавить подзадачу."""
+        # Открываем диалог создания подзадачи
+        self.selected_parent_task = task_id
+        self.show_subtasks = True
+        self.add_notification("📝 Создайте подзадачу", "info")
+        self.hide_context_menu()
+    
+    def quick_add_dependency(self, task_id: int):
+        """Быстро добавить зависимость."""
+        # Открываем диалог добавления зависимости
+        self.selected_dependency_task = task_id
+        self.show_dependencies = True
+        self.add_notification("🔗 Выберите зависимую задачу", "info")
+        self.hide_context_menu()
+    
+    def get_calendar_days(self) -> List[Dict]:
+        """Получить дни для отображения в календаре (месячный вид)."""
+        from datetime import datetime, timedelta
+        
+        current_date = datetime.strptime(self.calendar_current_date, "%Y-%m-%d")
+        year, month = current_date.year, current_date.month
+        
+        # Первый день месяца
+        first_day = datetime(year, month, 1)
+        # Последний день месяца
+        if month == 12:
+            next_month = datetime(year + 1, 1, 1)
+        else:
+            next_month = datetime(year, month + 1, 1)
+        last_day = next_month - timedelta(days=1)
+        
+        # Дни для отображения (включая дни предыдущего и следующего месяца)
+        start_weekday = first_day.weekday()  # 0 = Monday, 6 = Sunday
+        days = []
+        
+        # Дни предыдущего месяца
+        prev_month_day = first_day - timedelta(days=1)
+        for i in range(start_weekday - 1, -1, -1):
+            day_date = prev_month_day - timedelta(days=i)
+            days.append({
+                "date": day_date.strftime("%Y-%m-%d"),
+                "day": day_date.day,
+                "is_current_month": False,
+                "tasks": self.get_tasks_for_date(day_date.strftime("%Y-%m-%d"))
+            })
+        
+        # Дни текущего месяца
+        for day in range(1, last_day.day + 1):
+            day_date = datetime(year, month, day)
+            days.append({
+                "date": day_date.strftime("%Y-%m-%d"),
+                "day": day,
+                "is_current_month": True,
+                "tasks": self.get_tasks_for_date(day_date.strftime("%Y-%m-%d"))
+            })
+        
+        # Дни следующего месяца
+        next_month_start = last_day + timedelta(days=1)
+        days_needed = 42 - len(days)  # 6 weeks * 7 days
+        for i in range(days_needed):
+            day_date = next_month_start + timedelta(days=i)
+            days.append({
+                "date": day_date.strftime("%Y-%m-%d"),
+                "day": day_date.day,
+                "is_current_month": False,
+                "tasks": self.get_tasks_for_date(day_date.strftime("%Y-%m-%d"))
+            })
+        
+        return days
+    
+    def navigate_calendar(self, direction: str):
+        """Навигация по календарю (предыдущий/следующий месяц)."""
+        from datetime import datetime, timedelta
+        
+        current_date = datetime.strptime(self.calendar_current_date, "%Y-%m-%d")
+        
+        if direction == "prev":
+            # Предыдущий месяц
+            if current_date.month == 1:
+                new_date = datetime(current_date.year - 1, 12, 1)
+            else:
+                new_date = datetime(current_date.year, current_date.month - 1, 1)
+        else:  # "next"
+            # Следующий месяц
+            if current_date.month == 12:
+                new_date = datetime(current_date.year + 1, 1, 1)
+            else:
+                new_date = datetime(current_date.year, current_date.month + 1, 1)
+        
+        self.calendar_current_date = new_date.strftime("%Y-%m-%d")
+    
+    @rx.var
+    def calendar_display_month(self) -> str:
+        """Получить отформатированное отображение текущего месяца календаря."""
+        try:
+            from datetime import datetime
+            current_date = datetime.strptime(self.calendar_current_date, "%Y-%m-%d")
+            # Russian month names
+            months_ru = [
+                "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+            ]
+            return f"{months_ru[current_date.month - 1]} {current_date.year}"
+        except:
+            return "Ошибка отображения даты"
+    
+    # Dependency and sub-task methods
+    def add_dependency(self, task_id: int, dependency_id: int):
+        """Добавить зависимость к задаче."""
+        for task in self.tasks:
+            if task.id == task_id and dependency_id not in task.dependencies:
+                task.dependencies.append(dependency_id)
+                # Update the dependent task
+                for dep_task in self.tasks:
+                    if dep_task.id == dependency_id:
+                        dep_task.dependent_tasks.append(task_id)
+                        break
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        self.save_tasks()
+    
+    def remove_dependency(self, task_id: int, dependency_id: int):
+        """Удалить зависимость у задачи."""
+        for task in self.tasks:
+            if task.id == task_id and dependency_id in task.dependencies:
+                task.dependencies.remove(dependency_id)
+                # Update the dependent task
+                for dep_task in self.tasks:
+                    if dep_task.id == dependency_id and task_id in dep_task.dependent_tasks:
+                        dep_task.dependent_tasks.remove(task_id)
+                        break
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        self.save_tasks()
+    
+    def create_sub_task(self, parent_id: int, title: str, description: str = ""):
+        """Создать подзадачу для родительской задачи."""
+        if not title.strip():
+            return
+        
+        # Create sub-task
+        sub_task = Task(
+            id=self.task_counter,
+            title=title.strip(),
+            description=description.strip(),
+            priority=Priority.NORMAL,
+            category=Category.OTHER,
+            parent_id=parent_id,
+            status=TaskStatus.PENDING
+        )
+        
+        self.tasks.append(sub_task)
+        
+        # Update parent task
+        for task in self.tasks:
+            if task.id == parent_id:
+                task.sub_tasks.append(self.task_counter)
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        
+        self.task_counter += 1
+        self.save_tasks()
+    
+    def update_task_progress(self, task_id: int, progress: int):
+        """Обновить прогресс задачи с подзадачами."""
+        progress = max(0, min(100, progress))  # Clamp between 0 and 100
+        
+        for task in self.tasks:
+            if task.id == task_id:
+                task.progress = progress
+                # Auto-update status based on progress
+                if progress == 100:
+                    task.status = TaskStatus.COMPLETED
+                elif progress > 0 and task.status == TaskStatus.PENDING:
+                    task.status = TaskStatus.IN_PROGRESS
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+        
+        self.save_tasks()
+    
+    def calculate_sub_task_progress(self, parent_id: int) -> int:
+        """Рассчитать прогресс родительской задачи на основе подзадач."""
+        parent_task = None
+        sub_tasks = []
+        
+        for task in self.tasks:
+            if task.id == parent_id:
+                parent_task = task
+            elif task.parent_id == parent_id:
+                sub_tasks.append(task)
+        
+        if not parent_task or not sub_tasks:
+            return 0
+        
+        total_progress = sum(task.progress for task in sub_tasks)
+        calculated_progress = total_progress // len(sub_tasks) if sub_tasks else 0
+        
+        # Update parent task progress
+        self.update_task_progress(parent_id, calculated_progress)
+        return calculated_progress
+    
+    def get_dependent_tasks(self, task_id: int) -> List[Task]:
+        """Получить список задач, зависящих от указанной задачи."""
+        dependent_ids = []
+        for task in self.tasks:
+            if task.id == task_id:
+                dependent_ids = task.dependent_tasks
+                break
+        
+        return [task for task in self.tasks if task.id in dependent_ids]
+    
+    def get_task_dependencies(self, task_id: int) -> List[Task]:
+        """Получить список задач, от которых зависит указанная задача."""
+        dependency_ids = []
+        for task in self.tasks:
+            if task.id == task_id:
+                dependency_ids = task.dependencies
+                break
+        
+        return [task for task in self.tasks if task.id in dependency_ids]
+    
+    def get_sub_tasks(self, parent_id: int) -> List[Task]:
+        """Получить список подзадач для родительской задачи."""
+        return [task for task in self.tasks if task.parent_id == parent_id]
+    
+    def can_start_task(self, task_id: int) -> bool:
+        """Проверить, можно ли начать выполнение задачи (все зависимости завершены)."""
+        dependencies = self.get_task_dependencies(task_id)
+        return all(dep.status == TaskStatus.COMPLETED for dep in dependencies)
     
     def toggle_sort_direction(self):
         """Переключить направление сортировки."""
@@ -242,12 +1241,28 @@ def task_form() -> rx.Component:
                 size="2"
             ),
             
-            rx.flex(
+            rx.grid(
                 rx.select(
                     [Priority.LOW, Priority.NORMAL, Priority.HIGH, Priority.CRITICAL],
                     placeholder="Приоритет",
                     value=State.new_task_priority,
                     on_change=State.set_new_task_priority,
+                    width="100%"
+                ),
+                
+                rx.select(
+                    [Category.WORK, Category.PERSONAL, Category.HEALTH, Category.FINANCE, Category.EDUCATION, Category.OTHER],
+                    placeholder="Категория",
+                    value=State.new_task_category,
+                    on_change=State.set_new_task_category,
+                    width="100%"
+                ),
+                
+                rx.select(
+                    State.team_members,
+                    placeholder="Назначить исполнителя",
+                    value=State.new_task_assigned_to,
+                    on_change=State.set_new_task_assigned_to,
                     width="100%"
                 ),
                 
@@ -259,17 +1274,9 @@ def task_form() -> rx.Component:
                     width="100%"
                 ),
                 
-                rx.input(
-                    placeholder="Исполнитель",
-                    value=State.new_task_assigned_to,
-                    on_change=State.set_new_task_assigned_to,
-                    width="100%"
-                ),
-                
-                spacing="2",
-                width="100%",
-                direction="row",
-                wrap="wrap"
+                columns="4",
+                spacing="3",
+                width="100%"
             ),
             
             rx.flex(
@@ -277,24 +1284,119 @@ def task_form() -> rx.Component:
                     rx.icon("plus", size=16),
                     "Добавить",
                     on_click=State.add_task,
-                    size="2",
+                    size="3",
+                    variant="solid"
                 ),
                 rx.button(
                     "Очистить",
                     on_click=State.clear_form,
-                    size="2",
-                    variant="soft",
+                    size="3",
+                    variant="outline",
                     color_scheme="gray"
+                ),
+                spacing="3",
+                justify="end",
+                width="100%"
+            ),
+            
+            spacing="4",
+            width="100%"
+        ),
+        width="100%",
+        padding="1.5em",
+        shadow="lg",
+        border_radius="lg"
+    )
+
+
+def login_dialog() -> rx.Component:
+    """Диалог входа в систему."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.dialog.title("Вход в систему"),
+            rx.vstack(
+                rx.input(
+                    placeholder="Имя пользователя",
+                    value=State.login_username,
+                    on_change=State.set_login_username,
+                    width="100%"
+                ),
+                rx.input(
+                    placeholder="Пароль",
+                    type="password",
+                    value=State.login_password,
+                    on_change=State.set_login_password,
+                    width="100%"
+                ),
+                rx.text(
+                    "Доступные учетные записи: admin/admin123, user1/password1, user2/password2",
+                    size="1",
+                    color="gray.500",
+                    text_align="center"
+                ),
+                spacing="3",
+                width="100%"
+            ),
+            rx.flex(
+                rx.dialog.close(
+                    rx.button(
+                        "Отмена",
+                        variant="soft", 
+                        color_scheme="gray"
+                    )
+                ),
+                rx.dialog.close(
+                    rx.button(
+                        "Войти", 
+                        on_click=State.login
+                    )
                 ),
                 spacing="2",
                 justify="end",
                 width="100%"
             ),
-            
-            spacing="3",
-            width="100%"
         ),
-        width="100%"
+        open=State.show_login_dialog,
+        on_open_change=State.set_show_login_dialog
+    )
+
+
+def user_menu() -> rx.Component:
+    """Меню пользователя."""
+    return rx.cond(
+        State.is_authenticated,
+        rx.dropdown_menu.root(
+            rx.dropdown_menu.trigger(
+                rx.button(
+                    rx.icon("user", size=16),
+                    State.current_user,
+                    variant="ghost",
+                    size="2"
+                )
+            ),
+            rx.dropdown_menu.content(
+                rx.dropdown_menu.item(
+                    "Профиль",
+                    on_click=lambda: None
+                ),
+                rx.dropdown_menu.item(
+                    "Настройки",
+                    on_click=lambda: None
+                ),
+                rx.dropdown_menu.separator(),
+                rx.dropdown_menu.item(
+                    "Выйти",
+                    on_click=State.logout,
+                    color="red"
+                )
+            )
+        ),
+        rx.button(
+            "Войти",
+            on_click=lambda: State.set_show_login_dialog(True),
+            variant="solid",
+            size="2"
+        )
     )
 
 
@@ -323,16 +1425,23 @@ def edit_dialog() -> rx.Component:
                     on_change=State.set_edit_priority,
                     width="100%"
                 ),
+                rx.select(
+                    [Category.WORK, Category.PERSONAL, Category.HEALTH, Category.FINANCE, Category.EDUCATION, Category.OTHER],
+                    value=State.edit_category,
+                    on_change=State.set_edit_category,
+                    width="100%"
+                ),
+                rx.select(
+                    State.team_members,
+                    value=State.edit_assigned_to,
+                    on_change=State.set_edit_assigned_to,
+                    placeholder="Назначить исполнителя",
+                    width="100%"
+                ),
                 rx.input(
                     type="date",
                     value=State.edit_due_date,
                     on_change=State.set_edit_due_date,
-                    width="100%"
-                ),
-                rx.input(
-                    value=State.edit_assigned_to,
-                    on_change=State.set_edit_assigned_to,
-                    placeholder="Исполнитель",
                     width="100%"
                 ),
                 spacing="3",
@@ -379,92 +1488,201 @@ def task_card(task: Task) -> rx.Component:
         TaskStatus.CANCELLED: "gray"
     }
     
+    category_colors = {
+        Category.WORK: "blue",
+        Category.PERSONAL: "green",
+        Category.HEALTH: "red",
+        Category.FINANCE: "purple",
+        Category.EDUCATION: "orange",
+        Category.OTHER: "gray"
+    }
+    
+    # Set different background based on status
+    bg_color = {
+        TaskStatus.PENDING: "rgba(255, 255, 0, 0.1)",  # Light yellow
+        TaskStatus.IN_PROGRESS: "rgba(0, 0, 255, 0.1)",  # Light blue
+        TaskStatus.COMPLETED: "rgba(0, 255, 0, 0.1)",  # Light green
+        TaskStatus.CANCELLED: "rgba(128, 128, 128, 0.1)",  # Light gray
+    }.get(task.status, "white")
+    
     return rx.card(
         rx.vstack(
+            # Header with selection and badges
             rx.flex(
-                rx.badge(
-                    task.priority,
-                    color_scheme=priority_colors.get(task.priority, "gray"),
-                    variant="solid",
-                    size="1"
+                rx.checkbox(
+                    checked=rx.cond(
+                        State.selected_tasks.contains(task.id),
+                        True,
+                        False
+                    ),
+                    on_change=lambda: State.toggle_task_selection(task.id),
+                    size="2"
                 ),
-                rx.badge(
-                    task.status,
-                    color_scheme=status_colors.get(task.status, "gray"),
-                    variant="soft",
-                    size="1"
+                rx.hstack(
+                    rx.badge(
+                        task.priority,
+                        color_scheme=priority_colors.get(task.priority, "gray"),
+                        variant="solid",
+                        size="1"
+                    ),
+                    rx.badge(
+                        task.status,
+                        color_scheme=status_colors.get(task.status, "gray"),
+                        variant="soft",
+                        size="1"
+                    ),
+                    rx.badge(
+                        task.category,
+                        color_scheme=category_colors.get(task.category, "gray"),
+                        variant="outline",
+                        size="1"
+                    ),
+                    spacing="1"
                 ),
                 rx.spacer(),
-                rx.icon_button(
-                    rx.icon("pencil", size=16),
-                    on_click=lambda: State.open_edit_dialog(task.id),
-                    color_scheme="blue",
-                    variant="soft",
-                    size="2"
-                ),
-                rx.icon_button(
-                    rx.icon("trash-2", size=16),
-                    on_click=lambda: State.delete_task(task.id),
-                    color_scheme="red",
-                    variant="soft",
-                    size="2"
+                rx.hstack(
+                    rx.icon_button(
+                        rx.icon("pencil", size=16),
+                        on_click=lambda: State.open_edit_dialog(task.id),
+                        color_scheme="blue",
+                        variant="soft",
+                        size="2"
+                    ),
+                    rx.icon_button(
+                        rx.icon("trash-2", size=16),
+                        on_click=lambda: State.delete_task(task.id),
+                        color_scheme="red",
+                        variant="soft",
+                        size="2"
+                    ),
+                    spacing="1"
                 ),
                 width="100%",
                 align="center",
                 spacing="2"
             ),
             
-            rx.heading(task.title, size="4"),
+            # Task title
+            rx.heading(
+                task.title, 
+                size="4",
+                font_weight="600",
+                line_height="1.3"
+            ),
             
+            # Description
             rx.cond(
                 task.description != "",
-                rx.text(task.description, size="2", color_scheme="gray"),
+                rx.text(
+                    task.description, 
+                    size="2", 
+                    color="gray.600",
+                    line_height="1.4",
+                    margin_y="0.5em"
+                ),
                 rx.fragment()
             ),
             
+            # Assignment and due date info
             rx.flex(
-                rx.cond(
-                    task.assigned_to != "",
-                    rx.flex(
-                        rx.icon("user", size=14),
-                        rx.text(task.assigned_to, size="1"),
-                        spacing="1",
-                        align="center"
+                rx.flex(
+                    rx.icon("user", size=14, color="gray.500"),
+                    rx.cond(
+                        task.assigned_to != "",
+                        rx.text(
+                            task.assigned_to, 
+                            size="1",
+                            font_weight="500"
+                        ),
+                        rx.text(
+                            "Не назначена", 
+                            size="1", 
+                            color="gray.400",
+                            font_style="italic"
+                        )
                     ),
-                    rx.fragment()
+                    spacing="1",
+                    align="center"
                 ),
                 rx.spacer(),
                 rx.cond(
                     task.due_date != None,
                     rx.flex(
-                        rx.icon("calendar", size=14),
-                        rx.text(task.due_date, size="1"),
+                        rx.icon("calendar", size=14, color="gray.500"),
+                        rx.text(
+                            task.due_date, 
+                            size="1",
+                            font_weight="500"
+                        ),
                         spacing="1",
                         align="center"
                     ),
                     rx.fragment()
                 ),
                 width="100%",
-                align="center"
+                align="center",
+                padding_y="0.5em"
             ),
             
-            rx.divider(),
+            # Dependency and sub-task indicators
+            rx.flex(
+                rx.cond(
+                    task.dependencies.length() > 0,
+                    rx.badge(
+                        f"Зависит от {task.dependencies.length()} задач",
+                        color_scheme="blue",
+                        size="1",
+                        variant="soft"
+                    ),
+                    rx.fragment()
+                ),
+                rx.cond(
+                    task.sub_tasks.length() > 0,
+                    rx.badge(
+                        f"{task.sub_tasks.length()} подзадач",
+                        color_scheme="green",
+                        size="1",
+                        variant="soft"
+                    ),
+                    rx.fragment()
+                ),
+                rx.cond(
+                    task.parent_id != None,
+                    rx.badge(
+                        "Подзадача",
+                        color_scheme="purple",
+                        size="1",
+                        variant="soft"
+                    ),
+                    rx.fragment()
+                ),
+                spacing="2",
+                wrap="wrap"
+            ),
             
+            rx.divider(margin_y="0.75em"),
+            
+            # Action buttons
             rx.flex(
                 rx.button(
                     rx.icon("check", size=14),
+                    "Выполнить",
                     on_click=lambda: State.toggle_task_completion(task.id),
-                    size="1"
+                    size="2",
+                    variant="surface"
                 ),
                 rx.button(
                     "В работе",
                     on_click=lambda: State.update_task_status(task.id, TaskStatus.IN_PROGRESS),
-                    size="1"
+                    size="2",
+                    variant="surface"
                 ),
                 rx.button(
                     "Отменить",
                     on_click=lambda: State.update_task_status(task.id, TaskStatus.CANCELLED),
-                    size="1"
+                    size="2",
+                    variant="surface",
+                    color_scheme="gray"
                 ),
                 width="100%",
                 spacing="2",
@@ -474,51 +1692,256 @@ def task_card(task: Task) -> rx.Component:
             spacing="3",
             width="100%"
         ),
-        width="100%"
+        width="100%",
+        background=bg_color,
+        box_shadow="0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+        border_radius="lg",
+        padding="1.25em",
+        border=f"1px solid {bg_color.replace(')', ', 0.2)').replace('rgba', 'rgba')}" if bg_color.startswith('rgba') else "1px solid gray.200",
+        transition="all 0.2s ease-in-out",
+        _hover={
+            "transform": "translateY(-2px)",
+            "box_shadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
+        }
+    )
+
+
+def notification_item(notification: Dict[str, str]) -> rx.Component:
+    """Компонент отдельного уведомления."""
+    return rx.card(
+        rx.hstack(
+            rx.icon("info", size=20, color="blue.500"),
+            rx.vstack(
+                rx.text(notification["message"], size="2", weight="medium"),
+                rx.text(notification["timestamp"], size="1", color="gray.500"),
+                spacing="1"
+            ),
+            rx.spacer(),
+            rx.icon_button(
+                rx.icon("x", size=16),
+                on_click=lambda: State.remove_notification(notification["id"]),
+                size="1",
+                variant="ghost"
+            ),
+            align="start",
+            width="100%"
+        ),
+        padding="0.75em",
+        border_left="4px solid blue.500",
+        background_color="blue.50"
+    )
+
+
+def notifications_panel() -> rx.Component:
+    """Панель уведомлений."""
+    return rx.cond(
+        State.show_notifications & State.notifications.length() > 0,
+        rx.card(
+            rx.vstack(
+                rx.hstack(
+                    rx.heading("🔔 Уведомления", size="4"),
+                    rx.spacer(),
+                    rx.icon_button(
+                        rx.icon("x", size=16),
+                        on_click=State.clear_all_notifications,
+                        size="2",
+                        variant="ghost"
+                    ),
+                    width="100%"
+                ),
+                rx.divider(),
+                rx.scroll_area(
+                    rx.foreach(State.notifications, notification_item),
+                    max_height="300px",
+                    width="100%"
+                ),
+                spacing="3",
+                width="100%"
+            ),
+            width="100%",
+            margin_top="1em"
+        )
+    )
+
+
+def productivity_analytics() -> rx.Component:
+    """Панель аналитики продуктивности."""
+    return rx.card(
+        rx.vstack(
+            rx.heading("📊 Аналитика продуктивности", size="4", margin_bottom="1em"),
+            rx.flex(
+                rx.card(
+                    rx.vstack(
+                        rx.text("Уровень завершения", size="2", color="gray.600"),
+                        rx.text(f"{State.productivity_stats['completion_rate']}%", size="6", weight="bold", color="green.600"),
+                        spacing="2",
+                        align="center"
+                    ),
+                    padding="1em",
+                    width="100%"
+                ),
+                rx.card(
+                    rx.vstack(
+                        rx.text("Задач в день", size="2", color="gray.600"),
+                        rx.text(State.productivity_stats["tasks_per_day"], size="6", weight="bold", color="blue.600"),
+                        spacing="2",
+                        align="center"
+                    ),
+                    padding="1em",
+                    width="100%"
+                ),
+                rx.card(
+                    rx.vstack(
+                        rx.text("Самая активная категория", size="2", color="gray.600"),
+                        rx.text(State.productivity_stats["busiest_category"], size="4", weight="bold", color="purple.600"),
+                        spacing="2",
+                        align="center"
+                    ),
+                    padding="1em",
+                    width="100%"
+                ),
+                rx.card(
+                    rx.vstack(
+                        rx.text("Самый продуктивный день", size="2", color="gray.600"),
+                        rx.text(State.productivity_stats["most_productive_day"], size="4", weight="bold", color="orange.600"),
+                        spacing="2",
+                        align="center"
+                    ),
+                    padding="1em",
+                    width="100%"
+                ),
+                wrap="wrap",
+                spacing="4",
+                width="100%"
+            ),
+            spacing="4",
+            width="100%"
+        ),
+        width="100%",
+        margin_top="1em"
     )
 
 
 def stats_panel() -> rx.Component:
     """Панель статистики."""
     return rx.card(
-        rx.flex(
-            rx.vstack(
-                rx.text("Всего", size="1", color_scheme="gray"),
-                rx.heading(State.task_stats["total"], size="5"),
-                spacing="1",
-                align="center"
+        rx.vstack(
+            rx.grid(
+                rx.vstack(
+                    rx.text("Всего", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["total"], size="5"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("Ожидание", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["pending"], size="5", color_scheme="yellow"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("В работе", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["in_progress"], size="5", color_scheme="blue"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("Готово", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["completed"], size="5", color_scheme="green"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("Просрочено", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["overdue"], size="5", color_scheme="red"),
+                    spacing="1",
+                    align="center"
+                ),
+                columns="5",
+                width="100%",
+                spacing="4"
             ),
-            rx.vstack(
-                rx.text("Ожидание", size="1", color_scheme="gray"),
-                rx.heading(State.task_stats["pending"], size="5", color_scheme="yellow"),
-                spacing="1",
-                align="center"
-            ),
-            rx.vstack(
-                rx.text("В работе", size="1", color_scheme="gray"),
-                rx.heading(State.task_stats["in_progress"], size="5", color_scheme="blue"),
-                spacing="1",
-                align="center"
-            ),
-            rx.vstack(
-                rx.text("Готово", size="1", color_scheme="gray"),
-                rx.heading(State.task_stats["completed"], size="5", color_scheme="green"),
-                spacing="1",
-                align="center"
-            ),
-            rx.vstack(
-                rx.text("Просрочено", size="1", color_scheme="gray"),
-                rx.heading(State.task_stats["overdue"], size="5", color_scheme="red"),
-                spacing="1",
-                align="center"
+            rx.grid(
+                rx.vstack(
+                    rx.text("Работа", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["work"], size="5", color_scheme="blue"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("Личное", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["personal"], size="5", color_scheme="green"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("Здоровье", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["health"], size="5", color_scheme="red"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("Финансы", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["finance"], size="5", color_scheme="purple"),
+                    spacing="1",
+                    align="center"
+                ),
+                rx.vstack(
+                    rx.text("Образование", size="1", color_scheme="gray"),
+                    rx.heading(State.task_stats["education"], size="5", color_scheme="orange"),
+                    spacing="1",
+                    align="center"
+                ),
+                columns="5",
+                width="100%",
+                spacing="4"
             ),
             spacing="4",
-            width="100%",
-            justify="between",
-            align="center",
-            wrap="wrap"
+            width="100%"
         ),
         width="100%"
+    )
+
+
+def advanced_search_panel() -> rx.Component:
+    """Панель расширенного поиска."""
+    return rx.card(
+        rx.vstack(
+            rx.heading("🔍 Расширенный поиск", size="4", margin_bottom="1em"),
+            rx.grid(
+                rx.checkbox(
+                    "Искать в описании",
+                    checked=State.search_in_description,
+                    on_change=State.set_search_in_description,
+                    size="2"
+                ),
+                rx.checkbox(
+                    "Искать в комментариях",
+                    checked=State.search_in_comments,
+                    on_change=State.set_search_in_comments,
+                    size="2"
+                ),
+                rx.checkbox(
+                    "Искать в подзадачах",
+                    checked=State.search_in_subtasks,
+                    on_change=State.set_search_in_subtasks,
+                    size="2"
+                ),
+                rx.checkbox(
+                    "Точное совпадение",
+                    checked=State.search_exact_match,
+                    on_change=State.set_search_exact_match,
+                    size="2"
+                ),
+                columns="2",
+                spacing="4",
+                width="100%"
+            ),
+            spacing="4",
+            width="100%"
+        ),
+        width="100%",
+        margin_top="1em"
     )
 
 
@@ -526,114 +1949,790 @@ def filter_controls() -> rx.Component:
     """Элементы управления фильтрами."""
     return rx.card(
         rx.vstack(
-            rx.input(
-                placeholder="🔍 Поиск...",
-                value=State.search_query,
-                on_change=State.set_search_query,
-                width="100%",
-                size="2"
-            ),
-            
-            rx.flex(
-                rx.select(
-                    ["All", TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED, TaskStatus.CANCELLED],
-                    placeholder="Статус",
-                    value=State.filter_status,
-                    on_change=State.set_filter_status,
-                    width="100%"
+            rx.tabs.root(
+                rx.tabs.list(
+                    rx.tabs.trigger("Основные", value="basic"),
+                    rx.tabs.trigger("Расширенные", value="advanced"),
+                    rx.tabs.trigger("Сортировка", value="sort")
                 ),
                 
-                rx.select(
-                    ["All", Priority.LOW, Priority.NORMAL, Priority.HIGH, Priority.CRITICAL],
-                    placeholder="Приоритет",
-                    value=State.filter_priority,
-                    on_change=State.set_filter_priority,
-                    width="100%"
-                ),
-                
-                rx.flex(
-                    rx.select(
-                        ["created_at", "due_date", "priority", "title", "status"],
-                        value=State.sort_by,
-                        on_change=State.set_sort_by,
-                        width="100%"
-                    ),
-                    rx.icon_button(
-                        rx.cond(
-                            State.sort_ascending,
-                            rx.icon("arrow-up", size=16),
-                            rx.icon("arrow-down", size=16)
+                rx.tabs.content(
+                    rx.vstack(
+                        rx.input(
+                            placeholder="🔍 Поиск задач...",
+                            value=State.search_query,
+                            on_change=State.set_search_query,
+                            width="100%",
+                            size="3"
                         ),
-                        on_click=State.toggle_sort_direction,
-                        variant="soft",
-                        size="2"
-                    ),
-                    spacing="2",
-                    width="100%",
-                    align="center"
+                        
+                        rx.grid(
+                            rx.select(
+                                ["All", TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED, TaskStatus.CANCELLED],
+                                placeholder="Статус",
+                                value=State.filter_status,
+                                on_change=State.set_filter_status,
+                                width="100%"
+                            ),
+                            
+                            rx.select(
+                                ["All", Priority.LOW, Priority.NORMAL, Priority.HIGH, Priority.CRITICAL],
+                                placeholder="Приоритет",
+                                value=State.filter_priority,
+                                on_change=State.set_filter_priority,
+                                width="100%"
+                            ),
+                            
+                            rx.select(
+                                ["All", Category.WORK, Category.PERSONAL, Category.HEALTH, Category.FINANCE, Category.EDUCATION, Category.OTHER],
+                                placeholder="Категория",
+                                value=State.filter_category,
+                                on_change=State.set_filter_category,
+                                width="100%"
+                            ),
+                            
+                            rx.select(
+                                ["All", "Алексей", "Мария", "Иван", "Елена", "Дмитрий", "Ольга", "Сергей", "Анна"],
+                                placeholder="Исполнитель",
+                                value=State.filter_assigned_to,
+                                on_change=State.set_filter_assigned_to,
+                                width="100%"
+                            ),
+                            
+                            columns="4",
+                            spacing="3",
+                            width="100%"
+                        ),
+                        
+                        rx.flex(
+                            rx.checkbox(
+                                rx.text("Показать выполненные", size="2"),
+                                checked=State.show_completed,
+                                on_change=State.set_show_completed
+                            ),
+                            rx.spacer(),
+                            rx.button(
+                                "🔄 Сбросить фильтры",
+                                on_click=State.clear_all_filters,
+                                variant="outline",
+                                size="2"
+                            ),
+                            width="100%",
+                            align="center"
+                        ),
+                        
+                        spacing="4",
+                        width="100%"
+                    )
                 ),
                 
-                spacing="2",
-                width="100%",
-                direction="row",
-                wrap="wrap"
+                rx.tabs.content(
+                    rx.vstack(
+                        rx.heading("📅 Фильтры по датам", size="3"),
+                        rx.grid(
+                            rx.input(
+                                type="date",
+                                placeholder="Создано с",
+                                value=State.filter_date_from,
+                                on_change=State.set_filter_date_from,
+                                width="100%"
+                            ),
+                            rx.input(
+                                type="date",
+                                placeholder="Создано по",
+                                value=State.filter_date_to,
+                                on_change=State.set_filter_date_to,
+                                width="100%"
+                            ),
+                            rx.checkbox(
+                                rx.text("Создано сегодня", size="2"),
+                                checked=State.filter_created_today,
+                                on_change=State.set_filter_created_today
+                            ),
+                            rx.checkbox(
+                                rx.text("На сегодня", size="2"),
+                                checked=State.filter_due_today,
+                                on_change=State.set_filter_due_today
+                            ),
+                            columns="2",
+                            spacing="3",
+                            width="100%"
+                        ),
+                        
+                        rx.heading("🔍 Расширенный поиск", size="3", margin_top="1em"),
+                        rx.grid(
+                            rx.checkbox(
+                                rx.text("Искать в описании", size="2"),
+                                checked=State.filter_search_in_description,
+                                on_change=State.set_filter_search_in_description
+                            ),
+                            rx.checkbox(
+                                rx.text("Искать по исполнителю", size="2"),
+                                checked=State.filter_search_in_assignee,
+                                on_change=State.set_filter_search_in_assignee
+                            ),
+                            rx.checkbox(
+                                rx.text("Искать в комментариях", size="2"),
+                                checked=State.search_in_comments,
+                                on_change=State.set_search_in_comments
+                            ),
+                            rx.checkbox(
+                                rx.text("Искать в подзадачах", size="2"),
+                                checked=State.search_in_subtasks,
+                                on_change=State.set_search_in_subtasks
+                            ),
+                            rx.checkbox(
+                                rx.text("Точное совпадение", size="2"),
+                                checked=State.search_exact_match,
+                                on_change=State.set_search_exact_match
+                            ),
+                            columns="2",
+                            spacing="3",
+                            width="100%"
+                        ),
+                        
+                        rx.heading("📊 Специальные фильтры", size="3", margin_top="1em"),
+                        rx.grid(
+                            rx.checkbox(
+                                rx.text("Только просроченные", size="2"),
+                                checked=State.filter_overdue_only,
+                                on_change=State.set_filter_overdue_only
+                            ),
+                            rx.checkbox(
+                                rx.text("Только выполненные", size="2"),
+                                checked=State.filter_completed_only,
+                                on_change=State.set_filter_completed_only
+                            ),
+                            columns="2",
+                            spacing="3",
+                            width="100%"
+                        ),
+                        
+                        spacing="3",
+                        width="100%"
+                    )
+                ),
+                
+                rx.tabs.content(
+                    rx.vstack(
+                        rx.select(
+                            ["created_at", "due_date", "priority", "title", "status", "category", "assigned_to"],
+                            placeholder="Сортировка по",
+                            value=State.sort_by,
+                            on_change=State.set_sort_by,
+                            width="100%"
+                        ),
+                        
+                        rx.flex(
+                            rx.icon_button(
+                                rx.cond(
+                                    State.sort_ascending,
+                                    rx.icon("arrow-up", size=16),
+                                    rx.icon("arrow-down", size=16)
+                                ),
+                                on_click=State.toggle_sort_direction,
+                                variant="solid",
+                                size="3"
+                            ),
+                            # Export buttons
+                            rx.dropdown_menu.root(
+                                rx.dropdown_menu.trigger(
+                                    rx.button(
+                                        "📤 Экспорт",
+                                        variant="solid",
+                                        size="3"
+                                    )
+                                ),
+                                rx.dropdown_menu.content(
+                                    rx.dropdown_menu.item(
+                                        "Все задачи (CSV)",
+                                        on_click=State.export_tasks_csv
+                                    ),
+                                    rx.dropdown_menu.item(
+                                        "Все задачи (JSON)",
+                                        on_click=State.export_tasks_json
+                                    ),
+                                    rx.dropdown_menu.separator(),
+                                    rx.dropdown_menu.item(
+                                        "Отфильтрованные (CSV)",
+                                        on_click=State.export_filtered_tasks_csv
+                                    ),
+                                    rx.dropdown_menu.item(
+                                        "Отфильтрованные (JSON)",
+                                        on_click=State.export_filtered_tasks_json
+                                    )
+                                )
+                            ),
+                            spacing="2",
+                            align="center"
+                        ),
+                        
+                        spacing="3",
+                        width="100%"
+                    )
+                ),
+                
+                default_value="basic",
+                width="100%"
             ),
             
+            spacing="4",
+            width="100%"
+        ),
+        width="100%",
+        padding="1.5em",
+        shadow="md",
+        border_radius="lg"
+    )
+
+
+def bulk_actions_bar() -> rx.Component:
+    """Панель массовых операций."""
+    return rx.cond(
+        State.show_bulk_actions,
+        rx.card(
             rx.flex(
-                rx.switch(
-                    checked=State.show_completed,
-                    on_change=State.set_show_completed
+                rx.text(
+                    "Выбрано: ", State.selected_tasks.length(), " задач",
+                    size="2",
+                    weight="bold"
                 ),
-                rx.text("Показать выполненные", size="2"),
                 rx.spacer(),
                 rx.button(
-                    "Сбросить фильтры",
-                    on_click=State.clear_all_filters,
-                    variant="soft",
-                    size="2"
+                    "Выбрать все отфильтрованные",
+                    on_click=State.select_all_filtered_tasks,
+                    size="2",
+                    variant="outline"
                 ),
+                rx.dropdown_menu.root(
+                    rx.dropdown_menu.trigger(
+                        rx.button(
+                            "Обновить статус",
+                            variant="solid",
+                            size="2"
+                        )
+                    ),
+                    rx.dropdown_menu.content(
+                        rx.dropdown_menu.item(
+                            "В ожидании",
+                            on_click=lambda: State.bulk_update_status(TaskStatus.PENDING)
+                        ),
+                        rx.dropdown_menu.item(
+                            "В работе",
+                            on_click=lambda: State.bulk_update_status(TaskStatus.IN_PROGRESS)
+                        ),
+                        rx.dropdown_menu.item(
+                            "Выполнено",
+                            on_click=lambda: State.bulk_update_status(TaskStatus.COMPLETED)
+                        ),
+                        rx.dropdown_menu.item(
+                            "Отменено",
+                            on_click=lambda: State.bulk_update_status(TaskStatus.CANCELLED)
+                        )
+                    )
+                ),
+                rx.dropdown_menu.root(
+                    rx.dropdown_menu.trigger(
+                        rx.button(
+                            "Назначить",
+                            variant="solid",
+                            size="2"
+                        )
+                    ),
+                    rx.dropdown_menu.content(
+                        rx.foreach(
+                            State.team_members,
+                            lambda member: rx.dropdown_menu.item(
+                                member,
+                                on_click=lambda: State.bulk_assign_to_member(member)
+                            )
+                        ),
+                        rx.dropdown_menu.separator(),
+                        rx.dropdown_menu.item(
+                            "Отменить назначение",
+                            on_click=lambda: State.bulk_assign_to_member("")
+                        )
+                    )
+                ),
+                rx.button(
+                    "Удалить",
+                    on_click=State.bulk_delete_tasks,
+                    size="2",
+                    color_scheme="red",
+                    variant="solid"
+                ),
+                rx.button(
+                    "Отменить",
+                    on_click=State.clear_selection,
+                    size="2",
+                    variant="outline",
+                    color_scheme="gray"
+                ),
+                spacing="3",
                 width="100%",
                 align="center",
+                wrap="wrap"
+            ),
+            width="100%",
+            padding="1em",
+            background_color="rgba(0, 123, 255, 0.1)",
+            border="1px solid blue",
+            border_radius="md"
+        ),
+        rx.fragment()
+    )
+
+def dependency_manager(task: Task) -> rx.Component:
+    """Компонент управления зависимостями задачи."""
+    return rx.card(
+        rx.vstack(
+            rx.heading("Зависимости задачи", size="3"),
+            
+            # Current dependencies
+            rx.cond(
+                task.dependencies.length() > 0,
+                rx.vstack(
+                    rx.text("Зависит от:", size="2", weight="bold"),
+                    rx.foreach(
+                        State.get_task_dependencies(task.id),
+                        lambda dep_task: rx.hstack(
+                            rx.badge(
+                                dep_task.title,
+                                color_scheme={
+                                    TaskStatus.PENDING: "yellow",
+                                    TaskStatus.IN_PROGRESS: "blue",
+                                    TaskStatus.COMPLETED: "green",
+                                    TaskStatus.CANCELLED: "gray"
+                                }.get(dep_task.status, "gray")
+                            ),
+                            rx.icon_button(
+                                rx.icon("x", size=12),
+                                on_click=lambda: State.remove_dependency(task.id, dep_task.id),
+                                size="1",
+                                variant="ghost",
+                                color_scheme="red"
+                            ),
+                            spacing="2",
+                            align="center"
+                        )
+                    ),
+                    spacing="2"
+                ),
+                rx.text("Нет зависимостей", size="2", color="gray.500")
+            ),
+            
+            # Dependent tasks
+            rx.cond(
+                task.dependent_tasks.length() > 0,
+                rx.vstack(
+                    rx.text("От этой задачи зависят:", size="2", weight="bold", margin_top="1em"),
+                    rx.foreach(
+                        State.get_dependent_tasks(task.id),
+                        lambda dep_task: rx.badge(
+                            dep_task.title,
+                            color_scheme={
+                                TaskStatus.PENDING: "yellow",
+                                TaskStatus.IN_PROGRESS: "blue",
+                                TaskStatus.COMPLETED: "green",
+                                TaskStatus.CANCELLED: "gray"
+                            }.get(dep_task.status, "gray"),
+                            size="2"
+                        )
+                    ),
+                    spacing="2"
+                ),
+                rx.fragment()
+            ),
+            
+            # Add dependency
+            rx.vstack(
+                rx.text("Добавить зависимость:", size="2", weight="bold", margin_top="1em"),
+                rx.select(
+                    [
+                        other_task.title 
+                        for other_task in State.tasks 
+                        if other_task.id != task.id 
+                        and other_task.id not in task.dependencies
+                        and other_task.id not in task.sub_tasks
+                        and other_task.parent_id != task.id
+                    ],
+                    placeholder="Выберите задачу",
+                    on_change=lambda selection: State.add_dependency(
+                        task.id, 
+                        next(t.id for t in State.tasks if t.title == selection)
+                    ) if selection else None,
+                    width="100%"
+                ),
                 spacing="2"
             ),
             
             spacing="3",
             width="100%"
         ),
-        width="100%"
+        width="100%",
+        padding="1em",
+        background_color="rgba(59, 130, 246, 0.05)",
+        border="1px solid blue.200",
+        border_radius="md"
+    )
+
+def sub_task_manager(task: Task) -> rx.Component:
+    """Компонент управления подзадачами."""
+    return rx.card(
+        rx.vstack(
+            rx.heading("Подзадачи", size="3"),
+            
+            # Progress bar for parent tasks
+            rx.cond(
+                task.sub_tasks.length() > 0,
+                rx.vstack(
+                    rx.flex(
+                        rx.text("Прогресс:", size="2", weight="bold"),
+                        rx.text(f"{task.progress}%", size="2", color="blue.600"),
+                        spacing="2",
+                        align="center"
+                    ),
+                    rx.progress(value=task.progress, width="100%"),
+                    spacing="2"
+                ),
+                rx.fragment()
+            ),
+            
+            # List of sub-tasks
+            rx.cond(
+                task.sub_tasks.length() > 0,
+                rx.vstack(
+                    rx.foreach(
+                        State.get_sub_tasks(task.id),
+                        lambda sub_task: rx.card(
+                            rx.flex(
+                                rx.checkbox(
+                                    checked=sub_task.status == TaskStatus.COMPLETED,
+                                    on_change=lambda: State.toggle_task_completion(sub_task.id),
+                                    size="1"
+                                ),
+                                rx.text(sub_task.title, size="2"),
+                                rx.spacer(),
+                                rx.badge(
+                                    f"{sub_task.progress}%",
+                                    color_scheme="blue",
+                                    size="1"
+                                ),
+                                rx.icon_button(
+                                    rx.icon("trash-2", size=12),
+                                    on_click=lambda: State.delete_task(sub_task.id),
+                                    size="1",
+                                    variant="ghost",
+                                    color_scheme="red"
+                                ),
+                                width="100%",
+                                align="center",
+                                spacing="2"
+                            ),
+                            padding="0.75em",
+                            width="100%"
+                        )
+                    ),
+                    spacing="2"
+                ),
+                rx.text("Нет подзадач", size="2", color="gray.500")
+            ),
+            
+            # Add sub-task form
+            rx.vstack(
+                rx.text("Добавить подзадачу:", size="2", weight="bold", margin_top="1em"),
+                rx.input(
+                    placeholder="Название подзадачи",
+                    id=f"subtask-title-{task.id}",
+                    size="2"
+                ),
+                rx.text_area(
+                    placeholder="Описание (необязательно)",
+                    id=f"subtask-desc-{task.id}",
+                    size="1",
+                    height="60px"
+                ),
+                rx.button(
+                    "Добавить подзадачу",
+                    on_click=lambda: State.create_sub_task(
+                        task.id,
+                        rx.get_value(f"subtask-title-{task.id}"),
+                        rx.get_value(f"subtask-desc-{task.id}")
+                    ),
+                    size="2",
+                    variant="solid"
+                ),
+                spacing="2"
+            ),
+            
+            spacing="3",
+            width="100%"
+        ),
+        width="100%",
+        padding="1em",
+        background_color="rgba(34, 197, 94, 0.05)",
+        border="1px solid green.200",
+        border_radius="md"
+    )
+
+def calendar_view() -> rx.Component:
+    """Календарный вид задач."""
+    return rx.cond(
+        State.show_calendar,
+        rx.card(
+            rx.vstack(
+                # Calendar header
+                rx.flex(
+                    rx.button(
+                        "←",
+                        on_click=lambda: State.navigate_calendar("prev"),
+                        variant="ghost",
+                        size="2"
+                    ),
+                    rx.vstack(
+                        rx.heading(
+                            State.calendar_display_month,
+                            size="4",
+                            text_align="center"
+                        ),
+                        rx.hstack(
+                            rx.button(
+                                "Месяц",
+                                on_click=lambda: State.set_calendar_view_type("month"),
+                                variant=rx.cond(State.calendar_view_type == "month", "solid", "outline"),
+                                size="1"
+                            ),
+                            rx.button(
+                                "Неделя",
+                                on_click=lambda: State.set_calendar_view_type("week"),
+                                variant=rx.cond(State.calendar_view_type == "week", "solid", "outline"),
+                                size="1"
+                            ),
+                            rx.button(
+                                "День",
+                                on_click=lambda: State.set_calendar_view_type("day"),
+                                variant=rx.cond(State.calendar_view_type == "day", "solid", "outline"),
+                                size="1"
+                            ),
+                            spacing="1"
+                        ),
+                        spacing="1",
+                        align="center"
+                    ),
+                    rx.button(
+                        "→",
+                        on_click=lambda: State.navigate_calendar("next"),
+                        variant="ghost",
+                        size="2"
+                    ),
+                    width="100%",
+                    justify="between",
+                    align="center"
+                ),
+                
+                # Calendar grid
+                rx.cond(
+                    State.calendar_view_type == "month",
+                    rx.vstack(
+                        # Weekday headers
+                        rx.grid(
+                            rx.foreach(
+                                ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+                                lambda day: rx.center(
+                                    rx.text(day, size="1", font_weight="bold", color="gray.600"),
+                                    height="2em"
+                                )
+                            ),
+                            columns="7",
+                            width="100%"
+                        ),
+                        
+                        # Simple calendar display
+                        rx.center(
+                            rx.text(
+                                "Календарь задач",
+                                size="2",
+                                color="gray.600"
+                            ),
+                            height="300px"
+                        ),
+                        
+                        spacing="2",
+                        width="100%"
+                    ),
+                    rx.text("Другие виды календаря будут реализованы в будущих обновлениях", size="2", color="gray.500")
+                ),
+                
+                # Close button
+                rx.flex(
+                    rx.button(
+                        "Закрыть календарь",
+                        on_click=State.toggle_calendar_view,
+                        variant="outline",
+                        size="2"
+                    ),
+                    width="100%",
+                    justify="center"
+                ),
+                
+                spacing="4",
+                width="100%"
+            ),
+            width="100%",
+            max_width="800px",
+            margin="0 auto",
+            padding="1.5em",
+            shadow="lg",
+            border_radius="lg"
+        ),
+        rx.fragment()
+    )
+
+def notification_banner() -> rx.Component:
+    """Баннер уведомлений."""
+    return rx.cond(
+        State.show_notifications,
+        rx.card(
+            rx.flex(
+                rx.icon("triangle_alert", size=20, color="red"),
+                rx.text(State.notification_message, size="2", weight="bold"),
+                rx.spacer(),
+                rx.icon_button(
+                    rx.icon("x", size=16),
+                    on_click=State.dismiss_notification,
+                    variant="ghost",
+                    size="1"
+                ),
+                spacing="2",
+                align="center",
+                width="100%"
+            ),
+            background_color="rgba(239, 68, 68, 0.1)",
+            border="1px solid red.300",
+            border_radius="md",
+            padding="1em",
+            width="100%"
+        ),
+        rx.fragment()
+    )
+
+def theme_toggle() -> rx.Component:
+    """Компонент переключения темы."""
+    return rx.icon_button(
+        rx.cond(
+            State.theme == "light",
+            rx.icon("moon", size=20),
+            rx.icon("sun", size=20)
+        ),
+        on_click=State.toggle_theme,
+        size="3",
+        variant="outline"
+    )
+
+
+def context_menu() -> rx.Component:
+    """Контекстное меню для задач."""
+    return rx.cond(
+        State.show_context_menu,
+        rx.box(
+            "Контекстное меню",
+            position="fixed",
+            left="100px",
+            top="100px",
+            background="white",
+            border="1px solid gray",
+            padding="10px",
+            z_index="1000"
+        )
     )
 
 
 def index() -> rx.Component:
     """Главная страница."""
     return rx.box(
-        rx.color_mode.button(position="top-right"),
+        # Применяем стили темы
+        apply_theme_styles(),
+        
+        # Добавляем переключатель темы в правый верхний угол
+        rx.flex(
+            theme_toggle(),
+            position="fixed",
+            top="20px",
+            right="20px",
+            z_index="1000"
+        ),
+        login_dialog(),
         edit_dialog(),
+        calendar_view(),
+        context_menu(),
         rx.container(
             rx.vstack(
-                rx.heading("📋 Управление задачами", size="8", align="center"),
+                rx.flex(
+                    rx.heading("📋 Управление задачами", size="8"),
+                    rx.button(
+                        rx.icon("calendar", size=20),
+                        "Календарь",
+                        on_click=State.toggle_calendar_view,
+                        variant=rx.cond(State.show_calendar, "solid", "outline"),
+                        size="3"
+                    ),
+                    width="100%",
+                    justify="between",
+                    align="center"
+                ),
+                notification_banner(),
+                notifications_panel(),
                 stats_panel(),
-                task_form(),
-                filter_controls(),
-                rx.divider(),
+                productivity_analytics(),
+                bulk_actions_bar(),
                 
                 rx.cond(
-                    State.filtered_tasks.length() > 0,
-                    rx.flex(
-                        rx.foreach(State.filtered_tasks, task_card),
-                        spacing="3",
-                        width="100%",
-                        direction="row",
-                        wrap="wrap"
+                    State.is_authenticated,
+                    rx.grid(
+                        task_form(),
+                        filter_controls(),
+                        columns="2",
+                        spacing="4",
+                        width="100%"
                     ),
                     rx.center(
                         rx.vstack(
-                            rx.icon("inbox", size=48),
-                            rx.text("Нет задач", size="4"),
-                            spacing="3",
+                            rx.icon("lock", size=48, color="gray.400"),
+                            rx.heading("Для работы с задачами необходимо войти в систему", size="4"),
+                            rx.button(
+                                "Войти",
+                                on_click=lambda: State.set_show_login_dialog(True),
+                                size="3",
+                                variant="solid"
+                            ),
+                            spacing="4",
                             align="center"
                         ),
-                        height="200px"
+                        height="300px"
+                    )
+                ),
+                
+                rx.divider(),
+                
+                rx.cond(
+                    State.is_authenticated & State.filtered_tasks.length() > 0,
+                    rx.vstack(
+                        rx.foreach(State.filtered_tasks, task_card),
+                        spacing="4",
+                        width="100%"
+                    ),
+                    rx.cond(
+                        State.is_authenticated,
+                        rx.center(
+                            rx.vstack(
+                                rx.icon("inbox", size=48),
+                                rx.text("Нет задач", size="4"),
+                                spacing="3",
+                                align="center"
+                            ),
+                            height="300px"
+                        ),
+                        rx.fragment()
                     )
                 ),
                 
@@ -642,9 +2741,68 @@ def index() -> rx.Component:
                 padding_y="5"
             ),
             size="4"
-        )
+        ),
+        on_mount=State.on_load
     )
 
 
-app = rx.App()
+# Custom theme styles
+DARK_MODE_STYLES = {
+    "body": {
+        "background_color": "gray.900",
+        "color": "white"
+    },
+    ".card": {
+        "background_color": "gray.800",
+        "border_color": "gray.700"
+    },
+    ".input, .select": {
+        "background_color": "gray.700",
+        "border_color": "gray.600",
+        "color": "white"
+    }
+}
+
+LIGHT_MODE_STYLES = {
+    "body": {
+        "background_color": "gray.50",
+        "color": "gray.900"
+    },
+    ".card": {
+        "background_color": "white",
+        "border_color": "gray.200"
+    },
+    ".input, .select": {
+        "background_color": "white",
+        "border_color": "gray.300",
+        "color": "gray.900"
+    }
+}
+
+# Theme-based styling function
+def get_theme_styles(theme: str) -> Dict[str, Dict[str, str]]:
+    """Получить стили в зависимости от темы."""
+    if theme == "dark":
+        return DARK_MODE_STYLES
+    else:
+        return LIGHT_MODE_STYLES
+
+app = rx.App(
+    stylesheets=[
+        "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    ],
+    style={
+        "font_family": "Inter, sans-serif",
+        "antialias": True
+    }
+)
+
+# Добавляем динамические стили для темы
+def apply_theme_styles():
+    """Применить стили в зависимости от текущей темы."""
+    return rx.cond(
+        State.theme == "dark",
+        rx.box(style=DARK_MODE_STYLES),
+        rx.box(style=LIGHT_MODE_STYLES)
+    )
 app.add_page(index, route="/", title="Управление задачами")
