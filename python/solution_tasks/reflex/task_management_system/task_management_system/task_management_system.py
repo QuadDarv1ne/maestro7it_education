@@ -542,18 +542,6 @@ class State(rx.State):
         """Получить количество отфильтрованных задач."""
         return len(self.filtered_tasks)
     
-    def get_task_data_for_display(self, task: Task) -> dict:
-        """Получить данные задачи для отображения."""
-        return {
-            "id": task.id,
-            "title": task.title,
-            "description": task.description,
-            "status": task.status.value if hasattr(task.status, "value") else str(task.status),
-            "priority": task.priority.value if hasattr(task.priority, "value") else str(task.priority),
-            "due_date": task.due_date,
-            "assigned_to": task.assigned_to
-        }
-    
     def needs_pagination(self) -> bool:
         """Проверить, нужна ли пагинация."""
         return self.virtual_scroll_enabled and self.get_total_pages() > 1
@@ -1947,23 +1935,32 @@ def edit_dialog() -> rx.Component:
     )
 
 
-def task_card(task_dict: dict) -> rx.Component:
-    """Карточка задачи с данными из словаря."""
+def task_card(task: Task) -> rx.Component:
+    """Карточка задачи с объектом Task."""
     return rx.card(
-        rx.vstack(
-            rx.text(f"Задача #{task_dict.get('id', 'N/A')}: {task_dict.get('title', 'Без названия')}", size="3", weight="bold"),
-            rx.text(task_dict.get('description', 'Нет описания') or "Нет описания", size="2", color="gray.600"),
-            rx.hstack(
-                rx.badge(f"Статус: {task_dict.get('status', 'Неизвестно')}", color_scheme="green", size="1"),
-                rx.badge(f"Приоритет: {task_dict.get('priority', 'Неизвестно')}", color_scheme="blue", size="1"),
-                spacing="2"
+        rx.hstack(
+            rx.checkbox(
+                checked=task.status == TaskStatus.COMPLETED,
+                on_change=lambda: State.toggle_task_completion(task.id),
+                size="1"
             ),
-            spacing="2"
+            rx.vstack(
+                rx.text(task.title, size="3", weight="bold"),
+                rx.cond(
+                    task.description,
+                    rx.text(task.description, size="2", color="gray.500"),
+                    rx.text("Нет описания", size="2", color="gray.500")
+                ),
+                spacing="1"
+            ),
+            rx.spacer(),
+            rx.badge(task.status, color_scheme="green", size="1"),
+            rx.badge(task.priority, color_scheme="blue", size="1"),
+            width="100%"
         ),
         width="100%",
-        background="white",
         class_name="task-card",
-        **{"data-task-id": str(task_dict.get('id', 0))}
+        **{"data-task-id": str(task.id)}
     )
 
 
@@ -3254,14 +3251,16 @@ def index() -> rx.Component:
                     e.preventDefault();
                     const x = e.clientX;
                     const y = e.clientY;
-                    // Находим ID задачи (можно хранить в data-task-id)
                     const taskId = card.dataset.taskId;
+                    console.log('Context menu triggered', { taskId, x, y });  // ← для отладки
                     if (taskId) {
                         Reflex.setState({
                             context_menu_task_id: parseInt(taskId),
                             context_menu_position: { x: x, y: y },
                             show_context_menu: true
                         });
+                    } else {
+                        console.warn('No data-task-id found on card');
                     }
                 }
             });
@@ -3349,32 +3348,8 @@ def index() -> rx.Component:
                             rx.cond(
                                 State.tasks.length() > 0,
                                 rx.vstack(
-                                    rx.foreach(
-                                        State.tasks[:10],  # Показываем первые 10 задач
-                                        lambda task: rx.card(
-                                            rx.hstack(
-                                                rx.checkbox(
-                                                    checked=task.status == TaskStatus.COMPLETED,
-                                                    on_change=lambda: State.toggle_task_completion(task.id),
-                                                    size="1"
-                                                ),
-                                                rx.vstack(
-                                                    rx.text(task.title, size="3", weight="bold"),
-                                                    rx.cond(
-                                                        task.description,
-                                                        rx.text(task.description, size="2", color="gray.500"),
-                                                        rx.text("Нет описания", size="2", color="gray.500")
-                                                    ),
-                                                    spacing="1"
-                                                ),
-                                                rx.spacer(),
-                                                rx.badge(task.status, color_scheme="green", size="1"),
-                                                rx.badge(task.priority, color_scheme="blue", size="1"),
-                                                width="100%"
-                                            ),
-                                            width="100%"
-                                        )
-                                    ),
+                                    paginated = State.get_paginated_tasks()
+                                    rx.foreach(paginated, task_card),
                                     spacing="2"
                                 ),
                                 rx.text("Нет задач. Создайте первую задачу!", size="3", color="gray.500")
@@ -3416,7 +3391,7 @@ DARK_MODE_STYLES = {
     "input, select, textarea": {"background_color": "var(--gray-8)", "border_color": "var(--gray-7)", "color": "var(--gray-1)"},
     ".badge": {"background_color": "var(--gray-7) !important", "color": "white"},
     "button": {"background_color": "var(--blue-9)", "color": "white"},
-    "[data-radix-popper-content-wrapper]": {"background_color": "var(--gray-9)", "color": "white"},
+    "[data-radix-popper-content-wrapper], .menu-content": {"background_color": "var(--gray-9)", "color": "white"},
     ".accordion-content": {"background_color": "var(--gray-9)", "color": "white"},
     ".progress": {"background_color": "var(--gray-7)"},
     "h1, h2, h3, h4, h5, h6, .heading": {"color": "white"},
