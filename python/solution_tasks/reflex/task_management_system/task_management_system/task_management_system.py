@@ -3343,11 +3343,42 @@ def index() -> rx.Component:
                 rx.cond(
                     State.is_authenticated & State.filtered_tasks.length() > 0,
                     rx.vstack(
-                        # Простое отображение задач
+                        # Отображение списка задач
                         rx.vstack(
-                            rx.text("Система управления задачами", size="5", weight="bold"),
-                            rx.text("Функциональность ограничена из-за технических ограничений", size="2", color="gray.500"),
-                            rx.button("Создать тестовую задачу", on_click=State.add_task),
+                            rx.heading("Список задач", size="4"),
+                            rx.cond(
+                                State.tasks.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        State.tasks[:10],  # Показываем первые 10 задач
+                                        lambda task: rx.card(
+                                            rx.hstack(
+                                                rx.checkbox(
+                                                    checked=task.status == TaskStatus.COMPLETED,
+                                                    on_change=lambda: State.toggle_task_completion(task.id),
+                                                    size="1"
+                                                ),
+                                                rx.vstack(
+                                                    rx.text(task.title, size="3", weight="bold"),
+                                                    rx.cond(
+                                                        task.description,
+                                                        rx.text(task.description, size="2", color="gray.500"),
+                                                        rx.text("Нет описания", size="2", color="gray.500")
+                                                    ),
+                                                    spacing="1"
+                                                ),
+                                                rx.spacer(),
+                                                rx.badge(task.status, color_scheme="green", size="1"),
+                                                rx.badge(task.priority, color_scheme="blue", size="1"),
+                                                width="100%"
+                                            ),
+                                            width="100%"
+                                        )
+                                    ),
+                                    spacing="2"
+                                ),
+                                rx.text("Нет задач. Создайте первую задачу!", size="3", color="gray.500")
+                            ),
                             spacing="4"
                         ),
                         spacing="4",
