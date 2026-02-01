@@ -25,6 +25,8 @@
   "currency",
   "section_break_16",
   "milestone_completion",
+  "high_risk_percentage",
+  "quality_pass_rate",
   "project_details"
  ],
  "fields": [
@@ -134,6 +136,18 @@
    "fieldname": "milestone_completion",
    "fieldtype": "Percent",
    "label": "Milestone Completion"
+  },
+  {
+   "fieldname": "high_risk_percentage",
+   "fieldtype": "Percent",
+   "label": "High Risk Percentage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "quality_pass_rate",
+   "fieldtype": "Percent",
+   "label": "Quality Pass Rate",
+   "read_only": 1
   }
  ],
  "links": [],
