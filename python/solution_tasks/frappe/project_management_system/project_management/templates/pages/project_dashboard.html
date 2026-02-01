@@ -1,0 +1,111 @@
+{% extends "templates/web.html" %}
+
+{% block content %}
+<div class="project-dashboard">
+    <div class="container-fluid">
+        <h1>Project Dashboard</h1>
+        
+        <!-- Stats Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Managed Projects</h5>
+                        <h2>{{ stats.managed_projects or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Involved Projects</h5>
+                        <h2>{{ stats.involved_projects or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Assigned Tasks</h5>
+                        <h2>{{ stats.assigned_tasks or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Completed Tasks</h5>
+                        <h2>{{ stats.completed_tasks or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Projects Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3>Your Projects</h3>
+                {% if projects %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Project Name</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td><a href="/project/{{ project.name }}">{{ project.title }}</a></td>
+                            <td><span class="badge badge-{{ 'success' if project.status == 'Completed' else 'primary' if project.status == 'Working' else 'secondary' }}">{{ project.status }}</span></td>
+                            <td>{{ project.progress|default(0) }}%</td>
+                            <td>{{ project.expected_start_date or '-' }}</td>
+                            <td>{{ project.expected_end_date or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No projects found.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tasks Section -->
+        <div class="row">
+            <div class="col-12">
+                <h3>Your Tasks</h3>
+                {% if tasks %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Task Name</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Project</th>
+                            <th>Due Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr>
+                            <td><a href="/task/{{ task.name }}">{{ task.title }}</a></td>
+                            <td><span class="badge badge-{{ 'success' if task.status == 'Completed' else 'warning' if task.status == 'Working' else 'info' }}">{{ task.status }}</span></td>
+                            <td><span class="badge badge-{{ 'danger' if task.priority == 'High' else 'warning' if task.priority == 'Medium' else 'secondary' }}">{{ task.priority }}</span></td>
+                            <td><a href="/project/{{ task.project }}">{{ task.project }}</a></td>
+                            <td>{{ task.exp_end_date or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>No tasks assigned.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
