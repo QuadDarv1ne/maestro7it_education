@@ -24,6 +24,7 @@
   "total_budget",
   "currency",
   "section_break_16",
+  "milestone_completion",
   "project_details"
  ],
  "fields": [
@@ -128,6 +129,11 @@
    "fieldname": "project_details",
    "fieldtype": "Text Editor",
    "label": "Project Details"
+  },
+  {
+   "fieldname": "milestone_completion",
+   "fieldtype": "Percent",
+   "label": "Milestone Completion"
   }
  ],
  "links": [],

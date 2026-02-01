@@ -1,0 +1,160 @@
+{% extends "templates/web.html" %}
+
+{% block content %}
+<div class="project-analytics">
+    <div class="container-fluid">
+        <h1>Project Analytics Dashboard</h1>
+        
+        <!-- Project Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Projects</h5>
+                        <h2>{{ project_stats.total_projects or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Active Projects</h5>
+                        <h2>{{ project_stats.active_projects or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Avg Progress</h5>
+                        <h2>{{ project_stats.avg_project_progress or 0 }}%</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Completed</h5>
+                        <h2>{{ project_stats.completed_projects or 0 }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Task Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Task Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Total Tasks
+                                <span class="badge badge-primary badge-pill">{{ task_stats.total_tasks or 0 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Completed Tasks
+                                <span class="badge badge-success badge-pill">{{ task_stats.completed_tasks or 0 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Pending Tasks
+                                <span class="badge badge-warning badge-pill">{{ task_stats.pending_tasks or 0 }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Tasks by Priority</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for stat in task_stats.tasks_by_priority %}
+                        <div class="d-flex justify-content-between">
+                            <span>{{ stat.priority }}</span>
+                            <span class="badge badge-secondary">{{ stat.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Tasks by Status</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for stat in task_stats.tasks_by_status %}
+                        <div class="d-flex justify-content-between">
+                            <span>{{ stat.status }}</span>
+                            <span class="badge badge-secondary">{{ stat.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Resource and Budget Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Resources</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <h6>Total Resources</h6>
+                                <p>{{ resource_stats.total_resources or 0 }}</p>
+                            </div>
+                            <div class="col-6">
+                                <h6>Human Resources</h6>
+                                <p>{{ resource_stats.human_resources or 0 }}</p>
+                            </div>
+                        </div>
+                        
+                        <h6>Average Hourly Rates</h6>
+                        {% for rate in resource_stats.avg_hourly_rate_by_type %}
+                        <div class="d-flex justify-content-between">
+                            <span>{{ rate.resource_type }}</span>
+                            <span>${{ "%.2f"|format(rate.avg_rate or 0) }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Budget Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <span>Total Budget Across Projects:</span>
+                            <strong>${{ "%.2f"|format(budget_stats.total_budget_across_projects or 0) }}</strong>
+                        </div>
+                        
+                        <h6 class="mt-3">Budget Variance Stats</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <p>Over Budget: {{ budget_stats.budget_variance_stats.over_budget_count or 0 }}</p>
+                                <p>Under Budget: {{ budget_stats.budget_variance_stats.under_budget_count or 0 }}</p>
+                            </div>
+                            <div class="col-6">
+                                <p>Avg Variance: ${{ "%.2f"|format(budget_stats.budget_variance_stats.avg_variance or 0) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

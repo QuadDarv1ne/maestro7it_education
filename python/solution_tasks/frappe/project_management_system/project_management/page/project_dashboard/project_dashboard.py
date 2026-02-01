@@ -1,6 +1,3 @@
-# Copyright (c) 2023, Your Name and contributors
-# For license information, please see license.txt
-
 import frappe
 from frappe import _
 
@@ -14,8 +11,8 @@ def get_context(context):
 	context.stats = get_user_stats(user)
 
 def get_projects_for_user(user):
-	"""Get projects assigned to or managed by user"""
-	# Projects where user is project manager
+	"""Получить проекты, назначенные или управляемые пользователем"""
+	# Проекты, где пользователь является менеджером проекта
 	managed_projects = frappe.get_all(
 		"Project",
 		filters={"project_manager": user},
@@ -23,7 +20,7 @@ def get_projects_for_user(user):
 		order_by="creation desc"
 	)
 	
-	# Projects where user has assigned tasks
+	# Проекты, где у пользователя есть назначенные задачи
 	task_projects = frappe.db.sql("""
 		SELECT DISTINCT p.name, p.title, p.status, p.progress, p.expected_start_date, p.expected_end_date
 		FROM `tabProject` p
@@ -31,12 +28,12 @@ def get_projects_for_user(user):
 		WHERE t.assignee = %s
 	""", user, as_dict=1)
 	
-	# Combine and deduplicate
+	# Объединить и удалить дубликаты
 	all_projects = managed_projects + [p for p in task_projects if p not in managed_projects]
 	return all_projects
 
 def get_tasks_for_user(user):
-	"""Get tasks assigned to user"""
+	"""Получить задачи, назначенные пользователю"""
 	tasks = frappe.get_all(
 		"Task",
 		filters={"assignee": user},
@@ -46,22 +43,22 @@ def get_tasks_for_user(user):
 	return tasks
 
 def get_user_stats(user):
-	"""Get user statistics"""
+	"""Получить статистику пользователя"""
 	stats = {}
 	
-	# Total projects managed
+	# Всего проектов под управлением
 	stats['managed_projects'] = frappe.db.count("Project", {"project_manager": user})
 	
-	# Total projects involved in
+	# Всего проектов, в которых участвует
 	stats['involved_projects'] = len(get_projects_for_user(user))
 	
-	# Total tasks assigned
+	# Всего назначенных задач
 	stats['assigned_tasks'] = frappe.db.count("Task", {"assignee": user})
 	
-	# Completed tasks
+	# Выполненные задачи
 	stats['completed_tasks'] = frappe.db.count("Task", {"assignee": user, "status": "Completed"})
 	
-	# Pending tasks
+	# Незавершенные задачи
 	stats['pending_tasks'] = stats['assigned_tasks'] - stats['completed_tasks']
 	
 	return stats
