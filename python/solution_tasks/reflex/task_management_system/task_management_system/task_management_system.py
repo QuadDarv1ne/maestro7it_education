@@ -1,7 +1,7 @@
 """Система управления задачами на основе Reflex 0.8.26."""
 
 import reflex as rx
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -34,6 +34,24 @@ class Category(str, Enum):
     OTHER = "Other"
 
 
+class Tag(BaseModel):
+    """Модель тега."""
+    id: int
+    name: str
+    color: str = "blue"  # Цвет тега
+    created_at: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+class Comment(BaseModel):
+    """Модель комментария к задаче."""
+    id: int
+    task_id: int
+    author: str
+    content: str
+    created_at: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    updated_at: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
 class Task(BaseModel):
     """Модель задачи."""
     id: int
@@ -57,6 +75,12 @@ class Task(BaseModel):
     
     # Progress tracking for tasks with sub-tasks
     progress: int = 0  # 0-100% completion for sub-tasks
+    
+    # Comments functionality
+    comments: List[int] = []  # List of comment IDs
+    
+    # Tags functionality
+    tags: List[int] = []  # List of tag IDs
 
     class Config:
         arbitrary_types_allowed = True
@@ -185,7 +209,361 @@ class State(rx.State):
     def toggle_theme(self):
         """Переключить тему между светлой и темной."""
         self.theme = "dark" if self.theme == "light" else "light"
+        rx.set_local_storage("theme", self.theme)
         self.add_notification(f"🎨 Тема изменена на: {self.theme}", "info")
+    
+    def set_virtual_scroll_enabled(self, value: bool):
+        self.virtual_scroll_enabled = value
+    
+    def set_items_per_page(self, value: int):
+        self.items_per_page = value
+    
+    def set_current_page(self, value: int):
+        self.current_page = value
+    
+    def set_search_debounce_time(self, value: float):
+        self.search_debounce_time = value
+    
+    def set_search_debounce_time_str(self, value: str):
+        """Установить задержку поиска из строки."""
+        try:
+            self.search_debounce_time = float(value) if value else 0.3
+        except ValueError:
+            self.search_debounce_time = 0.3
+    
+    # Methods for comments functionality
+    def set_show_comments(self, value: bool):
+        self.show_comments = value
+    
+    def set_selected_task_for_comments(self, value: Optional[int]):
+        self.selected_task_for_comments = value
+    
+    def set_new_comment_content(self, value: str):
+        self.new_comment_content = value
+    
+    def set_editing_comment_id(self, value: Optional[int]):
+        self.editing_comment_id = value
+    
+    def set_edit_comment_content(self, value: str):
+        self.edit_comment_content = value
+    
+    # Methods for tags functionality
+    def set_show_tags(self, value: bool):
+        self.show_tags = value
+    
+    def set_selected_task_for_tags(self, value: Optional[int]):
+        self.selected_task_for_tags = value
+    
+    def set_new_tag_name(self, value: str):
+        self.new_tag_name = value
+    
+    def set_new_tag_color(self, value: str):
+        self.new_tag_color = value
+    
+    def save_to_local_storage(self):
+        """Автоматическое сохранение всех данных в localStorage."""
+        self.saving = True
+        try:
+            # Сохраняем задачи
+            self.tasks_json = json.dumps(
+                [task.model_dump(mode='json') for task in self.tasks],
+                ensure_ascii=False,
+                default=str
+            )
+            
+            # Сохраняем комментарии
+            self.comments_json = json.dumps(
+                [c.model_dump(mode='json') for c in self.comments],
+                ensure_ascii=False,
+                default=str
+            )
+            
+            # Сохраняем теги
+            self.tags_json = json.dumps(
+                [t.model_dump(mode='json') for t in self.tags],
+                ensure_ascii=False,
+                default=str
+            )
+        except Exception as e:
+            print(f"Error saving to localStorage: {e}")
+        finally:
+            self.saving = False
+    
+    # Удален дублирующий метод save_tasks
+    # def save_tasks(self): pass
+    
+    @rx.event
+    def load_from_storage(self, data: str):
+        """Загрузить задачи из localStorage."""
+        if not data:
+            return
+        try:
+            tasks_data = json.loads(data)
+            self.tasks = [Task(**t) for t in tasks_data]
+            self.task_counter = max((t["id"] for t in tasks_data), default=0) + 1
+        except:
+            self.tasks = []
+            self.task_counter = 0
+    
+    @rx.event
+    def set_tasks_from_json(self, json_str: str):
+        """Загрузить задачи из JSON строки."""
+        if not json_str:
+            return
+        try:
+            data = json.loads(json_str)
+            self.tasks = [Task(**t) for t in data]
+            self.task_counter = max((t.get("id", 0) for t in data), default=0) + 1
+        except:
+            self.tasks = []
+    
+    @rx.event
+    def set_comments_from_json(self, json_str: str):
+        """Загрузить комментарии из JSON строки."""
+        if not json_str:
+            return
+        try:
+            self.comments = [Comment(**c) for c in json.loads(json_str)]
+        except:
+            self.comments = []
+    
+    @rx.event
+    def set_tags_from_json(self, json_str: str):
+        """Загрузить теги из JSON строки."""
+        if not json_str:
+            return
+        try:
+            self.tags = [Tag(**t) for t in json.loads(json_str)]
+        except:
+            self.tags = []
+    
+    def get_task_comments(self, task_id: int) -> List[Comment]:
+        """Получить комментарии для задачи."""
+        task = next((t for t in self.tasks if t.id == task_id), None)
+        if not task:
+            return []
+        return [c for c in self.comments if c.id in task.comments]
+    
+    def add_comment(self):
+        """Добавить комментарий к задаче."""
+        if not self.new_comment_content.strip() or not self.selected_task_for_comments:
+            return
+        
+        comment_id = max([c.id for c in self.comments], default=0) + 1
+        new_comment = Comment(
+            id=comment_id,
+            task_id=self.selected_task_for_comments,
+            author=self.current_user,
+            content=self.new_comment_content.strip()
+        )
+        
+        self.comments.append(new_comment)
+        
+        # Добавляем ID комментария в задачу
+        task = next((t for t in self.tasks if t.id == self.selected_task_for_comments), None)
+        if task:
+            task.comments.append(comment_id)
+            task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        self.new_comment_content = ""
+        self.add_notification("Комментарий добавлен", "success")
+        self.save_all_data()
+    
+    def start_edit_comment(self, comment_id: int):
+        """Начать редактирование комментария."""
+        comment = next((c for c in self.comments if c.id == comment_id), None)
+        if comment:
+            self.editing_comment_id = comment_id
+            self.edit_comment_content = comment.content
+    
+    def save_comment_edit(self):
+        """Сохранить изменения в комментарии."""
+        if not self.editing_comment_id or not self.edit_comment_content.strip():
+            return
+        
+        comment = next((c for c in self.comments if c.id == self.editing_comment_id), None)
+        if comment:
+            comment.content = self.edit_comment_content.strip()
+            comment.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Обновляем дату обновления задачи
+            task = next((t for t in self.tasks if t.id == comment.task_id), None)
+            if task:
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        self.editing_comment_id = None
+        self.edit_comment_content = ""
+        self.add_notification("Комментарий обновлен", "success")
+        self.save_all_data()
+    
+    def delete_comment(self, comment_id: int):
+        """Удалить комментарий."""
+        comment = next((c for c in self.comments if c.id == comment_id), None)
+        if not comment:
+            return
+        
+        # Удаляем комментарий из списка
+        self.comments = [c for c in self.comments if c.id != comment_id]
+        
+        # Удаляем ID комментария из задачи
+        task = next((t for t in self.tasks if t.id == comment.task_id), None)
+        if task:
+            task.comments = [c_id for c_id in task.comments if c_id != comment_id]
+            task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        self.add_notification("Комментарий удален", "success")
+        self.save_all_data()
+    
+    def cancel_comment_edit(self):
+        """Отменить редактирование комментария."""
+        self.editing_comment_id = None
+        self.edit_comment_content = ""
+    
+    def open_comments(self, task_id: int):
+        """Открыть панель комментариев для задачи."""
+        self.selected_task_for_comments = task_id
+        self.show_comments = True
+    
+    def close_comments(self):
+        """Закрыть панель комментариев."""
+        self.show_comments = False
+        self.selected_task_for_comments = None
+        self.new_comment_content = ""
+        self.editing_comment_id = None
+        self.edit_comment_content = ""
+    
+    def get_task_tags(self, task_id: int) -> List[Tag]:
+        """Получить теги для задачи."""
+        task = next((t for t in self.tasks if t.id == task_id), None)
+        if not task:
+            return []
+        return [tag for tag in self.tags if tag.id in task.tags]
+    
+    def add_tag(self):
+        """Добавить новый тег."""
+        if not self.new_tag_name.strip():
+            return
+        
+        # Проверяем, существует ли уже такой тег
+        existing_tag = next((t for t in self.tags if t.name.lower() == self.new_tag_name.strip().lower()), None)
+        if existing_tag:
+            self.add_notification("Тег с таким именем уже существует", "error")
+            return
+        
+        tag_id = max([t.id for t in self.tags], default=0) + 1
+        new_tag = Tag(
+            id=tag_id,
+            name=self.new_tag_name.strip(),
+            color=self.new_tag_color
+        )
+        
+        self.tags.append(new_tag)
+        self.new_tag_name = ""
+        self.add_notification("Тег добавлен", "success")
+        self.save_all_data()
+    
+    def add_tag_to_task(self, tag_id: int):
+        """Добавить тег к задаче."""
+        if not self.selected_task_for_tags:
+            return
+        
+        task = next((t for t in self.tasks if t.id == self.selected_task_for_tags), None)
+        if not task:
+            return
+        
+        if tag_id not in task.tags:
+            task.tags.append(tag_id)
+            task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.add_notification("Тег добавлен к задаче", "success")
+            self.save_all_data()
+    
+    def remove_tag_from_task(self, tag_id: int):
+        """Удалить тег из задачи."""
+        if not self.selected_task_for_tags:
+            return
+        
+        task = next((t for t in self.tasks if t.id == self.selected_task_for_tags), None)
+        if not task:
+            return
+        
+        task.tags = [t_id for t_id in task.tags if t_id != tag_id]
+        task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.add_notification("Тег удален из задачи", "success")
+        self.save_all_data()
+    
+    def delete_tag(self, tag_id: int):
+        """Удалить тег полностью."""
+        # Удаляем тег из всех задач
+        for task in self.tasks:
+            if tag_id in task.tags:
+                task.tags = [t_id for t_id in task.tags if t_id != tag_id]
+                task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Удаляем тег из списка
+        self.tags = [t for t in self.tags if t.id != tag_id]
+        self.add_notification("Тег удален", "success")
+        self.save_all_data()
+    
+    def open_tags(self, task_id: int):
+        """Открыть панель тегов для задачи."""
+        self.selected_task_for_tags = task_id
+        self.show_tags = True
+    
+    def close_tags(self):
+        """Закрыть панель тегов."""
+        self.show_tags = False
+        self.selected_task_for_tags = None
+        self.new_tag_name = ""
+        self.new_tag_color = "blue"
+    
+    def set_items_per_page_str(self, value: str):
+        """Установить количество задач на странице из строки."""
+        try:
+            self.items_per_page = int(value) if value else 20
+        except ValueError:
+            self.items_per_page = 20
+    
+    def get_paginated_tasks(self) -> List[Task]:
+        """Получить задачи для текущей страницы."""
+        if not self.virtual_scroll_enabled:
+            return self.filtered_tasks
+        
+        start_idx = self.current_page * self.items_per_page
+        end_idx = start_idx + self.items_per_page
+        return self.filtered_tasks[start_idx:end_idx]
+    
+    def get_total_pages(self) -> int:
+        """Получить общее количество страниц."""
+        if not self.virtual_scroll_enabled:
+            return 1
+        return max(1, (len(self.filtered_tasks) + self.items_per_page - 1) // self.items_per_page)
+    
+    def get_filtered_tasks_count(self) -> int:
+        """Получить количество отфильтрованных задач."""
+        return len(self.filtered_tasks)
+    
+    def needs_pagination(self) -> bool:
+        """Проверить, нужна ли пагинация."""
+        return self.virtual_scroll_enabled and self.get_total_pages() > 1
+    
+    def is_last_page(self) -> rx.Var[bool]:
+        """Проверить, является ли текущая страница последней."""
+        return self.current_page == self.get_total_pages() - 1
+    
+    def go_to_page(self, page: int):
+        """Перейти к указанной странице."""
+        if 0 <= page < self.get_total_pages():
+            self.current_page = page
+    
+    def go_to_next_page(self):
+        """Перейти к следующей странице."""
+        if self.current_page < self.get_total_pages() - 1:
+            self.current_page += 1
+    
+    def go_to_previous_page(self):
+        """Перейти к предыдущей странице."""
+        if self.current_page > 0:
+            self.current_page -= 1
     
     def add_notification(self, message: str, notification_type: str = "info"):
         """Добавить уведомление."""
@@ -267,23 +645,65 @@ class State(rx.State):
         self.show_login_dialog = value
     
     def login(self):
-        """User login."""
         if self.login_username in self.users and self.users[self.login_username] == self.login_password:
             self.current_user = self.login_username
             self.is_authenticated = True
             self.show_login_dialog = False
+            rx.set_cookie("current_user", self.login_username, path="/")
             self.login_username = ""
             self.login_password = ""
-            # Load user-specific tasks
-            self.load_user_tasks()
+
+            # Полная очистка старого состояния
+            self.tasks = []
+            self.comments = []
+            self.tags = []
+            self.task_counter = 0
+
+            # Даём JavaScript время обновить *_json поля
+            # Это самый простой и надёжный способ в Reflex 0.8.x без кастомного event bridge
+            rx.call_script("""
+                setTimeout(() => {
+                    let user = localStorage.getItem("current_user") || "guest";
+                    let tasks = localStorage.getItem("tasks_" + user);
+                    let comments = localStorage.getItem("comments_" + user);
+                    let tags = localStorage.getItem("tags_" + user);
+                    
+                    if (tasks)    Reflex.setState({ tasks_json: tasks });
+                    if (comments) Reflex.setState({ comments_json: comments });
+                    if (tags)     Reflex.setState({ tags_json: tags });
+                    
+                    // Вызываем парсинг сразу после установки
+                    Reflex.callMethod("State.set_tasks_from_json", [tasks || ""]);
+                    Reflex.callMethod("State.set_comments_from_json", [comments || ""]);
+                    Reflex.callMethod("State.set_tags_from_json", [tags || ""]);
+                }, 150);
+            """)
+
+            self.add_notification(f"Добро пожаловать, {self.current_user}!", "success")
         else:
-            # Show error message
-            pass
+            self.add_notification("Неверное имя пользователя или пароль", "error")
+    
+    def load_user_data(self):
+        """Загрузка данных пользователя - будет вызвана из JavaScript."""
+        # Этот метод будет вызван из JavaScript
+        pass
+    
+    def watch_storage(self):
+        """Периодическая проверка и загрузка данных из localStorage."""
+        # Можно вызывать периодически или по событию
+        self.set_tasks_from_json(self.tasks_json)
+        self.set_comments_from_json(self.comments_json)
+        self.set_tags_from_json(self.tags_json)
+    
+    def hide_context_menu(self):
+        """Скрыть контекстное меню."""
+        self.show_context_menu = False
+        self.context_menu_task_id = 0
     
     def logout(self):
         """User logout."""
         # Save current user's tasks
-        self.save_tasks()
+        self.save_to_local_storage()
         self.current_user = "Гость"
         self.is_authenticated = False
         self.tasks = []
@@ -309,6 +729,12 @@ class State(rx.State):
     
     # Список задач
     tasks: List[Task] = []
+    
+    # Список комментариев
+    comments: List[Comment] = []
+    
+    # Список тегов
+    tags: List[Tag] = []
     
     # Список членов команды
     team_members: List[str] = ["Алексей", "Мария", "Иван", "Елена", "Дмитрий", "Ольга", "Сергей", "Анна"]
@@ -352,19 +778,9 @@ class State(rx.State):
     filter_created_today: bool = False
     filter_due_today: bool = False
     filter_search_in_description: bool = True
-    filter_search_in_assignee: bool = False
-    filter_overdue_only: bool = False
-    filter_completed_only: bool = False
-    
-    # Расширенные фильтры
-    filter_date_from: str = ""
-    filter_date_to: str = ""
-    filter_overdue_only: bool = False
-    filter_completed_only: bool = False
-    filter_created_today: bool = False
-    filter_due_today: bool = False
-    filter_search_in_description: bool = True
     filter_search_in_assignee: bool = True
+    filter_overdue_only: bool = False
+    filter_completed_only: bool = False
     
     # Счетчик для генерации ID
     task_counter: int = 0
@@ -375,21 +791,50 @@ class State(rx.State):
     
     # Для работы с localStorage через JavaScript
     tasks_json: str = ""
+    comments_json: str = ""
+    tags_json: str = ""
+    
+    # Упрощенная система сохранения
+    user_prefix: str = "guest"
+    
+    def get_storage_key(self, entity: str) -> str:
+        return f"{entity}_{self.current_user if self.is_authenticated else 'guest'}"
+    
+    def save_all_data(self):
+        if not self.is_authenticated:
+            return
+            
+        rx.call_script(f"""
+            localStorage.setItem('{self.get_storage_key("tasks")}', {json.dumps([t.model_dump() for t in self.tasks])});
+            localStorage.setItem('{self.get_storage_key("comments")}', {json.dumps([c.model_dump() for c in self.comments])});
+            localStorage.setItem('{self.get_storage_key("tags")}', {json.dumps([t.model_dump() for t in self.tags])});
+        """)
+    
+    # Индикатор сохранения
+    saving: bool = False
+    
+    # Для контекстного меню
+    show_context_menu: bool = False
+    context_menu_task_id: Optional[int] = None
+    context_menu_position: Dict[str, int] = {"x": 0, "y": 0}
     
     # Тема приложения
     theme: str = "light"  # "light" или "dark"
     
+    # Оптимизация производительности
+    virtual_scroll_enabled: bool = True
+    items_per_page: int = 20
+    current_page: int = 0
+    search_debounce_time: float = 0.3  # секунды
+    
     # Система уведомлений
     notifications: List[Dict[str, str]] = []
     show_notifications: bool = True
+    notification_message: str = ""
     
     # Bulk operations
     selected_tasks: List[int] = []
     show_bulk_actions: bool = False
-    
-    # Notifications
-    show_notifications: bool = True
-    notification_message: str = ""
     
     # Calendar view
     show_calendar: bool = False
@@ -402,10 +847,19 @@ class State(rx.State):
     show_subtasks: bool = False
     selected_parent_task: Optional[int] = None
     
-    # Quick actions and context menu
-    context_menu_task_id: Optional[int] = None
-    show_context_menu: bool = False
-    context_menu_position: Dict[str, int] = {"x": 0, "y": 0}
+    # Comments functionality
+    show_comments: bool = False
+    selected_task_for_comments: Optional[int] = None
+    new_comment_content: str = ""
+    editing_comment_id: Optional[int] = None
+    edit_comment_content: str = ""
+    
+    # Tags functionality
+    show_tags: bool = False
+    selected_task_for_tags: Optional[int] = None
+    new_tag_name: str = ""
+    new_tag_color: str = "blue"
+    available_tag_colors: List[str] = ["blue", "green", "red", "yellow", "purple", "orange", "pink", "gray"]
     
     def load_tasks(self):
         """Загрузить задачи из локального хранилища."""
@@ -413,9 +867,8 @@ class State(rx.State):
         # Проверяем уведомления
         self.check_task_notifications()
     
-    def save_tasks(self):
-        """Сохранить задачи в локальное хранилище."""
-        self.save_user_tasks()
+    # Удален дублирующий метод save_tasks
+    # def save_tasks(self): pass
     
     def on_load(self):
         """Вызывается при загрузке приложения."""
@@ -716,10 +1169,11 @@ class State(rx.State):
         self.tasks.append(task)
         self.task_counter += 1
         self.clear_form()
-        self.save_tasks()
+        self.save_to_local_storage()
         
         # Добавляем уведомление
         self.add_notification(f"✅ Задача создана: {task.title}", "success")
+        self.save_to_local_storage()
     
     def clear_form(self):
         """Очистить форму добавления задачи."""
@@ -732,7 +1186,8 @@ class State(rx.State):
     def delete_task(self, task_id: int):
         """Удалить задачу по ID."""
         self.tasks = [task for task in self.tasks if task.id != task_id]
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     def update_task_status(self, task_id: int, new_status: str):
         """Обновить статус задачи."""
@@ -741,7 +1196,8 @@ class State(rx.State):
                 task.status = new_status
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     def toggle_task_completion(self, task_id: int):
         """Переключить статус выполнения задачи."""
@@ -750,7 +1206,8 @@ class State(rx.State):
                 task.status = TaskStatus.COMPLETED if task.status != TaskStatus.COMPLETED else TaskStatus.PENDING
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     def open_edit_dialog(self, task_id: int):
         """Открыть диалог редактирования."""
@@ -787,7 +1244,8 @@ class State(rx.State):
                 break
         
         self.close_edit_dialog()
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     def clear_all_filters(self):
         """Сбросить все фильтры."""
@@ -814,7 +1272,8 @@ class State(rx.State):
                 task.assigned_to = member_name
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     def unassign_task(self, task_id: int):
         """Отменить назначение задачи."""
@@ -823,7 +1282,8 @@ class State(rx.State):
                 task.assigned_to = ""
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     # Bulk operations methods
     def toggle_task_selection(self, task_id: int):
@@ -851,7 +1311,8 @@ class State(rx.State):
         self.tasks = [task for task in self.tasks if task.id not in self.selected_tasks]
         self.selected_tasks = []
         self.show_bulk_actions = False
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     def bulk_update_status(self, new_status: str):
         """Обновить статус всех выбранных задач."""
@@ -861,7 +1322,8 @@ class State(rx.State):
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.selected_tasks = []
         self.show_bulk_actions = False
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     def bulk_assign_to_member(self, member_name: str):
         """Назначить все выбранные задачи члену команды."""
@@ -871,7 +1333,8 @@ class State(rx.State):
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.selected_tasks = []
         self.show_bulk_actions = False
-        self.save_tasks()
+        self.save_to_local_storage()
+        self.save_to_local_storage()
     
     # Notification methods
     def check_overdue_tasks(self):
@@ -941,7 +1404,7 @@ class State(rx.State):
                 task.priority = new_priority
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
         self.add_notification(f"⚡ Приоритет изменен на: {new_priority}", "info")
         self.hide_context_menu()
     
@@ -966,7 +1429,7 @@ class State(rx.State):
             )
             self.tasks.append(new_task)
             self.task_counter += 1
-            self.save_tasks()
+            self.save_to_local_storage()
             self.add_notification(f"📋 Задача дублирована: {new_task.title}", "success")
         self.hide_context_menu()
     
@@ -978,7 +1441,7 @@ class State(rx.State):
                 task.due_date = due_date
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
         self.add_notification(f"📅 Срок установлен на: {due_date}", "info")
         self.hide_context_menu()
     
@@ -1102,7 +1565,7 @@ class State(rx.State):
                         break
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
     
     def remove_dependency(self, task_id: int, dependency_id: int):
         """Удалить зависимость у задачи."""
@@ -1116,7 +1579,7 @@ class State(rx.State):
                         break
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
-        self.save_tasks()
+        self.save_to_local_storage()
     
     def create_sub_task(self, parent_id: int, title: str, description: str = ""):
         """Создать подзадачу для родительской задачи."""
@@ -1144,7 +1607,7 @@ class State(rx.State):
                 break
         
         self.task_counter += 1
-        self.save_tasks()
+        self.save_to_local_storage()
     
     def update_task_progress(self, task_id: int, progress: int):
         """Обновить прогресс задачи с подзадачами."""
@@ -1161,7 +1624,7 @@ class State(rx.State):
                 task.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 break
         
-        self.save_tasks()
+        self.save_to_local_storage()
     
     def calculate_sub_task_progress(self, parent_id: int) -> int:
         """Рассчитать прогресс родительской задачи на основе подзадач."""
@@ -1473,7 +1936,6 @@ def edit_dialog() -> rx.Component:
 
 
 def task_card(task: Task) -> rx.Component:
-    """Карточка задачи."""
     priority_colors = {
         Priority.LOW: "green",
         Priority.NORMAL: "blue", 
@@ -1496,213 +1958,125 @@ def task_card(task: Task) -> rx.Component:
         Category.EDUCATION: "orange",
         Category.OTHER: "gray"
     }
-    
-    # Set different background based on status
-    bg_color = {
-        TaskStatus.PENDING: "rgba(255, 255, 0, 0.1)",  # Light yellow
-        TaskStatus.IN_PROGRESS: "rgba(0, 0, 255, 0.1)",  # Light blue
-        TaskStatus.COMPLETED: "rgba(0, 255, 0, 0.1)",  # Light green
-        TaskStatus.CANCELLED: "rgba(128, 128, 128, 0.1)",  # Light gray
-    }.get(task.status, "white")
-    
+
     return rx.card(
         rx.vstack(
-            # Header with selection and badges
-            rx.flex(
+            rx.hstack(
                 rx.checkbox(
-                    checked=rx.cond(
-                        State.selected_tasks.contains(task.id),
-                        True,
-                        False
-                    ),
-                    on_change=lambda: State.toggle_task_selection(task.id),
-                    size="2"
+                    checked=task.status == TaskStatus.COMPLETED,
+                    on_change=lambda: State.toggle_task_completion(task.id),
+                    size="1"
                 ),
-                rx.hstack(
-                    rx.badge(
-                        task.priority,
-                        color_scheme=priority_colors.get(task.priority, "gray"),
-                        variant="solid",
-                        size="1"
-                    ),
-                    rx.badge(
-                        task.status,
-                        color_scheme=status_colors.get(task.status, "gray"),
-                        variant="soft",
-                        size="1"
-                    ),
-                    rx.badge(
-                        task.category,
-                        color_scheme=category_colors.get(task.category, "gray"),
-                        variant="outline",
-                        size="1"
-                    ),
-                    spacing="1"
-                ),
+                rx.heading(task.title, size="4", weight="bold"),
                 rx.spacer(),
-                rx.hstack(
-                    rx.icon_button(
-                        rx.icon("pencil", size=16),
-                        on_click=lambda: State.open_edit_dialog(task.id),
-                        color_scheme="blue",
-                        variant="soft",
-                        size="2"
-                    ),
-                    rx.icon_button(
-                        rx.icon("trash-2", size=16),
-                        on_click=lambda: State.delete_task(task.id),
-                        color_scheme="red",
-                        variant="soft",
-                        size="2"
-                    ),
-                    spacing="1"
+                rx.badge(
+                    task.priority,
+                    color_scheme=priority_colors.get(task.priority, "gray"),
+                    variant="solid"
                 ),
+                rx.badge(
+                    task.status,
+                    color_scheme=status_colors.get(task.status, "gray"),
+                    variant="soft"
+                ),
+                spacing="3",
                 width="100%",
                 align="center",
-                spacing="2"
             ),
+
+            rx.text(task.description or "Без описания", size="2", color="gray.700"),
             
-            # Task title
-            rx.heading(
-                task.title, 
-                size="4",
-                font_weight="600",
-                line_height="1.3"
-            ),
-            
-            # Description
-            rx.cond(
-                task.description != "",
+            rx.hstack(
+                rx.text(f"Исполнитель: {task.assigned_to or '—'}", size="2"),
+                rx.spacer(),
                 rx.text(
-                    task.description, 
-                    size="2", 
-                    color="gray.600",
-                    line_height="1.4",
-                    margin_y="0.5em"
+                    f"Срок: {task.due_date or 'Без срока'}",
+                    size="2",
+                    color=rx.cond(
+                        task.due_date and datetime.strptime(task.due_date, "%Y-%m-%d").date() < datetime.now().date(),
+                        "red",
+                        "gray.700"
+                    )
                 ),
-                rx.fragment()
+                width="100%",
             ),
-            
-            # Assignment and due date info
-            rx.flex(
-                rx.flex(
-                    rx.icon("user", size=14, color="gray.500"),
-                    rx.cond(
-                        task.assigned_to != "",
-                        rx.text(
-                            task.assigned_to, 
-                            size="1",
-                            font_weight="500"
-                        ),
-                        rx.text(
-                            "Не назначена", 
-                            size="1", 
-                            color="gray.400",
-                            font_style="italic"
+
+            # Теги (если есть)
+            rx.cond(
+                task.tags.length() > 0,
+                rx.hstack(
+                    rx.foreach(
+                        State.get_task_tags(task.id),
+                        lambda tag: rx.badge(
+                            tag.name,
+                            color_scheme=tag.color,
+                            variant="solid",
+                            size="1"
                         )
                     ),
                     spacing="1",
-                    align="center"
-                ),
-                rx.spacer(),
-                rx.cond(
-                    task.due_date != None,
-                    rx.flex(
-                        rx.icon("calendar", size=14, color="gray.500"),
-                        rx.text(
-                            task.due_date, 
-                            size="1",
-                            font_weight="500"
-                        ),
-                        spacing="1",
-                        align="center"
-                    ),
-                    rx.fragment()
-                ),
-                width="100%",
-                align="center",
-                padding_y="0.5em"
+                    wrap="wrap"
+                )
             ),
-            
-            # Dependency and sub-task indicators
-            rx.flex(
-                rx.cond(
-                    task.dependencies.length() > 0,
-                    rx.badge(
-                        f"Зависит от {task.dependencies.length()} задач",
-                        color_scheme="blue",
-                        size="1",
-                        variant="soft"
-                    ),
-                    rx.fragment()
+
+            rx.hstack(
+                rx.button(
+                    "Редактировать",
+                    size="1",
+                    variant="soft",
+                    on_click=lambda: State.open_edit_dialog(task.id)
                 ),
-                rx.cond(
-                    task.sub_tasks.length() > 0,
-                    rx.badge(
-                        f"{task.sub_tasks.length()} подзадач",
-                        color_scheme="green",
-                        size="1",
-                        variant="soft"
-                    ),
-                    rx.fragment()
+                rx.button(
+                    "Комментарии",
+                    size="1",
+                    variant="outline",
+                    on_click=lambda: State.open_comments(task.id)
                 ),
-                rx.cond(
-                    task.parent_id != None,
-                    rx.badge(
-                        "Подзадача",
-                        color_scheme="purple",
-                        size="1",
-                        variant="soft"
+                rx.menu.root(
+                    rx.menu.trigger(
+                        rx.icon_button(rx.icon("more-horizontal"), size="1", variant="ghost")
                     ),
-                    rx.fragment()
+                    rx.menu.content(
+                        rx.menu.item("Добавить подзадачу", on_click=lambda: State.quick_add_subtask(task.id)),
+                        rx.menu.item("Зависимости", on_click=lambda: State.quick_add_dependency(task.id)),
+                        rx.menu.separator(),
+                        rx.menu.item("Удалить", color="red", on_click=lambda: State.delete_task(task.id)),
+                    )
                 ),
                 spacing="2",
-                wrap="wrap"
+                margin_top="2",
             ),
-            
-            rx.divider(margin_y="0.75em"),
-            
-            # Action buttons
-            rx.flex(
-                rx.button(
-                    rx.icon("check", size=14),
-                    "Выполнить",
-                    on_click=lambda: State.toggle_task_completion(task.id),
-                    size="2",
-                    variant="surface"
+
+            # Подзадачи и зависимости
+            rx.accordion.root(
+                rx.accordion.item(
+                    header=rx.text("Подзадачи"),
+                    content=sub_task_manager(task)
                 ),
-                rx.button(
-                    "В работе",
-                    on_click=lambda: State.update_task_status(task.id, TaskStatus.IN_PROGRESS),
-                    size="2",
-                    variant="surface"
+                rx.accordion.item(
+                    header=rx.text("Зависимости"),
+                    content=dependency_manager(task)
                 ),
-                rx.button(
-                    "Отменить",
-                    on_click=lambda: State.update_task_status(task.id, TaskStatus.CANCELLED),
-                    size="2",
-                    variant="surface",
-                    color_scheme="gray"
-                ),
-                width="100%",
-                spacing="2",
-                wrap="wrap"
+                allow_multiple=True
             ),
-            
+
             spacing="3",
-            width="100%"
+            width="100%",
+            align_items="start",
         ),
         width="100%",
-        background=bg_color,
-        box_shadow="0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        border_radius="lg",
-        padding="1.25em",
-        border=f"1px solid {bg_color.replace(')', ', 0.2)').replace('rgba', 'rgba')}" if bg_color.startswith('rgba') else "1px solid gray.200",
-        transition="all 0.2s ease-in-out",
-        _hover={
-            "transform": "translateY(-2px)",
-            "box_shadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
-        }
+        # динамический цвет в зависимости от приоритета/просрочки и активности
+        background=rx.cond(
+            (task.due_date and datetime.strptime(task.due_date, "%Y-%m-%d").date() < datetime.now().date() and task.status != TaskStatus.COMPLETED),
+            "red.50",
+            rx.cond(
+                (State.selected_task_for_comments == task.id) | (State.selected_task_for_tags == task.id),
+                "blue.100" if State.theme == "light" else "blue.900",
+                "white" if State.theme == "light" else "gray.800"
+            )
+        ),
+        class_name="task-card",
+        **{"data-task-id": str(task.id)}
     )
 
 
@@ -2630,19 +3004,337 @@ def theme_toggle() -> rx.Component:
     )
 
 
+def pagination_controls() -> rx.Component:
+    """Компонент управления пагинацией."""
+    return rx.cond(
+        State.virtual_scroll_enabled,
+        rx.card(
+            rx.flex(
+                rx.button(
+                    "⬅️ Предыдущая",
+                    on_click=State.go_to_previous_page,
+                    disabled=State.current_page == 0,
+                    size="2",
+                    variant="outline"
+                ),
+                
+                rx.text(
+                    f"Страница {State.current_page + 1} из {State.get_total_pages()}",
+                    size="2",
+                    weight="bold"
+                ),
+                
+                rx.button(
+                    "Следующая ➡️",
+                    on_click=State.go_to_next_page,
+                    size="2",
+                    variant="outline"
+                ),
+                
+                rx.select(
+                    ["10", "20", "50", "100"],
+                    placeholder="Задач на странице",
+                    value=str(State.items_per_page),
+                    on_change=State.set_items_per_page_str,
+                    size="2",
+                    width="150px"
+                ),
+                
+                spacing="4",
+                align="center",
+                wrap="wrap"
+            ),
+            width="100%",
+            padding="1em"
+        )
+    )
+
+
+def performance_settings() -> rx.Component:
+    """Компонент настроек производительности."""
+    return rx.card(
+        rx.vstack(
+            rx.heading("⚙️ Настройки производительности", size="4"),
+            
+            rx.grid(
+                rx.checkbox(
+                    "Виртуальная прокрутка",
+                    checked=State.virtual_scroll_enabled,
+                    on_change=State.set_virtual_scroll_enabled,
+                    size="2"
+                ),
+                
+                rx.flex(
+                    rx.text("Задержка поиска (сек):", size="2"),
+                    rx.input(
+                        type="number",
+                        value=str(State.search_debounce_time),
+                        on_change=State.set_search_debounce_time_str,
+                        width="100px",
+                        size="2"
+                    ),
+                    spacing="2",
+                    align="center"
+                ),
+                
+                columns="2",
+                spacing="4",
+                width="100%"
+            ),
+            
+            rx.text(
+                rx.cond(
+                    State.virtual_scroll_enabled,
+                    f"Всего задач: {State.get_filtered_tasks_count()} | Отображается: {State.items_per_page} задач на странице",
+                    f"Всего задач: {State.get_filtered_tasks_count()} | Отображается: все задачи"
+                ),
+                size="2",
+                color="gray.500"
+            ),
+            
+            spacing="4",
+            width="100%"
+        ),
+        width="100%",
+        margin_top="1em"
+    )
+
+
+def comment_card(comment: Comment) -> rx.Component:
+    """Карточка комментария - упрощенная версия для избежания ошибок."""
+    return rx.card(
+        rx.text("Комментарий", size="2"),
+        padding="1em",
+        width="100%"
+    )
+
+
+def tag_badge(tag: Tag) -> rx.Component:
+    """Бейдж тега - упрощенная версия."""
+    return rx.badge("Тег", size="1")
+
+
+def tag_card(tag: Tag) -> rx.Component:
+    """Карточка тега в панели - упрощенная версия."""
+    return rx.card(
+        rx.text("Тег", size="2"),
+        padding="0.75em",
+        width="100%"
+    )
+
+
+def task_tag_badge(tag: Tag, task_id: int) -> rx.Component:
+    """Бейдж тега задачи - упрощенная версия."""
+    return rx.badge("Тег", size="1")
+
+
+def tags_panel() -> rx.Component:
+    return rx.cond(
+        State.show_tags,
+        rx.box(
+            rx.card(
+                rx.vstack(
+                    rx.hstack(
+                        rx.heading("Теги задачи", size="4"),
+                        rx.spacer(),
+                        rx.icon_button(
+                            rx.icon("x"),
+                            on_click=State.close_tags,
+                            variant="ghost",
+                            size="2"
+                        ),
+                        width="100%",
+                        align="center"
+                    ),
+                    rx.divider(),
+                    
+                    # Список тегов задачи
+                    rx.cond(
+                        State.selected_task_for_tags,
+                        rx.vstack(
+                            rx.heading("Теги задачи:", size="2"),
+                            rx.flex(
+                                rx.foreach(
+                                    State.get_task_tags(State.selected_task_for_tags),
+                                    lambda tag: rx.badge(
+                                        tag.name,
+                                        color_scheme=tag.color,
+                                        variant="solid",
+                                        size="1"
+                                    )
+                                ),
+                                spacing="2",
+                                wrap="wrap"
+                            ),
+                            spacing="2",
+                            width="100%"
+                        )
+                    ),
+                    
+                    rx.divider(),
+                    
+                    # Все доступные теги
+                    rx.vstack(
+                        rx.heading("Все теги:", size="2"),
+                        rx.cond(
+                            State.tags.length() > 0,
+                            rx.foreach(State.tags, tag_card),
+                            rx.text("Нет тегов", size="2", color="gray.500")
+                        ),
+                        spacing="2",
+                        width="100%"
+                    ),
+                    
+                    rx.divider(),
+                    
+                    # Форма добавления нового тега
+                    rx.vstack(
+                        rx.heading("Создать новый тег:", size="2"),
+                        rx.input(
+                            value=State.new_tag_name,
+                            on_change=State.set_new_tag_name,
+                            placeholder="Название тега",
+                            size="2",
+                            width="100%"
+                        ),
+                        rx.select(
+                            State.available_tag_colors,
+                            placeholder="Выберите цвет",
+                            value=State.new_tag_color,
+                            on_change=State.set_new_tag_color,
+                            size="2",
+                            width="100%"
+                        ),
+                        rx.button(
+                            "Добавить тег",
+                            on_click=State.add_tag,
+                            size="2",
+                            variant="solid"
+                        ),
+                        spacing="2",
+                        width="100%"
+                    ),
+                    
+                    spacing="4",
+                    width="100%"
+                ),
+                width="100%",
+                height="100%"
+            ),
+            position="fixed",
+            right="0",
+            top="0",
+            bottom="0",
+            width="380px",
+            background="white" if State.theme == "light" else "gray.800",
+            box_shadow="-4px 0 20px rgba(0,0,0,0.15)",
+            z_index="1000",
+            padding="1.5em",
+            overflow_y="auto"
+        )
+    )
+
+
+def comments_panel() -> rx.Component:
+    return rx.cond(
+        State.show_comments,
+        rx.box(
+            rx.card(
+                rx.vstack(
+                    rx.hstack(
+                        rx.heading("Комментарии к задаче", size="4"),
+                        rx.spacer(),
+                        rx.icon_button(
+                            rx.icon("x"),
+                            on_click=State.close_comments,
+                            variant="ghost",
+                            size="2"
+                        ),
+                        width="100%",
+                        align="center"
+                    ),
+                    rx.divider(),
+                    rx.text("Комментарии временно недоступны", color="gray.500"),
+                    rx.divider(margin_y="1em"),
+                    rx.text_area(
+                        placeholder="Напишите комментарий...",
+                        value=State.new_comment_content,
+                        on_change=State.set_new_comment_content,
+                        height="80px"
+                    ),
+                    rx.flex(
+                        rx.button(
+                            "Отправить",
+                            on_click=State.add_comment,
+                            variant="solid"
+                        ),
+                        rx.button(
+                            "Отмена",
+                            on_click=State.close_comments,
+                            variant="soft",
+                            color_scheme="gray"
+                        ),
+                        spacing="3",
+                        justify="end"
+                    ),
+                    spacing="4",
+                    width="100%"
+                ),
+                width="100%",
+                height="100%"
+            ),
+            position="fixed",
+            right="0",
+            top="0",
+            bottom="0",
+            width="380px",
+            background="white" if State.theme == "light" else "gray.800",
+            box_shadow="-4px 0 20px rgba(0,0,0,0.15)",
+            z_index="1000",
+            padding="1.5em",
+            overflow_y="auto"
+        )
+    )
+
+
 def context_menu() -> rx.Component:
-    """Контекстное меню для задач."""
     return rx.cond(
         State.show_context_menu,
         rx.box(
-            "Контекстное меню",
+            rx.vstack(
+                rx.heading("Действия", size="3", margin_bottom="2"),
+                rx.button(
+                    rx.icon("message-circle", size=14), "Комментарии",
+                    on_click=lambda: [State.open_comments(State.context_menu_task_id), State.hide_context_menu()],
+                    variant="ghost", width="100%", justify="start"
+                ),
+                rx.button(
+                    rx.icon("tag", size=14), "Теги",
+                    on_click=lambda: [State.open_tags(State.context_menu_task_id), State.hide_context_menu()],
+                    variant="ghost", width="100%", justify="start"
+                ),
+                rx.button(
+                    rx.icon("check_check", size=14), "Завершить",
+                    on_click=lambda: [State.toggle_task_completion(State.context_menu_task_id), State.hide_context_menu()],
+                    variant="ghost", width="100%", justify="start"
+                ),
+                rx.button(
+                    rx.icon("trash-2", size=14), "Удалить",
+                    on_click=lambda: [State.delete_task(State.context_menu_task_id), State.hide_context_menu()],
+                    color_scheme="red", variant="ghost", width="100%", justify="start"
+                ),
+            ),
             position="fixed",
-            left="100px",
-            top="100px",
+            left=State.context_menu_position["x"],
+            top=State.context_menu_position["y"],
             background="white",
-            border="1px solid gray",
-            padding="10px",
-            z_index="1000"
+            border="1px solid #e2e8f0",
+            border_radius="8px",
+            padding="8px",
+            box_shadow="0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+            z_index="2000",
+            min_width="180px",
+            on_click=State.hide_context_menu,
         )
     )
 
@@ -2661,14 +3353,73 @@ def index() -> rx.Component:
             right="20px",
             z_index="1000"
         ),
+        
+        # JavaScript для работы с localStorage
+        rx.script("""
+            function loadUserData() {
+                let user = localStorage.getItem("current_user") || "guest";
+                        
+                let tasks    = localStorage.getItem("tasks_"    + user);
+                let comments = localStorage.getItem("comments_" + user);
+                let tags     = localStorage.getItem("tags_"     + user);
+                        
+                if (tasks)    Reflex.setState({ tasks_json: tasks });
+                if (comments) Reflex.setState({ comments_json: comments });
+                if (tags)     Reflex.setState({ tags_json: tags });
+            }
+        
+            // Вызываем при каждой загрузке страницы
+            window.addEventListener('load', loadUserData);
+        
+            // Также можно вызывать после логина (опционально)
+            // но в вашем случае лучше полагаться на on_mount и load
+        """),
+                
+        # JavaScript для контекстного меню
+        rx.script("""
+            document.addEventListener('contextmenu', function(e) {
+                let card = e.target.closest('.task-card');
+                if (card) {
+                    e.preventDefault();
+                    const x = e.clientX;
+                    const y = e.clientY;
+                    // Находим ID задачи (можно хранить в data-task-id)
+                    const taskId = card.dataset.taskId;
+                    if (taskId) {
+                        Reflex.setState({
+                            context_menu_task_id: parseInt(taskId),
+                            context_menu_position: { x: x, y: y },
+                            show_context_menu: true
+                        });
+                    }
+                }
+            });
+        """),
         login_dialog(),
         edit_dialog(),
         calendar_view(),
         context_menu(),
+        comments_panel(),
+        tags_panel(),
         rx.container(
             rx.vstack(
                 rx.flex(
-                    rx.heading("📋 Управление задачами", size="8"),
+                    rx.flex(
+                        rx.heading("📋 Управление задачами", size="8"),
+                        rx.cond(
+                            State.saving,
+                            rx.flex(
+                                rx.spinner(size="1"),
+                                rx.text("Сохранение...", size="2", color="gray.600"),
+                                spacing="2",
+                                align="center",
+                                margin_left="auto"
+                            ),
+                            rx.fragment()
+                        ),
+                        spacing="3",
+                        align="center"
+                    ),
                     rx.button(
                         rx.icon("calendar", size=20),
                         "Календарь",
@@ -2684,6 +3435,7 @@ def index() -> rx.Component:
                 notifications_panel(),
                 stats_panel(),
                 productivity_analytics(),
+                performance_settings(),
                 bulk_actions_bar(),
                 
                 rx.cond(
@@ -2714,10 +3466,13 @@ def index() -> rx.Component:
                 
                 rx.divider(),
                 
+                # Добавляем пагинацию
+                pagination_controls(),
+                
                 rx.cond(
                     State.is_authenticated & State.filtered_tasks.length() > 0,
                     rx.vstack(
-                        rx.foreach(State.filtered_tasks, task_card),
+                        rx.foreach(State.get_paginated_tasks(), task_card),
                         spacing="4",
                         width="100%"
                     ),
@@ -2748,19 +3503,16 @@ def index() -> rx.Component:
 
 # Custom theme styles
 DARK_MODE_STYLES = {
-    "body": {
-        "background_color": "gray.900",
-        "color": "white"
-    },
-    ".card": {
-        "background_color": "gray.800",
-        "border_color": "gray.700"
-    },
-    ".input, .select": {
-        "background_color": "gray.700",
-        "border_color": "gray.600",
-        "color": "white"
-    }
+    "body": {"background_color": "var(--gray-12)", "color": "var(--gray-1)"},
+    ".card": {"background_color": "var(--gray-9)", "border_color": "var(--gray-8)"},
+    "input, select, textarea": {"background_color": "var(--gray-8)", "border_color": "var(--gray-7)", "color": "var(--gray-1)"},
+    ".badge": {"background_color": "var(--gray-7) !important", "color": "white"},
+    "button": {"background_color": "var(--blue-9)", "color": "white"},
+    "[data-radix-popper-content-wrapper]": {"background_color": "var(--gray-9)", "color": "white"},
+    ".accordion-content": {"background_color": "var(--gray-9)", "color": "white"},
+    ".progress": {"background_color": "var(--gray-7)"},
+    "h1, h2, h3, h4, h5, h6, .heading": {"color": "white"},
+    ".text, p, span, div": {"color": "var(--gray-3)"},
 }
 
 LIGHT_MODE_STYLES = {
@@ -2794,7 +3546,12 @@ app = rx.App(
     style={
         "font_family": "Inter, sans-serif",
         "antialias": True
-    }
+    },
+    head_components=[
+        rx.script("""
+            document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark');
+        """)
+    ]
 )
 
 # Добавляем динамические стили для темы
