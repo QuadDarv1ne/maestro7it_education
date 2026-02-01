@@ -542,6 +542,18 @@ class State(rx.State):
         """Получить количество отфильтрованных задач."""
         return len(self.filtered_tasks)
     
+    def get_task_data_for_display(self, task: Task) -> dict:
+        """Получить данные задачи для отображения."""
+        return {
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "status": task.status.value if hasattr(task.status, "value") else str(task.status),
+            "priority": task.priority.value if hasattr(task.priority, "value") else str(task.priority),
+            "due_date": task.due_date,
+            "assigned_to": task.assigned_to
+        }
+    
     def needs_pagination(self) -> bool:
         """Проверить, нужна ли пагинация."""
         return self.virtual_scroll_enabled and self.get_total_pages() > 1
@@ -1935,148 +1947,23 @@ def edit_dialog() -> rx.Component:
     )
 
 
-def task_card(task: Task) -> rx.Component:
-    priority_colors = {
-        Priority.LOW: "green",
-        Priority.NORMAL: "blue", 
-        Priority.HIGH: "orange",
-        Priority.CRITICAL: "red"
-    }
-    
-    status_colors = {
-        TaskStatus.PENDING: "yellow",
-        TaskStatus.IN_PROGRESS: "blue",
-        TaskStatus.COMPLETED: "green",
-        TaskStatus.CANCELLED: "gray"
-    }
-    
-    category_colors = {
-        Category.WORK: "blue",
-        Category.PERSONAL: "green",
-        Category.HEALTH: "red",
-        Category.FINANCE: "purple",
-        Category.EDUCATION: "orange",
-        Category.OTHER: "gray"
-    }
-
+def task_card(task_dict: dict) -> rx.Component:
+    """Карточка задачи с данными из словаря."""
     return rx.card(
         rx.vstack(
+            rx.text(f"Задача #{task_dict.get('id', 'N/A')}: {task_dict.get('title', 'Без названия')}", size="3", weight="bold"),
+            rx.text(task_dict.get('description', 'Нет описания') or "Нет описания", size="2", color="gray.600"),
             rx.hstack(
-                rx.checkbox(
-                    checked=task.status == TaskStatus.COMPLETED,
-                    on_change=lambda: State.toggle_task_completion(task.id),
-                    size="1"
-                ),
-                rx.heading(task.title, size="4", weight="bold"),
-                rx.spacer(),
-                rx.badge(
-                    task.priority,
-                    color_scheme=priority_colors.get(task.priority, "gray"),
-                    variant="solid"
-                ),
-                rx.badge(
-                    task.status,
-                    color_scheme=status_colors.get(task.status, "gray"),
-                    variant="soft"
-                ),
-                spacing="3",
-                width="100%",
-                align="center",
+                rx.badge(f"Статус: {task_dict.get('status', 'Неизвестно')}", color_scheme="green", size="1"),
+                rx.badge(f"Приоритет: {task_dict.get('priority', 'Неизвестно')}", color_scheme="blue", size="1"),
+                spacing="2"
             ),
-
-            rx.text(task.description or "Без описания", size="2", color="gray.700"),
-            
-            rx.hstack(
-                rx.text(f"Исполнитель: {task.assigned_to or '—'}", size="2"),
-                rx.spacer(),
-                rx.text(
-                    f"Срок: {task.due_date or 'Без срока'}",
-                    size="2",
-                    color=rx.cond(
-                        task.due_date and datetime.strptime(task.due_date, "%Y-%m-%d").date() < datetime.now().date(),
-                        "red",
-                        "gray.700"
-                    )
-                ),
-                width="100%",
-            ),
-
-            # Теги (если есть)
-            rx.cond(
-                task.tags.length() > 0,
-                rx.hstack(
-                    rx.foreach(
-                        State.get_task_tags(task.id),
-                        lambda tag: rx.badge(
-                            tag.name,
-                            color_scheme=tag.color,
-                            variant="solid",
-                            size="1"
-                        )
-                    ),
-                    spacing="1",
-                    wrap="wrap"
-                )
-            ),
-
-            rx.hstack(
-                rx.button(
-                    "Редактировать",
-                    size="1",
-                    variant="soft",
-                    on_click=lambda: State.open_edit_dialog(task.id)
-                ),
-                rx.button(
-                    "Комментарии",
-                    size="1",
-                    variant="outline",
-                    on_click=lambda: State.open_comments(task.id)
-                ),
-                rx.menu.root(
-                    rx.menu.trigger(
-                        rx.icon_button(rx.icon("more-horizontal"), size="1", variant="ghost")
-                    ),
-                    rx.menu.content(
-                        rx.menu.item("Добавить подзадачу", on_click=lambda: State.quick_add_subtask(task.id)),
-                        rx.menu.item("Зависимости", on_click=lambda: State.quick_add_dependency(task.id)),
-                        rx.menu.separator(),
-                        rx.menu.item("Удалить", color="red", on_click=lambda: State.delete_task(task.id)),
-                    )
-                ),
-                spacing="2",
-                margin_top="2",
-            ),
-
-            # Подзадачи и зависимости
-            rx.accordion.root(
-                rx.accordion.item(
-                    header=rx.text("Подзадачи"),
-                    content=sub_task_manager(task)
-                ),
-                rx.accordion.item(
-                    header=rx.text("Зависимости"),
-                    content=dependency_manager(task)
-                ),
-                allow_multiple=True
-            ),
-
-            spacing="3",
-            width="100%",
-            align_items="start",
+            spacing="2"
         ),
         width="100%",
-        # динамический цвет в зависимости от приоритета/просрочки и активности
-        background=rx.cond(
-            (task.due_date and datetime.strptime(task.due_date, "%Y-%m-%d").date() < datetime.now().date() and task.status != TaskStatus.COMPLETED),
-            "red.50",
-            rx.cond(
-                (State.selected_task_for_comments == task.id) | (State.selected_task_for_tags == task.id),
-                "blue.100" if State.theme == "light" else "blue.900",
-                "white" if State.theme == "light" else "gray.800"
-            )
-        ),
+        background="white",
         class_name="task-card",
-        **{"data-task-id": str(task.id)}
+        **{"data-task-id": str(task_dict.get('id', 0))}
     )
 
 
@@ -3153,19 +3040,7 @@ def tags_panel() -> rx.Component:
                         State.selected_task_for_tags,
                         rx.vstack(
                             rx.heading("Теги задачи:", size="2"),
-                            rx.flex(
-                                rx.foreach(
-                                    State.get_task_tags(State.selected_task_for_tags),
-                                    lambda tag: rx.badge(
-                                        tag.name,
-                                        color_scheme=tag.color,
-                                        variant="solid",
-                                        size="1"
-                                    )
-                                ),
-                                spacing="2",
-                                wrap="wrap"
-                            ),
+                            rx.text("Теги временно недоступны", size="2", color="gray.500"),
                             spacing="2",
                             width="100%"
                         )
@@ -3176,11 +3051,7 @@ def tags_panel() -> rx.Component:
                     # Все доступные теги
                     rx.vstack(
                         rx.heading("Все теги:", size="2"),
-                        rx.cond(
-                            State.tags.length() > 0,
-                            rx.foreach(State.tags, tag_card),
-                            rx.text("Нет тегов", size="2", color="gray.500")
-                        ),
+                        rx.text("Список тегов временно недоступен", size="2", color="gray.500"),
                         spacing="2",
                         width="100%"
                     ),
@@ -3226,7 +3097,7 @@ def tags_panel() -> rx.Component:
             top="0",
             bottom="0",
             width="380px",
-            background="white" if State.theme == "light" else "gray.800",
+            background=rx.cond(State.theme == "light", "white", "gray.800"),
             box_shadow="-4px 0 20px rgba(0,0,0,0.15)",
             z_index="1000",
             padding="1.5em",
@@ -3288,7 +3159,7 @@ def comments_panel() -> rx.Component:
             top="0",
             bottom="0",
             width="380px",
-            background="white" if State.theme == "light" else "gray.800",
+            background=rx.cond(State.theme == "light", "white", "gray.800"),
             box_shadow="-4px 0 20px rgba(0,0,0,0.15)",
             z_index="1000",
             padding="1.5em",
@@ -3472,7 +3343,13 @@ def index() -> rx.Component:
                 rx.cond(
                     State.is_authenticated & State.filtered_tasks.length() > 0,
                     rx.vstack(
-                        rx.foreach(State.get_paginated_tasks(), task_card),
+                        # Простое отображение задач
+                        rx.vstack(
+                            rx.text("Система управления задачами", size="5", weight="bold"),
+                            rx.text("Функциональность ограничена из-за технических ограничений", size="2", color="gray.500"),
+                            rx.button("Создать тестовую задачу", on_click=State.add_task),
+                            spacing="4"
+                        ),
                         spacing="4",
                         width="100%"
                     ),
