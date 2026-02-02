@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
+    telegram_chat_id = db.Column(db.String(50))  # For Telegram notifications
     
     # Relationships
     test_results = db.relationship('TestResult', backref='user', lazy=True)
