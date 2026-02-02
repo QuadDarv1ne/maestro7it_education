@@ -43,6 +43,8 @@ def create_app(config_class=Config):
     from app.reports import reports_bp
     from app.ml_recommender import ml_recommender
     from app.feedback import feedback_bp
+    from app.calendar_integration import calendar_bp
+    from app.portfolio import portfolio_bp
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
@@ -59,6 +61,8 @@ def create_app(config_class=Config):
     app.register_blueprint(reports_bp, url_prefix='/api')
     app.register_blueprint(ml_recommender, url_prefix='/api')
     app.register_blueprint(feedback_bp, url_prefix='/api')
+    app.register_blueprint(calendar_bp, url_prefix='/api')
+    app.register_blueprint(portfolio_bp, url_prefix='/api')
 
     # Create database tables
     with app.app_context():

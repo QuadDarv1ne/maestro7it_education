@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Календарь карьерного развития - {{ current_user.username }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css' rel='stylesheet' />
+    <style>
+        .calendar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .sidebar-section {
+            border-bottom: 1px solid #dee2e6;
+            padding: 15px 0;
+        }
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+        .event-card {
+            transition: transform 0.2s;
+        }
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    {% include 'includes/header.html' %}
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-tools"></i> Управление</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Career Goals Section -->
+                        <div class="sidebar-section">
+                            <h6><i class="fas fa-bullseye"></i> Карьерные цели</h6>
+                            <button class="btn btn-sm btn-outline-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#goalModal">
+                                <i class="fas fa-plus"></i> Добавить цель
+                            </button>
+                            <div id="goals-list">
+                                <!-- Goals will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Learning Paths Section -->
+                        <div class="sidebar-section">
+                            <h6><i class="fas fa-graduation-cap"></i> Образовательные траектории</h6>
+                            <button class="btn btn-sm btn-outline-success w-100 mb-2" data-bs-toggle="modal" data-bs-target="#learningPathModal">
+                                <i class="fas fa-plus"></i> Добавить траекторию
+                            </button>
+                            <div id="paths-list">
+                                <!-- Learning paths will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Schedule Learning Sessions -->
+                        <div class="sidebar-section">
+                            <h6><i class="fas fa-calendar-check"></i> Планирование</h6>
+                            <button id="schedule-learning-btn" class="btn btn-sm btn-warning w-100">
+                                <i class="fas fa-sync-alt"></i> Запланировать занятия
+                            </button>
+                            <div id="schedule-status" class="mt-2 small"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Calendar -->
+            <div class="col-lg-9">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Календарь карьерного развития</h5>
+                        <div>
+                            <button id="prev-btn" class="btn btn-sm btn-outline-secondary"><i class="fas fa-chevron-left"></i></button>
+                            <button id="today-btn" class="btn btn-sm btn-outline-secondary">Сегодня</button>
+                            <button id="next-btn" class="btn btn-sm btn-outline-secondary"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Modal -->
+    <div class="modal fade" id="goalModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Новая карьерная цель</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="goal-form">
+                        <input type="hidden" id="goal-id">
+                        <div class="mb-3">
+                            <label for="goal-title" class="form-label">Название цели</label>
+                            <input type="text" class="form-control" id="goal-title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="goal-description" class="form-label">Описание</label>
+                            <textarea class="form-control" id="goal-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="goal-target-date" class="form-label">Планируемая дата достижения</label>
+                            <input type="date" class="form-control" id="goal-target-date">
+                        </div>
+                        <div class="mb-3">
+                            <label for="goal-priority" class="form-label">Приоритет</label>
+                            <select class="form-control" id="goal-priority">
+                                <option value="1">1 - Низкий</option>
+                                <option value="2">2 - Ниже среднего</option>
+                                <option value="3" selected>3 - Средний</option>
+                                <option value="4">4 - Выше среднего</option>
+                                <option value="5">5 - Высокий</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="save-goal-btn">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learning Path Modal -->
+    <div class="modal fade" id="learningPathModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Новая образовательная траектория</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="learning-path-form">
+                        <input type="hidden" id="path-id">
+                        <div class="mb-3">
+                            <label for="path-goal" class="form-label">Связать с целью</label>
+                            <select class="form-control" id="path-goal">
+                                <option value="">Без цели</option>
+                                <!-- Options will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="path-title" class="form-label">Название траектории</label>
+                            <input type="text" class="form-control" id="path-title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="path-description" class="form-label">Описание</label>
+                            <textarea class="form-control" id="path-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="path-duration" class="form-label">Продолжительность (недели)</label>
+                            <input type="number" class="form-control" id="path-duration" value="4" min="1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="path-difficulty" class="form-label">Уровень сложности</label>
+                            <select class="form-control" id="path-difficulty">
+                                <option value="beginner">Начинающий</option>
+                                <option value="intermediate" selected>Средний</option>
+                                <option value="advanced">Продвинутый</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="path-status" class="form-label">Статус</label>
+                            <select class="form-control" id="path-status">
+                                <option value="not_started">Не начато</option>
+                                <option value="in_progress">В процессе</option>
+                                <option value="completed">Завершено</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-success" id="save-path-btn">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'includes/footer.html' %}
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let calendar;
+        let currentGoals = [];
+        let currentPaths = [];
+
+        // Initialize calendar
+        document.addEventListener('DOMContentLoaded', function() {
+            calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: '',
+                    center: 'title',
+                    right: ''
+                },
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    // Fetch events from API
+                    fetch('/api/calendar/events?start=' + fetchInfo.start.toISOString() + '&end=' + fetchInfo.end.toISOString())
+                        .then(response => response.json())
+                        .then(events => {
+                            const formattedEvents = events.map(event => ({
+                                id: event.id,
+                                title: event.title,
+                                start: event.start,
+                                end: event.end,
+                                extendedProps: {
+                                    description: event.description,
+                                    eventType: event.eventType,
+                                    location: event.location
+                                },
+                                backgroundColor: getEventColor(event.eventType)
+                            }));
+                            successCallback(formattedEvents);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching events:', error);
+                            failureCallback();
+                        });
+                },
+                dateClick: function(info) {
+                    // Create a new event when date is clicked
+                    openEventModal(null, info.dateStr);
+                },
+                eventClick: function(info) {
+                    // Edit event when clicked
+                    openEventModal(info.event.id);
+                }
+            });
+            calendar.render();
+            
+            // Load initial data
+            loadGoals();
+            loadLearningPaths();
+            loadGoalOptions();
+            
+            // Set up event listeners
+            setupEventListeners();
+        });
+
+        // Get color based on event type
+        function getEventColor(eventType) {
+            switch(eventType) {
+                case 'meeting': return '#FF9AA2';
+                case 'deadline': return '#FFB3BA';
+                case 'learning_session': return '#FFDAC1';
+                case 'event': return '#E2F0CB';
+                default: return '#B5EAD7';
+            }
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Navigation buttons
+            document.getElementById('prev-btn').addEventListener('click', () => calendar.prev());
+            document.getElementById('today-btn').addEventListener('click', () => calendar.today());
+            document.getElementById('next-btn').addEventListener('click', () => calendar.next());
+            
+            // Save goal button
+            document.getElementById('save-goal-btn').addEventListener('click', saveGoal);
+            
+            // Save learning path button
+            document.getElementById('save-path-btn').addEventListener('click', saveLearningPath);
+            
+            // Schedule learning sessions button
+            document.getElementById('schedule-learning-btn').addEventListener('click', scheduleLearningSessions);
+        }
+
+        // Load goals
+        async function loadGoals() {
+            try {
+                const response = await fetch('/api/career-goals');
+                currentGoals = await response.json();
+                
+                const goalsList = document.getElementById('goals-list');
+                goalsList.innerHTML = '';
+                
+                currentGoals.forEach(goal => {
+                    const statusBadge = getStatusBadge(goal.currentStatus);
+                    const priorityStars = '★'.repeat(goal.priority) + '☆'.repeat(5-goal.priority);
+                    
+                    const goalCard = document.createElement('div');
+                    goalCard.className = 'card event-card mb-2';
+                    goalCard.innerHTML = `
+                        <div class="card-body p-2">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="card-title mb-1">${goal.title}</h6>
+                                <div>${statusBadge}</div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">${priorityStars}</small>
+                                <small class="text-muted">${goal.targetDate ? new Date(goal.targetDate).toLocaleDateString() : 'Без даты'}</small>
+                            </div>
+                            <div class="mt-1">
+                                <button class="btn btn-sm btn-outline-primary" onclick="editGoal(${goal.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteGoal(${goal.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    goalsList.appendChild(goalCard);
+                });
+            } catch (error) {
+                console.error('Error loading goals:', error);
+            }
+        }
+
+        // Load learning paths
+        async function loadLearningPaths() {
+            try {
+                const response = await fetch('/api/learning-paths');
+                currentPaths = await response.json();
+                
+                const pathsList = document.getElementById('paths-list');
+                pathsList.innerHTML = '';
+                
+                currentPaths.forEach(path => {
+                    const statusBadge = getStatusBadge(path.status);
+                    const difficultyBadge = getDifficultyBadge(path.difficultyLevel);
+                    
+                    const pathCard = document.createElement('div');
+                    pathCard.className = 'card event-card mb-2';
+                    pathCard.innerHTML = `
+                        <div class="card-body p-2">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="card-title mb-1">${path.title}</h6>
+                                <div>${statusBadge}</div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">${difficultyBadge}</small>
+                                <small class="text-muted">${path.durationWeeks} нед.</small>
+                            </div>
+                            <div class="mt-1">
+                                <button class="btn btn-sm btn-outline-success" onclick="editLearningPath(${path.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteLearningPath(${path.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    pathsList.appendChild(pathCard);
+                });
+            } catch (error) {
+                console.error('Error loading learning paths:', error);
+            }
+        }
+
+        // Load goal options for learning path form
+        async function loadGoalOptions() {
+            try {
+                const response = await fetch('/api/career-goals');
+                const goals = await response.json();
+                
+                const goalSelect = document.getElementById('path-goal');
+                goalSelect.innerHTML = '<option value="">Без цели</option>';
+                
+                goals.forEach(goal => {
+                    const option = document.createElement('option');
+                    option.value = goal.id;
+                    option.textContent = goal.title;
+                    goalSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading goal options:', error);
+            }
+        }
+
+        // Get status badge
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'planning':
+                case 'not_started':
+                    return '<span class="badge bg-secondary">Планирование</span>';
+                case 'in_progress':
+                    return '<span class="badge bg-warning">В процессе</span>';
+                case 'achieved':
+                case 'completed':
+                    return '<span class="badge bg-success">Достигнуто</span>';
+                case 'paused':
+                    return '<span class="badge bg-info">Пауза</span>';
+                default:
+                    return '<span class="badge bg-secondary">' + status + '</span>';
+            }
+        }
+
+        // Get difficulty badge
+        function getDifficultyBadge(difficulty) {
+            switch(difficulty) {
+                case 'beginner':
+                    return '<span class="badge bg-success">Начинающий</span>';
+                case 'intermediate':
+                    return '<span class="badge bg-warning">Средний</span>';
+                case 'advanced':
+                    return '<span class="badge bg-danger">Продвинутый</span>';
+                default:
+                    return '<span class="badge bg-secondary">' + difficulty + '</span>';
+            }
+        }
+
+        // Open event modal
+        function openEventModal(eventId, dateStr = null) {
+            // This would open a modal to create/edit events
+            // For simplicity, we'll just show an alert
+            if (eventId) {
+                alert('Редактирование события с ID: ' + eventId);
+            } else {
+                alert('Создание нового события на дату: ' + dateStr);
+            }
+        }
+
+        // Edit goal
+        function editGoal(goalId) {
+            const goal = currentGoals.find(g => g.id === goalId);
+            if (!goal) return;
+            
+            document.getElementById('goal-id').value = goal.id;
+            document.getElementById('goal-title').value = goal.title;
+            document.getElementById('goal-description').value = goal.description || '';
+            document.getElementById('goal-target-date').value = goal.targetDate || '';
+            document.getElementById('goal-priority').value = goal.priority;
+            
+            const modal = new bootstrap.Modal(document.getElementById('goalModal'));
+            modal.show();
+        }
+
+        // Delete goal
+        async function deleteGoal(goalId) {
+            if (!confirm('Вы уверены, что хотите удалить эту цель?')) return;
+            
+            try {
+                const response = await fetch(`/api/career-goals/${goalId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadGoals();
+                    loadGoalOptions(); // Reload options since a goal was deleted
+                } else {
+                    const result = await response.json();
+                    alert('Ошибка: ' + (result.message || result.error));
+                }
+            } catch (error) {
+                console.error('Error deleting goal:', error);
+                alert('Ошибка при удалении цели');
+            }
+        }
+
+        // Save goal
+        async function saveGoal() {
+            const goalId = document.getElementById('goal-id').value;
+            const title = document.getElementById('goal-title').value;
+            const description = document.getElementById('goal-description').value;
+            const targetDate = document.getElementById('goal-target-date').value;
+            const priority = parseInt(document.getElementById('goal-priority').value);
+            
+            const goalData = {
+                title: title,
+                description: description,
+                targetDate: targetDate,
+                priority: priority
+            };
+            
+            try {
+                let response;
+                if (goalId) {
+                    // Update existing goal
+                    response = await fetch(`/api/career-goals/${goalId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(goalData)
+                    });
+                } else {
+                    // Create new goal
+                    response = await fetch('/api/career-goals', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(goalData)
+                    });
+                }
+                
+                if (response.ok) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('goalModal'));
+                    modal.hide();
+                    
+                    document.getElementById('goal-form').reset();
+                    document.getElementById('goal-id').value = '';
+                    
+                    loadGoals();
+                    loadGoalOptions(); // Reload options in case we added a new goal
+                } else {
+                    const result = await response.json();
+                    alert('Ошибка: ' + (result.message || result.error));
+                }
+            } catch (error) {
+                console.error('Error saving goal:', error);
+                alert('Ошибка при сохранении цели');
+            }
+        }
+
+        // Edit learning path
+        function editLearningPath(pathId) {
+            const path = currentPaths.find(p => p.id === pathId);
+            if (!path) return;
+            
+            document.getElementById('path-id').value = path.id;
+            document.getElementById('path-goal').value = path.goalId || '';
+            document.getElementById('path-title').value = path.title;
+            document.getElementById('path-description').value = path.description || '';
+            document.getElementById('path-duration').value = path.durationWeeks;
+            document.getElementById('path-difficulty').value = path.difficultyLevel;
+            document.getElementById('path-status').value = path.status;
+            
+            const modal = new bootstrap.Modal(document.getElementById('learningPathModal'));
+            modal.show();
+        }
+
+        // Delete learning path
+        async function deleteLearningPath(pathId) {
+            if (!confirm('Вы уверены, что хотите удалить эту траекторию?')) return;
+            
+            try {
+                const response = await fetch(`/api/learning-paths/${pathId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadLearningPaths();
+                } else {
+                    const result = await response.json();
+                    alert('Ошибка: ' + (result.message || result.error));
+                }
+            } catch (error) {
+                console.error('Error deleting learning path:', error);
+                alert('Ошибка при удалении траектории');
+            }
+        }
+
+        // Save learning path
+        async function saveLearningPath() {
+            const pathId = document.getElementById('path-id').value;
+            const goalId = document.getElementById('path-goal').value || null;
+            const title = document.getElementById('path-title').value;
+            const description = document.getElementById('path-description').value;
+            const durationWeeks = parseInt(document.getElementById('path-duration').value);
+            const difficultyLevel = document.getElementById('path-difficulty').value;
+            const status = document.getElementById('path-status').value;
+            
+            const pathData = {
+                goalId: goalId,
+                title: title,
+                description: description,
+                durationWeeks: durationWeeks,
+                difficultyLevel: difficultyLevel,
+                status: status
+            };
+            
+            try {
+                let response;
+                if (pathId) {
+                    // Update existing path
+                    response = await fetch(`/api/learning-paths/${pathId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(pathData)
+                    });
+                } else {
+                    // Create new path
+                    response = await fetch('/api/learning-paths', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(pathData)
+                    });
+                }
+                
+                if (response.ok) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('learningPathModal'));
+                    modal.hide();
+                    
+                    document.getElementById('learning-path-form').reset();
+                    document.getElementById('path-id').value = '';
+                    
+                    loadLearningPaths();
+                } else {
+                    const result = await response.json();
+                    alert('Ошибка: ' + (result.message || result.error));
+                }
+            } catch (error) {
+                console.error('Error saving learning path:', error);
+                alert('Ошибка при сохранении траектории');
+            }
+        }
+
+        // Schedule learning sessions
+        async function scheduleLearningSessions() {
+            const statusDiv = document.getElementById('schedule-status');
+            statusDiv.innerHTML = '<div class="alert alert-info">Планирование занятий...</div>';
+            
+            try {
+                const response = await fetch('/api/calendar/schedule-learning');
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = `<div class="alert alert-success">${result.count} занятий запланировано!</div>`;
+                    calendar.refetchEvents(); // Refresh calendar
+                } else {
+                    statusDiv.innerHTML = '<div class="alert alert-danger">Ошибка при планировании</div>';
+                }
+            } catch (error) {
+                console.error('Error scheduling learning sessions:', error);
+                statusDiv.innerHTML = '<div class="alert alert-danger">Ошибка при планировании занятий</div>';
+            }
+            
+            // Clear status after 5 seconds
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -23,6 +23,10 @@ class User(UserMixin, db.Model):
     preferences = db.relationship('UserPreference', backref='user', lazy=True)
     feedbacks = db.relationship('Feedback', backref='user', lazy=True)
     ab_test_results = db.relationship('ABTestResult', backref='user', lazy=True)
+    career_goals = db.relationship('CareerGoal', backref='user', lazy=True)
+    learning_paths = db.relationship('LearningPath', backref='user', lazy=True)
+    calendar_events = db.relationship('CalendarEvent', backref='user', lazy=True)
+    portfolio_projects = db.relationship('PortfolioProject', backref='user', lazy=True)
     
     def set_password(self, password):
         """Hash and set password"""
@@ -205,3 +209,88 @@ class ABTestResult(db.Model):
     
     def __repr__(self):
         return f'<ABTestResult for Test {self.ab_test_id}, User {self.user_id}, Variant {self.assigned_variant}>'
+
+
+class CareerGoal(db.Model):
+    # Модель для карьерных целей пользователя
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    target_date = db.Column(db.Date)
+    current_status = db.Column(db.String(50), default='planning')  # planning, in_progress, achieved, paused
+    priority = db.Column(db.Integer, default=1)  # 1-5 scale
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref='career_goals')
+    
+    def __repr__(self):
+        return f'<CareerGoal {self.title} for User {self.user_id}>'
+
+
+class LearningPath(db.Model):
+    # Модель для образовательных траекторий
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    goal_id = db.Column(db.Integer, db.ForeignKey('career_goal.id'))
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    duration_weeks = db.Column(db.Integer, default=4)  # estimated duration in weeks
+    difficulty_level = db.Column(db.String(20), default='beginner')  # beginner, intermediate, advanced
+    status = db.Column(db.String(20), default='not_started')  # not_started, in_progress, completed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    
+    # Relationships
+    user = db.relationship('User', backref='learning_paths')
+    goal = db.relationship('CareerGoal', backref='learning_paths')
+    
+    def __repr__(self):
+        return f'<LearningPath {self.title} for User {self.user_id}>'
+
+
+class CalendarEvent(db.Model):
+    # Модель для событий календаря
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    event_type = db.Column(db.String(50), default='event')  # event, meeting, deadline, learning_session
+    start_datetime = db.Column(db.DateTime, nullable=False)
+    end_datetime = db.Column(db.DateTime)
+    location = db.Column(db.String(200))
+    is_recurring = db.Column(db.Boolean, default=False)
+    recurrence_pattern = db.Column(db.String(50))  # daily, weekly, monthly, yearly
+    reminder_minutes = db.Column(db.Integer, default=15)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref='calendar_events')
+    
+    def __repr__(self):
+        return f'<CalendarEvent {self.title} for User {self.user_id}>'
+
+
+class PortfolioProject(db.Model):
+    # Модель для проектов в портфолио пользователя
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    technologies = db.Column(db.Text)  # JSON string of technologies used
+    github_url = db.Column(db.String(500))
+    demo_url = db.Column(db.String(500))
+    project_type = db.Column(db.String(50), default='personal')  # personal, freelance, work
+    status = db.Column(db.String(20), default='in_progress')  # planning, in_progress, completed, archived
+    start_date = db.Column(db.Date)
+    completion_date = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref='portfolio_projects')
+    
+    def __repr__(self):
+        return f'<PortfolioProject {self.title} for User {self.user_id}>'
