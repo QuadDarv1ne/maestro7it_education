@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Сравнение результатов - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.index') }}">Главная</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.profile') }}">Профиль</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('progress.user_progress') }}">Прогресс</a>
+                    </li>
+                    <li class="breadcrumb-item active">Сравнение</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-exchange-alt"></i> Сравнение результатов
+                </h1>
+                <a href="{{ url_for('progress.user_progress') }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Назад к прогрессу
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-clipboard"></i> Первый результат ({{ comparison_data.result1.date }})
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-success">{{ comparison_data.result1.methodology|title }}</span>
+                    </div>
+                    <h5>Доминирующая сфера:</h5>
+                    <p class="fs-4 text-primary">{{ comparison_data.result1.dominant_category }}</p>
+                    
+                    <h6>Баллы по сферам:</h6>
+                    <div class="list-group">
+                        {% for category, score in comparison_data.result1.scores.items() %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ category }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ score }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-clipboard"></i> Второй результат ({{ comparison_data.result2.date }})
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-info">{{ comparison_data.result2.methodology|title }}</span>
+                    </div>
+                    <h5>Доминирующая сфера:</h5>
+                    <p class="fs-4 text-info">{{ comparison_data.result2.dominant_category }}</p>
+                    
+                    <h6>Баллы по сферам:</h6>
+                    <div class="list-group">
+                        {% for category, score in comparison_data.result2.scores.items() %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ category }}</span>
+                            <span class="badge bg-info rounded-pill">{{ score }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comparison Results -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-balance-scale"></i> Сравнительный анализ
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <h5>Изменения по профессиональным сферам:</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Сфера</th>
+                                    <th>Первый результат</th>
+                                    <th>Второй результат</th>
+                                    <th>Изменение</th>
+                                    <th>Тренд</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category, change_data in comparison_data.changes.items() %}
+                                <tr>
+                                    <td><strong>{{ category }}</strong></td>
+                                    <td>{{ change_data.previous }}</td>
+                                    <td>{{ change_data.current }}</td>
+                                    <td>
+                                        {% if change_data.change > 0 %}
+                                            <span class="text-success">+{{ change_data.change }}</span>
+                                        {% elif change_data.change < 0 %}
+                                            <span class="text-danger">{{ change_data.change }}</span>
+                                        {% else %}
+                                            <span class="text-muted">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if change_data.improvement %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-arrow-up"></i> Рост
+                                            </span>
+                                        {% elif change_data.deterioration %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-arrow-down"></i> Снижение
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-equals"></i> Без изменений
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Summary -->
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-arrow-up fa-2x mb-2"></i>
+                                    <h4>{{ comparison_data.changes|selectattr('improvement', 'equalto', true)|list|length }}</h4>
+                                    <p class="mb-0">Сферы с ростом</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-arrow-down fa-2x mb-2"></i>
+                                    <h4>{{ comparison_data.changes|selectattr('deterioration', 'equalto', true)|list|length }}</h4>
+                                    <p class="mb-0">Сферы со снижением</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-secondary text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-equals fa-2x mb-2"></i>
+                                    <h4>{{ comparison_data.changes|selectattr('improvement', 'equalto', false)|selectattr('deterioration', 'equalto', false)|list|length }}</h4>
+                                    <p class="mb-0">Без изменений</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recommendations -->
+                    {% if comparison_data.changes %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-lightbulb"></i> Рекомендации на основе изменений
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    {% set growing_areas = comparison_data.changes|selectattr('improvement', 'equalto', true)|list %}
+                                    {% set declining_areas = comparison_data.changes|selectattr('deterioration', 'equalto', true)|list %}
+                                    
+                                    {% if growing_areas %}
+                                    <div class="alert alert-success">
+                                        <h6><i class="fas fa-arrow-up"></i> Растущие профессиональные сферы:</h6>
+                                        <ul class="mb-0">
+                                            {% for item in growing_areas %}
+                                            <li>{{ item[0] }} (+{{ item[1].change }})</li>
+                                            {% endfor %}
+                                        </ul>
+                                        <p class="mb-0 mt-2">Рассмотрите развитие навыков в этих областях - они становятся для вас всё более важными.</p>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if declining_areas %}
+                                    <div class="alert alert-warning">
+                                        <h6><i class="fas fa-arrow-down"></i> Снижающиеся профессиональные сферы:</h6>
+                                        <ul class="mb-0">
+                                            {% for item in declining_areas %}
+                                            <li>{{ item[0] }} ({{ item[1].change }})</li>
+                                            {% endfor %}
+                                        </ul>
+                                        <p class="mb-0 mt-2">Возможно, стоит пересмотреть акценты в саморазвитии в этих областях.</p>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if not growing_areas and not declining_areas %}
+                                    <div class="alert alert-info">
+                                        <h6><i class="fas fa-info-circle"></i> Стабильность</h6>
+                                        <p class="mb-0">Ваши профессиональные предпочтения остались стабильными. Это может свидетельствовать о чётко сформировавшихся интересах и склонностях.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

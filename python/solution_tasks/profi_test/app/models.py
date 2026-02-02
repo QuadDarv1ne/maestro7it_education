@@ -107,3 +107,19 @@ class Rating(db.Model):
     
     def __repr__(self):
         return f'<Rating {self.rating_type} by User {self.user_id}>'
+
+
+class UserProgress(db.Model):
+    """Model for tracking user progress over time"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    test_result_id = db.Column(db.Integer, db.ForeignKey('test_result.id'), nullable=False)
+    category_scores = db.Column(db.Text)  # JSON string of category scores
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='progress_records')
+    test_result = db.relationship('TestResult', backref='progress_record')
+    
+    def __repr__(self):
+        return f'<UserProgress User {self.user_id} - Test {self.test_result_id}>'

@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Прогресс - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.index') }}">Главная</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.profile') }}">Профиль</a>
+                    </li>
+                    <li class="breadcrumb-item active">Прогресс</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-chart-line"></i> Ваш прогресс
+                </h1>
+                <div>
+                    <a href="{{ url_for('progress.export_progress') }}" class="btn btn-success me-2">
+                        <i class="fas fa-download"></i> Экспортировать данные
+                    </a>
+                    <a href="{{ url_for('test.methodology') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Пройти новый тест
+                    </a>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> 
+                Здесь вы можете отслеживать изменения в ваших результатах со временем.
+                Каждый пройденный тест добавляет новую точку данных к вашему профессиональному профилю.
+            </div>
+        </div>
+    </div>
+    
+    {% if progress_data %}
+    <!-- Progress Summary -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-tasks"></i> Статистика прогресса
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="border p-3 rounded bg-light">
+                                <h3 class="text-primary">{{ progress_data|length }}</h3>
+                                <p class="mb-0">Пройдено тестов</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border p-3 rounded bg-light">
+                                <h3 class="text-success">{{ progress_data|selectattr('methodology', 'equalto', 'klimov')|list|length }}</h3>
+                                <p class="mb-0">Тестов Климова</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border p-3 rounded bg-light">
+                                <h3 class="text-info">{{ progress_data|selectattr('methodology', 'equalto', 'holland')|list|length }}</h3>
+                                <p class="mb-0">Тестов Холланда</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border p-3 rounded bg-light">
+                                <h3 class="text-warning">{{ progress_data[-1].formatted_date if progress_data else 'Нет данных' }}</h3>
+                                <p class="mb-0">Последний тест</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Progress Chart -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> График прогресса
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="progressChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-history"></i> История тестов
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Методика</th>
+                                    <th>Доминирующая сфера</th>
+                                    <th>Баллы</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in progress_data %}
+                                <tr>
+                                    <td>{{ data.formatted_date }}</td>
+                                    <td>
+                                        {% if data.methodology == 'klimov' %}
+                                            <span class="badge bg-success">Климов</span>
+                                        {% else %}
+                                            <span class="badge bg-info">Холланд</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ data.dominant_category }}</td>
+                                    <td>
+                                        {% for category, score in data.scores.items() %}
+                                            <span class="badge bg-light text-dark me-1">{{ category }}: {{ score }}</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('test.view_results', result_id=data.id) }}" 
+                                           class="btn btn-sm btn-outline-primary me-1">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('recommendations.detailed_recommendations', result_id=data.id) }}" 
+                                           class="btn btn-sm btn-outline-warning me-1">
+                                            <i class="fas fa-robot"></i>
+                                        </a>
+                                        {% if progress_data|length > 1 %}
+                                        <a href="#" onclick="showCompareModal({{ data.id }})" 
+                                           class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Compare Modal -->
+    {% if progress_data|length > 1 %}
+    <div class="modal fade" id="compareModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Сравнить результаты</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="firstResult" class="form-label">Первый результат:</label>
+                        <select class="form-select" id="firstResult">
+                            {% for data in progress_data %}
+                            <option value="{{ data.id }}">{{ data.formatted_date }} - {{ data.dominant_category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="secondResult" class="form-label">Второй результат:</label>
+                        <select class="form-select" id="secondResult">
+                            {% for data in progress_data %}
+                            <option value="{{ data.id }}">{{ data.formatted_date }} - {{ data.dominant_category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-primary" onclick="compareSelectedResults()">Сравнить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                <h3 class="text-muted">Пока нет данных о прогрессе</h3>
+                <p class="text-muted">Пройдите первый тест, чтобы начать отслеживание вашего профессионального профиля</p>
+                <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-clipboard-list"></i> Пройти тестирование
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Prepare data for chart
+const progressData = {{ progress_data | tojson }};
+let chart = null;
+
+if (progressData.length > 0) {
+    // Prepare chart data
+    const labels = progressData.map(data => data.formatted_date);
+    const allCategories = new Set();
+    
+    // Collect all unique categories
+    progressData.forEach(data => {
+        Object.keys(data.scores).forEach(category => {
+            allCategories.add(category);
+        });
+    });
+    
+    // Prepare datasets for each category
+    const datasets = [];
+    let colorIndex = 0;
+    const colors = [
+        'rgb(255, 99, 132)', 'rgb(54, 162, 235)', 'rgb(255, 205, 86)',
+        'rgb(75, 192, 192)', 'rgb(153, 102, 255)', 'rgb(255, 159, 64)',
+        'rgb(199, 199, 199)', 'rgb(83, 102, 255)', 'rgb(255, 99, 255)'
+    ];
+    
+    allCategories.forEach(category => {
+        const data = progressData.map(record => {
+            return record.scores[category] || 0;
+        });
+        
+        datasets.push({
+            label: category,
+            data: data,
+            borderColor: colors[colorIndex % colors.length],
+            backgroundColor: colors[colorIndex % colors.length] + '20', // Add transparency
+            tension: 0.1
+        });
+        
+        colorIndex++;
+    });
+    
+    // Create chart
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Изменение баллов по профессиональным сферам'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function showCompareModal(firstResultId) {
+    // Set the first result in the modal
+    document.getElementById('firstResult').value = firstResultId;
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('compareModal'));
+    modal.show();
+}
+
+function compareSelectedResults() {
+    const firstResultId = document.getElementById('firstResult').value;
+    const secondResultId = document.getElementById('secondResult').value;
+    
+    if (firstResultId === secondResultId) {
+        alert('Выберите два разных результата для сравнения');
+        return;
+    }
+    
+    // Redirect to comparison page
+    window.location.href = `/progress/compare/${firstResultId}/${secondResultId}`;
+}
+</script>
+{% endblock %}

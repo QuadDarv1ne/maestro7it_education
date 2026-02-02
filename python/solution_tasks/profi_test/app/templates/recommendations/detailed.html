@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Персональные рекомендации - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.index') }}">Главная</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.profile') }}">Профиль</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('test.view_results', result_id=result.id) }}">Результаты</a>
+                    </li>
+                    <li class="breadcrumb-item active">Рекомендации</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-robot"></i> Персональные рекомендации ИИ
+                </h1>
+                <a href="{{ url_for('test.view_results', result_id=result.id) }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Назад к результатам
+                </a>
+            </div>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-lightbulb"></i> 
+                Наши рекомендации основаны на анализе ваших результатов с использованием искусственного интеллекта.
+                Мы сравниваем ваши склонности с профильными характеристиками различных профессиональных сфер.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confidence Score -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>Уровень уверенности рекомендаций</h3>
+                    <div class="progress my-3" style="height: 30px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ '%.0f'|format(recommendations.confidence_score * 100) }}%;">
+                            {{ '%.1f'|format(recommendations.confidence_score * 100) }}%
+                        </div>
+                    </div>
+                    <p class="mb-0">Чем выше процент, тем точнее рекомендации соответствуют вашему профилю</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Matches -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-trophy"></i> Лучшие совпадения
+            </h2>
+            <div class="row">
+                {% for match in recommendations.top_matches %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 border-top border-primary border-3">
+                        <div class="card-body">
+                            <h4 class="card-title text-primary">{{ match.sphere }}</h4>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-success fs-6">Схожесть: {{ match.similarity }}%</span>
+                            </div>
+                            
+                            <h6 class="text-muted">Профессии:</h6>
+                            <ul class="list-unstyled">
+                                {% for career in match.careers %}
+                                <li><i class="fas fa-briefcase text-info me-2"></i>{{ career }}</li>
+                                {% endfor %}
+                            </ul>
+                            
+                            <h6 class="text-muted">Ключевые навыки:</h6>
+                            <ul class="list-unstyled">
+                                {% for skill in match.skills %}
+                                <li><i class="fas fa-tools text-warning me-2"></i>{{ skill }}</li>
+                                {% endfor %}
+                            </ul>
+                            
+                            <h6 class="text-muted">Характеристики:</h6>
+                            <ul class="list-unstyled">
+                                {% for trait in match.traits %}
+                                <li><i class="fas fa-star text-success me-2"></i>{{ trait }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Career Suggestions -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-briefcase"></i> Предлагаемые профессии
+            </h2>
+            <div class="row">
+                {% for suggestion in recommendations.career_suggestions %}
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title">{{ suggestion.profession }}</h5>
+                                    <p class="card-text text-muted">{{ suggestion.reason }}</p>
+                                </div>
+                                <span class="badge bg-info fs-6">{{ suggestion.match_percentage }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Skill Development -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-graduation-cap"></i> Развитие навыков
+            </h2>
+            <div class="row">
+                {% for skill_dev in recommendations.skill_development %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-tools text-warning me-2"></i>{{ skill_dev.skill }}
+                            </h5>
+                            <p class="card-text">
+                                <span class="badge bg-primary">Сфера: {{ skill_dev.sphere }}</span>
+                                <br>
+                                <span class="text-success">Релевантность: {{ skill_dev.relevance }}%</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Learning Paths -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-road"></i> Пути обучения
+            </h2>
+            <div class="list-group">
+                {% for path in recommendations.learning_paths %}
+                <div class="list-group-item">
+                    <i class="fas fa-map-signs text-primary me-2"></i>{{ path }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Similar Users -->
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-users"></i> Пользователи с похожими результатами
+            </h2>
+            <div id="similarUsersList">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Поиск пользователей с похожими результатами...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load similar users
+    fetch(`/similar_users/{{ result.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('similarUsersList');
+            
+            if (data.length > 0) {
+                let html = '<div class="row">';
+                
+                data.forEach(user => {
+                    html += `
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="card-title">${user.username}</h6>
+                                            ${user.is_admin ? '<span class="badge bg-danger">Админ</span>' : ''}
+                                        </div>
+                                        <span class="badge bg-info">${user.similarity}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-user-friends fa-2x text-muted"></i>
+                        <p class="text-muted">Пока не найдено пользователей с похожими результатами</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading similar users:', error);
+            document.getElementById('similarUsersList').innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Не удалось загрузить список похожих пользователей
+                </div>
+            `;
+        });
+});
+</script>
+{% endblock %}

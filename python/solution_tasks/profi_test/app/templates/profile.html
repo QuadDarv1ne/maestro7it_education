@@ -20,6 +20,33 @@
                     <p class="text-muted">
                         <small>Зарегистрирован: {{ current_user.created_at.strftime('%d.%m.%Y') }}</small>
                     </p>
+                    {% if current_user.is_admin %}
+                        <span class="badge bg-danger">Админ</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-bolt"></i> Быстрые действия</h4>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('test.methodology') }}" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-clipboard-list"></i> Пройти тест
+                    </a>
+                    <a href="{{ url_for('progress.user_progress') }}" class="btn btn-success w-100 mb-2">
+                        <i class="fas fa-chart-line"></i> Прогресс
+                    </a>
+                    <a href="{{ url_for('notifications.user_notifications') }}" class="btn btn-info w-100 mb-2">
+                        <i class="fas fa-bell"></i> Уведомления
+                        {% if notification_count > 0 %}
+                            <span class="badge bg-light text-dark">{{ notification_count }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-warning w-100">
+                        <i class="fas fa-info-circle"></i> О системе
+                    </a>
                 </div>
             </div>
         </div>
@@ -51,8 +78,12 @@
                                     </div>
                                     <div>
                                         <a href="{{ url_for('test.view_results', result_id=result.id) }}" 
-                                           class="btn btn-primary btn-sm">
+                                           class="btn btn-primary btn-sm me-1">
                                             <i class="fas fa-eye"></i> Подробнее
+                                        </a>
+                                        <a href="{{ url_for('recommendations.detailed_recommendations', result_id=result.id) }}" 
+                                           class="btn btn-warning btn-sm">
+                                            <i class="fas fa-robot"></i>
                                         </a>
                                     </div>
                                 </div>

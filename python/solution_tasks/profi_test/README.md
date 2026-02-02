@@ -90,7 +90,7 @@ http://localhost:5000
 
 ### 📁 Структура проекта
 
-```textline
+``textline
 profi_test/
 ├── app/
 │   ├── __init__.py          # Инициализация приложения

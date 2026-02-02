@@ -31,6 +31,8 @@ def create_app():
     from app.analytics import analytics
     from app.comments import comments
     from app.ratings import ratings
+    from app.recommendations import recommendations_bp
+    from app.progress import progress_bp
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
@@ -40,6 +42,8 @@ def create_app():
     app.register_blueprint(analytics)
     app.register_blueprint(comments)
     app.register_blueprint(ratings)
+    app.register_blueprint(recommendations_bp)
+    app.register_blueprint(progress_bp)
     
     # Create database tables
     with app.app_context():
