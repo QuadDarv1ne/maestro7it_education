@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Комментарии к результатам - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.index') }}">Главная</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.profile') }}">Профиль</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('test.view_results', result_id=test_result.id) }}">Результаты</a>
+                    </li>
+                    <li class="breadcrumb-item active">Комментарии</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-comments"></i> Комментарии
+                    {% if test_result.methodology == 'klimov' %}
+                        <span class="badge bg-success">Климов</span>
+                    {% else %}
+                        <span class="badge bg-info">Холланд</span>
+                    {% endif %}
+                </h1>
+                <a href="{{ url_for('test.view_results', result_id=test_result.id) }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Назад к результатам
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Comment Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plus-circle"></i> Добавить комментарий
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="commentForm">
+                        <div class="mb-3">
+                            <label for="commentContent" class="form-label">Ваш комментарий</label>
+                            <textarea class="form-control" id="commentContent" rows="3" 
+                                      placeholder="Поделитесь своими мыслями о результатах..." required></textarea>
+                            <div class="form-text">Минимум 3 символа</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Отправить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comments List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-list"></i> Все комментарии 
+                        <span class="badge bg-light text-dark">{{ comments|length }}</span>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if comments %}
+                        <div id="commentsContainer">
+                            {% for comment in comments %}
+                            <div class="comment-item border-bottom pb-3 mb-3" data-comment-id="{{ comment.id }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-user-circle text-primary me-2"></i>
+                                            <strong>{{ comment.user.username }}</strong>
+                                            {% if comment.user.is_admin %}
+                                                <span class="badge bg-danger ms-2">Админ</span>
+                                            {% endif %}
+                                            <small class="text-muted ms-2">
+                                                {{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                                {% if comment.updated_at != comment.created_at %}
+                                                    <span class="text-info">(изменено)</span>
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="comment-content">
+                                            <p class="mb-2">{{ comment.content }}</p>
+                                        </div>
+                                        
+                                        <!-- Edit form (hidden by default) -->
+                                        <div class="edit-form d-none">
+                                            <div class="mb-2">
+                                                <textarea class="form-control edit-textarea" rows="3">{{ comment.content }}</textarea>
+                                            </div>
+                                            <button class="btn btn-sm btn-success save-edit">
+                                                <i class="fas fa-save"></i> Сохранить
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary cancel-edit">
+                                                <i class="fas fa-times"></i> Отмена
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if comment.user_id == current_user.id or current_user.is_admin %}
+                                    <div class="comment-actions">
+                                        {% if comment.user_id == current_user.id %}
+                                        <button class="btn btn-sm btn-outline-primary edit-comment">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger delete-comment">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Пока нет комментариев</h4>
+                            <p class="text-muted">Будьте первым, кто оставит комментарий!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add comment
+    document.getElementById('commentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const content = document.getElementById('commentContent').value.trim();
+        
+        if (content.length < 3) {
+            alert('Комментарий должен содержать минимум 3 символа');
+            return;
+        }
+        
+        fetch(`/test/{{ test_result.id }}/comment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `content=${encodeURIComponent(content)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Clear form
+                document.getElementById('commentContent').value = '';
+                
+                // Add comment to list
+                addCommentToDOM(data.comment);
+                
+                // Show success message
+                alert('Комментарий добавлен успешно!');
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при добавлении комментария');
+        });
+    });
+    
+    // Edit comment
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-comment')) {
+            const commentItem = e.target.closest('.comment-item');
+            const contentDiv = commentItem.querySelector('.comment-content');
+            const editForm = commentItem.querySelector('.edit-form');
+            
+            contentDiv.classList.add('d-none');
+            editForm.classList.remove('d-none');
+        }
+        
+        if (e.target.closest('.cancel-edit')) {
+            const commentItem = e.target.closest('.comment-item');
+            const contentDiv = commentItem.querySelector('.comment-content');
+            const editForm = commentItem.querySelector('.edit-form');
+            
+            contentDiv.classList.remove('d-none');
+            editForm.classList.add('d-none');
+        }
+        
+        if (e.target.closest('.save-edit')) {
+            const commentItem = e.target.closest('.comment-item');
+            const commentId = commentItem.dataset.commentId;
+            const textarea = commentItem.querySelector('.edit-textarea');
+            const content = textarea.value.trim();
+            
+            if (content.length < 3) {
+                alert('Комментарий должен содержать минимум 3 символа');
+                return;
+            }
+            
+            fetch(`/comment/${commentId}/edit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `content=${encodeURIComponent(content)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update content
+                    const contentP = commentItem.querySelector('.comment-content p');
+                    contentP.textContent = data.comment.content;
+                    
+                    // Hide edit form
+                    const contentDiv = commentItem.querySelector('.comment-content');
+                    const editForm = commentItem.querySelector('.edit-form');
+                    contentDiv.classList.remove('d-none');
+                    editForm.classList.add('d-none');
+                    
+                    // Show updated timestamp
+                    const timestampSpan = commentItem.querySelector('.text-muted');
+                    timestampSpan.innerHTML = timestampSpan.innerHTML + ' <span class="text-info">(изменено)</span>';
+                    
+                    alert('Комментарий обновлен!');
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Произошла ошибка при обновлении комментария');
+            });
+        }
+        
+        if (e.target.closest('.delete-comment')) {
+            const commentItem = e.target.closest('.comment-item');
+            const commentId = commentItem.dataset.commentId;
+            
+            if (confirm('Вы уверены, что хотите удалить этот комментарий?')) {
+                fetch(`/comment/${commentId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        commentItem.remove();
+                        alert('Комментарий удален');
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении комментария');
+                });
+            }
+        }
+    });
+    
+    // Function to add comment to DOM
+    function addCommentToDOM(comment) {
+        const container = document.getElementById('commentsContainer');
+        const commentHtml = `
+            <div class="comment-item border-bottom pb-3 mb-3" data-comment-id="${comment.id}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-user-circle text-primary me-2"></i>
+                            <strong>{{ current_user.username }}</strong>
+                            <small class="text-muted ms-2">${comment.created_at}</small>
+                        </div>
+                        <div class="comment-content">
+                            <p class="mb-2">${comment.content}</p>
+                        </div>
+                        <div class="edit-form d-none">
+                            <div class="mb-2">
+                                <textarea class="form-control edit-textarea" rows="3">${comment.content}</textarea>
+                            </div>
+                            <button class="btn btn-sm btn-success save-edit">
+                                <i class="fas fa-save"></i> Сохранить
+                            </button>
+                            <button class="btn btn-sm btn-secondary cancel-edit">
+                                <i class="fas fa-times"></i> Отмена
+                            </button>
+                        </div>
+                    </div>
+                    <div class="comment-actions">
+                        <button class="btn btn-sm btn-outline-primary edit-comment">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-comment">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('afterbegin', commentHtml);
+    }
+});
+</script>
+{% endblock %}

@@ -67,3 +67,19 @@ class Notification(db.Model):
     
     def __repr__(self):
         return f'<Notification {self.id} for User {self.user_id}>'
+
+class Comment(db.Model):
+    """Model for test result comments"""
+    id = db.Column(db.Integer, primary_key=True)
+    test_result_id = db.Column(db.Integer, db.ForeignKey('test_result.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    test_result = db.relationship('TestResult', backref='comments')
+    user = db.relationship('User', backref='comments')
+    
+    def __repr__(self):
+        return f'<Comment {self.id} on Test {self.test_result_id}>'
