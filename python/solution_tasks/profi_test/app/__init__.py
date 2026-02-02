@@ -3,6 +3,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from flask_caching import Cache
 from config import Config
 
 db = SQLAlchemy()
@@ -11,25 +12,33 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Пожалуйста, войдите для доступа к этой странице.'
 
+# Initialize cache
+cache = Cache()
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
-
+    
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-
+    cache.init_app(app)  # Initialize cache
+    
     # Import models after db initialization to avoid circular imports
     from app.models import User
-
+    
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
-
+    
     # Initialize logging system
     from app.logging_system import setup_logging
     setup_logging(app)
+    
+    # Initialize performance monitoring
+    from app.performance import performance_monitor
+    app.performance_monitor = performance_monitor
     
     # Initialize API documentation
     from app.api_docs import init_api_docs
@@ -54,6 +63,7 @@ def create_app(config_class=Config):
     from app.calendar_integration import calendar_bp
     from app.portfolio import portfolio_bp
     from app.telegram_bot import telegram_bot
+    from app.monitoring import monitoring
     # api_docs_bp is registered in init_api_docs function
     
     app.register_blueprint(main)
@@ -73,6 +83,7 @@ def create_app(config_class=Config):
     app.register_blueprint(feedback_bp, url_prefix='/api')
     app.register_blueprint(calendar_bp, url_prefix='/api')
     app.register_blueprint(portfolio_bp, url_prefix='/api')
+    app.register_blueprint(monitoring, url_prefix='/api/monitoring')
     # api_docs_bp is registered in init_api_docs function
 
     # Create database tables

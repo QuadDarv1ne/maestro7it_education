@@ -4,7 +4,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from app import db
 
-
 class User(UserMixin, db.Model):
     """User model for authentication"""
     id = db.Column(db.Integer, primary_key=True)
@@ -15,19 +14,19 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     telegram_chat_id = db.Column(db.String(50))  # For Telegram notifications
     
-    # Relationships
-    test_results = db.relationship('TestResult', backref='user', lazy=True)
-    notifications = db.relationship('Notification', backref='user', lazy=True)
-    comments = db.relationship('Comment', backref='comment_user', lazy=True)
-    ratings = db.relationship('Rating', backref='rating_user', lazy=True)
-    progress_records = db.relationship('UserProgress', backref='progress_user', lazy=True)
-    preferences = db.relationship('UserPreference', backref='preference_user', lazy=True)
-    feedbacks = db.relationship('Feedback', backref='feedback_user', lazy=True)
-    ab_test_results = db.relationship('ABTestResult', backref='ab_test_user', lazy=True)
-    career_goals = db.relationship('CareerGoal', backref='career_goal_user', lazy=True)
-    learning_paths = db.relationship('LearningPath', backref='learning_path_user', lazy=True)
-    calendar_events = db.relationship('CalendarEvent', backref='calendar_event_user', lazy=True)
-    portfolio_projects = db.relationship('PortfolioProject', backref='portfolio_project_user', lazy=True)
+    # Relationships with proper back_populates to avoid conflicts
+    test_results = db.relationship('TestResult', back_populates='user', lazy='select')
+    notifications = db.relationship('Notification', back_populates='user', lazy='select')
+    comments = db.relationship('Comment', back_populates='user', lazy='select')
+    ratings = db.relationship('Rating', back_populates='user', lazy='select')
+    progress_records = db.relationship('UserProgress', back_populates='user', lazy='select')
+    preferences = db.relationship('UserPreference', back_populates='user', lazy='select')
+    feedbacks = db.relationship('Feedback', back_populates='user', lazy='select')
+    ab_test_results = db.relationship('ABTestResult', back_populates='user', lazy='select')
+    career_goals = db.relationship('CareerGoal', back_populates='user', lazy='select')
+    learning_paths = db.relationship('LearningPath', back_populates='user', lazy='select')
+    calendar_events = db.relationship('CalendarEvent', back_populates='user', lazy='select')
+    portfolio_projects = db.relationship('PortfolioProject', back_populates='user', lazy='select')
     
     def set_password(self, password):
         """Hash and set password"""
@@ -51,6 +50,12 @@ class TestResult(db.Model):
     recommendation = db.Column(db.Text)  # Personalized recommendation
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
+    
+    # Relationships
+    user = db.relationship('User', back_populates='test_results')
+    comments = db.relationship('Comment', back_populates='test_result', lazy='select')
+    ratings = db.relationship('Rating', back_populates='test_result', lazy='select')
+    progress_record = db.relationship('UserProgress', back_populates='test_result', uselist=False)
     
     def __repr__(self):
         return f'<TestResult {self.id} for User {self.user_id}>'
@@ -80,6 +85,9 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     read_at = db.Column(db.DateTime)
     
+    # Relationship
+    user = db.relationship('User', back_populates='notifications')
+    
     def __repr__(self):
         return f'<Notification {self.id} for User {self.user_id}>'
 
@@ -94,8 +102,9 @@ class Comment(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    test_result = db.relationship('TestResult', backref='comments')
-    user = db.relationship('User', backref='user_comments')
+    test_result = db.relationship('TestResult', back_populates='comments')
+    user = db.relationship('User', back_populates='comments')
+    ratings = db.relationship('Rating', back_populates='comment', lazy='select')
     
     def __repr__(self):
         return f'<Comment {self.id} on Test {self.test_result_id}>'
@@ -117,9 +126,9 @@ class Rating(db.Model):
     )
     
     # Relationships
-    user = db.relationship('User', backref='user_ratings')
-    test_result = db.relationship('TestResult', backref='ratings')
-    comment = db.relationship('Comment', backref='ratings')
+    user = db.relationship('User', back_populates='ratings')
+    test_result = db.relationship('TestResult', back_populates='ratings')
+    comment = db.relationship('Comment', back_populates='ratings')
     
     def __repr__(self):
         return f'<Rating {self.rating_type} by User {self.user_id}>'
@@ -134,8 +143,8 @@ class UserProgress(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    user = db.relationship('User', backref='user_progress_records')
-    test_result = db.relationship('TestResult', backref='progress_record')
+    user = db.relationship('User', back_populates='progress_records')
+    test_result = db.relationship('TestResult', back_populates='progress_record')
     
     def __repr__(self):
         return f'<UserProgress User {self.user_id} - Test {self.test_result_id}>'
@@ -152,14 +161,14 @@ class UserPreference(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationship
-    user = db.relationship('User', backref='user_preferences')
+    user = db.relationship('User', back_populates='preferences')
     
     def __repr__(self):
         return f'<UserPreference for User {self.user_id}>'
 
 
 class Feedback(db.Model):
-    # Модель для хранения отзывов пользователей
+    """Model for storing user feedback"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     feedback_type = db.Column(db.String(50), nullable=False)  # suggestion, bug_report, feature_request, general_feedback
@@ -172,14 +181,14 @@ class Feedback(db.Model):
     resolution_notes = db.Column(db.Text)
     
     # Relationship
-    user = db.relationship('User', backref='user_feedbacks')
+    user = db.relationship('User', back_populates='feedbacks')
     
     def __repr__(self):
         return f'<Feedback {self.feedback_type} by User {self.user_id}>'
 
 
 class ABTest(db.Model):
-    # Модель для A/B тестирования экспериментов
+    """Model for A/B testing experiments"""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)  # e.g., "ml_recommendation_algorithm_v2"
     description = db.Column(db.Text)
@@ -191,12 +200,15 @@ class ABTest(db.Model):
     started_at = db.Column(db.DateTime)
     ended_at = db.Column(db.DateTime)
     
+    # Relationship
+    results = db.relationship('ABTestResult', back_populates='ab_test', lazy='select')
+    
     def __repr__(self):
         return f'<ABTest {self.name}>'
 
 
 class ABTestResult(db.Model):
-    # Модель для результатов A/B тестирования
+    """Model for A/B testing results"""
     id = db.Column(db.Integer, primary_key=True)
     ab_test_id = db.Column(db.Integer, db.ForeignKey('ab_test.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -205,15 +217,15 @@ class ABTestResult(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    ab_test = db.relationship('ABTest', backref='results')
-    user = db.relationship('User', backref='user_ab_test_results')
+    ab_test = db.relationship('ABTest', back_populates='results')
+    user = db.relationship('User', back_populates='ab_test_results')
     
     def __repr__(self):
         return f'<ABTestResult for Test {self.ab_test_id}, User {self.user_id}, Variant {self.assigned_variant}>'
 
 
 class CareerGoal(db.Model):
-    # Модель для карьерных целей пользователя
+    """Model for user career goals"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
@@ -225,14 +237,15 @@ class CareerGoal(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationship
-    user = db.relationship('User', backref='user_career_goals')
+    user = db.relationship('User', back_populates='career_goals')
+    learning_paths = db.relationship('LearningPath', back_populates='goal', lazy='select')
     
     def __repr__(self):
         return f'<CareerGoal {self.title} for User {self.user_id}>'
 
 
 class LearningPath(db.Model):
-    # Модель для образовательных траекторий
+    """Model for educational learning paths"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     goal_id = db.Column(db.Integer, db.ForeignKey('career_goal.id'))
@@ -245,15 +258,15 @@ class LearningPath(db.Model):
     completed_at = db.Column(db.DateTime)
     
     # Relationships
-    user = db.relationship('User', backref='user_learning_paths')
-    goal = db.relationship('CareerGoal', backref='learning_paths')
+    user = db.relationship('User', back_populates='learning_paths')
+    goal = db.relationship('CareerGoal', back_populates='learning_paths')
     
     def __repr__(self):
         return f'<LearningPath {self.title} for User {self.user_id}>'
 
 
 class CalendarEvent(db.Model):
-    # Модель для событий календаря
+    """Model for calendar events"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
@@ -268,14 +281,14 @@ class CalendarEvent(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationship
-    user = db.relationship('User', backref='user_calendar_events')
+    user = db.relationship('User', back_populates='calendar_events')
     
     def __repr__(self):
         return f'<CalendarEvent {self.title} for User {self.user_id}>'
 
 
 class PortfolioProject(db.Model):
-    # Модель для проектов в портфолио пользователя
+    """Model for user portfolio projects"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
@@ -291,7 +304,7 @@ class PortfolioProject(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationship
-    user = db.relationship('User', backref='user_portfolio_projects')
+    user = db.relationship('User', back_populates='portfolio_projects')
     
     def __repr__(self):
         return f'<PortfolioProject {self.title} for User {self.user_id}>'
