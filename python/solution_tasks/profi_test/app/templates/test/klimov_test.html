@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Тест Климова - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">
+                        <i class="fas fa-brain"></i> Тест по методике Климова
+                    </h2>
+                    <p class="mb-0">Дифференциально-диагностический опросник (20 вопросов)</p>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-4">
+                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="text-center mb-4">
+                        <span id="questionCounter">Вопрос 1 из {{ questions|length }}</span>
+                    </div>
+                    
+                    <form id="testForm">
+                        <div id="questionsContainer">
+                            {% for question in questions %}
+                            <div class="question-block mb-4" data-question-id="{{ question.id }}" 
+                                 style="{% if not loop.first %}display: none;{% endif %}">
+                                <h4 class="mb-3">Вопрос {{ question.id }}</h4>
+                                <p class="lead">{{ question.text }}</p>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           id="q{{ question.id }}_1" value="1" required>
+                                    <label class="form-check-label" for="q{{ question.id }}_1">
+                                        Совершенно не соответствует
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           id="q{{ question.id }}_2" value="2">
+                                    <label class="form-check-label" for="q{{ question.id }}_2">
+                                        Скорее не соответствует
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           id="q{{ question.id }}_3" value="3">
+                                    <label class="form-check-label" for="q{{ question.id }}_3">
+                                        Затрудняюсь ответить
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           id="q{{ question.id }}_4" value="4">
+                                    <label class="form-check-label" for="q{{ question.id }}_4">
+                                        Скорее соответствует
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           id="q{{ question.id }}_5" value="5">
+                                    <label class="form-check-label" for="q{{ question.id }}_5">
+                                        Совершенно соответствует
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" id="prevBtn" class="btn btn-outline-secondary" disabled>
+                                <i class="fas fa-arrow-left"></i> Назад
+                            </button>
+                            <button type="button" id="nextBtn" class="btn btn-primary">
+                                Далее <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <button type="button" id="submitBtn" class="btn btn-success" style="display: none;">
+                                <i class="fas fa-check"></i> Завершить тест
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentQuestion = 0;
+    const totalQuestions = {{ questions|length }};
+    const questions = {{ questions|tojson }};
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const questionBlocks = document.querySelectorAll('.question-block');
+        const progressBar = document.getElementById('progressBar');
+        const questionCounter = document.getElementById('questionCounter');
+        
+        // Navigation functions
+        function showQuestion(index) {
+            questionBlocks.forEach((block, i) => {
+                block.style.display = i === index ? 'block' : 'none';
+            });
+            
+            // Update progress
+            const progress = ((index + 1) / totalQuestions) * 100;
+            progressBar.style.width = progress + '%';
+            questionCounter.textContent = `Вопрос ${index + 1} из ${totalQuestions}`;
+            
+            // Update button states
+            prevBtn.disabled = index === 0;
+            nextBtn.style.display = index === totalQuestions - 1 ? 'none' : 'inline-block';
+            submitBtn.style.display = index === totalQuestions - 1 ? 'inline-block' : 'none';
+            
+            currentQuestion = index;
+        }
+        
+        // Next button
+        nextBtn.addEventListener('click', function() {
+            if (currentQuestion < totalQuestions - 1) {
+                // Check if current question is answered
+                const currentBlock = questionBlocks[currentQuestion];
+                const selected = currentBlock.querySelector('input[type="radio"]:checked');
+                
+                if (!selected) {
+                    alert('Пожалуйста, ответьте на текущий вопрос');
+                    return;
+                }
+                
+                showQuestion(currentQuestion + 1);
+            }
+        });
+        
+        // Previous button
+        prevBtn.addEventListener('click', function() {
+            if (currentQuestion > 0) {
+                showQuestion(currentQuestion - 1);
+            }
+        });
+        
+        // Submit button
+        submitBtn.addEventListener('click', function() {
+            // Check if all questions are answered
+            let allAnswered = true;
+            questionBlocks.forEach(block => {
+                const selected = block.querySelector('input[type="radio"]:checked');
+                if (!selected) {
+                    allAnswered = false;
+                }
+            });
+            
+            if (!allAnswered) {
+                alert('Пожалуйста, ответьте на все вопросы');
+                return;
+            }
+            
+            // Collect answers
+            const answers = {};
+            questionBlocks.forEach(block => {
+                const questionId = block.dataset.questionId;
+                const selected = block.querySelector('input[type="radio"]:checked');
+                if (selected) {
+                    answers[questionId] = selected.value;
+                }
+            });
+            
+            // Submit to server
+            submitTest(answers);
+        });
+        
+        // Submit test function
+        function submitTest(answers) {
+            fetch('/submit_test/klimov', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(answers)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/results/' + data.result_id;
+                } else {
+                    alert('Ошибка при сохранении результатов: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Произошла ошибка при отправке результатов');
+            });
+        }
+        
+        // Initialize
+        showQuestion(0);
+    });
+</script>
+{% endblock %}

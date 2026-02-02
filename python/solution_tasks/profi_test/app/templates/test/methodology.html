@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Выбор методики - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body p-5">
+                    <h1 class="text-center mb-4">
+                        <i class="fas fa-list-check text-primary"></i> Выбор методики тестирования
+                    </h1>
+                    <p class="text-center text-muted lead">
+                        Выберите подходящую методику для определения ваших профессиональных склонностей
+                    </p>
+                    
+                    <div class="row mt-5">
+                        <!-- Klimov Methodology -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body">
+                                    <h3 class="card-title text-primary">
+                                        <i class="fas fa-user-md"></i> Методика Климова
+                                    </h3>
+                                    <p class="card-text">
+                                        Дифференциально-диагностический опросник для выявления склонности 
+                                        к одной из пяти типовых сфер труда.
+                                    </p>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success"></i> 20 вопросов</li>
+                                        <li><i class="fas fa-check text-success"></i> Научно обоснована</li>
+                                        <li><i class="fas fa-check text-success"></i> Быстрые результаты</li>
+                                        <li><i class="fas fa-check text-success"></i> Подходит для подростков</li>
+                                    </ul>
+                                    <div class="mt-3">
+                                        <span class="badge bg-primary me-2">Человек-природа</span>
+                                        <span class="badge bg-primary me-2">Человек-техника</span>
+                                        <span class="badge bg-primary me-2">Человек-человек</span>
+                                        <span class="badge bg-primary me-2">Человек-знаковая система</span>
+                                        <span class="badge bg-primary">Человек-художественный образ</span>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0">
+                                    <a href="{{ url_for('test.take_test', method='klimov') }}" 
+                                       class="btn btn-primary w-100">
+                                        <i class="fas fa-play-circle"></i> Начать тестирование
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Holland Methodology -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100 border-secondary">
+                                <div class="card-body">
+                                    <h3 class="card-title text-secondary">
+                                        <i class="fas fa-users"></i> Методика Холланда
+                                    </h3>
+                                    <p class="card-text">
+                                        Опросник профессиональных предпочтений, соотносящий тип личности 
+                                        с профессиональной средой.
+                                    </p>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-clock text-warning"></i> 60 вопросов</li>
+                                        <li><i class="fas fa-flask text-warning"></i> Глубокая диагностика</li>
+                                        <li><i class="fas fa-hourglass-half text-warning"></i> В разработке</li>
+                                        <li><i class="fas fa-user-graduate text-warning"></i> Для старшеклассников</li>
+                                    </ul>
+                                    <div class="mt-3">
+                                        <span class="badge bg-secondary me-2">Реалистический</span>
+                                        <span class="badge bg-secondary me-2">Исследовательский</span>
+                                        <span class="badge bg-secondary me-2">Артистический</span>
+                                        <span class="badge bg-secondary me-2">Социальный</span>
+                                        <span class="badge bg-secondary me-2">Предпринимательский</span>
+                                        <span class="badge bg-secondary">Конвенциональный</span>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0">
+                                    <button class="btn btn-secondary w-100" disabled>
+                                        <i class="fas fa-tools"></i> В разработке
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h5><i class="fas fa-info-circle"></i> Рекомендация</h5>
+                                <p class="mb-0">
+                                    Для школьников рекомендуется начать с методики Климова - она 
+                                    содержит меньше вопросов и дает четкое понимание профессиональных 
+                                    склонностей. После получения результатов можно пройти более 
+                                    детальную диагностику.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

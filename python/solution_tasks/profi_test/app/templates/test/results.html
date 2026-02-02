@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты теста - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h2 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> Результаты тестирования
+                    </h2>
+                    <p class="mb-0">Методика Климова - {{ result.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                </div>
+                <div class="card-body">
+                    <!-- Main Result -->
+                    <div class="row mb-5">
+                        <div class="col-12">
+                            <div class="text-center p-4 bg-light rounded">
+                                <h3 class="text-primary">Ваша профессиональная стихия:</h3>
+                                <h1 class="display-4 fw-bold text-success">{{ results.dominant_category }}</h1>
+                                <p class="lead">Наиболее выраженная профессиональная склонность</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scores Chart -->
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <h4 class="mb-4"><i class="fas fa-chart-pie"></i> Распределение баллов</h4>
+                            <div class="list-group">
+                                {% for category, score in results.scores.items() %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <i class="fas fa-circle me-2" 
+                                           style="color: {% if category == results.dominant_category %}#28a745{% else %}#6c757d{% endif %}"></i>
+                                        {{ category }}
+                                    </span>
+                                    <span class="badge bg-{% if category == results.dominant_category %}success{% else %}secondary{% endif %} rounded-pill">
+                                        {{ score }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h4 class="mb-4"><i class="fas fa-info-circle"></i> Интерпретация результатов</h4>
+                            <div class="bg-white border rounded p-3">
+                                {{ result.recommendation|safe }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Results -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h4 class="mb-3"><i class="fas fa-list"></i> Подробные результаты</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Категория</th>
+                                            <th>Баллы</th>
+                                            <th>Процент</th>
+                                            <th>Интерпретация</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for category, score in results.scores.items() %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ category }}</strong>
+                                            </td>
+                                            <td>{{ score }}</td>
+                                            <td>
+                                                {% set percentage = (score / (results.total_questions * 3)) * 100 %}
+                                                {{ "%.1f"|format(percentage) }}%
+                                            </td>
+                                            <td>
+                                                {% if category == results.dominant_category %}
+                                                    <span class="text-success"><i class="fas fa-check-circle"></i> Высокая склонность</span>
+                                                {% elif score >= (results.total_questions * 3 * 0.6) %}
+                                                    <span class="text-primary">Средняя склонность</span>
+                                                {% else %}
+                                                    <span class="text-muted">Низкая склонность</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="row mt-5">
+                        <div class="col-12 text-center">
+                            <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg me-3">
+                                <i class="fas fa-redo"></i> Пройти другой тест
+                            </a>
+                            <a href="{{ url_for('main.profile') }}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-history"></i> История тестов
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <div class="card bg-white p-5">
+                <h1 class="display-4 fw-bold text-primary">
+                    <i class="fas fa-graduation-cap"></i> МойПрофСтарт
+                </h1>
+                <p class="lead text-muted">
+                    Профессиональная ориентация школьников через научно обоснованные методики тестирования
+                </p>
+                <div class="mt-4">
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-play-circle"></i> Пройти тест
+                    </a>
+                    <a href="{{ url_for('main.profile') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-user"></i> Мой профиль
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-user-plus"></i> Начать тестирование
+                    </a>
+                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-info-circle"></i> Узнать больше
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="row mt-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center p-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3 class="h5 fw-bold">Научные методики</h3>
+                <p class="text-muted">
+                    Используем проверенные психологические методики для точного определения профессиональных склонностей
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center p-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3 class="h5 fw-bold">Персональные рекомендации</h3>
+                <p class="text-muted">
+                    Получите индивидуальные рекомендации по выбору профессии и образовательной траектории
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center p-4">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="h5 fw-bold">Конфиденциальность</h3>
+                <p class="text-muted">
+                    Все данные надежно защищены и используются исключительно для профессиональной ориентации
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Methodologies Preview -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card bg-white">
+                <div class="card-body">
+                    <h2 class="text-center mb-4">Используемые методики</h2>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="border-start border-4 border-primary ps-3 mb-4">
+                                <h4 class="text-primary">Методика Климова</h4>
+                                <p>
+                                    Дифференциально-диагностический опросник для выявления склонности 
+                                    к одной из пяти типовых сфер труда: человек-природа, человек-техника, 
+                                    человек-человек, человек-знаковая система, человек-художественный образ.
+                                </p>
+                                <span class="badge bg-primary">20 вопросов</span>
+                                <span class="badge bg-success ms-2">Готово к использованию</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border-start border-4 border-secondary ps-3">
+                                <h4>Методика Холланда</h4>
+                                <p>
+                                    Опросник профессиональных предпочтений, соотносящий тип личности 
+                                    с профессиональной средой: реалистический, исследовательский, 
+                                    артистический, социальный, предпринимательский, конвенциональный.
+                                </p>
+                                <span class="badge bg-secondary">В разработке</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <div class="card bg-dark text-light p-5">
+                <h2 class="mb-3">Готовы определить свою профессиональную стихию?</h2>
+                <p class="lead mb-4">
+                    Пройдите профессиональное тестирование и получите персональные рекомендации
+                </p>
+                {% if not current_user.is_authenticated %}
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-rocket"></i> Начать прямо сейчас
+                </a>
+                {% else %}
+                <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-play-circle"></i> Пройти тест
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

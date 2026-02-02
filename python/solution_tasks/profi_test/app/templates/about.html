@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}О проекте - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body p-5">
+                    <h1 class="text-center mb-4">
+                        <i class="fas fa-info-circle text-primary"></i> О проекте
+                    </h1>
+                    
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <h3><i class="fas fa-bullseye text-success"></i> Цель проекта</h3>
+                            <p>
+                                Помочь школьникам определить свои профессиональные склонности 
+                                и выбрать подходящую образовательную траекторию через 
+                                научно обоснованные методики тестирования.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h3><i class="fas fa-flask text-info"></i> Научная основа</h3>
+                            <p>
+                                Проект основан на проверенных психологических методиках, 
+                                разработанных отечественными и зарубежными учеными 
+                                в области профессиональной ориентации.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-5">
+                        <div class="col-12">
+                            <h3 class="mb-4"><i class="fas fa-tools text-warning"></i> Используемые технологии</h3>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fab fa-python fa-3x text-primary mb-2"></i>
+                                        <h5>Python Flask</h5>
+                                        <p class="text-muted small">Веб-фреймворк</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-database fa-3x text-success mb-2"></i>
+                                        <h5>SQLite</h5>
+                                        <p class="text-muted small">База данных</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fab fa-bootstrap fa-3x text-info mb-2"></i>
+                                        <h5>Bootstrap 5</h5>
+                                        <p class="text-muted small">Фронтенд фреймворк</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h3 class="mb-4"><i class="fas fa-user-graduate text-primary"></i> Для кого этот проект</h3>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    <strong>Школьники 9-11 классов</strong> - для выбора профиля обучения
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    <strong>Родители</strong> - для понимания склонностей ребенка
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    <strong>Педагоги</strong> - для профессионального консультирования
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    <strong>Психологи</strong> - как инструмент диагностики
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-5">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg me-3">
+                            <i class="fas fa-home"></i> На главную
+                        </a>
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('test.methodology') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-play-circle"></i> Пройти тест
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-user-plus"></i> Начать тестирование
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

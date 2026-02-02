@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- User Info -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user"></i> Профиль пользователя</h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-circle fa-5x text-primary"></i>
+                    </div>
+                    <h3>{{ current_user.username }}</h3>
+                    <p class="text-muted">{{ current_user.email }}</p>
+                    <p class="text-muted">
+                        <small>Зарегистрирован: {{ current_user.created_at.strftime('%d.%m.%Y') }}</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test History -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-history"></i> История тестов</h4>
+                </div>
+                <div class="card-body">
+                    {% if test_results %}
+                        <div class="list-group">
+                            {% for result in test_results %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h5 class="mb-1">
+                                            {% if result.methodology == 'klimov' %}
+                                                <i class="fas fa-brain text-primary"></i> Методика Климова
+                                            {% else %}
+                                                <i class="fas fa-users text-secondary"></i> Методика Холланда
+                                            {% endif %}
+                                        </h5>
+                                        <p class="mb-1">{{ result.recommendation|truncate(100)|safe }}</p>
+                                        <small class="text-muted">
+                                            {{ result.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <a href="{{ url_for('test.view_results', result_id=result.id) }}" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye"></i> Подробнее
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Нет пройденных тестов</h4>
+                            <p class="text-muted">Вы еще не проходили профессиональные тесты</p>
+                            <a href="{{ url_for('test.methodology') }}" class="btn btn-primary">
+                                <i class="fas fa-play-circle"></i> Пройти первый тест
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

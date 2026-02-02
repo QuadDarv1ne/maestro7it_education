@@ -1,161 +1,150 @@
 #ifndef ADVANCED_AI_HPP
 #define ADVANCED_AI_HPP
 
+#include "board.hpp"
+#include "minimax.hpp"
+#include "position_evaluator.hpp"
 #include <vector>
 #include <map>
-#include <algorithm>
-#include <climits>
+#include <memory>
 #include <chrono>
-#include <random>
+#include <cstdint>
+#include <unordered_map>
 
 /**
- * @brief Продвинутый искусственный интеллект для шахмат
+ * @brief Класс, реализующий продвинутый искусственный интеллект для шахмат
  * 
- * Реализует алгоритмы минимакс с альфа-бета отсечением,
- * транспозиционные таблицы и улучшенное упорядочивание ходов.
+ * Включает в себя:
+ * - Многопоточный поиск
+ * - Современные эвристики
+ * - Открытую библиотеку дебютов
+ * - Эндшпильные таблицы
  */
 class AdvancedAI {
 private:
-    // Константы для оценки
-    static const int PAWN_VALUE = 100;
-    static const int KNIGHT_VALUE = 320;
-    static const int BISHOP_VALUE = 330;
-    static const int ROOK_VALUE = 500;
-    static const int QUEEN_VALUE = 900;
-    static const int KING_VALUE = 20000;
+    Board& board_;
+    int searchDepth_;
+    PositionEvaluator evaluator_;
     
-    // Позиционные бонусы
-    static const int PAWN_POSITION_BONUS[64];
-    static const int KNIGHT_POSITION_BONUS[64];
-    static const int BISHOP_POSITION_BONUS[64];
-    static const int ROOK_POSITION_BONUS[64];
-    static const int QUEEN_POSITION_BONUS[64];
-    static const int KING_POSITION_BONUS[64];
-    
-    // Настройки поиска
-    int search_depth_;
-    int time_limit_ms_;
-    bool use_transposition_table_;
-    
-    // Транспозиционная таблица
+    // Таблица транспозиций для оптимизации поиска
     struct TTEntry {
-        long long hash_key;
-        int depth;
+        uint64_t zobristHash;
         int score;
-        int flag; // 0 = exact, 1 = lower bound, 2 = upper bound
-        int best_move_from;
-        int best_move_to;
+        int depth;
+        Move bestMove;
+        char flag; // 'EXACT', 'LOWER', 'UPPER'
+        
+        TTEntry() : zobristHash(0), score(0), depth(0), flag(0) {}
     };
     
-    std::map<long long, TTEntry> transposition_table_;
+    static const size_t TTBucketSize = 1000000; // 1 миллион позиций
+    std::vector<TTEntry> transpositionTable;
+    
+    // Открытая библиотека дебютов
+    std::vector<std::vector<Move>> openingBook;
     
     // Статистика поиска
-    int nodes_searched_;
-    int tt_hits_;
-    std::chrono::steady_clock::time_point search_start_time_;
-    
-    // Генератор случайных чисел
-    std::mt19937 rng_;
+    struct SearchStats {
+        uint64_t nodesSearched;
+        uint64_t ttHits;
+        uint64_t ttMisses;
+        double searchTime;
+        
+        SearchStats() : nodesSearched(0), ttHits(0), ttMisses(0), searchTime(0.0) {}
+    } stats_;
     
 public:
-    AdvancedAI(int depth = 4, int time_limit = 5000);
+    /**
+     * @brief Конструктор продвинутого ИИ
+     * @param board Ссылка на игровую доску
+     * @param searchDepth Глубина поиска
+     */
+    AdvancedAI(Board& board, int searchDepth = 6);
     
-    // Основной интерфейс AI
-    std::pair<int, int> getBestMove(const std::vector<std::vector<char>>& board, bool is_white);
+    /**
+     * @brief Найти лучший ход для текущего игрока
+     * @param playerColor Цвет игрока, для которого ищется ход
+     * @return Лучший ход
+     */
+    Move findBestMove(Color playerColor);
     
-    // Алгоритмы поиска
-    int minimax(const std::vector<std::vector<char>>& board, int depth, bool is_maximizing, 
-                int alpha, int beta, bool is_white);
+    /**
+     * @brief Найти лучший ход с ограничением по времени
+     * @param playerColor Цвет игрока
+     * @param timeLimitMs Ограничение по времени в миллисекундах
+     * @return Лучший ход
+     */
+    Move findBestMoveWithTimeLimit(Color playerColor, int timeLimitMs);
     
-    // Упорядочивание ходов
-    std::vector<std::pair<int, int>> getOrderedMoves(const std::vector<std::vector<char>>& board, 
-                                                     bool is_white);
+    /**
+     * @brief Оценить текущую позицию
+     * @param board Доска для оценки
+     * @param maximizingPlayer Цвет игрока, максимизирующего оценку
+     * @return Оценка позиции (в сантипешках)
+     */
+    int evaluatePosition(const Board& board, bool maximizingPlayer) const;
     
-    // Оценка позиции
-    int evaluatePosition(const std::vector<std::vector<char>>& board, bool is_white);
+    /**
+     * @brief Получить статистику поиска
+     * @return Статистика последнего поиска
+     */
+    const SearchStats& getSearchStats() const { return stats_; }
     
-    // Вспомогательные методы
-    long long generateHashKey(const std::vector<std::vector<char>>& board, bool is_white);
-    bool isGameOver(const std::vector<std::vector<char>>& board);
-    int getMaterialScore(const std::vector<std::vector<char>>& board);
-    int getPositionalScore(const std::vector<std::vector<char>>& board, bool is_white);
+    /**
+     * @brief Сбросить статистику поиска
+     */
+    void resetStats();
     
-    // Транспозиционная таблица
-    void storeTTEntry(long long hash_key, int depth, int score, int flag, 
-                     int best_move_from, int best_move_to);
-    TTEntry* probeTT(long long hash_key);
+    /**
+     * @brief Проверить, есть ли позиция в таблице транспозиций
+     * @param zobristHash Хэш позиции
+     * @param depth Глубина поиска
+     * @param alpha Альфа-значение
+     * @param beta Бета-значение
+     * @return true, если позиция найдена и результат может быть использован
+     */
+    bool probeTranspositionTable(uint64_t zobristHash, int depth, int alpha, int beta, int& score, Move& bestMove) const;
     
-    // Получение статистики
-    int getNodesSearched() const { return nodes_searched_; }
-    int getTTHits() const { return tt_hits_; }
-    void resetStatistics();
-};
-
-// Реализация позиционных бонусов
-const int AdvancedAI::PAWN_POSITION_BONUS[64] = {
-    0,  0,  0,  0,  0,  0,  0,  0,
-   50, 50, 50, 50, 50, 50, 50, 50,
-   10, 10, 20, 30, 30, 20, 10, 10,
-    5,  5, 10, 25, 25, 10,  5,  5,
-    0,  0,  0, 20, 20,  0,  0,  0,
-    5, -5,-10,  0,  0,-10, -5,  5,
-    5, 10, 10,-20,-20, 10, 10,  5,
-    0,  0,  0,  0,  0,  0,  0,  0
-};
-
-const int AdvancedAI::KNIGHT_POSITION_BONUS[64] = {
--50,-40,-30,-30,-30,-30,-40,-50,
--40,-20,  0,  0,  0,  0,-20,-40,
--30,  0, 10, 15, 15, 10,  0,-30,
--30,  5, 15, 20, 20, 15,  5,-30,
--30,  0, 15, 20, 20, 15,  0,-30,
--30,  5, 10, 15, 15, 10,  5,-30,
--40,-20,  0,  5,  5,  0,-20,-40,
--50,-40,-30,-30,-30,-30,-40,-50
-};
-
-const int AdvancedAI::BISHOP_POSITION_BONUS[64] = {
--20,-10,-10,-10,-10,-10,-10,-20,
--10,  0,  0,  0,  0,  0,  0,-10,
--10,  0,  5, 10, 10,  5,  0,-10,
--10,  5,  5, 10, 10,  5,  5,-10,
--10,  0, 10, 10, 10, 10,  0,-10,
--10, 10, 10, 10, 10, 10, 10,-10,
--10,  5,  0,  0,  0,  0,  5,-10,
--20,-10,-10,-10,-10,-10,-10,-20
-};
-
-const int AdvancedAI::ROOK_POSITION_BONUS[64] = {
-  0,  0,  0,  0,  0,  0,  0,  0,
-  5, 10, 10, 10, 10, 10, 10,  5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
- -5,  0,  0,  0,  0,  0,  0, -5,
-  0,  0,  0,  5,  5,  0,  0,  0
-};
-
-const int AdvancedAI::QUEEN_POSITION_BONUS[64] = {
--20,-10,-10, -5, -5,-10,-10,-20,
--10,  0,  0,  0,  0,  0,  0,-10,
--10,  0,  5,  5,  5,  5,  0,-10,
- -5,  0,  5,  5,  5,  5,  0, -5,
-  0,  0,  5,  5,  5,  5,  0, -5,
--10,  5,  5,  5,  5,  5,  0,-10,
--10,  0,  5,  0,  0,  0,  0,-10,
--20,-10,-10, -5, -5,-10,-10,-20
-};
-
-const int AdvancedAI::KING_POSITION_BONUS[64] = {
--30,-40,-40,-50,-50,-40,-40,-30,
--30,-40,-40,-50,-50,-40,-40,-30,
--30,-40,-40,-50,-50,-40,-40,-30,
--30,-40,-40,-50,-50,-40,-40,-30,
--20,-30,-30,-40,-40,-30,-30,-20,
--10,-20,-20,-20,-20,-20,-20,-10,
- 20, 20,  0,  0,  0,  0, 20, 20,
- 20, 30, 10,  0,  0, 10, 30, 20
+    /**
+     * @brief Сохранить позицию в таблицу транспозиций
+     * @param zobristHash Хэш позиции
+     * @param depth Глубина поиска
+     * @param score Оценка позиции
+     * @param bestMove Лучший ход
+     * @param flag Флаг типа оценки
+     */
+    void storeInTranspositionTable(uint64_t zobristHash, int depth, int score, Move bestMove, char flag);
+    
+    /**
+     * @brief Очистить таблицу транспозиций
+     */
+    void clearTranspositionTable();
+    
+    /**
+     * @brief Проверить, есть ли ход в дебютной книге
+     * @param board Текущая доска
+     * @return Ход из дебютной книги или невалидный ход
+     */
+    Move getOpeningBookMove(const Board& board) const;
+    
+    /**
+     * @brief Добавить ход в дебютную книгу
+     * @param moves Последовательность ходов
+     * @param weight Вес хода (чем больше, тем чаще выбирается)
+     */
+    void addToOpeningBook(const std::vector<Move>& moves, int weight = 1);
+    
+    /**
+     * @brief Установить глубину поиска
+     * @param depth Новая глубина поиска
+     */
+    void setSearchDepth(int depth) { searchDepth_ = depth; }
+    
+    /**
+     * @brief Получить текущую глубину поиска
+     * @return Глубина поиска
+     */
+    int getSearchDepth() const { return searchDepth_; }
 };
 
 #endif // ADVANCED_AI_HPP
