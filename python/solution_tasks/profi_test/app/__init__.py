@@ -54,7 +54,7 @@ def create_app(config_class=Config):
     from app.calendar_integration import calendar_bp
     from app.portfolio import portfolio_bp
     from app.telegram_bot import telegram_bot
-    from app.api_docs import api_docs_bp
+    # api_docs_bp is registered in init_api_docs function
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
@@ -73,7 +73,7 @@ def create_app(config_class=Config):
     app.register_blueprint(feedback_bp, url_prefix='/api')
     app.register_blueprint(calendar_bp, url_prefix='/api')
     app.register_blueprint(portfolio_bp, url_prefix='/api')
-    app.register_blueprint(api_docs_bp)
+    # api_docs_bp is registered in init_api_docs function
 
     # Create database tables
     with app.app_context():

@@ -8,28 +8,6 @@ import os
 
 portfolio_bp = Blueprint('portfolio', __name__)
 
-class PortfolioProject(db.Model):
-    # Модель для проектов в портфолио пользователя
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    technologies = db.Column(db.Text)  # JSON string of technologies used
-    github_url = db.Column(db.String(500))
-    demo_url = db.Column(db.String(500))
-    project_type = db.Column(db.String(50), default='personal')  # personal, freelance, work
-    status = db.Column(db.String(20), default='in_progress')  # planning, in_progress, completed, archived
-    start_date = db.Column(db.Date)
-    completion_date = db.Column(db.Date)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationship
-    user = db.relationship('User', backref='portfolio_projects')
-    
-    def __repr__(self):
-        return f'<PortfolioProject {self.title} for User {self.user_id}>'
-
 
 @portfolio_bp.route('/portfolio')
 @login_required
