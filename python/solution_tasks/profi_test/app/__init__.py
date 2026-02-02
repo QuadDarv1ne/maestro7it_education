@@ -33,6 +33,8 @@ def create_app():
     from app.ratings import ratings
     from app.recommendations import recommendations_bp
     from app.progress import progress_bp
+    from app.mobile_api import mobile_api
+    from app.market_api import market_api
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
@@ -44,6 +46,8 @@ def create_app():
     app.register_blueprint(ratings)
     app.register_blueprint(recommendations_bp)
     app.register_blueprint(progress_bp)
+    app.register_blueprint(mobile_api, url_prefix='/api')
+    app.register_blueprint(market_api, url_prefix='/api')
     
     # Create database tables
     with app.app_context():
