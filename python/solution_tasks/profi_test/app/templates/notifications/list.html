@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-bell"></i> Уведомления
+                </h1>
+                {% if notifications.items %}
+                <button id="markAllRead" class="btn btn-outline-primary">
+                    <i class="fas fa-check-double"></i> Отметить все как прочитанные
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    {% if notifications.items %}
+        <div class="row">
+            <div class="col-12">
+                <div class="list-group">
+                    {% for notification in notifications.items %}
+                    <div class="list-group-item {% if not notification.is_read %}bg-light{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    {% if notification.type == 'info' %}
+                                        <i class="fas fa-info-circle text-info me-2"></i>
+                                    {% elif notification.type == 'success' %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                    {% elif notification.type == 'warning' %}
+                                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                    {% elif notification.type == 'error' %}
+                                        <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                                    {% endif %}
+                                    
+                                    <h5 class="mb-0 {% if not notification.is_read %}fw-bold{% endif %}">
+                                        {{ notification.title }}
+                                    </h5>
+                                    
+                                    {% if not notification.is_read %}
+                                        <span class="badge bg-primary ms-2">Новое</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <p class="mb-2">{{ notification.message|safe }}</p>
+                                
+                                <small class="text-muted">
+                                    {{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                    {% if notification.read_at %}
+                                        | Прочитано: {{ notification.read_at.strftime('%d.%m.%Y %H:%M') }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            
+                            <div class="ms-3">
+                                <button class="btn btn-sm btn-outline-danger delete-notification" 
+                                        data-id="{{ notification.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if notifications.pages > 1 %}
+                <nav aria-label="Навигация по страницам" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if notifications.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('notifications.user_notifications', page=notifications.prev_num) }}">
+                                    <i class="fas fa-chevron-left"></i> Назад
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in notifications.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num != notifications.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('notifications.user_notifications', page=page_num) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">…</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if notifications.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('notifications.user_notifications', page=notifications.next_num) }}">
+                                    Вперед <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h3 class="text-muted">Нет уведомлений</h3>
+                    <p class="text-muted">Здесь будут отображаться ваши уведомления</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark all as read
+    document.getElementById('markAllRead')?.addEventListener('click', function() {
+        fetch('/notifications/mark_all_read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка');
+        });
+    });
+    
+    // Delete notification
+    document.querySelectorAll('.delete-notification').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.dataset.id;
+            
+            if (confirm('Вы уверены, что хотите удалить это уведомление?')) {
+                fetch(`/notifications/${notificationId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка');
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

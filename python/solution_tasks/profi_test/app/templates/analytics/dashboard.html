@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-chart-line"></i> Аналитика системы
+                </h1>
+                <div>
+                    <select id="timeRange" class="form-select d-inline-block w-auto">
+                        <option value="7" {% if stats.time_range == 7 %}selected{% endif %}>7 дней</option>
+                        <option value="30" {% if stats.time_range == 30 %}selected{% endif %}>30 дней</option>
+                        <option value="90" {% if stats.time_range == 90 %}selected{% endif %}>90 дней</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h3>{{ stats.total_users }}</h3>
+                    <p class="mb-0">Всего пользователей</p>
+                    <small>+{{ stats.new_users }} новых за период</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-alt fa-2x mb-2"></i>
+                    <h3>{{ stats.total_tests }}</h3>
+                    <p class="mb-0">Всего тестов</p>
+                    <small>+{{ stats.recent_tests }} за период</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-brain fa-2x mb-2"></i>
+                    <h3>{{ stats.klimov_tests }}</h3>
+                    <p class="mb-0">Тесты Климова</p>
+                    <small>{{ "%.1f"|format((stats.klimov_tests/stats.total_tests*100) if stats.total_tests > 0 else 0) }}%</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h3>{{ stats.holland_tests }}</h3>
+                    <p class="mb-0">Тесты Холланда</p>
+                    <small>{{ "%.1f"|format((stats.holland_tests/stats.total_tests*100) if stats.total_tests > 0 else 0) }}%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> Динамика тестирования
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="dailyTestsChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-pie-chart"></i> Распределение методик
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="methodologyChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Users -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-users"></i> Активные пользователи
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if stats.active_users %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Пользователь</th>
+                                        <th>Количество тестов</th>
+                                        <th>Тип</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user_data in stats.active_users %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ user_data.username }}</strong>
+                                            {% if user_data.is_admin %}
+                                                <span class="badge bg-danger">Админ</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ user_data.test_count }}</td>
+                                        <td>
+                                            {% if user_data.is_admin %}
+                                                <span class="text-danger">Администратор</span>
+                                            {% else %}
+                                                <span class="text-primary">Пользователь</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('analytics.user_analytics', user_id=user_data.username) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-chart-line"></i> Аналитика
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Нет активных пользователей</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Time range selector
+    document.getElementById('timeRange').addEventListener('change', function() {
+        const days = this.value;
+        window.location.href = `/analytics?days=${days}`;
+    });
+    
+    // Load chart data
+    const timeRange = {{ stats.time_range }};
+    
+    fetch(`/analytics/api/chart_data?days=${timeRange}`)
+        .then(response => response.json())
+        .then(data => {
+            // Daily tests chart
+            const ctx1 = document.getElementById('dailyTestsChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: data.daily_tests.map(item => item.date),
+                    datasets: [{
+                        label: 'Количество тестов',
+                        data: data.daily_tests.map(item => item.count),
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Methodology chart
+            const ctx2 = document.getElementById('methodologyChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'pie',
+                data: {
+                    labels: data.methodology_stats.map(item => item.methodology === 'klimov' ? 'Климов' : 'Холланд'),
+                    datasets: [{
+                        data: data.methodology_stats.map(item => item.count),
+                        backgroundColor: [
+                            'rgb(255, 99, 132)',
+                            'rgb(54, 162, 235)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        })
+        .catch(error => console.error('Error loading chart data:', error));
+});
+</script>
+{% endblock %}

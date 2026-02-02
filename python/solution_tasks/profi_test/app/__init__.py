@@ -27,11 +27,15 @@ def create_app():
     from app.auth import auth
     from app.test_routes import test
     from app.admin import admin
+    from app.notifications import notifications
+    from app.analytics import analytics
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(test)
     app.register_blueprint(admin)
+    app.register_blueprint(notifications)
+    app.register_blueprint(analytics)
     
     # Create database tables
     with app.app_context():

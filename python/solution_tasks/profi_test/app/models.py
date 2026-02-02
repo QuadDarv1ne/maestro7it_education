@@ -15,6 +15,7 @@ class User(UserMixin, db.Model):
     
     # Relationships
     test_results = db.relationship('TestResult', backref='user', lazy=True)
+    notifications = db.relationship('Notification', backref='user', lazy=True)
     
     def set_password(self, password):
         """Hash and set password"""
@@ -52,3 +53,17 @@ class TestQuestion(db.Model):
     
     def __repr__(self):
         return f'<TestQuestion {self.methodology}-{self.question_number}>'
+
+class Notification(db.Model):
+    """Model for user notifications"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), default='info')  # info, success, warning, error
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    read_at = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<Notification {self.id} for User {self.user_id}>'
