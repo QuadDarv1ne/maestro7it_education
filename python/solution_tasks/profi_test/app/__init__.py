@@ -36,9 +36,33 @@ def create_app(config_class=Config):
     from app.logging_system import setup_logging
     setup_logging(app)
     
+    # Initialize enhanced structured logging
+    from app.structured_logging import structured_logger, register_logging_commands
+    structured_logger.init_app(app)
+    app.structured_logger = structured_logger
+    register_logging_commands(app)
+    
     # Initialize performance monitoring
     from app.performance import performance_monitor
     app.performance_monitor = performance_monitor
+    
+    # Initialize database optimization
+    from app.database_optimization import initialize_database_optimization
+    initialize_database_optimization(app)
+    
+    # Initialize database connection pooling
+    from app.database_pooling import db_connection_manager, register_database_commands
+    db_connection_manager.init_app(app)
+    register_database_commands(app)
+    
+    # Initialize advanced performance monitoring
+    from app.performance_monitoring import db_performance_monitor, register_monitoring_commands
+    db_performance_monitor.init_app(app)
+    register_monitoring_commands(app)
+    
+    # Initialize enhanced security features
+    from app.security_enhanced import security_manager
+    security_manager.init_app(app)
     
     # Initialize API documentation
     from app.api_docs import init_api_docs
@@ -64,6 +88,7 @@ def create_app(config_class=Config):
     from app.portfolio import portfolio_bp
     from app.telegram_bot import telegram_bot
     from app.monitoring import monitoring
+    from app.tasks import task_api
     # api_docs_bp is registered in init_api_docs function
     
     app.register_blueprint(main)
@@ -84,6 +109,7 @@ def create_app(config_class=Config):
     app.register_blueprint(calendar_bp, url_prefix='/api')
     app.register_blueprint(portfolio_bp, url_prefix='/api')
     app.register_blueprint(monitoring, url_prefix='/api/monitoring')
+    app.register_blueprint(task_api, url_prefix='/api')
     # api_docs_bp is registered in init_api_docs function
 
     # Create database tables
