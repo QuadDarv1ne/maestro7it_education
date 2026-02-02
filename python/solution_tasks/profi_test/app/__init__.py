@@ -27,6 +27,14 @@ def create_app(config_class=Config):
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # Initialize logging system
+    from app.logging_system import setup_logging
+    setup_logging(app)
+    
+    # Initialize API documentation
+    from app.api_docs import init_api_docs
+    init_api_docs(app)
+    
     # Register blueprints
     from app.routes import main
     from app.auth import auth
@@ -45,6 +53,8 @@ def create_app(config_class=Config):
     from app.feedback import feedback_bp
     from app.calendar_integration import calendar_bp
     from app.portfolio import portfolio_bp
+    from app.telegram_bot import telegram_bot
+    from app.api_docs import api_docs_bp
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
@@ -63,6 +73,7 @@ def create_app(config_class=Config):
     app.register_blueprint(feedback_bp, url_prefix='/api')
     app.register_blueprint(calendar_bp, url_prefix='/api')
     app.register_blueprint(portfolio_bp, url_prefix='/api')
+    app.register_blueprint(api_docs_bp)
 
     # Create database tables
     with app.app_context():
