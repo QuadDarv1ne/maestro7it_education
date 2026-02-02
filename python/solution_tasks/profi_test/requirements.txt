@@ -3,3 +3,4 @@ Flask-WTF==1.1.1
 Flask-SQLAlchemy==3.0.5
 Flask-Login==0.6.3
 WTForms==3.0.1
+reportlab==4.0.4

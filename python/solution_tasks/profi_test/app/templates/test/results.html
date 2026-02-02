@@ -7,11 +7,17 @@
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="card">
-                <div class="card-header bg-success text-white">
+                <div class="card-header {% if result.methodology == 'klimov' %}bg-success{% else %}bg-info{% endif %} text-white">
                     <h2 class="mb-0">
                         <i class="fas fa-chart-bar"></i> Результаты тестирования
                     </h2>
-                    <p class="mb-0">Методика Климова - {{ result.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                    <p class="mb-0">
+                        {% if result.methodology == 'klimov' %}
+                            Методика Климова - {{ result.created_at.strftime('%d.%m.%Y %H:%M') }}
+                        {% else %}
+                            Методика Холланда - {{ result.created_at.strftime('%d.%m.%Y %H:%M') }}
+                        {% endif %}
+                    </p>
                 </div>
                 <div class="card-body">
                     <!-- Main Result -->
@@ -19,8 +25,19 @@
                         <div class="col-12">
                             <div class="text-center p-4 bg-light rounded">
                                 <h3 class="text-primary">Ваша профессиональная стихия:</h3>
-                                <h1 class="display-4 fw-bold text-success">{{ results.dominant_category }}</h1>
-                                <p class="lead">Наиболее выраженная профессиональная склонность</p>
+                                {% if result.methodology == 'klimov' %}
+                                    <h1 class="display-4 fw-bold text-success">{{ results.dominant_category }}</h1>
+                                    <p class="lead">Наиболее выраженная профессиональная склонность</p>
+                                {% else %}
+                                    <div class="mt-3">
+                                        {% for category, score in results.top_categories %}
+                                            <h3 class="text-info">{{ category }}</h3>
+                                            {% set percentage = (score / (results.total_questions * 3)) * 100 %}
+                                            <p class="lead">{{ "%.1f"|format(percentage) }}% совпадение</p>
+                                        {% endfor %}
+                                    </div>
+                                    <p class="lead">Ваши три основных профессиональных типа</p>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -28,16 +45,23 @@
                     <!-- Scores Chart -->
                     <div class="row mb-5">
                         <div class="col-md-6">
-                            <h4 class="mb-4"><i class="fas fa-chart-pie"></i> Распределение баллов</h4>
+                            <h4 class="mb-4">
+                                <i class="fas fa-chart-pie"></i> 
+                                {% if result.methodology == 'klimov' %}
+                                    Распределение баллов
+                                {% else %}
+                                    Профессиональные типы
+                                {% endif %}
+                            </h4>
                             <div class="list-group">
                                 {% for category, score in results.scores.items() %}
                                 <div class="list-group-item d-flex justify-content-between align-items-center">
                                     <span>
                                         <i class="fas fa-circle me-2" 
-                                           style="color: {% if category == results.dominant_category %}#28a745{% else %}#6c757d{% endif %}"></i>
+                                           style="color: {% if result.methodology == 'klimov' and category == results.dominant_category %}#28a745{% elif result.methodology == 'holland' and category in (results.top_categories|map(attribute='0')|list) %}#17a2b8{% else %}#6c757d{% endif %}"></i>
                                         {{ category }}
                                     </span>
-                                    <span class="badge bg-{% if category == results.dominant_category %}success{% else %}secondary{% endif %} rounded-pill">
+                                    <span class="badge bg-{% if result.methodology == 'klimov' and category == results.dominant_category %}success{% elif result.methodology == 'holland' and category in (results.top_categories|map(attribute='0')|list) %}info{% else %}secondary{% endif %} rounded-pill">
                                         {{ score }}
                                     </span>
                                 </div>
@@ -55,10 +79,17 @@
                     <!-- Detailed Results -->
                     <div class="row">
                         <div class="col-12">
-                            <h4 class="mb-3"><i class="fas fa-list"></i> Подробные результаты</h4>
+                            <h4 class="mb-3">
+                                <i class="fas fa-list"></i> 
+                                {% if result.methodology == 'klimov' %}
+                                    Подробные результаты
+                                {% else %}
+                                    Все профессиональные типы
+                                {% endif %}
+                            </h4>
                             <div class="table-responsive">
                                 <table class="table table-striped">
-                                    <thead class="table-dark">
+                                    <thead class="{% if result.methodology == 'klimov' %}table-success{% else %}table-info{% endif %}">
                                         <tr>
                                             <th>Категория</th>
                                             <th>Баллы</th>
@@ -78,12 +109,22 @@
                                                 {{ "%.1f"|format(percentage) }}%
                                             </td>
                                             <td>
-                                                {% if category == results.dominant_category %}
-                                                    <span class="text-success"><i class="fas fa-check-circle"></i> Высокая склонность</span>
-                                                {% elif score >= (results.total_questions * 3 * 0.6) %}
-                                                    <span class="text-primary">Средняя склонность</span>
+                                                {% if result.methodology == 'klimov' %}
+                                                    {% if category == results.dominant_category %}
+                                                        <span class="text-success"><i class="fas fa-check-circle"></i> Высокая склонность</span>
+                                                    {% elif score >= (results.total_questions * 3 * 0.6) %}
+                                                        <span class="text-primary">Средняя склонность</span>
+                                                    {% else %}
+                                                        <span class="text-muted">Низкая склонность</span>
+                                                    {% endif %}
                                                 {% else %}
-                                                    <span class="text-muted">Низкая склонность</span>
+                                                    {% if category in (results.top_categories|map(attribute='0')|list) %}
+                                                        <span class="text-info"><i class="fas fa-star"></i> Один из основных типов</span>
+                                                    {% elif score >= (results.total_questions * 3 * 0.5) %}
+                                                        <span class="text-primary">Умеренная склонность</span>
+                                                    {% else %}
+                                                        <span class="text-muted">Низкая склонность</span>
+                                                    {% endif %}
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -99,6 +140,9 @@
                         <div class="col-12 text-center">
                             <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg me-3">
                                 <i class="fas fa-redo"></i> Пройти другой тест
+                            </a>
+                            <a href="{{ url_for('test.export_pdf', result_id=result.id) }}" class="btn btn-success btn-lg me-3">
+                                <i class="fas fa-file-pdf"></i> Скачать PDF
                             </a>
                             <a href="{{ url_for('main.profile') }}" class="btn btn-outline-primary btn-lg">
                                 <i class="fas fa-history"></i> История тестов
