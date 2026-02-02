@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from app import db
 
+
 class User(UserMixin, db.Model):
     """User model for authentication"""
     id = db.Column(db.Integer, primary_key=True)
@@ -16,6 +17,12 @@ class User(UserMixin, db.Model):
     # Relationships
     test_results = db.relationship('TestResult', backref='user', lazy=True)
     notifications = db.relationship('Notification', backref='user', lazy=True)
+    comments = db.relationship('Comment', backref='user', lazy=True)
+    ratings = db.relationship('Rating', backref='user', lazy=True)
+    progress_records = db.relationship('UserProgress', backref='user', lazy=True)
+    preferences = db.relationship('UserPreference', backref='user', lazy=True)
+    feedbacks = db.relationship('Feedback', backref='user', lazy=True)
+    ab_test_results = db.relationship('ABTestResult', backref='user', lazy=True)
     
     def set_password(self, password):
         """Hash and set password"""
@@ -27,6 +34,7 @@ class User(UserMixin, db.Model):
     
     def __repr__(self):
         return f'<User {self.username}>'
+
 
 class TestResult(db.Model):
     """Model for storing test results"""
@@ -42,6 +50,7 @@ class TestResult(db.Model):
     def __repr__(self):
         return f'<TestResult {self.id} for User {self.user_id}>'
 
+
 class TestQuestion(db.Model):
     """Model for test questions"""
     id = db.Column(db.Integer, primary_key=True)
@@ -53,6 +62,7 @@ class TestQuestion(db.Model):
     
     def __repr__(self):
         return f'<TestQuestion {self.methodology}-{self.question_number}>'
+
 
 class Notification(db.Model):
     """Model for user notifications"""
@@ -67,6 +77,7 @@ class Notification(db.Model):
     
     def __repr__(self):
         return f'<Notification {self.id} for User {self.user_id}>'
+
 
 class Comment(db.Model):
     """Model for test result comments"""
@@ -123,3 +134,74 @@ class UserProgress(db.Model):
     
     def __repr__(self):
         return f'<UserProgress User {self.user_id} - Test {self.test_result_id}>'
+
+
+class UserPreference(db.Model):
+    """Model for user preferences and settings"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    vacancy_alerts_enabled = db.Column(db.Boolean, default=False)
+    preferred_professions = db.Column(db.Text)  # JSON string of preferred professions
+    email_notifications = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    user = db.relationship('User', backref='preferences')
+    
+    def __repr__(self):
+        return f'<UserPreference for User {self.user_id}>'
+
+
+class Feedback(db.Model):
+    # Модель для хранения отзывов пользователей
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    feedback_type = db.Column(db.String(50), nullable=False)  # suggestion, bug_report, feature_request, general_feedback
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    rating = db.Column(db.Integer)  # 1-5 star rating
+    is_resolved = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime)
+    resolution_notes = db.Column(db.Text)
+    
+    # Relationship
+    user = db.relationship('User', backref='feedbacks')
+    
+    def __repr__(self):
+        return f'<Feedback {self.feedback_type} by User {self.user_id}>'
+
+
+class ABTest(db.Model):
+    # Модель для A/B тестирования экспериментов
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # e.g., "ml_recommendation_algorithm_v2"
+    description = db.Column(db.Text)
+    variant_a = db.Column(db.String(100), nullable=False)  # e.g., "current_algorithm"
+    variant_b = db.Column(db.String(100), nullable=False)  # e.g., "new_algorithm"
+    traffic_split = db.Column(db.Float, default=0.5)  # 0.0 to 1.0, proportion for variant B
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime)
+    ended_at = db.Column(db.DateTime)
+    
+    def __repr__(self):
+        return f'<ABTest {self.name}>'
+
+
+class ABTestResult(db.Model):
+    # Модель для результатов A/B тестирования
+    id = db.Column(db.Integer, primary_key=True)
+    ab_test_id = db.Column(db.Integer, db.ForeignKey('ab_test.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    assigned_variant = db.Column(db.String(10), nullable=False)  # 'A' or 'B'
+    metric_value = db.Column(db.Float)  # e.g., engagement rate, click-through rate
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    ab_test = db.relationship('ABTest', backref='results')
+    user = db.relationship('User', backref='ab_test_results')
+    
+    def __repr__(self):
+        return f'<ABTestResult for Test {self.ab_test_id}, User {self.user_id}, Variant {self.assigned_variant}>'

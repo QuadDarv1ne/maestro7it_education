@@ -94,3 +94,49 @@ def create_system_notification(title, message, notification_type='info'):
         create_notification(user.id, title, message, notification_type)
     
     return True
+
+@notifications.route('/notifications/vacancy_alerts')
+@login_required
+def vacancy_alerts():
+    """Get user's vacancy alerts settings"""
+    from app.models import UserPreference
+    
+    # Get or create user preferences
+    prefs = UserPreference.query.filter_by(user_id=current_user.id).first()
+    if not prefs:
+        prefs = UserPreference(user_id=current_user.id)
+        db.session.add(prefs)
+        db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'alerts_enabled': prefs.vacancy_alerts_enabled,
+        'preferred_professions': prefs.preferred_professions
+    })
+
+@notifications.route('/notifications/vacancy_alerts/update', methods=['POST'])
+@login_required
+def update_vacancy_alerts():
+    """Update user's vacancy alerts settings"""
+    from app.models import UserPreference
+    import json
+    
+    data = request.get_json()
+    enabled = data.get('enabled', False)
+    professions = data.get('professions', [])
+    
+    # Get or create user preferences
+    prefs = UserPreference.query.filter_by(user_id=current_user.id).first()
+    if not prefs:
+        prefs = UserPreference(user_id=current_user.id)
+        db.session.add(prefs)
+    
+    prefs.vacancy_alerts_enabled = enabled
+    prefs.preferred_professions = json.dumps(professions)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Настройки уведомлений обновлены'
+    })

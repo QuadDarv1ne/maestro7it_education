@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Обратная связь - {{ current_user.username }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    {% include 'includes/header.html' %}
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0"><i class="fas fa-comments"></i> Обратная связь</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead">Мы ценим ваше мнение! Пожалуйста, поделитесь своими мыслями, предложениями или сообщите о проблемах.</p>
+                        
+                        <form id="feedback-form">
+                            <div class="mb-3">
+                                <label for="feedback-type" class="form-label">Тип обратной связи</label>
+                                <select class="form-select" id="feedback-type" required>
+                                    <option value="">Выберите тип...</option>
+                                    <option value="suggestion">Предложение</option>
+                                    <option value="bug_report">Сообщить об ошибке</option>
+                                    <option value="feature_request">Запрос новой функции</option>
+                                    <option value="general_feedback">Общий комментарий</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="feedback-title" class="form-label">Заголовок</label>
+                                <input type="text" class="form-control" id="feedback-title" placeholder="Кратко опишите вашу идею или проблему" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="feedback-content" class="form-label">Подробное описание</label>
+                                <textarea class="form-control" id="feedback-content" rows="5" placeholder="Пожалуйста, предоставьте как можно больше деталей..." required></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="feedback-rating" class="form-label">Оценка (необязательно)</label>
+                                <div class="star-rating">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                </div>
+                                <input type="hidden" id="rating-value" value="0">
+                                <div class="form-text">Нажмите на звезды, чтобы оценить</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Отправить отзыв
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Previous Feedback Section -->
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h3 class="mb-0"><i class="fas fa-history"></i> Ваши предыдущие отзывы</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="feedback-list">
+                            <p class="text-muted">Загрузка ваших отзывов...</p>
+                        </div>
+                        <nav aria-label="Feedback pagination">
+                            <ul class="pagination justify-content-center" id="feedback-pagination">
+                                <!-- Pagination will be loaded dynamically -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'includes/footer.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Star rating functionality
+        document.querySelectorAll('.star').forEach(star => {
+            star.addEventListener('click', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                document.getElementById('rating-value').value = value;
+                
+                // Highlight selected stars
+                document.querySelectorAll('.star').forEach((s, index) => {
+                    if (index < value) {
+                        s.style.color = 'gold';
+                    } else {
+                        s.style.color = 'lightgray';
+                    }
+                });
+            });
+        });
+        
+        // Submit feedback form
+        document.getElementById('feedback-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const feedbackType = document.getElementById('feedback-type').value;
+            const title = document.getElementById('feedback-title').value;
+            const content = document.getElementById('feedback-content').value;
+            const rating = parseInt(document.getElementById('rating-value').value);
+            
+            const feedbackData = {
+                type: feedbackType,
+                title: title,
+                content: content
+            };
+            
+            if (rating > 0) {
+                feedbackData.rating = rating;
+            }
+            
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(feedbackData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Ваш отзыв успешно отправлен!');
+                    document.getElementById('feedback-form').reset();
+                    document.querySelectorAll('.star').forEach(s => s.style.color = 'lightgray');
+                    document.getElementById('rating-value').value = 0;
+                    
+                    // Reload feedback list
+                    loadUserFeedback();
+                } else {
+                    alert(`Ошибка: ${result.message || result.error}`);
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                alert('Произошла ошибка при отправке отзыва. Пожалуйста, попробуйте позже.');
+            }
+        });
+        
+        // Load user feedback
+        async function loadUserFeedback(page = 1) {
+            try {
+                const response = await fetch(`/api/feedback?page=${page}`);
+                const data = await response.json();
+                
+                const feedbackList = document.getElementById('feedback-list');
+                let html = '';
+                
+                if (data.feedbacks.length === 0) {
+                    html = '<p class="text-muted">У вас пока нет отзывов.</p>';
+                } else {
+                    data.feedbacks.forEach(feedback => {
+                        const statusBadge = feedback.is_resolved ? 
+                            '<span class="badge bg-success">Решено</span>' : 
+                            '<span class="badge bg-warning">В обработке</span>';
+                            
+                        const ratingStars = feedback.rating ? 
+                            '★'.repeat(feedback.rating) + '☆'.repeat(5-feedback.rating) : 
+                            'Не оценено';
+                        
+                        html += `
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="card-title">${feedback.title}</h5>
+                                        <div>${statusBadge}</div>
+                                    </div>
+                                    <p class="card-text">${feedback.content}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">${feedback.type} • ${new Date(feedback.created_at).toLocaleDateString()}</small>
+                                        <small class="text-muted">Оценка: ${ratingStars}</small>
+                                    </div>
+                                    ${feedback.resolution_notes ? `
+                                        <div class="alert alert-info mt-2">
+                                            <strong>Ответ команды:</strong> ${feedback.resolution_notes}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                feedbackList.innerHTML = html;
+                
+                // Render pagination
+                renderPagination(data.current_page, data.pages);
+            } catch (error) {
+                console.error('Error loading feedback:', error);
+                document.getElementById('feedback-list').innerHTML = '<p class="text-danger">Ошибка при загрузке отзывов.</p>';
+            }
+        }
+        
+        // Render pagination
+        function renderPagination(currentPage, totalPages) {
+            const pagination = document.getElementById('feedback-pagination');
+            let html = '';
+            
+            // Previous button
+            if (currentPage > 1) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="loadUserFeedback(${currentPage - 1})">Предыдущая</a></li>`;
+            } else {
+                html += `<li class="page-item disabled"><span class="page-link">Предыдущая</span></li>`;
+            }
+            
+            // Page numbers
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                if (i === currentPage) {
+                    html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                } else {
+                    html += `<li class="page-item"><a class="page-link" href="#" onclick="loadUserFeedback(${i})">${i}</a></li>`;
+                }
+            }
+            
+            // Next button
+            if (currentPage < totalPages) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="loadUserFeedback(${currentPage + 1})">Следующая</a></li>`;
+            } else {
+                html += `<li class="page-item disabled"><span class="page-link">Следующая</span></li>`;
+            }
+            
+            pagination.innerHTML = html;
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserFeedback();
+        });
+        
+        // Make loadUserFeedback available globally for pagination
+        window.loadUserFeedback = loadUserFeedback;
+    </script>
+    
+    <style>
+        .star-rating {
+            display: inline-block;
+        }
+        
+        .star {
+            font-size: 2rem;
+            color: lightgray;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .star:hover {
+            color: gold;
+        }
+    </style>
+</body>
+</html>

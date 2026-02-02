@@ -1,6 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты теста - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.index') }}">Главная</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.profile') }}">Профиль</a>
+                    </li>
+                    <li class="breadcrumb-item active">Результаты теста</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-chart-bar"></i> Результаты тестирования
+                    {% if result.methodology == 'klimov' %}
+                        <span class="badge bg-success">Методика Климова</span>
+                    {% else %}
+                        <span class="badge bg-info">Методика Холланда</span>
+                    {% endif %}
+                </h1>
+                <div>
+                    <a href="{{ url_for('comments.test_comments', test_id=result.id) }}" 
+                       class="btn btn-outline-info me-2">
+                        <i class="fas fa-comments"></i> Комментарии
+                        {% if result.comments %}
+                            <span class="badge bg-info">{{ result.comments|length }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ url_for('recommendations.detailed_recommendations', result_id=result.id) }}" class="btn btn-warning me-2">
+                        <i class="fas fa-robot"></i> ИИ-Рекомендации
+                    </a>
+                    <a href="{{ url_for('test.export_pdf', result_id=result.id) }}" 
+                       class="btn btn-success">
+                        <i class="fas fa-file-pdf"></i> Скачать PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Result -->
+                    <div class="row mb-5">
+                        <div class="col-12">
+                            <div class="text-center p-4 bg-light rounded">
+                                <h3 class="text-primary">Ваша профессиональная стихия:</h3>
+                                {% if result.methodology == 'klimov' %}
+                                    <h1 class="display-4 fw-bold text-success">{{ results.dominant_category }}</h1>
+                                    <p class="lead">Наиболее выраженная профессиональная склонность</p>
+                                {% else %}
+                                    <div class="mt-3">
+                                        {% for category, score in results.top_categories %}
+                                            <h3 class="text-info">{{ category }}</h3>
+                                            {% set percentage = (score / (results.total_questions * 3)) * 100 %}
+                                            <p class="lead">{{ "%.1f"|format(percentage) }}% совпадение</p>
+                                        {% endfor %}
+                                    </div>
+                                    <p class="lead">Ваши три основных профессиональных типа</p>
+                                {% endif %}
+                                
+                                <!-- Ratings for this result -->
+                                <div class="mt-4">
+                                    <div class="btn-group" role="group">
+                                        <button id="likeBtn" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-thumbs-up"></i> Нравится
+                                            <span id="likeCount">0</span>
+                                        </button>
+                                        <button id="dislikeBtn" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-thumbs-down"></i> Не нравится
+                                            <span id="dislikeCount">0</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scores Chart -->
+                    <div class="row mb-5">
+                        <div class="col-md-6">
+                            <h4 class="mb-4">
+                                <i class="fas fa-chart-pie"></i> 
+                                {% if result.methodology == 'klimov' %}
+                                    Распределение баллов
+                                {% else %}
+                                    Профессиональные типы
+                                {% endif %}
+                            </h4>
+                            <div class="list-group">
+                                {% for category, score in results.scores.items() %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <i class="fas fa-circle me-2" 
+                                           style="color: {% if result.methodology == 'klimov' and category == results.dominant_category %}#28a745{% elif result.methodology == 'holland' and category in (results.top_categories|map(attribute='0')|list) %}#17a2b8{% else %}#6c757d{% endif %}"></i>
+                                        {{ category }}
+                                    </span>
+                                    <span class="badge bg-{% if result.methodology == 'klimov' and category == results.dominant_category %}success{% elif result.methodology == 'holland' and category in (results.top_categories|map(attribute='0')|list) %}info{% else %}secondary{% endif %} rounded-pill">
+                                        {{ score }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h4 class="mb-4"><i class="fas fa-info-circle"></i> Интерпретация результатов</h4>
+                            <div class="bg-white border rounded p-3">
+                                {{ result.recommendation|safe }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Results -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h4 class="mb-3">
+                                <i class="fas fa-list"></i> 
+                                {% if result.methodology == 'klimov' %}
+                                    Подробные результаты
+                                {% else %}
+                                    Все профессиональные типы
+                                {% endif %}
+                            </h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead class="{% if result.methodology == 'klimov' %}table-success{% else %}table-info{% endif %}">
+                                        <tr>
+                                            <th>Категория</th>
+                                            <th>Баллы</th>
+                                            <th>Процент</th>
+                                            <th>Интерпретация</th>
+                                            <th>Профессии</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for category, score in results.scores.items() %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ category }}</strong>
+                                            </td>
+                                            <td>{{ score }}</td>
+                                            <td>
+                                                {% set percentage = (score / (results.total_questions * 3)) * 100 %}
+                                                {{ "%.1f"|format(percentage) }}%
+                                            </td>
+                                            <td>
+                                                {% if result.methodology == 'klimov' %}
+                                                    {% if category == results.dominant_category %}
+                                                        <span class="text-success"><i class="fas fa-check-circle"></i> Высокая склонность</span>
+                                                    {% elif score >= (results.total_questions * 3 * 0.6) %}
+                                                        <span class="text-primary">Средняя склонность</span>
+                                                    {% else %}
+                                                        <span class="text-muted">Низкая склонность</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% if category in (results.top_categories|map(attribute='0')|list) %}
+                                                        <span class="text-info"><i class="fas fa-star"></i> Один из основных типов</span>
+                                                    {% elif score >= (results.total_questions * 3 * 0.5) %}
+                                                        <span class="text-primary">Умеренная склонность</span>
+                                                    {% else %}
+                                                        <span class="text-muted">Низкая склонность</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="getProfessionInfo('{{ category }}')"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#professionModal">
+                                                    <i class="fas fa-search"></i> Профессии
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="row mt-5">
+                        <div class="col-12 text-center">
+                            <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg me-3">
+                                <i class="fas fa-redo"></i> Пройти другой тест
+                            </a>
+                            <a href="{{ url_for('comments.test_comments', test_id=result.id) }}" class="btn btn-info btn-lg me-3">
+                                <i class="fas fa-comments"></i> Комментарии
+                                {% if result.comments %}
+                                    <span class="badge bg-light text-dark">{{ result.comments|length }}</span>
+                                {% endif %}
+                            </a>
+                            <a href="{{ url_for('recommendations.detailed_recommendations', result_id=result.id) }}" class="btn btn-warning btn-lg me-3">
+                                <i class="fas fa-robot"></i> ИИ-Рекомендации
+                            </a>
+                            <a href="{{ url_for('test.export_pdf', result_id=result.id) }}" class="btn btn-success btn-lg me-3">
+                                <i class="fas fa-file-pdf"></i> Скачать PDF
+                            </a>
+                            <a href="{{ url_for('main.profile') }}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-history"></i> История тестов
                             </a>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profession Modal -->
+    <div class="modal fade" id="professionModal" tabindex="-1" aria-labelledby="professionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="professionModalLabel">Профессии и рынок труда</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="professionInfoContent">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                            <p>Получение информации о профессиях...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
                 </div>
             </div>
         </div>
@@ -118,6 +350,93 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Произошла ошибка при оценке');
         });
     });
+    
+    // Function to get profession info
+    window.getProfessionInfo = function(category) {
+        const modalBody = document.getElementById('professionInfoContent');
+        modalBody.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+                <p>Получение информации о профессиях для "${category}"...</p>
+            </div>
+        `;
+        
+        fetch(`/api/market/profession/${encodeURIComponent(category)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const profession = data.profession;
+                    const info = profession.info;
+                    const vacancies = profession.vacancies;
+                    
+                    let content = `
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5>${category}</h5>
+                                <p><strong>Описание:</strong> ${info.description || 'Информация недоступна'}</p>
+                                <p><strong>Средняя зарплата:</strong> ${info.salary_range ? 
+                                    `${info.salary_range.average.toLocaleString()} ${info.salary_range.currency}` : 
+                                    'Информация недоступна'}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Навыки:</h6>
+                                <ul class="list-unstyled">
+                                    ${info.skills ? info.skills.slice(0, 5).map(skill => `<li><span class="badge bg-secondary">${skill}</span></li>`).join('') : '<li>Информация недоступна</li>'}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (vacancies.length > 0) {
+                        content += `
+                            <hr>
+                            <h6>Актуальные вакансии:</h6>
+                            <div class="list-group">
+                        `;
+                        
+                        vacancies.forEach(vacancy => {
+                            content += `
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="mb-1">${vacancy.title}</h6>
+                                            <p class="mb-1 small">${vacancy.employer}</p>
+                                            <p class="mb-1 small text-muted">${vacancy.experience} • ${vacancy.schedule}</p>
+                                        </div>
+                                        <div class="text-end">
+                                            <p class="mb-1">${vacancy.salary}</p>
+                                            <a href="${vacancy.url}" target="_blank" class="btn btn-sm btn-outline-primary">Подробнее</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        content += '</div>';
+                    } else {
+                        content += '<p class="text-muted">Актуальные вакансии не найдены</p>';
+                    }
+                    
+                    modalBody.innerHTML = content;
+                } else {
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> ${data.error || 'Ошибка получения информации'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Ошибка получения информации о профессии
+                    </div>
+                `;
+            });
+    };
 });
 </script>
 {% endblock %}

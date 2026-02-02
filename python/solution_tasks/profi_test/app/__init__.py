@@ -2,26 +2,31 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate
+from config import Config
 
-# Initialize extensions
 db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
+login_manager.login_view = 'auth.login'
+login_manager.login_message = 'Пожалуйста, войдите для доступа к этой странице.'
 
-def create_app():
-    """Application factory pattern"""
+def create_app(config_class=Config):
     app = Flask(__name__)
-    
-    # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///profi_test.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    # Initialize extensions with app
+    app.config.from_object(config_class)
+
+    # Initialize extensions
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Пожалуйста, войдите для доступа к этой странице.'
-    
+
+    # Import models after db initialization to avoid circular imports
+    from app.models import User
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
     # Register blueprints
     from app.routes import main
     from app.auth import auth
@@ -35,6 +40,9 @@ def create_app():
     from app.progress import progress_bp
     from app.mobile_api import mobile_api
     from app.market_api import market_api
+    from app.reports import reports_bp
+    from app.ml_recommender import ml_recommender
+    from app.feedback import feedback_bp
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
@@ -48,17 +56,44 @@ def create_app():
     app.register_blueprint(progress_bp)
     app.register_blueprint(mobile_api, url_prefix='/api')
     app.register_blueprint(market_api, url_prefix='/api')
-    
+    app.register_blueprint(reports_bp, url_prefix='/api')
+    app.register_blueprint(ml_recommender, url_prefix='/api')
+    app.register_blueprint(feedback_bp, url_prefix='/api')
+
     # Create database tables
     with app.app_context():
         db.create_all()
+
+    # Start vacancy alerts scheduler
+    try:
+        from app.vacancy_alerts import start_scheduler
+        start_scheduler()
+    except Exception as e:
+        print(f"Ошибка при запуске планировщика уведомлений: {e}")
+
+    # Start ML recommendations scheduler
+    try:
+        from app.ml_recommendations import generate_ml_notifications
+        import schedule
+        import threading
+        import time
+        from datetime import datetime
         
-        # Import models after db is initialized to avoid circular imports
-        from app.models import User
+        def run_ml_scheduler():
+            # Планируем генерацию ML-рекомендаций раз в день
+            schedule.every().day.at("10:00").do(generate_ml_notifications)
+            # Также раз в 12 часов
+            schedule.every(12).hours.do(generate_ml_notifications)
+            
+            while True:
+                schedule.run_pending()
+                time.sleep(60)  # Проверяем каждую минуту
         
-        @login_manager.user_loader
-        def load_user(user_id):
-            """Load user by ID for Flask-Login"""
-            return User.query.get(int(user_id))
-    
+        ml_scheduler_thread = threading.Thread(target=run_ml_scheduler, daemon=True)
+        ml_scheduler_thread.start()
+        
+        print(f"[{datetime.now()}] ML-рекомендательная система запущена")
+    except Exception as e:
+        print(f"Ошибка при запуске ML-рекомендательной системы: {e}")
+
     return app
