@@ -83,3 +83,27 @@ class Comment(db.Model):
     
     def __repr__(self):
         return f'<Comment {self.id} on Test {self.test_result_id}>'
+
+
+class Rating(db.Model):
+    """Model for ratings (likes/dislikes) for test results and comments"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    test_result_id = db.Column(db.Integer, db.ForeignKey('test_result.id'), nullable=True)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
+    rating_type = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Ensure only one rating per user per item
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'test_result_id', name='unique_user_test_rating'),
+        db.UniqueConstraint('user_id', 'comment_id', name='unique_user_comment_rating'),
+    )
+    
+    # Relationships
+    user = db.relationship('User', backref='ratings')
+    test_result = db.relationship('TestResult', backref='ratings')
+    comment = db.relationship('Comment', backref='ratings')
+    
+    def __repr__(self):
+        return f'<Rating {self.rating_type} by User {self.user_id}>'

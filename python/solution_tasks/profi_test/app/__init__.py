@@ -30,6 +30,7 @@ def create_app():
     from app.notifications import notifications
     from app.analytics import analytics
     from app.comments import comments
+    from app.ratings import ratings
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
@@ -38,6 +39,7 @@ def create_app():
     app.register_blueprint(notifications)
     app.register_blueprint(analytics)
     app.register_blueprint(comments)
+    app.register_blueprint(ratings)
     
     # Create database tables
     with app.app_context():

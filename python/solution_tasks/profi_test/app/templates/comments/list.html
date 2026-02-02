@@ -99,6 +99,20 @@
                                             <p class="mb-2">{{ comment.content }}</p>
                                         </div>
                                         
+                                        <!-- Comment ratings -->
+                                        <div class="mt-2">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="like-comment-btn btn btn-outline-success btn-sm" data-comment-id="{{ comment.id }}">
+                                                    <i class="fas fa-thumbs-up"></i> 
+                                                    <span class="like-count">{{ comment.ratings|selectattr('rating_type', 'equalto', 'like')|list|length }}</span>
+                                                </button>
+                                                <button class="dislike-comment-btn btn btn-outline-danger btn-sm" data-comment-id="{{ comment.id }}">
+                                                    <i class="fas fa-thumbs-down"></i>
+                                                    <span class="dislike-count">{{ comment.ratings|selectattr('rating_type', 'equalto', 'dislike')|list|length }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
                                         <!-- Edit form (hidden by default) -->
                                         <div class="edit-form d-none">
                                             <div class="mb-2">
@@ -320,6 +334,134 @@ document.addEventListener('DOMContentLoaded', function() {
         
         container.insertAdjacentHTML('afterbegin', commentHtml);
     }
+    
+    // Add event listeners for comment ratings
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.like-comment-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.like-comment-btn');
+            const commentId = btn.dataset.commentId;
+            const currentClassList = btn.classList;
+            const isCurrentlyLiked = currentClassList.contains('active');
+            
+            fetch(`/rate/comment/${commentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    rating_type: isCurrentlyLiked ? 'like' : 'like'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update counts for this specific comment
+                    const likeCountEl = btn.querySelector('.like-count');
+                    const dislikeBtn = btn.closest('.btn-group').querySelector('.dislike-comment-btn');
+                    const dislikeCountEl = dislikeBtn.querySelector('.dislike-count');
+                    
+                    likeCountEl.textContent = data.likes;
+                    dislikeCountEl.textContent = data.dislikes;
+                    
+                    // Update button states
+                    if (data.action === 'unrated') {
+                        btn.classList.remove('active', 'btn-success');
+                        btn.classList.add('btn-outline-success');
+                        dislikeBtn.classList.remove('active', 'btn-danger');
+                        dislikeBtn.classList.add('btn-outline-danger');
+                    } else if (data.action === 'rated' || data.action === 'changed') {
+                        btn.classList.add('active', 'btn-success');
+                        btn.classList.remove('btn-outline-success');
+                        dislikeBtn.classList.remove('active', 'btn-danger');
+                        dislikeBtn.classList.add('btn-outline-danger');
+                    }
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Произошла ошибка при оценке комментария');
+            });
+        }
+        
+        if (e.target.closest('.dislike-comment-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.dislike-comment-btn');
+            const commentId = btn.dataset.commentId;
+            const currentClassList = btn.classList;
+            const isCurrentlyDisliked = currentClassList.contains('active');
+            
+            fetch(`/rate/comment/${commentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    rating_type: isCurrentlyDisliked ? 'dislike' : 'dislike'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update counts for this specific comment
+                    const dislikeCountEl = btn.querySelector('.dislike-count');
+                    const likeBtn = btn.closest('.btn-group').querySelector('.like-comment-btn');
+                    const likeCountEl = likeBtn.querySelector('.like-count');
+                    
+                    likeCountEl.textContent = data.likes;
+                    dislikeCountEl.textContent = data.dislikes;
+                    
+                    // Update button states
+                    if (data.action === 'unrated') {
+                        btn.classList.remove('active', 'btn-danger');
+                        btn.classList.add('btn-outline-danger');
+                        likeBtn.classList.remove('active', 'btn-success');
+                        likeBtn.classList.add('btn-outline-success');
+                    } else if (data.action === 'rated' || data.action === 'changed') {
+                        btn.classList.add('active', 'btn-danger');
+                        btn.classList.remove('btn-outline-danger');
+                        likeBtn.classList.remove('active', 'btn-success');
+                        likeBtn.classList.add('btn-outline-success');
+                    }
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Произошла ошибка при оценке комментария');
+            });
+        }
+    });
+    
+    // Load initial rating statuses for all comments
+    document.querySelectorAll('.comment-item').forEach(commentItem => {
+        const commentId = commentItem.dataset.commentId;
+        
+        fetch(`/comment/${commentId}/rating_status`)
+            .then(response => response.json())
+            .then(data => {
+                const likeBtn = commentItem.querySelector('.like-comment-btn');
+                const dislikeBtn = commentItem.querySelector('.dislike-comment-btn');
+                const likeCountEl = likeBtn.querySelector('.like-count');
+                const dislikeCountEl = dislikeBtn.querySelector('.dislike-count');
+                
+                likeCountEl.textContent = data.likes;
+                dislikeCountEl.textContent = data.dislikes;
+                
+                // Update button states based on current rating
+                if (data.current_rating === 'like') {
+                    likeBtn.classList.add('active', 'btn-success');
+                    likeBtn.classList.remove('btn-outline-success');
+                } else if (data.current_rating === 'dislike') {
+                    dislikeBtn.classList.add('active', 'btn-danger');
+                    dislikeBtn.classList.remove('btn-outline-danger');
+                }
+            })
+            .catch(error => console.error('Error loading rating status:', error));
+    });
 });
 </script>
 {% endblock %}
