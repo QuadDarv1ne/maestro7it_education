@@ -5,7 +5,7 @@ API конечные точки расширенной системы управ
 """
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.content_management_v2 import (
+from app.content_management import (
     content_moderation_engine, content_quality_analyzer, 
     content_optimizer, ContentItem, ContentType, ContentStatus, ContentQuality
 )

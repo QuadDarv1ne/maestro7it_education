@@ -95,11 +95,11 @@ def create_app(config_class=Config):
     app.enhanced_ml_recommender = enhanced_ml_recommender_instance
     
     # Initialize advanced analytics
-    from app.advanced_analytics import advanced_analytics_instance
-    app.advanced_analytics = advanced_analytics_instance
+    from app.advanced_analytics import analytics_engine
+    app.advanced_analytics = analytics_engine
     
     # Initialize user experience manager
-    from app.user_experience import ux_manager
+    from app.ux_api import ux_manager
     app.ux_manager = ux_manager
     
     # Initialize visualizations
@@ -111,8 +111,8 @@ def create_app(config_class=Config):
     app.enhanced_reports = enhanced_reports
     
     # Initialize advanced notifications
-    from app.advanced_notifications import advanced_notifications
-    app.advanced_notifications = advanced_notifications
+    from app.advanced_notifications import notification_manager
+    app.advanced_notifications = notification_manager
     
     # Initialize data processor
     from app.data_processor import data_processor
@@ -144,16 +144,18 @@ def create_app(config_class=Config):
     app.security_manager = security_manager
     
     # Initialize business intelligence engine
-    from app.business_intelligence import bi_engine
-    app.bi_engine = bi_engine
+    from app.business_intelligence import bi_engine_v2
+    app.bi_engine = bi_engine_v2
     
     # Initialize user manager
     from app.user_management import user_manager
     app.user_manager = user_manager
     
-    # Initialize content manager
-    from app.content_management import content_manager
-    app.content_manager = content_manager
+    # Initialize content management systems
+    from app.content_management import content_moderation_engine, content_quality_analyzer, content_optimizer
+    app.content_moderation_engine = content_moderation_engine
+    app.content_quality_analyzer = content_quality_analyzer
+    app.content_optimizer = content_optimizer
     
     # Initialize comment manager
     from app.advanced_comments import comment_manager
@@ -167,10 +169,6 @@ def create_app(config_class=Config):
     from app.advanced_ratings import rating_manager
     app.rating_manager = rating_manager
     
-    # Initialize analytics engine
-    from app.advanced_analytics import analytics_engine
-    app.analytics_engine = analytics_engine
-    
     # Initialize ML recommendation engine
     from app.ml_recommendations import recommendation_engine
     app.recommendation_engine = recommendation_engine
@@ -180,14 +178,10 @@ def create_app(config_class=Config):
     app.search_engine = search_engine
     
     # Initialize enhanced business intelligence engine
-    from app.business_intelligence_v2 import bi_engine_v2
+    from app.business_intelligence import bi_engine_v2
     app.bi_engine_v2 = bi_engine_v2
     
-    # Initialize advanced content management systems
-    from app.content_management_v2 import content_moderation_engine, content_quality_analyzer, content_optimizer
-    app.content_moderation_engine = content_moderation_engine
-    app.content_quality_analyzer = content_quality_analyzer
-    app.content_optimizer = content_optimizer
+
     
     # Register blueprints
     from app.routes import main
@@ -225,11 +219,11 @@ def create_app(config_class=Config):
     from app.search_api import search_api
     app.register_blueprint(search_api, url_prefix='/api/search')
     
-    from app.bi_api_v2 import bi_api_v2
-    app.register_blueprint(bi_api_v2, url_prefix='/api/bi-v2')
+    from app.bi_api import bi_api_v2
+    app.register_blueprint(bi_api_v2, url_prefix='/api/bi')
     
-    from app.content_api_v2 import content_api_v2
-    app.register_blueprint(content_api_v2, url_prefix='/api/content-v2')
+    from app.content_api import content_api_v2
+    app.register_blueprint(content_api_v2, url_prefix='/api/content')
     # api_docs_bp is registered in init_api_docs function
     
     app.register_blueprint(main)
@@ -248,7 +242,6 @@ def create_app(config_class=Config):
     app.register_blueprint(advanced_api, url_prefix='/api/advanced')
     app.register_blueprint(ux_api, url_prefix='/api/ux')
     app.register_blueprint(reports_api, url_prefix='/api/reports')
-    app.register_blueprint(notifications_api, url_prefix='/api/notifications')
     app.register_blueprint(data_api, url_prefix='/api/data')
     app.register_blueprint(monitoring_api, url_prefix='/api/monitoring')
     app.register_blueprint(scheduler_api, url_prefix='/api/scheduler')

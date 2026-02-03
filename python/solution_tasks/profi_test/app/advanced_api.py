@@ -5,7 +5,7 @@
 """
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.advanced_analytics import advanced_analytics_instance
+from app.advanced_analytics import analytics_engine
 from app.enhanced_ml_recommender import enhanced_ml_recommender_instance
 from app import db
 from app.models import User, TestResult, CareerGoal, LearningPath
@@ -19,7 +19,7 @@ advanced_api = Blueprint('advanced_api', __name__)
 def get_user_engagement():
     """Получает статистику вовлеченности пользователей"""
     try:
-        stats = advanced_analytics_instance.get_user_engagement_stats()
+        stats = analytics_engine.get_user_engagement_stats()
         return jsonify({
             'success': True,
             'data': stats
@@ -36,7 +36,7 @@ def get_user_engagement():
 def get_test_statistics():
     """Get test completion statistics"""
     try:
-        stats = advanced_analytics_instance.get_test_completion_statistics()
+        stats = analytics_engine.get_test_completion_statistics()
         return jsonify({
             'success': True,
             'data': stats
@@ -53,7 +53,7 @@ def get_test_statistics():
 def get_popular_categories():
     """Get popular professional categories"""
     try:
-        categories = advanced_analytics_instance.get_popular_categories()
+        categories = analytics_engine.get_popular_categories()
         return jsonify({
             'success': True,
             'data': categories
@@ -70,7 +70,7 @@ def get_popular_categories():
 def get_career_goals_analytics():
     """Get career goals statistics"""
     try:
-        stats = advanced_analytics_instance.get_career_goal_statistics()
+        stats = analytics_engine.get_career_goal_statistics()
         return jsonify({
             'success': True,
             'data': stats
@@ -87,7 +87,7 @@ def get_career_goals_analytics():
 def get_learning_paths_analytics():
     """Get learning paths statistics"""
     try:
-        stats = advanced_analytics_instance.get_learning_path_statistics()
+        stats = analytics_engine.get_learning_path_statistics()
         return jsonify({
             'success': True,
             'data': stats

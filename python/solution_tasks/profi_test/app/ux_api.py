@@ -5,12 +5,33 @@ API конечные точки пользовательского опыта д
 """
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.user_experience import ux_manager
-from app.advanced_analytics import advanced_analytics_instance
+from app.advanced_analytics import analytics_engine  # Используем существующий движок
 from app.enhanced_ml_recommender import enhanced_ml_recommender_instance
 from app import db
 from app.models import User, TestResult, CareerGoal, LearningPath
 import json
+
+# Создаем заглушку для ux_manager
+class UXManager:
+    def get_personalized_dashboard_widgets(self, user):
+        return []
+    
+    def get_user_progress(self, user):
+        return {'completed_steps': []}
+    
+    def get_welcome_message(self, user):
+        return f"Добро пожаловать, {user.username}!"
+    
+    def get_smart_notifications(self, user):
+        return []
+    
+    def get_adaptive_learning_path(self, user, test_result):
+        return []
+    
+    def get_user_insights_and_tips(self, user):
+        return []
+
+ux_manager = UXManager()
 
 ux_api = Blueprint('ux_api', __name__)
 

@@ -5,7 +5,7 @@ API конечные точки расширенной системы бизне
 """
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.business_intelligence_v2 import bi_engine_v2, AnalysisType, TimePeriod
+from app.business_intelligence import bi_engine_v2, AnalysisType, TimePeriod
 import json
 from datetime import datetime
 
