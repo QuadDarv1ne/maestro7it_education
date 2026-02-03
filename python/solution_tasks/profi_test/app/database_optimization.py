@@ -280,18 +280,23 @@ class DatabaseOptimizer:
 db_optimizer = DatabaseOptimizer()
 
 def initialize_database_optimization(app=None):
-    """Initialize database optimization when application starts"""
+    """Инициализация оптимизации базы данных при запуске приложения"""
     try:
-        logger.info("Initializing database optimization...")
+        logger.info("Инициализация оптимизации базы данных...")
         
-        # Only proceed if we're inside an app context
-        from flask import current_app
+        # Только продолжаем, если мы внутри контекста приложения
+        from flask import current_app, has_app_context
+        
+        # Проверяем наличие контекста приложения
+        if not has_app_context():
+            logger.info("Вне контекста приложения, откладываем оптимизацию базы данных")
+            return None
+            
         if app is None:
             try:
                 app = current_app._get_current_object()
             except RuntimeError:
-                # We're outside of app context, return early
-                logger.info("Outside of application context, deferring database optimization")
+                logger.info("Не удалось получить контекст приложения, откладываем оптимизацию")
                 return None
         
         # Create indexes

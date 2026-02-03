@@ -872,5 +872,34 @@ class MLRecommendationEngine:
             return {}
 
 
+def generate_ml_notifications():
+    """Генерирует ML-уведомления для пользователей"""
+    try:
+        # Получаем все активные пользователи
+        from app.models import User
+        from app import db
+        
+        active_users = User.query.filter_by(is_active=True).all()
+        notifications_generated = 0
+        
+        for user in active_users:
+            # Генерируем персонализированные рекомендации
+            recommendations = recommendation_engine.generate_personalized_recommendations(
+                user_id=user.id, 
+                num_recommendations=3
+            )
+            
+            if recommendations:
+                # Здесь можно добавить логику создания уведомлений
+                notifications_generated += len(recommendations)
+                
+        logging.getLogger(__name__).info(f"Сгенерировано {notifications_generated} ML-уведомлений для {len(active_users)} пользователей")
+        return True
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Ошибка при генерации ML-уведомлений: {str(e)}")
+        return False
+
+
 # Глобальный экземпляр движка рекомендаций
 recommendation_engine = MLRecommendationEngine()

@@ -23,3 +23,8 @@ class Config:
     # API ключи (опционально)
     HH_API_KEY = os.environ.get('HH_API_KEY')
     SUPERJOB_API_KEY = os.environ.get('SUPERJOB_API_KEY')
+    
+    # Настройки кэширования
+    CACHE_TYPE = 'simple'
+    CACHE_DEFAULT_TIMEOUT = 300
+    CACHE_THRESHOLD = 1000

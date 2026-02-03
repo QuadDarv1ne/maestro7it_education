@@ -16,24 +16,44 @@ class CustomFormatter(logging.Formatter):
         # Add timestamp
         record.timestamp = datetime.utcnow().isoformat()
         
-        # Add request context if available
-        if hasattr(g, 'user_id'):
-            record.user_id = g.user_id
-        else:
-            record.user_id = 'anonymous'
+        # Safely add request context if available
+        try:
+            from flask import g, request, has_request_context
             
-        if request:
-            record.request_id = getattr(request, 'id', 'unknown')
-            record.endpoint = request.endpoint or 'unknown'
-            record.method = request.method
-            record.url = request.url
-            record.remote_addr = request.remote_addr
-        else:
-            record.request_id = 'unknown'
-            record.endpoint = 'unknown'
-            record.method = 'unknown'
-            record.url = 'unknown'
-            record.remote_addr = 'unknown'
+            if has_request_context():
+                if hasattr(g, 'user_id'):
+                    record.user_id = g.user_id
+                else:
+                    record.user_id = 'anonymous'
+                    
+                if request:
+                    record.request_id = getattr(request, 'id', 'unknown')
+                    record.endpoint = request.endpoint or 'unknown'
+                    record.method = request.method
+                    record.url = request.url
+                    record.remote_addr = request.remote_addr
+                else:
+                    record.request_id = 'unknown'
+                    record.endpoint = 'unknown'
+                    record.method = 'unknown'
+                    record.url = 'unknown'
+                    record.remote_addr = 'unknown'
+            else:
+                # No request context
+                record.user_id = 'system'
+                record.request_id = 'system'
+                record.endpoint = 'system'
+                record.method = 'SYSTEM'
+                record.url = 'system'
+                record.remote_addr = 'localhost'
+        except Exception:
+            # Fallback when context is not available
+            record.user_id = 'system'
+            record.request_id = 'system'
+            record.endpoint = 'system'
+            record.method = 'SYSTEM'
+            record.url = 'system'
+            record.remote_addr = 'localhost'
         
         # Format the message
         log_entry = {
