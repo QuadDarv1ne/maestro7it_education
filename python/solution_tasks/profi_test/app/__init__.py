@@ -12,7 +12,7 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Пожалуйста, войдите для доступа к этой странице.'
 
-# Initialize cache
+# Инициализация кэша
 cache = Cache()
 
 def create_app(config_class=Config):
@@ -50,134 +50,134 @@ def create_app(config_class=Config):
         """
         return User.query.get(int(user_id))
     
-    # Initialize logging system
+    # Инициализация системы логирования
     from app.logging_system import setup_logging
     setup_logging(app)
     
-    # Initialize enhanced structured logging
+    # Инициализация расширенного структурированного логирования
     from app.structured_logging import structured_logger, register_logging_commands
     structured_logger.init_app(app)
     app.structured_logger = structured_logger
     register_logging_commands(app)
     
-    # Initialize performance monitoring
+    # Инициализация мониторинга производительности
     from app.performance import performance_monitor
     app.performance_monitor = performance_monitor
     
-    # Initialize database optimization
+    # Инициализация оптимизации базы данных
     from app.database_optimization import initialize_database_optimization
     initialize_database_optimization(app)
     
-    # Initialize database connection pooling
+    # Инициализация пула соединений с базой данных
     from app.database_pooling import db_connection_manager, register_database_commands
     db_connection_manager.init_app(app)
     register_database_commands(app)
     
-    # Initialize advanced performance monitoring
+    # Инициализация расширенного мониторинга производительности
     from app.performance_monitoring import db_performance_monitor, register_monitoring_commands
     db_performance_monitor.init_app(app)
     register_monitoring_commands(app)
     
-    # Initialize enhanced security features
+    # Инициализация расширенных функций безопасности
     from app.security_enhanced import security_manager
     security_manager.init_app(app)
     
-    # Initialize security audit
+    # Инициализация аудита безопасности
     from app.security_audit import security_manager as audit_security_manager
     app.audit_security_manager = audit_security_manager
     
-    # Initialize API documentation
+    # Инициализация документации API
     from app.api_docs import init_api_docs
     init_api_docs(app)
     
-    # Initialize enhanced ML recommender
+    # Инициализация расширенного ML рекомендатора
     from app.enhanced_ml_recommender import enhanced_ml_recommender_instance
     app.enhanced_ml_recommender = enhanced_ml_recommender_instance
     
-    # Initialize advanced analytics
+    # Инициализация расширенной аналитики
     from app.advanced_analytics import analytics_engine
     app.advanced_analytics = analytics_engine
     
-    # Initialize user experience manager
+    # Инициализация менеджера пользовательского опыта
     from app.ux_api import ux_manager
     app.ux_manager = ux_manager
     
-    # Initialize visualizations
+    # Инициализация визуализаций
     from app.visualizations import visualizer
     app.visualizer = visualizer
     
-    # Initialize enhanced reports
+    # Инициализация расширенных отчетов
     from app.enhanced_reports import enhanced_reports
     app.enhanced_reports = enhanced_reports
     
-    # Initialize advanced notifications
+    # Инициализация расширенных уведомлений
     from app.advanced_notifications import notification_manager
     app.advanced_notifications = notification_manager
     
-    # Initialize data processor
+    # Инициализация обработчика данных
     from app.data_processor import data_processor
     app.data_processor = data_processor
     
-    # Initialize advanced cache manager
+    # Инициализация расширенного менеджера кэша
     from app.advanced_caching import cache_manager
     app.cache_manager = cache_manager
     
-    # Initialize system monitor
+    # Инициализация системного монитора
     from app.system_monitoring import system_monitor
     app.system_monitor = system_monitor
     
-    # Initialize error handler
+    # Инициализация обработчика ошибок
     from app.error_handling import error_handler
     app.error_handler = error_handler
     
-    # Initialize config manager
+    # Инициализация менеджера конфигурации
     from app.config_manager import config_manager
     app.config_manager = config_manager
     
-    # Initialize task scheduler
+    # Инициализация планировщика задач
     from app.task_scheduler import task_scheduler
     app.task_scheduler = task_scheduler
     task_scheduler.start()  # Автозапуск планировщика
     
-    # Initialize security manager
+    # Инициализация менеджера безопасности
     from app.advanced_security import security_manager
     app.security_manager = security_manager
     
-    # Initialize business intelligence engine
+    # Инициализация движка бизнес-аналитики
     from app.business_intelligence import bi_engine_v2
     app.bi_engine = bi_engine_v2
     
-    # Initialize user manager
+    # Инициализация менеджера пользователей
     from app.user_management import user_manager
     app.user_manager = user_manager
     
-    # Initialize content management systems
+    # Инициализация систем управления контентом
     from app.content_management import content_moderation_engine, content_quality_analyzer, content_optimizer
     app.content_moderation_engine = content_moderation_engine
     app.content_quality_analyzer = content_quality_analyzer
     app.content_optimizer = content_optimizer
     
-    # Initialize comment manager
+    # Инициализация менеджера комментариев
     from app.advanced_comments import comment_manager
     app.comment_manager = comment_manager
     
-    # Initialize notification manager
+    # Инициализация менеджера уведомлений
     from app.advanced_notifications import notification_manager
     app.notification_manager = notification_manager
     
-    # Initialize rating manager
+    # Инициализация менеджера рейтингов
     from app.advanced_ratings import rating_manager
     app.rating_manager = rating_manager
     
-    # Initialize ML recommendation engine
+    # Инициализация движка ML рекомендаций
     from app.ml_recommendations import recommendation_engine
     app.recommendation_engine = recommendation_engine
     
-    # Initialize advanced search engine
+    # Инициализация расширенного поискового движка
     from app.advanced_search import search_engine
     app.search_engine = search_engine
     
-    # Initialize enhanced business intelligence engine
+    # Инициализация расширенного движка бизнес-аналитики
     from app.business_intelligence import bi_engine_v2
     app.bi_engine_v2 = bi_engine_v2
     
