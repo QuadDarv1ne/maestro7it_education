@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 """
-User Experience API endpoints for Profi Test
-Provides access to UX enhancement features
+API конечные точки пользовательского опыта для ПрофиТест
+Предоставляет доступ к функциям улучшения UX
 """
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
@@ -17,7 +18,7 @@ ux_api = Blueprint('ux_api', __name__)
 @ux_api.route('/dashboard/widgets', methods=['GET'])
 @login_required
 def get_dashboard_widgets():
-    """Get personalized dashboard widgets for the user"""
+    """Получает персонализированные виджеты дашборда для пользователя"""
     try:
         widgets = ux_manager.get_personalized_dashboard_widgets(current_user)
         return jsonify({
@@ -51,7 +52,7 @@ def get_user_progress():
 @ux_api.route('/welcome-message', methods=['GET'])
 @login_required
 def get_welcome_message():
-    """Get personalized welcome message"""
+    """Получает персонализированное приветственное сообщение"""
     try:
         message = ux_manager.get_welcome_message(current_user)
         return jsonify({
@@ -68,7 +69,7 @@ def get_welcome_message():
 @ux_api.route('/smart-notifications', methods=['GET'])
 @login_required
 def get_smart_notifications():
-    """Get smart notifications based on user behavior"""
+    """Получает умные уведомления на основе поведения пользователя"""
     try:
         notifications = ux_manager.get_smart_notifications(current_user)
         return jsonify({

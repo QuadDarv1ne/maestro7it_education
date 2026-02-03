@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 """
-Enhanced Machine Learning Recommender System for Profi Test
-This module implements advanced ML algorithms for personalized career recommendations
+Расширенная система машинного обучения для рекомендаций ПрофиТест
+Этот модуль реализует продвинутые алгоритмы машинного обучения для персонализированных карьерных рекомендаций
 """
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -18,6 +19,10 @@ import logging
 
 
 class EnhancedMLRecommender:
+    """
+    Расширенная система машинного обучения для рекомендаций.
+    Реализует алгоритмы для генерации персонализированных карьерных рекомендаций.
+    """
     def __init__(self):
         self.vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
         self.scaler = StandardScaler()
@@ -26,7 +31,7 @@ class EnhancedMLRecommender:
         
     def prepare_user_data(self):
         """
-        Prepare user data for ML analysis
+        Подготавливает данные пользователей для анализа ML
         """
         try:
             # Get all users with their test results
@@ -82,7 +87,7 @@ class EnhancedMLRecommender:
 
     def train_model(self):
         """
-        Train the ML model with user data
+        Обучает модель ML с данными пользователей
         """
         try:
             users_data = self.prepare_user_data()

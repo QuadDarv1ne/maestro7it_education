@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
@@ -8,7 +9,7 @@ mobile_api = Blueprint('mobile_api', __name__)
 
 @mobile_api.route('/auth/login', methods=['POST'])
 def mobile_login():
-    """API endpoint for mobile app login"""
+    """API конечная точка для входа в мобильное приложение"""
     data = request.get_json()
     
     if not data or not data.get('email') or not data.get('password'):
@@ -64,7 +65,7 @@ def mobile_register():
 @mobile_api.route('/test/methodologies')
 @login_required
 def get_methodologies():
-    """Get available test methodologies"""
+    """Получает доступные методики тестирования"""
     methodologies = [
         {
             'id': 'klimov',
@@ -85,7 +86,7 @@ def get_methodologies():
 @mobile_api.route('/test/questions/<methodology>')
 @login_required
 def get_questions(methodology):
-    """Get questions for a specific methodology"""
+    """Получает вопросы для конкретной методики"""
     questions = TestQuestion.query.filter_by(methodology=methodology).order_by(TestQuestion.question_number).all()
     
     if not questions:
@@ -109,7 +110,7 @@ def get_questions(methodology):
 @mobile_api.route('/test/submit', methods=['POST'])
 @login_required
 def submit_test():
-    """Submit test results"""
+    """Отправляет результаты теста"""
     data = request.get_json()
     
     if not data or not data.get('methodology') or not data.get('answers'):
@@ -148,7 +149,7 @@ def submit_test():
 @mobile_api.route('/user/results')
 @login_required
 def get_user_results():
-    """Get user's test results"""
+    """Получает результаты тестов пользователя"""
     results = TestResult.query.filter_by(user_id=current_user.id).order_by(
         TestResult.created_at.desc()
     ).all()

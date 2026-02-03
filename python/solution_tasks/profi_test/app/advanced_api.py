@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 """
-Advanced API endpoints for Profi Test
-Provides access to enhanced analytics and ML features
+Расширенные API конечные точки для ПрофиТест
+Предоставляет доступ к расширенным аналитическим и ML функциям
 """
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
@@ -16,7 +17,7 @@ advanced_api = Blueprint('advanced_api', __name__)
 @advanced_api.route('/analytics/user-engagement', methods=['GET'])
 @login_required
 def get_user_engagement():
-    """Get user engagement statistics"""
+    """Получает статистику вовлеченности пользователей"""
     try:
         stats = advanced_analytics_instance.get_user_engagement_stats()
         return jsonify({
@@ -101,7 +102,7 @@ def get_learning_paths_analytics():
 @advanced_api.route('/ml/train-model', methods=['POST'])
 @login_required
 def train_ml_model():
-    """Train the ML recommendation model"""
+    """Обучает модель ML рекомендаций"""
     try:
         if current_user.is_admin:
             success = enhanced_ml_recommender_instance.train_model()

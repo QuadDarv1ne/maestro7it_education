@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 """
-User Experience Enhancement Module for Profi Test
-Provides features to improve user engagement and satisfaction
+Модуль улучшения пользовательского опыта для ПрофиТест
+Предоставляет функции для повышения вовлеченности и удовлетворенности пользователей
 """
 from datetime import datetime, timedelta
 from flask import session, g
@@ -11,6 +12,10 @@ import json
 
 
 class UserExperienceManager:
+    """
+    Менеджер пользовательского опыта для системы ПрофиТест.
+    Управляет процессом онбординга и улучшением взаимодействия с пользователем.
+    """
     def __init__(self):
         self.onboarding_steps = [
             'registration',
@@ -23,7 +28,7 @@ class UserExperienceManager:
         
     def get_user_progress(self, user):
         """
-        Get user's progress through the platform
+        Получает прогресс пользователя на платформе
         """
         try:
             progress = {

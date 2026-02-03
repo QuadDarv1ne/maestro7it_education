@@ -5,14 +5,14 @@ from datetime import datetime
 from app import db
 
 class User(UserMixin, db.Model):
-    """User model for authentication"""
+    """Модель пользователя для аутентификации"""
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
-    telegram_chat_id = db.Column(db.String(50))  # For Telegram notifications
+    telegram_chat_id = db.Column(db.String(50))  # Для уведомлений Telegram
     
     # Relationships with proper back_populates to avoid conflicts
     test_results = db.relationship('TestResult', back_populates='user', lazy='select')
@@ -29,11 +29,11 @@ class User(UserMixin, db.Model):
     portfolio_projects = db.relationship('PortfolioProject', back_populates='user', lazy='select')
     
     def set_password(self, password):
-        """Hash and set password"""
+        """Хэширует и устанавливает пароль"""
         self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
-        """Check if provided password matches hash"""
+        """Проверяет, соответствует ли предоставленный пароль хэшу"""
         return check_password_hash(self.password_hash, password)
     
     def __repr__(self):
@@ -41,13 +41,13 @@ class User(UserMixin, db.Model):
 
 
 class TestResult(db.Model):
-    """Model for storing test results"""
+    """Модель для хранения результатов тестов"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    methodology = db.Column(db.String(50), nullable=False)  # 'klimov', 'holland', etc.
-    answers = db.Column(db.Text)  # JSON string of answers
-    results = db.Column(db.Text)  # JSON string of calculated results
-    recommendation = db.Column(db.Text)  # Personalized recommendation
+    methodology = db.Column(db.String(50), nullable=False)  # 'klimov', 'holland', и т.д.
+    answers = db.Column(db.Text)  # JSON строка ответов
+    results = db.Column(db.Text)  # JSON строка вычисленных результатов
+    recommendation = db.Column(db.Text)  # Персональная рекомендация
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     
