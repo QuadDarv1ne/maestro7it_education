@@ -64,9 +64,25 @@ def create_app(config_class=Config):
     from app.security_enhanced import security_manager
     security_manager.init_app(app)
     
+    # Initialize security audit
+    from app.security_audit import security_manager as audit_security_manager
+    app.audit_security_manager = audit_security_manager
+    
     # Initialize API documentation
     from app.api_docs import init_api_docs
     init_api_docs(app)
+    
+    # Initialize enhanced ML recommender
+    from app.enhanced_ml_recommender import enhanced_ml_recommender_instance
+    app.enhanced_ml_recommender = enhanced_ml_recommender_instance
+    
+    # Initialize advanced analytics
+    from app.advanced_analytics import advanced_analytics_instance
+    app.advanced_analytics = advanced_analytics_instance
+    
+    # Initialize user experience manager
+    from app.user_experience import ux_manager
+    app.ux_manager = ux_manager
     
     # Register blueprints
     from app.routes import main
@@ -89,6 +105,8 @@ def create_app(config_class=Config):
     from app.telegram_bot import telegram_bot
     from app.monitoring import monitoring
     from app.tasks import task_api
+    from app.advanced_api import advanced_api
+    from app.ux_api import ux_api
     # api_docs_bp is registered in init_api_docs function
     
     app.register_blueprint(main)
@@ -110,6 +128,8 @@ def create_app(config_class=Config):
     app.register_blueprint(portfolio_bp, url_prefix='/api')
     app.register_blueprint(monitoring, url_prefix='/api/monitoring')
     app.register_blueprint(task_api, url_prefix='/api')
+    app.register_blueprint(advanced_api, url_prefix='/api/advanced')
+    app.register_blueprint(ux_api, url_prefix='/api/ux')
     # api_docs_bp is registered in init_api_docs function
 
     # Create database tables
