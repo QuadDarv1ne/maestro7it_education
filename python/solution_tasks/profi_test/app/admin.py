@@ -15,13 +15,13 @@ def admin_dashboard():
         flash('Доступ запрещен', 'error')
         return redirect(url_for('main.index'))
     
-    # Get statistics
+    # Получить статистику
     total_users = User.query.count()
     total_tests = TestResult.query.count()
     recent_users = User.query.order_by(User.created_at.desc()).limit(10).all()
     recent_tests = TestResult.query.order_by(TestResult.created_at.desc()).limit(10).all()
     
-    # Get methodology statistics
+    # Получить статистику по методологиям
     klimov_tests = TestResult.query.filter_by(methodology='klimov').count()
     holland_tests = TestResult.query.filter_by(methodology='holland').count()
     
@@ -128,21 +128,21 @@ def admin_statistics():
         flash('Доступ запрещен', 'error')
         return redirect(url_for('main.index'))
     
-    # Get data for charts
-    # Registration statistics
+    # Получить данные для графиков
+    # Статистика регистраций
     week_ago = datetime.utcnow() - timedelta(days=7)
     month_ago = datetime.utcnow() - timedelta(days=30)
     
     weekly_registrations = User.query.filter(User.created_at >= week_ago).count()
     monthly_registrations = User.query.filter(User.created_at >= month_ago).count()
     
-    # Test statistics by date
+    # Статистика тестов по датам
     daily_tests = db.session.query(
         db.func.date(TestResult.created_at).label('date'),
         db.func.count(TestResult.id).label('count')
     ).group_by(db.func.date(TestResult.created_at)).order_by('date').all()
     
-    # Methodology popularity
+    # Популярность методологий
     methodology_stats = db.session.query(
         TestResult.methodology,
         db.func.count(TestResult.id).label('count')

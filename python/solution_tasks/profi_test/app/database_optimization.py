@@ -14,14 +14,14 @@ from app.models import (
 logger = logging.getLogger(__name__)
 
 class DatabaseOptimizer:
-    """Database optimization and indexing manager"""
+    """Менеджер оптимизации базы данных и индексирования"""
     
     def __init__(self):
         self.indexes = {}
         self.optimizations = []
         
     def create_indexes(self):
-        """Create database indexes for improved query performance"""
+        """Создание индексов базы данных для улучшения производительности запросов"""
         
         # User table indexes
         user_indexes = [
@@ -175,7 +175,7 @@ class DatabaseOptimizer:
         return self.indexes
     
     def optimize_queries(self):
-        """Apply query optimization strategies"""
+        """Применение стратегий оптимизации запросов"""
         
         optimizations = []
         

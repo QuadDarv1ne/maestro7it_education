@@ -8,7 +8,7 @@ import json
 # Create blueprint for API documentation
 api_docs_bp = Blueprint('api_docs', __name__, url_prefix='/api/docs')
 
-# Initialize Flask-RESTX API
+# Инициализация Flask-RESTX API
 api = Api(
     None,  # Will be initialized later
     version='1.0',
@@ -183,6 +183,6 @@ def swagger_ui():
     return render_template('api_docs/swagger.html')
 
 def init_api_docs(app):
-    """Initialize API documentation with the Flask app"""
+    """Инициализация документации API с Flask приложением"""
     api.init_app(app)
     app.register_blueprint(api_docs_bp)

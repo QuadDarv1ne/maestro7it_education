@@ -250,7 +250,6 @@ def create_app(config_class=Config):
     app.register_blueprint(comments_api, url_prefix='/api/comments')
     app.register_blueprint(notifications_api, url_prefix='/api/notifications')
     app.register_blueprint(ratings_api, url_prefix='/api/ratings')
-    app.register_blueprint(analytics_api, url_prefix='/api/analytics')
     # api_docs_bp is registered in init_api_docs function
 
     # Create database tables

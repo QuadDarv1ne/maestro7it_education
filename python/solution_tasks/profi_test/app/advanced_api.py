@@ -34,7 +34,7 @@ def get_user_engagement():
 @advanced_api.route('/analytics/test-statistics', methods=['GET'])
 @login_required
 def get_test_statistics():
-    """Get test completion statistics"""
+    """Получает статистику завершения тестов"""
     try:
         stats = analytics_engine.get_test_completion_statistics()
         return jsonify({
@@ -51,7 +51,7 @@ def get_test_statistics():
 @advanced_api.route('/analytics/popular-categories', methods=['GET'])
 @login_required
 def get_popular_categories():
-    """Get popular professional categories"""
+    """Получает популярные профессиональные категории"""
     try:
         categories = analytics_engine.get_popular_categories()
         return jsonify({
@@ -68,7 +68,7 @@ def get_popular_categories():
 @advanced_api.route('/analytics/career-goals', methods=['GET'])
 @login_required
 def get_career_goals_analytics():
-    """Get career goals statistics"""
+    """Получает статистику карьерных целей"""
     try:
         stats = analytics_engine.get_career_goal_statistics()
         return jsonify({
@@ -85,7 +85,7 @@ def get_career_goals_analytics():
 @advanced_api.route('/analytics/learning-paths', methods=['GET'])
 @login_required
 def get_learning_paths_analytics():
-    """Get learning paths statistics"""
+    """Получает статистику учебных путей"""
     try:
         stats = analytics_engine.get_learning_path_statistics()
         return jsonify({
@@ -109,17 +109,17 @@ def train_ml_model():
             if success:
                 return jsonify({
                     'success': True,
-                    'message': 'ML model trained successfully'
+                    'message': 'Модель ML успешно обучена'
                 })
             else:
                 return jsonify({
                     'success': False,
-                    'message': 'Failed to train ML model'
+                    'message': 'Не удалось обучить модель ML'
                 }), 500
         else:
             return jsonify({
                 'success': False,
-                'message': 'Admin access required'
+                'message': 'Требуется доступ администратора'
             }), 403
     except Exception as e:
         return jsonify({
@@ -131,12 +131,12 @@ def train_ml_model():
 @advanced_api.route('/ml/recommendations/<int:user_id>', methods=['GET'])
 @login_required
 def get_ml_recommendations(user_id):
-    """Get ML-based recommendations for a user"""
+    """Получает рекомендации на основе ML для пользователя"""
     try:
         if not current_user.is_admin and current_user.id != user_id:
             return jsonify({
                 'success': False,
-                'message': 'Access denied'
+                'message': 'Доступ запрещен'
             }), 403
         
         recommendations = enhanced_ml_recommender_instance.generate_personalized_recommendations(user_id)
@@ -154,12 +154,12 @@ def get_ml_recommendations(user_id):
 @advanced_api.route('/ml/similar-users/<int:user_id>', methods=['GET'])
 @login_required
 def get_similar_users(user_id):
-    """Get users similar to the given user"""
+    """Получает пользователей, похожих на указанного пользователя"""
     try:
         if not current_user.is_admin and current_user.id != user_id:
             return jsonify({
                 'success': False,
-                'message': 'Access denied'
+                'message': 'Доступ запрещен'
             }), 403
         
         similar_users = enhanced_ml_recommender_instance.get_similar_users(user_id)
@@ -177,12 +177,12 @@ def get_similar_users(user_id):
 @advanced_api.route('/ml/cluster-insights', methods=['GET'])
 @login_required
 def get_cluster_insights():
-    """Get insights about user clusters"""
+    """Получает инсайты о кластерах пользователей"""
     try:
         if not current_user.is_admin:
             return jsonify({
                 'success': False,
-                'message': 'Admin access required'
+                'message': 'Требуется доступ администратора'
             }), 403
         
         insights = enhanced_ml_recommender_instance.get_cluster_insights()
@@ -205,7 +205,7 @@ def get_comprehensive_report():
         if not current_user.is_admin:
             return jsonify({
                 'success': False,
-                'message': 'Admin access required'
+                'message': 'Требуется доступ администратора'
             }), 403
         
         report = advanced_analytics_instance.generate_comprehensive_report()
@@ -228,7 +228,7 @@ def export_analytics_csv():
         if not current_user.is_admin:
             return jsonify({
                 'success': False,
-                'message': 'Admin access required'
+                'message': 'Требуется доступ администратора'
             }), 403
         
         data = request.get_json()
@@ -261,7 +261,7 @@ def get_profile_completion(user_id):
         if not current_user.is_admin and current_user.id != user_id:
             return jsonify({
                 'success': False,
-                'message': 'Access denied'
+                'message': 'Доступ запрещен'
             }), 403
         
         user = User.query.get_or_404(user_id)
@@ -323,7 +323,7 @@ def get_personal_insights(user_id):
         if not current_user.is_admin and current_user.id != user_id:
             return jsonify({
                 'success': False,
-                'message': 'Access denied'
+                'message': 'Доступ запрещен'
             }), 403
         
         # Get user's test results
