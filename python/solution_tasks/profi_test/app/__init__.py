@@ -288,4 +288,4 @@ def create_app(config_class=Config):
     except Exception as e:
         print(f"Ошибка при запуске ML-рекомендательной системы: {e}")
 
-    return app
+    return app    # Add user notifications

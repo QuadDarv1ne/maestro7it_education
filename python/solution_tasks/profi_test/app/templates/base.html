@@ -68,7 +68,7 @@
                         </span>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link position-relative" href="{{ url_for('notifications.user_notifications') }}">
+                        <a class="nav-link position-relative" href="/api/notifications">
                             <i class="fas fa-bell"></i>
                             <span id="notificationCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
                                 0
@@ -137,12 +137,12 @@
     <script>
         // Update notification count
         function updateNotificationCount() {
-            fetch('/notifications/unread_count')
+            fetch('/api/notifications/unread-count')
                 .then(response => response.json())
                 .then(data => {
                     const countElement = document.getElementById('notificationCount');
-                    if (data.count > 0) {
-                        countElement.textContent = data.count;
+                    if (data.unread_count > 0) {
+                        countElement.textContent = data.unread_count;
                         countElement.classList.remove('d-none');
                     } else {
                         countElement.classList.add('d-none');
