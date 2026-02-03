@@ -179,21 +179,25 @@ def create_app(config_class=Config):
     from app.advanced_search import search_engine
     app.search_engine = search_engine
     
+    # Initialize enhanced business intelligence engine
+    from app.business_intelligence_v2 import bi_engine_v2
+    app.bi_engine_v2 = bi_engine_v2
+    
+    # Initialize advanced content management systems
+    from app.content_management_v2 import content_moderation_engine, content_quality_analyzer, content_optimizer
+    app.content_moderation_engine = content_moderation_engine
+    app.content_quality_analyzer = content_quality_analyzer
+    app.content_optimizer = content_optimizer
+    
     # Register blueprints
     from app.routes import main
     from app.auth import auth
     from app.test_routes import test
     from app.admin import admin
-    from app.notifications import notifications
-    from app.analytics import analytics
-    from app.comments import comments
-    from app.ratings import ratings
     from app.recommendations import recommendations_bp
     from app.progress import progress_bp
     from app.mobile_api import mobile_api
     from app.market_api import market_api
-    from app.reports import reports_bp
-    from app.ml_recommender import ml_recommender
     from app.feedback import feedback_bp
     from app.calendar_integration import calendar_bp
     from app.portfolio import portfolio_bp
@@ -208,11 +212,8 @@ def create_app(config_class=Config):
     from app.monitoring_api import monitoring_api
     from app.scheduler_api import scheduler_api
     from app.security_api import security_api
-    from app.bi_api import bi_api
     from app.user_api import user_api
-    from app.content_api import content_api
     from app.comments_api import comments_api
-    from app.notifications_api import notifications_api
     from app.ratings_api import ratings_api
     from app.analytics_api import analytics_api
     app.register_blueprint(analytics_api, url_prefix='/api/analytics')
@@ -223,22 +224,22 @@ def create_app(config_class=Config):
     
     from app.search_api import search_api
     app.register_blueprint(search_api, url_prefix='/api/search')
+    
+    from app.bi_api_v2 import bi_api_v2
+    app.register_blueprint(bi_api_v2, url_prefix='/api/bi-v2')
+    
+    from app.content_api_v2 import content_api_v2
+    app.register_blueprint(content_api_v2, url_prefix='/api/content-v2')
     # api_docs_bp is registered in init_api_docs function
     
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(test)
     app.register_blueprint(admin)
-    app.register_blueprint(notifications)
-    app.register_blueprint(analytics)
-    app.register_blueprint(comments)
-    app.register_blueprint(ratings)
     app.register_blueprint(recommendations_bp)
     app.register_blueprint(progress_bp)
     app.register_blueprint(mobile_api, url_prefix='/api')
     app.register_blueprint(market_api, url_prefix='/api')
-    app.register_blueprint(reports_bp, url_prefix='/api')
-    app.register_blueprint(ml_recommender, url_prefix='/api')
     app.register_blueprint(feedback_bp, url_prefix='/api')
     app.register_blueprint(calendar_bp, url_prefix='/api')
     app.register_blueprint(portfolio_bp, url_prefix='/api')
@@ -252,9 +253,7 @@ def create_app(config_class=Config):
     app.register_blueprint(monitoring_api, url_prefix='/api/monitoring')
     app.register_blueprint(scheduler_api, url_prefix='/api/scheduler')
     app.register_blueprint(security_api, url_prefix='/api/security')
-    app.register_blueprint(bi_api, url_prefix='/api/bi')
     app.register_blueprint(user_api, url_prefix='/api/users')
-    app.register_blueprint(content_api, url_prefix='/api/content')
     app.register_blueprint(comments_api, url_prefix='/api/comments')
     app.register_blueprint(notifications_api, url_prefix='/api/notifications')
     app.register_blueprint(ratings_api, url_prefix='/api/ratings')
