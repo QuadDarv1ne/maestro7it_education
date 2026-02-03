@@ -870,9 +870,36 @@ class MLRecommendationEngine:
         except Exception as e:
             self.logger.error(f"Ошибка при получении статистики рекомендаций: {str(e)}")
             return {}
+    
+    def get_popular_recommendations(self, limit: int = 10) -> List[Recommendation]:
+        """
+        Получает популярные рекомендации.
+        
+        Args:
+            limit: Максимальное количество рекомендаций
+            
+        Returns:
+            list: Список популярных рекомендаций
+        """
+        try:
+            # Для демонстрации используем трендовые рекомендации
+            # В реальной системе это будут рекомендации на основе популярности
+            trending = self.get_trending_recommendations(limit)
+            
+            # Модифицируем тип рекомендаций на популярные
+            for rec in trending:
+                rec.recommendation_type = RecommendationType.TRENDING
+                rec.explanation = f"Популярный контент: {rec.explanation or 'Рекомендован на основе популярности'}"
+            
+            return trending
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка при получении популярных рекомендаций: {str(e)}")
+            return []
 
 
 def generate_ml_notifications():
+
     """Генерирует ML-уведомления для пользователей"""
     try:
         # Получаем все активные пользователи
@@ -884,9 +911,9 @@ def generate_ml_notifications():
         
         for user in active_users:
             # Генерируем персонализированные рекомендации
-            recommendations = recommendation_engine.generate_personalized_recommendations(
+            recommendations = recommendation_engine.get_personalized_recommendations(
                 user_id=user.id, 
-                num_recommendations=3
+                limit=3
             )
             
             if recommendations:

@@ -345,17 +345,17 @@ def get_recommendation_types():
             'message': str(e)
         }), 500
     
-    def _get_recommendation_type_description(self, rec_type):
-        """Получает описание типа рекомендации."""
-        descriptions = {
-            RecommendationType.CONTENT_BASED: 'На основе контента',
-            RecommendationType.COLLABORATIVE: 'Коллаборативные',
-            RecommendationType.HYBRID: 'Гибридные',
-            RecommendationType.CONTEXTUAL: 'Контекстуальные',
-            RecommendationType.TRENDING: 'Трендовые',
-            RecommendationType.PERSONALIZED: 'Персонализированные'
-        }
-        return descriptions.get(rec_type, 'Неизвестный тип')
+def _get_recommendation_type_description(rec_type):
+    """Получает описание типа рекомендации."""
+    descriptions = {
+        RecommendationType.CONTENT_BASED: 'На основе контента',
+        RecommendationType.COLLABORATIVE: 'Коллаборативные',
+        RecommendationType.HYBRID: 'Гибридные',
+        RecommendationType.CONTEXTUAL: 'Контекстуальные',
+        RecommendationType.TRENDING: 'Трендовые',
+        RecommendationType.PERSONALIZED: 'Персонализированные'
+    }
+    return descriptions.get(rec_type, 'Неизвестный тип')
 
 
 @recommendations_api.route('/recommendations/contexts', methods=['GET'])
@@ -384,17 +384,17 @@ def get_recommendation_contexts():
             'message': str(e)
         }), 500
     
-    def _get_context_description(self, context):
-        """Получает описание контекста."""
-        descriptions = {
-            RecommendationContext.USER_PROFILE: 'На основе профиля пользователя',
-            RecommendationContext.BEHAVIOR: 'На основе поведения',
-            RecommendationContext.TIME: 'Временной контекст',
-            RecommendationContext.LOCATION: 'Географический контекст',
-            RecommendationContext.DEVICE: 'Контекст устройства',
-            RecommendationContext.SEASONAL: 'Сезонный контекст'
-        }
-        return descriptions.get(context, 'Неизвестный контекст')
+def _get_context_description(context):
+    """Получает описание контекста."""
+    descriptions = {
+        RecommendationContext.USER_PROFILE: 'На основе профиля пользователя',
+        RecommendationContext.BEHAVIOR: 'На основе поведения',
+        RecommendationContext.TIME: 'Временной контекст',
+        RecommendationContext.LOCATION: 'Географический контекст',
+        RecommendationContext.DEVICE: 'Контекст устройства',
+        RecommendationContext.SEASONAL: 'Сезонный контекст'
+    }
+    return descriptions.get(context, 'Неизвестный контекст')
 
 
 @recommendations_api.route('/statistics', methods=['GET'])
@@ -657,6 +657,43 @@ def test_recommendation_system():
             'message': 'Тестовая система рекомендаций выполнена успешно',
             'test_recommendations_count': len(test_recommendations),
             'user_preferences_updated': True
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+@recommendations_api.route('/recommendations/popular', methods=['GET'])
+@login_required
+def get_popular_recommendations():
+    """
+    Получает популярные рекомендации.
+    """
+    try:
+        limit = int(request.args.get('limit', 10))
+        
+        # Получаем популярные рекомендации (на основе взаимодействий и рейтингов)
+        # Временно используем трендовые рекомендации до реализации метода
+        popular_recommendations = recommendation_engine.get_trending_recommendations(limit)
+        
+        recommendations_data = []
+        for rec in popular_recommendations:
+            rec_data = {
+                'id': rec.id,
+                'target_id': rec.target_id,
+                'target_type': rec.target_type,
+                'score': round(rec.score, 3),
+                'explanation': rec.explanation,
+                'metadata': rec.metadata
+            }
+            recommendations_data.append(rec_data)
+        
+        return jsonify({
+            'success': True,
+            'recommendations': recommendations_data,
+            'count': len(recommendations_data)
         })
     except Exception as e:
         return jsonify({
