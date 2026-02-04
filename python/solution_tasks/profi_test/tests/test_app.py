@@ -6,41 +6,115 @@ import json
 import time
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
+import tempfile
+import os
 
-# Импорт компонентов приложения
-from app import create_app, db
+# Импорт Flask и расширений напрямую для создания легковесного тестового приложения
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
+from flask_migrate import Migrate
+from flask_caching import Cache
+
+# Импорт конфигурации
+from config import TestConfig
+
+# Импорт моделей
 from app.models import User, TestResult, TestQuestion
 from app.performance import cached_query, performance_monitor
 from app.validators import InputValidator, FormValidator, APIValidator
 from app.security import rate_limiter, api_protector, RateLimiter
 from app.tasks import task_manager, TaskStatus
 
+# Импорт blueprint'ов
+from app.routes import main
+from app.auth import auth
+from app.test_routes import test
+from app.admin import admin
+from app.api_docs import api as api_docs_bp
+from app.analytics_api import analytics_bp
+from app.progress import progress_bp
+from app.portfolio import portfolio_bp
+from app.monitoring import monitoring
+from app.task_api import task_api
+from app.advanced_api import advanced_api
+from app.ux_api import ux_api
+from app.reports_api import reports_api
+from app.data_api import data_api
+from app.monitoring_api import monitoring_api
+from app.scheduler_api import scheduler_api
+from app.security_api import security_api
+from app.user_api import user_api
+from app.comments_api import comments_api
+from app.notifications_api import notifications_api
+from app.ratings_api import ratings_api
+
+# Create lightweight test app
 @pytest.fixture
 def app():
     """Создает и настраивает новый экземпляр приложения для каждого теста."""
-    import tempfile
-    import os
-    
     # Create temporary database
     db_fd, db_path = tempfile.mkstemp()
     
-    app = create_app({
-        'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
-        'SECRET_KEY': 'test-secret-key',
-        'CACHE_TYPE': 'SimpleCache',
-        'WTF_CSRF_ENABLED': False
-    })
+    app = Flask(__name__)
+    
+    # Загружаем конфигурацию для тестов
+    app.config.from_object(TestConfig)
+    
+    # Обновляем путь к базе данных
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    
+    # Инициализируем расширения
+    db = SQLAlchemy()
+    db.init_app(app)
+    
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    
+    csrf = CSRFProtect()
+    csrf.init_app(app)
+    
+    migrate = Migrate()
+    migrate.init_app(app, db)
+    
+    cache = Cache()
+    cache.init_app(app)
+    
+    # Регистрируем blueprint'ы
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(test_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(api_docs_bp, url_prefix='/api')
+    app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    app.register_blueprint(progress_bp, url_prefix='/api/progress')
+    app.register_blueprint(portfolio_bp, url_prefix='/api')
+    app.register_blueprint(monitoring, url_prefix='/api/monitoring')
+    app.register_blueprint(task_api, url_prefix='/api')
+    app.register_blueprint(advanced_api, url_prefix='/api/advanced')
+    app.register_blueprint(ux_api, url_prefix='/api/ux')
+    app.register_blueprint(reports_api, url_prefix='/api/reports')
+    app.register_blueprint(data_api, url_prefix='/api/data')
+    app.register_blueprint(monitoring_api, url_prefix='/api/monitoring')
+    app.register_blueprint(scheduler_api, url_prefix='/api/scheduler')
+    app.register_blueprint(security_api, url_prefix='/api/security')
+    app.register_blueprint(user_api, url_prefix='/api/users')
+    app.register_blueprint(comments_api, url_prefix='/api/comments')
+    app.register_blueprint(notifications_api, url_prefix='/api/notifications')
+    app.register_blueprint(ratings_api, url_prefix='/api/ratings')
     
     with app.app_context():
         db.create_all()
         yield app
         db.drop_all()
         db.session.remove()
-        db.engine.dispose()
-    
+        
     # Cleanup with error handling for Windows
-    os.close(db_fd)
+    try:
+        os.close(db_fd)
+    except:
+        pass
     try:
         os.unlink(db_path)
     except PermissionError:

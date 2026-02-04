@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_caching import Cache
-from config import Config
+from config import Config, TestConfig
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -263,40 +263,43 @@ def create_app(config=None):
     app.register_blueprint(ratings_api, url_prefix='/api/ratings')
     # api_docs_bp is registered in init_api_docs function
 
-    # Create database tables
-    with app.app_context():
-        db.create_all()
-
-    # Start vacancy alerts scheduler
-    try:
-        from app.vacancy_alerts import start_scheduler
-        start_scheduler()
-    except Exception as e:
-        print(f"Ошибка при запуске планировщика уведомлений: {e}")
-
-    # Start ML recommendations scheduler
-    try:
-        from app.ml_recommendations import generate_ml_notifications
-        import schedule
-        import threading
-        import time
-        from datetime import datetime
+    # Create database tables only in application context
+    if not config or (isinstance(config, dict) and config.get('TESTING') is not True) or (hasattr(config, 'TESTING') and config.TESTING is not True) or (hasattr(config, '__name__') and config.__name__ == 'TestConfig'):
+        with app.app_context():
+            db.create_all()
         
-        def run_ml_scheduler():
-            # Планируем генерацию ML-рекомендаций раз в день
-            schedule.every().day.at("10:00").do(generate_ml_notifications)
-            # Также раз в 12 часов
-            schedule.every(12).hours.do(generate_ml_notifications)
+        # Start vacancy alerts scheduler
+        try:
+            from app.vacancy_alerts import start_scheduler
+            start_scheduler()
+        except Exception as e:
+            print(f"Ошибка при запуске планировщика уведомлений: {e}")
+    
+        # Start ML recommendations scheduler
+        try:
+            from app.ml_recommendations import generate_ml_notifications
+            import schedule
+            import threading
+            import time
+            from datetime import datetime
             
-            while True:
-                schedule.run_pending()
-                time.sleep(60)  # Проверяем каждую минуту
-        
-        ml_scheduler_thread = threading.Thread(target=run_ml_scheduler, daemon=True)
-        ml_scheduler_thread.start()
-        
-        print(f"[{datetime.now()}] ML-рекомендательная система запущена")
-    except Exception as e:
-        print(f"Ошибка при запуске ML-рекомендательной системы: {e}")
-
+            def run_ml_scheduler():
+                # Планируем генерацию ML-рекомендаций раз в день
+                schedule.every().day.at("10:00").do(generate_ml_notifications)
+                # Также раз в 12 часов
+                schedule.every(12).hours.do(generate_ml_notifications)
+                
+                while True:
+                    schedule.run_pending()
+                    time.sleep(60)  # Проверяем каждую минуту
+            
+            ml_scheduler_thread = threading.Thread(target=run_ml_scheduler, daemon=True)
+            ml_scheduler_thread.start()
+            
+            print(f"[{datetime.now()}] ML-рекомендательная система запущена")
+        except Exception as e:
+            print(f"Ошибка при запуске ML-рекомендательной системы: {e}")
+    else:
+        print("Пропуск инициализации базы данных и планировщиков для тестовой среды")
+    
     return app
