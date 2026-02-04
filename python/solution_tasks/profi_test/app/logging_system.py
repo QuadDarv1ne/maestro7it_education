@@ -86,7 +86,9 @@ def setup_logging(app):
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     
-    # Clear existing handlers
+    # Close existing handlers before clearing
+    for handler in root_logger.handlers[:]:
+        handler.close()
     root_logger.handlers.clear()
     
     # Create formatters

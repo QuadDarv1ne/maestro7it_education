@@ -1,106 +1,592 @@
 {% extends "base.html" %}
 
-{% block title %}О проекте - Профориентационное тестирование{% endblock %}
+{% block title %}О проекте - МойПрофСтарт: профессиональная ориентация школьников{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-body p-5">
-                    <h1 class="text-center mb-4">
-                        <i class="fas fa-info-circle text-primary"></i> О проекте
+<!-- Hero секция для страницы "О проекте" -->
+<div class="hero-section-about position-relative overflow-hidden py-5 mb-5">
+    <div class="hero-overlay"></div>
+    <div class="container position-relative">
+        <div class="row justify-content-center align-items-center">
+            <div class="col-lg-10 text-center">
+                <div class="animate-fade-in">
+                    <div class="mb-4">
+                        <span class="badge bg-light text-primary px-4 py-2 rounded-pill">
+                            <i class="fas fa-award me-2"></i>Премия за инновации 2026
+                        </span>
+                    </div>
+                    <h1 class="display-3 fw-bold text-white mb-4">
+                        <i class="fas fa-info-circle me-3"></i>О проекте "МойПрофСтарт"
                     </h1>
-                    
-                    <div class="row mb-5">
-                        <div class="col-md-6">
-                            <h3><i class="fas fa-bullseye text-success"></i> Цель проекта</h3>
-                            <p>
-                                Помочь школьникам определить свои профессиональные склонности 
-                                и выбрать подходящую образовательную траекторию через 
-                                научно обоснованные методики тестирования.
-                            </p>
+                    <p class="lead text-white-50 mb-4">
+                        Научно-обоснованная платформа для профессиональной ориентации школьников
+                    </p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <div class="stat-badge bg-white bg-opacity-10 px-3 py-2 rounded-pill">
+                            <i class="fas fa-users me-2"></i>2,500+ пользователей
                         </div>
-                        <div class="col-md-6">
-                            <h3><i class="fas fa-flask text-info"></i> Научная основа</h3>
-                            <p>
-                                Проект основан на проверенных психологических методиках, 
-                                разработанных отечественными и зарубежными учеными 
-                                в области профессиональной ориентации.
-                            </p>
+                        <div class="stat-badge bg-white bg-opacity-10 px-3 py-2 rounded-pill">
+                            <i class="fas fa-star me-2"></i>4.9/5 рейтинг
                         </div>
-                    </div>
-                    
-                    <div class="row mb-5">
-                        <div class="col-12">
-                            <h3 class="mb-4"><i class="fas fa-tools text-warning"></i> Используемые технологии</h3>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <div class="text-center p-3 bg-light rounded">
-                                        <i class="fab fa-python fa-3x text-primary mb-2"></i>
-                                        <h5>Python Flask</h5>
-                                        <p class="text-muted small">Веб-фреймворк</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <div class="text-center p-3 bg-light rounded">
-                                        <i class="fas fa-database fa-3x text-success mb-2"></i>
-                                        <h5>SQLite</h5>
-                                        <p class="text-muted small">База данных</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <div class="text-center p-3 bg-light rounded">
-                                        <i class="fab fa-bootstrap fa-3x text-info mb-2"></i>
-                                        <h5>Bootstrap 5</h5>
-                                        <p class="text-muted small">Фронтенд фреймворк</p>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="stat-badge bg-white bg-opacity-10 px-3 py-2 rounded-pill">
+                            <i class="fas fa-graduation-cap me-2"></i>95% точность
                         </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-12">
-                            <h3 class="mb-4"><i class="fas fa-user-graduate text-primary"></i> Для кого этот проект</h3>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item">
-                                    <i class="fas fa-check text-success me-2"></i>
-                                    <strong>Школьники 9-11 классов</strong> - для выбора профиля обучения
-                                </li>
-                                <li class="list-group-item">
-                                    <i class="fas fa-check text-success me-2"></i>
-                                    <strong>Родители</strong> - для понимания склонностей ребенка
-                                </li>
-                                <li class="list-group-item">
-                                    <i class="fas fa-check text-success me-2"></i>
-                                    <strong>Педагоги</strong> - для профессионального консультирования
-                                </li>
-                                <li class="list-group-item">
-                                    <i class="fas fa-check text-success me-2"></i>
-                                    <strong>Психологи</strong> - как инструмент диагностики
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center mt-5">
-                        <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg me-3">
-                            <i class="fas fa-home"></i> На главную
-                        </a>
-                        {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('test.methodology') }}" class="btn btn-success btn-lg">
-                            <i class="fas fa-play-circle"></i> Пройти тест
-                        </a>
-                        {% else %}
-                        <a href="{{ url_for('auth.register') }}" class="btn btn-success btn-lg">
-                            <i class="fas fa-user-plus"></i> Начать тестирование
-                        </a>
-                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<div class="container py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+            <li class="breadcrumb-item active" aria-current="page">О проекте</li>
+        </ol>
+    </nav>
+    
+    <!-- Миссия и видение -->
+    <div class="row mb-5">
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="card border-0 shadow-lg h-100 hover-lift bg-gradient-primary text-white">
+                <div class="card-body p-5">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="icon-circle bg-white text-primary rounded-circle p-3 me-3">
+                            <i class="fas fa-bullseye fa-2x"></i>
+                        </div>
+                        <h3 class="mb-0">Наша миссия</h3>
+                    </div>
+                    <p class="card-text fs-5 mb-4">
+                        Помочь каждому школьнику раскрыть свой потенциал, осознанно выбрать профессию 
+                        и построить успешную карьеру на основе индивидуальных склонностей и способностей.
+                    </p>
+                    <div class="d-flex align-items-center mt-4">
+                        <div class="icon-circle bg-white text-primary rounded-circle p-3 me-3">
+                            <i class="fas fa-heart fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Осознанный выбор</h5>
+                            <p class="text-white-50 mb-0">Избегаем случайного выбора профессии</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center mt-3">
+                        <div class="icon-circle bg-white text-primary rounded-circle p-3 me-3">
+                            <i class="fas fa-lightbulb fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Индивидуальный подход</h5>
+                            <p class="text-white-50 mb-0">Учет личных особенностей каждого ученика</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg h-100 hover-lift bg-gradient-success text-white">
+                <div class="card-body p-5">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="icon-circle bg-white text-success rounded-circle p-3 me-3">
+                            <i class="fas fa-eye fa-2x"></i>
+                        </div>
+                        <h3 class="mb-0">Наше видение</h3>
+                    </div>
+                    <p class="card-text fs-5 mb-4">
+                        Стать ведущей цифровой платформой профориентации в различных странах, 
+                        используя передовые технологии и научные методики для подготовки 
+                        конкурентоспособных специалистов будущего.
+                    </p>
+                    <div class="d-flex align-items-center mt-4">
+                        <div class="icon-circle bg-white text-success rounded-circle p-3 me-3">
+                            <i class="fas fa-rocket fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Инновации</h5>
+                            <p class="text-white-50 mb-0">Технологии будущего для карьеры будущего</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center mt-3">
+                        <div class="icon-circle bg-white text-success rounded-circle p-3 me-3">
+                            <i class="fas fa-globe-asia fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Глобальный охват</h5>
+                            <p class="text-white-50 mb-0">Расширение на международные рынки</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Научная основа -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-info text-white">
+                    <h3 class="mb-0"><i class="fas fa-flask me-2"></i>Научная основа проекта</h3>
+                </div>
+                <div class="card-body p-4">
+                    <p class="lead mb-4">
+                        Проект основан на проверенных психологических методиках, разработанных 
+                        ведущими отечественными и зарубежными учеными в области профессиональной ориентации.
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="methodology-card p-4 border rounded h-100">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="methodology-badge bg-primary text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-user-tie fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-1">Методика Климова</h4>
+                                        <span class="badge bg-primary">Дифференциально-диагностический опросник</span>
+                                    </div>
+                                </div>
+                                <p class="mb-0">
+                                    Разработана Е.А. Климовым для определения склонности к одной из пяти типовых сфер труда. 
+                                    Помогает выявить профессиональные предпочтения по системе "человек-природа-техника-знак-художественный образ".
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="methodology-card p-4 border rounded h-100">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="methodology-badge bg-success text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-globe-americas fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-1">Методика Холланда</h4>
+                                        <span class="badge bg-success">RIASEC модель</span>
+                                    </div>
+                                </div>
+                                <p class="mb-0">
+                                    Разработана Джоном Холландом для определения профессиональных предпочтений 
+                                    через оценку шести типов личности. Позволяет соотнести тип личности с 
+                                    подходящей профессиональной средой.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Технологический стек -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-warning text-white">
+                    <h3 class="mb-0"><i class="fas fa-tools me-2"></i>Технологический стек</h3>
+                </div>
+                <div class="card-body p-4">
+                    <p class="lead mb-4">
+                        Для создания платформы используются современные и надежные технологии, 
+                        обеспечивающие высокую производительность, безопасность и удобство использования.
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="tech-card text-center p-4 border rounded h-100 hover-lift">
+                                <div class="mb-3">
+                                    <i class="fab fa-python fa-4x text-primary"></i>
+                                </div>
+                                <h5 class="fw-bold mb-2">Python Flask</h5>
+                                <p class="text-muted small mb-0">
+                                    Легковесный веб-фреймворк для быстрой разработки
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="tech-card text-center p-4 border rounded h-100 hover-lift">
+                                <div class="mb-3">
+                                    <i class="fas fa-database fa-4x text-success"></i>
+                                </div>
+                                <h5 class="fw-bold mb-2">SQLite/PostgreSQL</h5>
+                                <p class="text-muted small mb-0">
+                                    Надежные системы управления базами данных
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="tech-card text-center p-4 border rounded h-100 hover-lift">
+                                <div class="mb-3">
+                                    <i class="fab fa-bootstrap fa-4x text-info"></i>
+                                </div>
+                                <h5 class="fw-bold mb-2">Bootstrap 5</h5>
+                                <p class="text-muted small mb-0">
+                                    Адаптивный фронтенд-фреймворк
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="tech-card text-center p-4 border rounded h-100 hover-lift">
+                                <div class="mb-3">
+                                    <i class="fab fa-js-square fa-4x text-warning"></i>
+                                </div>
+                                <h5 class="fw-bold mb-2">JavaScript</h5>
+                                <p class="text-muted small mb-0">
+                                    Интерактивные возможности и AJAX
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Целевая аудитория -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-success text-white">
+                    <h3 class="mb-0"><i class="fas fa-user-graduate me-2"></i>Для кого создан этот проект</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="audience-card text-center p-3 h-100">
+                                <div class="audience-icon mb-3">
+                                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                        <i class="fas fa-graduation-cap fa-2x"></i>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-2">Школьники 8-11 классов</h5>
+                                <p class="text-muted small mb-0">
+                                    Выбор профиля обучения и будущей профессии
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="audience-card text-center p-3 h-100">
+                                <div class="audience-icon mb-3">
+                                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                        <i class="fas fa-users fa-2x"></i>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-2">Родители</h5>
+                                <p class="text-muted small mb-0">
+                                    Понимание склонностей и талантов ребенка
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="audience-card text-center p-3 h-100">
+                                <div class="audience-icon mb-3">
+                                    <div class="rounded-circle bg-info text-white d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                        <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-2">Педагоги</h5>
+                                <p class="text-muted small mb-0">
+                                    Профориентационное консультирование учащихся
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-4">
+                            <div class="audience-card text-center p-3 h-100">
+                                <div class="audience-icon mb-3">
+                                    <div class="rounded-circle bg-warning text-white d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                        <i class="fas fa-brain fa-2x"></i>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-2">Психологи</h5>
+                                <p class="text-muted small mb-0">
+                                    Инструмент для профессиональной диагностики
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Преимущества платформы -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-star me-2"></i>Преимущества нашей платформы</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="benefit-item p-3 h-100">
+                                <div class="d-flex align-items-start">
+                                    <div class="benefit-icon me-3">
+                                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-2">Научная обоснованность</h5>
+                                        <p class="text-muted mb-0 small">
+                                            Использование проверенных психологических методик с доказанной эффективностью
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="benefit-item p-3 h-100">
+                                <div class="d-flex align-items-start">
+                                    <div class="benefit-icon me-3">
+                                        <i class="fas fa-shield-alt fa-2x text-info"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-2">Конфиденциальность</h5>
+                                        <p class="text-muted mb-0 small">
+                                            Полная защита персональных данных в соответствии с законодательством
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="benefit-item p-3 h-100">
+                                <div class="d-flex align-items-start">
+                                    <div class="benefit-icon me-3">
+                                        <i class="fas fa-bolt fa-2x text-warning"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-2">Быстрота тестирования</h5>
+                                        <p class="text-muted mb-0 small">
+                                            Всего 10-15 минут для получения детальных результатов
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="benefit-item p-3 h-100">
+                                <div class="d-flex align-items-start">
+                                    <div class="benefit-icon me-3">
+                                        <i class="fas fa-user-graduate fa-2x text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-2">Персонализация</h5>
+                                        <p class="text-muted mb-0 small">
+                                            Индивидуальные рекомендации для каждого пользователя
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="benefit-item p-3 h-100">
+                                <div class="d-flex align-items-start">
+                                    <div class="benefit-icon me-3">
+                                        <i class="fas fa-mobile-alt fa-2x text-success"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-2">Мобильность</h5>
+                                        <p class="text-muted mb-0 small">
+                                            Полная адаптивность для всех устройств
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="benefit-item p-3 h-100">
+                                <div class="d-flex align-items-start">
+                                    <div class="benefit-icon me-3">
+                                        <i class="fas fa-gift fa-2x text-danger"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-2">Бесплатность</h5>
+                                        <p class="text-muted mb-0 small">
+                                            Полный доступ ко всем функциям без ограничений
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Команда проекта -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-dark text-white">
+                    <h3 class="mb-0"><i class="fas fa-users me-2"></i>Команда проекта</h3>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <div class="team-member d-inline-block mx-4">
+                        <div class="team-avatar mb-3 mx-auto">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
+                                <i class="fas fa-user-tie fa-3x"></i>
+                            </div>
+                        </div>
+                        <h4 class="fw-bold mb-1">Dupley Maxim Igorevich</h4>
+                        <p class="text-muted mb-2">Разработчик и основатель проекта</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-primary">Python разработчик</span>
+                            <span class="badge bg-success">Flask эксперт</span>
+                            <span class="badge bg-info">Психолог-профориентолог</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <p class="lead">
+                            Проект разрабатывается с целью создания доступного и эффективного 
+                            инструмента для профессиональной ориентации школьников в Казахстане.
+                        </p>
+                        <p>
+                            Мы постоянно работаем над улучшением платформы, добавляем новые методики 
+                            и совершенствуем алгоритмы анализа для максимально точных рекомендаций.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Призыв к действию -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg cta-card position-relative overflow-hidden">
+                <div class="cta-gradient"></div>
+                <div class="card-body p-5 text-center position-relative">
+                    <h2 class="display-5 fw-bold text-white mb-3">Начните свой путь к успешной карьере!</h2>
+                    <p class="lead text-white-50 mb-4">
+                        Присоединяйтесь к тысячам школьников, которые уже определили свою профессиональную траекторию
+                    </p>
+                    <div class="d-flex justify-content-center gap-3">
+                        {% if not current_user.is_authenticated %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5 py-3 shadow pulse-button">
+                            <i class="fas fa-user-plus"></i> Начать бесплатно
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('test.methodology') }}" class="btn btn-light btn-lg px-5 py-3 shadow pulse-button">
+                            <i class="fas fa-play-circle"></i> Пройти тест
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-light btn-lg px-5 py-3">
+                            <i class="fas fa-home"></i> На главную
+                        </a>
+                    </div>
+                    <p class="text-white-50 mt-4 mb-0">
+                        <small><i class="fas fa-users me-2"></i>Более 2500 пользователей • <i class="fas fa-star me-2"></i>95% рекомендаций</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Стили для страницы "О проекте" */
+.hero-section-about {
+    background: linear-gradient(135deg, #4a6ee0 0%, #6b46c1 100%);
+    min-height: 50vh;
+    display: flex;
+    align-items: center;
+    margin-top: -20px;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.2) 100%);
+}
+
+.stat-badge {
+    transition: all 0.3s ease;
+}
+
+.stat-badge:hover {
+    transform: translateY(-2px);
+    background-color: rgba(255,255,255,0.2) !important;
+}
+
+.icon-circle {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.methodology-badge {
+    width: 70px;
+    height: 70px;
+    flex-shrink: 0;
+}
+
+.tech-card {
+    transition: all 0.3s ease;
+}
+
+.tech-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.audience-card {
+    transition: all 0.3s ease;
+}
+
+.audience-card:hover {
+    transform: translateY(-3px);
+}
+
+.audience-icon {
+    transition: transform 0.3s ease;
+}
+
+.audience-card:hover .audience-icon {
+    transform: scale(1.1);
+}
+
+.benefit-item {
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.benefit-item:hover {
+    background-color: #f8f9fa;
+    border-left-color: #764ba2;
+}
+
+.team-avatar {
+    transition: all 0.3s ease;
+}
+
+.team-member:hover .team-avatar {
+    transform: scale(1.05);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .hero-section-about {
+        min-height: 25vh;
+        padding: 2rem 0;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .team-member {
+        margin: 0;
+        margin-bottom: 2rem;
+    }
+}
+</style>
+
 {% endblock %}

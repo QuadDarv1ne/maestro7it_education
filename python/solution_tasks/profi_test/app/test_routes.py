@@ -345,7 +345,7 @@ def calculate_klimov_results(answers):
     
     # Calculate scores based on answers
     for question_id, answer in answers.items():
-        question = next((q for q in KLIMOV_QUESTIONS if q['id'] == int(question_id)), None)
+        question = next((q for q in get_klimov_questions() if q['id'] == int(question_id)), None)
         if question:
             scores[question['category']] += int(answer)
     
@@ -373,7 +373,7 @@ def calculate_holland_results(answers):
     
     # Calculate scores based on answers
     for question_id, answer in answers.items():
-        question = next((q for q in HOLLAND_QUESTIONS if q['id'] == int(question_id)), None)
+        question = next((q for q in get_holland_questions() if q['id'] == int(question_id)), None)
         if question:
             scores[question['category']] += int(answer)
     

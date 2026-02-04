@@ -1,95 +1,146 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Профориентационное тестирование для школьников — МойПрофСтарт">
     <title>{% block title %}Профориентационное тестирование{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Bootstrap 5.3.3 (с встроенной поддержкой dark mode) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" 
+          rel="stylesheet" 
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" 
+          crossorigin="anonymous">
+
+    <!-- Font Awesome 6.6+ -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" 
+          integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
     <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+        :root {
+            --gradient-start: #667eea;
+            --gradient-end:   #764ba2;
         }
+
+        body {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            min-height: 100vh;
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        [data-bs-theme="dark"] body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+
         .navbar-brand {
             font-weight: bold;
         }
+
         .card {
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-radius: 1rem;
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+
+        .card:hover {
+            transform: translateY(-0.25rem);
+            box-shadow: 0 1rem 2rem rgba(0,0,0,0.12);
+        }
+
         .btn-primary {
-            border-radius: 25px;
-            padding: 10px 25px;
+            border-radius: 2rem;
+            padding: 0.625rem 1.5625rem;
         }
-        .feature-icon {
-            font-size: 2.5rem;
-            color: #667eea;
+
+        /* Улучшение фокуса для доступности */
+        :focus-visible {
+            outline: 3px solid var(--bs-primary);
+            outline-offset: 3px;
+        }
+
+        /* Иконка переключателя темы */
+        #theme-toggle {
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        #theme-toggle:hover {
+            transform: scale(1.15);
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
+
+    <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
                 <i class="fas fa-graduation-cap"></i> МойПрофСтарт
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#navbarNav" aria-controls="navbarNav" 
+                    aria-expanded="false" aria-label="Открыть/закрыть меню">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.index') }}">Главная</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.about') }}">О проекте</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Главная</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.about') }}">О проекте</a></li>
                     {% if current_user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('test.methodology') }}">Пройти тест</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.profile') }}">Профиль</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('test.methodology') }}">Пройти тест</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.profile') }}">Профиль</a></li>
                     {% if current_user.is_admin %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}">Админ-панель</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}">Админ-панель</a></li>
                     {% endif %}
                     {% endif %}
                 </ul>
-                <ul class="navbar-nav">
+
+                <ul class="navbar-nav align-items-center gap-2">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <span class="navbar-text me-3">
-                            <i class="fas fa-user"></i> {{ current_user.username }}
+                        <span class="navbar-text">
+                            <i class="fas fa-user me-1"></i> {{ current_user.username }}
                         </span>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link position-relative" href="/api/notifications">
-                            <i class="fas fa-bell"></i>
+                    <li class="nav-item position-relative">
+                        <a class="nav-link" href="/api/notifications" aria-label="Уведомления">
+                            <i class="fas fa-bell fa-lg"></i>
                             <span id="notificationCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
                                 0
                             </span>
                         </a>
                     </li>
+                    {% endif %}
+
+                    <!-- Переключатель темы -->
+                    <li class="nav-item">
+                        <button id="theme-toggle" class="btn btn-link nav-link text-white p-0" 
+                                aria-label="Переключить светлую / тёмную тему">
+                            <i class="fas fa-moon fa-lg"></i>
+                        </button>
+                    </li>
+
+                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.logout') }}">
-                            <i class="fas fa-sign-out-alt"></i> Выйти
+                            <i class="fas fa-sign-out-alt me-1"></i> Выйти
                         </a>
                     </li>
                     {% else %}
                     <li class="nav-item">
                         <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('auth.login') }}">
-                            <i class="fas fa-sign-in-alt"></i> Войти
+                            <i class="fas fa-sign-in-alt me-1"></i> Войти
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="btn btn-primary btn-sm" href="{{ url_for('auth.register') }}">
-                            <i class="fas fa-user-plus"></i> Регистрация
+                            <i class="fas fa-user-plus me-1"></i> Регистрация
                         </a>
                     </li>
                     {% endif %}
@@ -98,65 +149,112 @@
         </div>
     </nav>
 
-    <!-- Flash Messages -->
+    <!-- Flash-сообщения -->
     <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ 'danger' if category in ['error', 'danger'] else category }} alert-dismissible fade show" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
     </div>
 
-    <!-- Main Content -->
-    <main>
+    <!-- Основной контент -->
+    <main class="flex-grow-1">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-light mt-5 py-4">
+    <!-- Футер -->
+    <footer class="bg-dark text-light mt-auto py-4">
         <div class="container">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-md-6">
-                    <h5><i class="fas fa-graduation-cap"></i> МойПрофСтарт</h5>
-                    <p>Профессиональная ориентация школьников</p>
+                    <h5 class="mb-1"><i class="fas fa-graduation-cap me-2"></i>МойПрофСтарт</h5>
+                    <p class="mb-0">Профессиональная ориентация школьников</p>
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <p>&copy; {{ now.year }} Все права защищены. Разработано Dupley Maxim Igorevich</p>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <p class="mb-0">© 2026 Все права защищены. Разработано Dupley Maxim Igorevich</p>
                 </div>
             </div>
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS (bundle с Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" 
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" 
+            crossorigin="anonymous"></script>
+
     {% block scripts %}{% endblock %}
+
     <script>
-        // Update notification count
-        function updateNotificationCount() {
-            fetch('/api/notifications/unread-count')
-                .then(response => response.json())
+        // ────────────────────────────────────────────────
+        // Управление переключателем светлой / тёмной темы
+        // ────────────────────────────────────────────────
+
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const rootElement     = document.documentElement;
+        const themeIcon       = themeToggleBtn?.querySelector('i');
+
+        // Функция установки темы + сохранение + смена иконки
+        function установитьТему(тема) {
+            rootElement.setAttribute('data-bs-theme', тема);
+            localStorage.setItem('тема', тема);
+
+            if (themeIcon) {
+                // Солнце — для светлой темы, луна — для тёмной
+                themeIcon.className = тема === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        // Загрузка сохранённой темы или системных предпочтений при старте
+        const сохранённаяТема = localStorage.getItem('тема');
+
+        if (сохранённаяТема) {
+            установитьТему(сохранённаяТема);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            установитьТему('dark');
+        } else {
+            установитьТему('light');
+        }
+
+        // Обработчик клика по кнопке переключения
+        themeToggleBtn?.addEventListener('click', () => {
+            const текущаяТема = rootElement.getAttribute('data-bs-theme') || 'light';
+            const новаяТема   = текущаяТема === 'dark' ? 'light' : 'dark';
+            установитьТему(новаяТема);
+        });
+
+        // ────────────────────────────────────────────────
+        // Обновление счётчика непрочитанных уведомлений
+        // ────────────────────────────────────────────────
+
+        function обновитьСчётчикУведомлений() {
+            fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка сети');
+                    return response.json();
+                })
                 .then(data => {
-                    const countElement = document.getElementById('notificationCount');
+                    const счётчик = document.getElementById('notificationCount');
+                    if (!счётчик) return;
+
                     if (data.unread_count > 0) {
-                        countElement.textContent = data.unread_count;
-                        countElement.classList.remove('d-none');
+                        счётчик.textContent = data.unread_count;
+                        счётчик.classList.remove('d-none');
                     } else {
-                        countElement.classList.add('d-none');
+                        счётчик.classList.add('d-none');
                     }
                 })
-                .catch(error => console.error('Error fetching notification count:', error));
+                .catch(err => console.error('Не удалось загрузить счётчик уведомлений:', err));
         }
-        
-        // Update count on page load and every 30 seconds
-        if (typeof updateNotificationCount === 'function') {
-            updateNotificationCount();
-            setInterval(updateNotificationCount, 30000);
-        }
+
+        // Запуск сразу + каждые 30 секунд
+        обновитьСчётчикУведомлений();
+        setInterval(обновитьСчётчикУведомлений, 30000);
     </script>
 </body>
 </html>

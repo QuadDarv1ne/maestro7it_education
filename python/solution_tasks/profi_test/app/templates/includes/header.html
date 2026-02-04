@@ -1,0 +1,84 @@
+<!-- Header Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
+            <i class="fas fa-graduation-cap"></i> МойПрофСтарт
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.index') }}">
+                        <i class="fas fa-home"></i> Главная
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('test.methodology') }}">
+                        <i class="fas fa-clipboard-list"></i> Тестирование
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.about') }}">
+                        <i class="fas fa-info-circle"></i> О проекте
+                    </a>
+                </li>
+                {% if current_user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.profile') }}">
+                        <i class="fas fa-user"></i> Профиль
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('portfolio.portfolio_page') }}">
+                        <i class="fas fa-briefcase"></i> Портфолио
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('progress.user_progress') }}">
+                        <i class="fas fa-chart-line"></i> Прогресс
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('notifications.user_notifications') }}">
+                        <i class="fas fa-bell"></i> Уведомления
+                        {% if notification_count and notification_count > 0 %}
+                        <span class="badge bg-danger ms-1">{{ notification_count }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            
+            <ul class="navbar-nav">
+                {% if current_user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle"></i> {{ current_user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('main.profile') }}"><i class="fas fa-user me-2"></i>Профиль</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('portfolio.portfolio_page') }}"><i class="fas fa-briefcase me-2"></i>Портфолио</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Выйти</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="btn btn-outline-light me-2" href="{{ url_for('auth.login') }}">
+                        <i class="fas fa-sign-in-alt"></i> Вход
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-light" href="{{ url_for('auth.register') }}">
+                        <i class="fas fa-user-plus"></i> Регистрация
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

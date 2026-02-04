@@ -10,9 +10,8 @@ from app.models import User, TestResult
 class TestProfiTestApp(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        from config import TestConfig
+        self.app = create_app(TestConfig)
         self.client = self.app.test_client()
         
         with self.app.app_context():
@@ -46,6 +45,15 @@ class TestProfiTestApp(unittest.TestCase):
     def test_user_registration(self):
         """Test user registration"""
         with self.app.app_context():
+            # First check if user exists and delete if needed
+            existing_user = User.query.filter_by(username='testuser').first()
+            if existing_user:
+                db.session.delete(existing_user)
+                db.session.commit()
+            
+            # Get the registration page first to get the CSRF token
+            csrf_response = self.client.get('/register')
+            
             response = self.client.post('/register', data={
                 'username': 'testuser',
                 'email': 'test@example.com',

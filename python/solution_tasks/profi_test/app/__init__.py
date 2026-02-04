@@ -271,7 +271,11 @@ def create_app(config=None):
     # api_docs_bp is registered in init_api_docs function
 
     # Create database tables only in application context
-    if not config or (isinstance(config, dict) and config.get('TESTING') is not True) or (hasattr(config, 'TESTING') and config.TESTING is not True) or (hasattr(config, '__name__') and config.__name__ == 'TestConfig'):
+    # Fixed condition to properly handle TestConfig and testing environments
+    is_testing = (config and hasattr(config, 'TESTING') and config.TESTING) or \
+                 (isinstance(config, dict) and config.get('TESTING'))
+    
+    if not is_testing:
         with app.app_context():
             db.create_all()
         
@@ -283,7 +287,7 @@ def create_app(config=None):
             print(f"Ошибка при запуске планировщика уведомлений: {e}")
     
         # Start ML recommendations scheduler only in production
-        if not (config and hasattr(config, 'TESTING') and config.TESTING):
+        if not is_testing:
             try:
                 from app.ml_recommendations import generate_ml_notifications
                 import schedule

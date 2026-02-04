@@ -96,11 +96,17 @@ class TaskScheduler:
         self.running = False
         if self.worker_thread:
             self.worker_thread.join(timeout=5)
-        self.logger.info("Планировщик задач остановлен")
+        try:
+            self.logger.info("Планировщик задач остановлен")
+        except (ValueError, AttributeError):
+            pass  # Ignore logging errors during shutdown
     
     def shutdown(self):
         """Корректно завершает работу планировщика"""
-        self.logger.info("Завершение работы планировщика задач...")
+        try:
+            self.logger.info("Завершение работы планировщика задач...")
+        except (ValueError, AttributeError):
+            pass  # Ignore logging errors during shutdown
         self.stop()
         self._save_task_history()
     
