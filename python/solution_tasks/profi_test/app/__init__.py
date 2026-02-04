@@ -197,7 +197,7 @@ def create_app(config_class=Config):
     from app.portfolio import portfolio_bp
     from app.telegram_bot import telegram_bot
     from app.monitoring import monitoring
-    from app.tasks import task_api
+    from app.task_api import task_api
     from app.advanced_api import advanced_api
     from app.ux_api import ux_api
     from app.reports_api import reports_api
