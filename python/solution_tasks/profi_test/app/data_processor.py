@@ -256,7 +256,7 @@ class DataProcessor:
                     'username': user.username,
                     'email': user.email,
                     'created_at': user.created_at,
-                    'account_age_days': (datetime.utcnow() - user.created_at).days if user.created_at else 0
+                    'account_age_days': (datetime.now(datetime.UTC) - user.created_at).days if user.created_at else 0
                 },
                 'test_analytics': self._analyze_test_data(test_results),
                 'career_analytics': self._analyze_career_data(career_goals),
