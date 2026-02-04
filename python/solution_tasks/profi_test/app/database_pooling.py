@@ -305,7 +305,7 @@ def get_database_health():
             'pool_statistics': pool_stats,
             'slowest_queries': query_stats['top_slow_queries'],
             'issues': issues,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(datetime.UTC).isoformat()
         }
         
     except Exception as e:
@@ -313,7 +313,7 @@ def get_database_health():
         return {
             'status': 'unhealthy',
             'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(datetime.UTC).isoformat()
         }
 
 # Flask CLI commands for database management

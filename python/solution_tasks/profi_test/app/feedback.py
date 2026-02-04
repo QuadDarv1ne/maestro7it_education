@@ -115,7 +115,7 @@ def update_feedback(feedback_id):
     if is_resolved is not None:
         feedback.is_resolved = is_resolved
         if is_resolved:
-            feedback.resolved_at = datetime.utcnow()
+            feedback.resolved_at = datetime.now(datetime.UTC)
     
     if resolution_notes:
         feedback.resolution_notes = resolution_notes

@@ -40,7 +40,7 @@ class EnhancedMLRecommender:
                 user_features = {
                     'user_id': user.id,
                     'is_admin': user.is_admin,
-                    'created_at_days': (datetime.utcnow() - user.created_at).days if user.created_at else 0
+                    'created_at_days': (datetime.now(datetime.UTC) - user.created_at).days if user.created_at else 0
                 }
                 
                 # Get user's test results

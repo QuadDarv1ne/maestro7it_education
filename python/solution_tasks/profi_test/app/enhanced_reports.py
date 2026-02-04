@@ -95,7 +95,7 @@ class EnhancedReports:
                     'total_learning_paths': total_paths,
                     'total_notifications': total_notifications,
                     'learning_path_completion_rate': round(completion_rate, 2),
-                    'account_age_days': (datetime.utcnow() - user.created_at).days
+                    'account_age_days': (datetime.now(datetime.UTC) - user.created_at).days
                 },
                 'test_analysis': test_analysis,
                 'methodology_distribution': dict(methodology_counts),
@@ -407,7 +407,7 @@ class EnhancedReports:
             sorted_categories = sorted(avg_category_scores.items(), key=lambda x: x[1], reverse=True)
             
             report = {
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(datetime.UTC).isoformat(),
                 'system_metrics': {
                     'total_users': total_users,
                     'total_tests': total_tests,

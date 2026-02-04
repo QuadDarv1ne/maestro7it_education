@@ -129,7 +129,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.MEDIUM,
             'message': str(exception),
             'code': 400,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'field': getattr(exception, 'field', None),
                 'value': getattr(exception, 'value', None)
@@ -146,7 +146,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.HIGH,
             'message': 'Ошибка базы данных',
             'code': 500,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'db_error': str(exception),
                 'error_code': getattr(exception, 'code', None)
@@ -163,7 +163,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.MEDIUM,
             'message': 'Ошибка аутентификации',
             'code': 401,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'reason': str(exception)
             }
@@ -179,7 +179,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.HIGH,
             'message': 'Ошибка авторизации',
             'code': 403,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'reason': str(exception),
                 'required_permissions': getattr(exception, 'required_permissions', None)
@@ -196,7 +196,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.LOW,
             'message': 'Ресурс не найден',
             'code': 404,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'resource': str(exception)
             }
@@ -212,7 +212,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.MEDIUM,
             'message': str(exception),
             'code': 422,  # Unprocessable Entity
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'business_rule': getattr(exception, 'rule', None),
                 'context': getattr(exception, 'context', None)
@@ -229,7 +229,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.HIGH,
             'message': 'Ошибка внешнего сервиса',
             'code': 502,  # Bad Gateway
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'service': getattr(exception, 'service', None),
                 'error_details': str(exception)
@@ -246,7 +246,7 @@ class AdvancedErrorHandler:
             'severity': ErrorSeverity.CRITICAL,
             'message': 'Внутренняя ошибка сервера',
             'code': 500,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': {
                 'exception_type': type(exception).__name__,
                 'exception_message': str(exception)
