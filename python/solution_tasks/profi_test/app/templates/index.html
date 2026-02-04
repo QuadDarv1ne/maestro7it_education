@@ -457,17 +457,6 @@
     </div>
 </div>
 
-<!-- Футер с копирайтом -->
-<footer class="bg-dark text-white-50 py-4 mt-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-12 text-center">
-                <p class="mb-0">&copy; 2026 МойПрофСтарт. Разработано Dupley Maxim Igorevich</p>
-            </div>
-        </div>
-    </div>
-</footer>
-
 <style>
 /* Hero секция */
 .hero-section {
@@ -580,3 +569,96 @@
     bottom: 0;
     background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 60vh;
+    }
+    
+    .display-3 {
+        font-size: 2.5rem;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .display-5 {
+        font-size: 2rem;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
+    }
+    
+    .py-5 {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+    
+    .px-5 {
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+}
+
+/* Дополнительные улучшения */
+.feature-icon-large {
+    transition: transform 0.3s ease;
+}
+
+.hover-lift:hover .feature-icon-large {
+    transform: scale(1.1);
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #667eea;
+    color: white;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+}
+
+.stat-item {
+    padding: 1rem;
+}
+
+.methodology-types {
+    padding-left: 0.5rem;
+}
+
+/* Плавная прокрутка */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Улучшение читаемости */
+p {
+    line-height: 1.7;
+}
+
+/* Стили для бейджей */
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+}
+
+/* Тени для карточек */
+.card {
+    transition: all 0.3s ease;
+}
+
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075) !important;
+}
+
+.shadow-lg {
+    box-shadow: 0 1rem 3rem rgba(0,0,0,0.175) !important;
+}
+</style>
+
+{% endblock %}
