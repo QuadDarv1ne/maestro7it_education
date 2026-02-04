@@ -57,6 +57,7 @@ class TestProfiTestApp(unittest.TestCase):
             user = User.query.filter_by(username='testuser').first()
             self.assertIsNotNone(user)
             self.assertEqual(user.email, 'test@example.com')
+            self.assertEqual(response.status_code, 200)
     
     def test_user_login(self):
         """Test user login"""

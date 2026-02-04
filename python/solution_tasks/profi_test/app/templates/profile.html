@@ -7,97 +7,191 @@
     <div class="row">
         <!-- User Info -->
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0"><i class="fas fa-user"></i> Профиль пользователя</h4>
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user me-2"></i>Профиль пользователя</h4>
                 </div>
                 <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-user-circle fa-5x text-primary"></i>
+                    <div class="mb-4">
+                        <div class="position-relative d-inline-block">
+                            <i class="fas fa-user-circle fa-5x text-primary"></i>
+                            <div class="position-absolute bottom-0 end-0">
+                                <span class="badge bg-success rounded-circle p-2">
+                                    <i class="fas fa-check"></i>
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <h3>{{ current_user.username }}</h3>
-                    <p class="text-muted">{{ current_user.email }}</p>
-                    <p class="text-muted">
-                        <small>Зарегистрирован: {{ current_user.created_at.strftime('%d.%m.%Y') }}</small>
-                    </p>
-                    {% if current_user.is_admin %}
-                        <span class="badge bg-danger">Админ</span>
-                    {% endif %}
+                    <h3 class="mb-1">{{ current_user.username }}</h3>
+                    <p class="text-muted mb-2">{{ current_user.email }}</p>
+                    <div class="d-flex justify-content-center gap-3 mb-3">
+                        <span class="badge bg-info">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {{ current_user.created_at.strftime('%d.%m.%Y') }}
+                        </span>
+                        {% if current_user.is_admin %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-crown me-1"></i>
+                                Админ
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-user me-1"></i>
+                                Пользователь
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="progress mt-3" style="height: 8px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 75%"></div>
+                    </div>
+                    <small class="text-muted">Профиль заполнен на 75%</small>
                 </div>
             </div>
             
             <!-- Quick Actions -->
-            <div class="card mt-4">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0"><i class="fas fa-bolt"></i> Быстрые действия</h4>
+            <div class="card mt-4 shadow-sm">
+                <div class="card-header bg-gradient-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-bolt me-2"></i>Быстрые действия</h4>
                 </div>
                 <div class="card-body">
-                    <a href="{{ url_for('test.methodology') }}" class="btn btn-primary w-100 mb-2">
-                        <i class="fas fa-clipboard-list"></i> Пройти тест
-                    </a>
-                    <a href="{{ url_for('progress.user_progress') }}" class="btn btn-success w-100 mb-2">
-                        <i class="fas fa-chart-line"></i> Прогресс
-                    </a>
-                    <a href="{{ url_for('notifications.user_notifications') }}" class="btn btn-info w-100 mb-2">
-                        <i class="fas fa-bell"></i> Уведомления
-                        {% if notification_count > 0 %}
-                            <span class="badge bg-light text-dark">{{ notification_count }}</span>
-                        {% endif %}
-                    </a>
-                    <a href="{{ url_for('main.about') }}" class="btn btn-warning w-100">
-                        <i class="fas fa-info-circle"></i> О системе
-                    </a>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-clipboard-list me-2"></i>Пройти тест
+                        </a>
+                        <a href="{{ url_for('progress.user_progress') }}" class="btn btn-success">
+                            <i class="fas fa-chart-line me-2"></i>Мой прогресс
+                        </a>
+                        <a href="{{ url_for('notifications.user_notifications') }}" class="btn btn-info position-relative">
+                            <i class="fas fa-bell me-2"></i>Уведомления
+                            {% if notification_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ notification_count }}
+                                    <span class="visually-hidden">непрочитанных</span>
+                                </span>
+                            {% endif %}
+                        </a>
+                        <a href="{{ url_for('portfolio.index') }}" class="btn btn-warning">
+                            <i class="fas fa-briefcase me-2"></i>Портфолио
+                        </a>
+                        <a href="{{ url_for('main.about') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-info-circle me-2"></i>О системе
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="card mt-4 shadow-sm">
+                <div class="card-header bg-gradient-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Статистика</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="bg-light p-3 rounded">
+                                <h3 class="text-primary mb-0">{{ test_results|length }}</h3>
+                                <small class="text-muted">Тестов пройдено</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="bg-light p-3 rounded">
+                                <h3 class="text-success mb-0">{{ notification_count }}</h3>
+                                <small class="text-muted">Уведомлений</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
         <!-- Test History -->
         <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="fas fa-history"></i> История тестов</h4>
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient-success text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-history me-2"></i>История тестов</h4>
+                    {% if test_results %}
+                        <span class="badge bg-light text-dark">{{ test_results|length }} тестов</span>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     {% if test_results %}
-                        <div class="list-group">
+                        <div class="list-group list-group-flush">
                             {% for result in test_results %}
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h5 class="mb-1">
+                            <div class="list-group-item border-start border-4 {% if result.methodology == 'klimov' %}border-primary{% else %}border-secondary{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
                                             {% if result.methodology == 'klimov' %}
-                                                <i class="fas fa-brain text-primary"></i> Методика Климова
+                                                <i class="fas fa-brain text-primary me-2"></i>
+                                                <h5 class="mb-0 text-primary">Методика Климова</h5>
                                             {% else %}
-                                                <i class="fas fa-users text-secondary"></i> Методика Холланда
+                                                <i class="fas fa-users text-secondary me-2"></i>
+                                                <h5 class="mb-0 text-secondary">Методика Холланда</h5>
                                             {% endif %}
-                                        </h5>
-                                        <p class="mb-1">{{ result.recommendation|truncate(100)|safe }}</p>
-                                        <small class="text-muted">
-                                            {{ result.created_at.strftime('%d.%m.%Y %H:%M') }}
-                                        </small>
+                                            <span class="badge bg-light text-dark ms-2">
+                                                {{ result.created_at.strftime('%d.%m.%Y') }}
+                                            </span>
+                                        </div>
+                                        <p class="mb-2 text-muted">{{ result.recommendation|truncate(120)|safe }}</p>
+                                        <div class="d-flex gap-2">
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-star me-1"></i>
+                                                {{ result.score|round(1) if result.score else 'N/A' }}
+                                            </span>
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-award me-1"></i>
+                                                {{ result.profession_type or 'Не определено' }}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div>
+                                    <div class="ms-3">
                                         <a href="{{ url_for('test.view_results', result_id=result.id) }}" 
-                                           class="btn btn-primary btn-sm me-1">
-                                            <i class="fas fa-eye"></i> Подробнее
+                                           class="btn btn-primary btn-sm mb-1 w-100">
+                                            <i class="fas fa-eye me-1"></i>Подробнее
                                         </a>
                                         <a href="{{ url_for('recommendations.detailed_recommendations', result_id=result.id) }}" 
-                                           class="btn btn-warning btn-sm">
-                                            <i class="fas fa-robot"></i>
+                                           class="btn btn-warning btn-sm w-100">
+                                            <i class="fas fa-robot me-1"></i>AI
                                         </a>
                                     </div>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
+                        
+                        <!-- Progress Summary -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <h5 class="mb-3"><i class="fas fa-trophy text-warning me-2"></i>Ваш прогресс</h5>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <h4 class="text-primary">{{ test_results|selectattr('methodology', 'equalto', 'klimov')|list|length }}</h4>
+                                    <small class="text-muted">Климов</small>
+                                </div>
+                                <div class="col-4">
+                                    <h4 class="text-secondary">{{ test_results|selectattr('methodology', 'equalto', 'holland')|list|length }}</h4>
+                                    <small class="text-muted">Холланд</small>
+                                </div>
+                                <div class="col-4">
+                                    <h4 class="text-success">{{ test_results|length }}</h4>
+                                    <small class="text-muted">Всего</small>
+                                </div>
+                            </div>
+                        </div>
                     {% else %}
                         <div class="text-center py-5">
-                            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-                            <h4 class="text-muted">Нет пройденных тестов</h4>
-                            <p class="text-muted">Вы еще не проходили профессиональные тесты</p>
-                            <a href="{{ url_for('test.methodology') }}" class="btn btn-primary">
-                                <i class="fas fa-play-circle"></i> Пройти первый тест
-                            </a>
+                            <div class="mb-4">
+                                <i class="fas fa-file-alt fa-4x text-muted"></i>
+                            </div>
+                            <h4 class="text-muted mb-3">Нет пройденных тестов</h4>
+                            <p class="text-muted mb-4">Вы еще не проходили профессиональные тесты. Начните прямо сейчас!</p>
+                            <div class="d-grid gap-2 col-8 mx-auto">
+                                <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-play-circle me-2"></i>Пройти первый тест
+                                </a>
+                                <a href="{{ url_for('main.about') }}" class="btn btn-outline-info">
+                                    <i class="fas fa-question-circle me-2"></i>Как это работает?
+                                </a>
+                            </div>
                         </div>
                     {% endif %}
                 </div>

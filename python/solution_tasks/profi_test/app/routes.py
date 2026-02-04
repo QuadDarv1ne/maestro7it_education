@@ -20,4 +20,14 @@ def about():
 def profile():
     """Маршрут профиля пользователя"""
     test_results = TestResult.query.filter_by(user_id=current_user.id).order_by(TestResult.created_at.desc()).all()
-    return render_template('profile.html', test_results=test_results)
+    # Получаем количество непрочитанных уведомлений
+    try:
+        from app.advanced_notifications import notification_manager, NotificationStatus
+        user_notifications = notification_manager.get_user_notifications(
+            user_id=current_user.id,
+            status=NotificationStatus.UNREAD
+        )
+        notification_count = len(user_notifications)
+    except:
+        notification_count = 0
+    return render_template('profile.html', test_results=test_results, notification_count=notification_count)

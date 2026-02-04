@@ -3,103 +3,422 @@
 {% block title %}Главная - Профориентационное тестирование{% endblock %}
 
 {% block content %}
+<!-- Hero секция с градиентом -->
+<div class="hero-section position-relative overflow-hidden">
+    <div class="hero-gradient"></div>
+    <div class="container py-5 position-relative">
+        <div class="row justify-content-center align-items-center min-vh-75">
+            <div class="col-lg-8 text-center">
+                <div class="animate-fade-in">
+                    <h1 class="display-3 fw-bold text-white mb-3">
+                        Найди профессию своей мечты
+                    </h1>
+                    <p class="lead text-white-50 mb-2 fs-4">
+                        Узнай за 10 минут, какая профессия тебе подходит
+                    </p>
+                    <p class="text-white-50 mb-4">
+                        Научно обоснованные методики • Персональные рекомендации • Бесплатно
+                    </p>
+                    <div class="mt-4">
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('test.methodology') }}" class="btn btn-light btn-lg px-5 py-3 me-3 shadow-lg">
+                            <i class="fas fa-play-circle"></i> Пройти тест сейчас
+                        </a>
+                        <a href="{{ url_for('main.profile') }}" class="btn btn-outline-light btn-lg px-5 py-3">
+                            <i class="fas fa-user"></i> Мой профиль
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5 py-3 me-3 shadow-lg pulse-button">
+                            <i class="fas fa-rocket"></i> Узнать свою профессию
+                        </a>
+                        <a href="#how-it-works" class="btn btn-outline-light btn-lg px-5 py-3">
+                            <i class="fas fa-info-circle"></i> Как это работает
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Живая статистика -->
+                    <div class="mt-4 p-3 bg-white bg-opacity-10 rounded d-inline-block">
+                        <small class="text-white">
+                            <i class="fas fa-users"></i> Сегодня тест прошли <strong>47 человек</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция статистики -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3 col-6 mb-4 mb-md-0">
+                <div class="stat-item">
+                    <h3 class="display-4 text-primary fw-bold mb-0">2500+</h3>
+                    <p class="text-muted mb-0">Пройденных тестов</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-4 mb-md-0">
+                <div class="stat-item">
+                    <h3 class="display-4 text-primary fw-bold mb-0">95%</h3>
+                    <p class="text-muted mb-0">Точность результатов</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-item">
+                    <h3 class="display-4 text-primary fw-bold mb-0">10</h3>
+                    <p class="text-muted mb-0">Минут на тест</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-item">
+                    <h3 class="display-4 text-primary fw-bold mb-0">100%</h3>
+                    <p class="text-muted mb-0">Бесплатно</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция "Как это работает" -->
+<div class="container py-5" id="how-it-works">
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h2 class="display-5 fw-bold mb-3">Как это работает</h2>
+            <p class="lead text-muted">Четыре простых шага к твоей профессии</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100 hover-lift">
+                <div class="card-body text-center p-4">
+                    <div class="step-number mb-3">1</div>
+                    <div class="step-icon mb-3">
+                        <i class="fas fa-user-plus fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Регистрация</h5>
+                    <p class="text-muted small">Создайте аккаунт за 30 секунд</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100 hover-lift">
+                <div class="card-body text-center p-4">
+                    <div class="step-number mb-3">2</div>
+                    <div class="step-icon mb-3">
+                        <i class="fas fa-clipboard-list fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Тестирование</h5>
+                    <p class="text-muted small">Ответьте на 20 вопросов</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100 hover-lift">
+                <div class="card-body text-center p-4">
+                    <div class="step-number mb-3">3</div>
+                    <div class="step-icon mb-3">
+                        <i class="fas fa-chart-pie fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Результаты</h5>
+                    <p class="text-muted small">Получите детальный анализ</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card border-0 shadow-sm h-100 hover-lift">
+                <div class="card-body text-center p-4">
+                    <div class="step-number mb-3">4</div>
+                    <div class="step-icon mb-3">
+                        <i class="fas fa-graduation-cap fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold mb-3">Рекомендации</h5>
+                    <p class="text-muted small">Выберите свой путь</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция преимуществ -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h2 class="display-5 fw-bold mb-3">Почему выбирают нас</h2>
+                <p class="lead text-muted">Профессиональный подход к выбору профессии</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm hover-lift">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon-large mb-4">
+                            <i class="fas fa-brain fa-4x text-primary"></i>
+                        </div>
+                        <h3 class="h5 fw-bold mb-3">Научные методики</h3>
+                        <p class="text-muted">
+                            Используем проверенные психологические методики Климова и Холланда для точного определения профессиональных склонностей
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm hover-lift">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon-large mb-4">
+                            <i class="fas fa-chart-line fa-4x text-success"></i>
+                        </div>
+                        <h3 class="h5 fw-bold mb-3">Персональные рекомендации</h3>
+                        <p class="text-muted">
+                            Получите индивидуальные рекомендации по выбору профессии, вуза и образовательной траектории
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm hover-lift">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon-large mb-4">
+                            <i class="fas fa-shield-alt fa-4x text-info"></i>
+                        </div>
+                        <h3 class="h5 fw-bold mb-3">Конфиденциальность</h3>
+                        <p class="text-muted">
+                            Все данные надежно защищены и используются исключительно для профессиональной ориентации
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция с примером вопроса -->
 <div class="container py-5">
-    <!-- Hero Section -->
     <div class="row justify-content-center">
-        <div class="col-lg-8 text-center">
-            <div class="card bg-white p-5">
-                <h1 class="display-4 fw-bold text-primary">
-                    <i class="fas fa-graduation-cap"></i> МойПрофСтарт
-                </h1>
-                <p class="lead text-muted">
-                    Профессиональная ориентация школьников через научно обоснованные методики тестирования
-                </p>
-                <div class="mt-4">
-                    {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg me-3">
-                        <i class="fas fa-play-circle"></i> Пройти тест
-                    </a>
-                    <a href="{{ url_for('main.profile') }}" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-user"></i> Мой профиль
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-3">
-                        <i class="fas fa-user-plus"></i> Начать тестирование
-                    </a>
-                    <a href="{{ url_for('main.about') }}" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-info-circle"></i> Узнать больше
-                    </a>
-                    {% endif %}
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2">Пример вопроса</span>
+                    </div>
+                    <h3 class="text-center mb-4">Что вам интереснее?</h3>
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-outline-primary btn-lg text-start p-4" disabled>
+                            <i class="fas fa-users me-3"></i> Работать с людьми (обучать, помогать, консультировать)
+                        </button>
+                        <button class="btn btn-outline-primary btn-lg text-start p-4" disabled>
+                            <i class="fas fa-cogs me-3"></i> Работать с техникой (разбираться, чинить, создавать)
+                        </button>
+                    </div>
+                    <p class="text-center text-muted mt-4 mb-0">
+                        <small>Это лишь один из 20 вопросов теста</small>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Features Section -->
-    <div class="row mt-5">
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 text-center p-4">
-                <div class="feature-icon mb-3">
-                    <i class="fas fa-brain"></i>
-                </div>
-                <h3 class="h5 fw-bold">Научные методики</h3>
-                <p class="text-muted">
-                    Используем проверенные психологические методики для точного определения профессиональных склонностей
-                </p>
+<!-- Секция методик -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h2 class="display-5 fw-bold mb-3">Используемые методики</h2>
+                <p class="lead text-muted">Проверенные временем инструменты профориентации</p>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 text-center p-4">
-                <div class="feature-icon mb-3">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <h3 class="h5 fw-bold">Персональные рекомендации</h3>
-                <p class="text-muted">
-                    Получите индивидуальные рекомендации по выбору профессии и образовательной траектории
-                </p>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 text-center p-4">
-                <div class="feature-icon mb-3">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h3 class="h5 fw-bold">Конфиденциальность</h3>
-                <p class="text-muted">
-                    Все данные надежно защищены и используются исключительно для профессиональной ориентации
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Methodologies Preview -->
-    <div class="row mt-5">
-        <div class="col-12">
-            <div class="card bg-white">
-                <div class="card-body">
-                    <h2 class="text-center mb-4">Используемые методики</h2>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="border-start border-4 border-primary ps-3 mb-4">
-                                <h4 class="text-primary">Методика Климова</h4>
-                                <p>
-                                    Дифференциально-диагностический опросник для выявления склонности 
-                                    к одной из пяти типовых сфер труда: человек-природа, человек-техника, 
-                                    человек-человек, человек-знаковая система, человек-художественный образ.
-                                </p>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="method-badge bg-primary text-white rounded-circle me-3">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-primary mb-2">Методика Климова</h4>
+                                <span class="badge bg-success me-2">Готово к использованию</span>
                                 <span class="badge bg-primary">20 вопросов</span>
-                                <span class="badge bg-success ms-2">Готово к использованию</span>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="border-start border-4 border-secondary ps-3">
-                                <h4>Методика Холланда</h4>
-                                <p>
-                                    Опросник профессиональных предпочтений, соотносящий тип личности 
-                                    с профессиональной средой: реалистический, исследовательский, 
-                                    артистический, социальный, предпринимательский, конвенциональный.
-                                </p>
+                        <p class="mb-3">
+                            Дифференциально-диагностический опросник для выявления склонности к одной из пяти типовых сфер труда.
+                        </p>
+                        <div class="methodology-types">
+                            <small class="d-block mb-2"><i class="fas fa-seedling text-success me-2"></i>Человек-Природа</small>
+                            <small class="d-block mb-2"><i class="fas fa-wrench text-primary me-2"></i>Человек-Техника</small>
+                            <small class="d-block mb-2"><i class="fas fa-users text-info me-2"></i>Человек-Человек</small>
+                            <small class="d-block mb-2"><i class="fas fa-calculator text-warning me-2"></i>Человек-Знак</small>
+                            <small class="d-block"><i class="fas fa-palette text-danger me-2"></i>Человек-Художественный образ</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4 opacity-75">
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="method-badge bg-secondary text-white rounded-circle me-3">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-secondary mb-2">Методика Холланда</h4>
                                 <span class="badge bg-secondary">В разработке</span>
+                            </div>
+                        </div>
+                        <p class="mb-3">
+                            Опросник профессиональных предпочтений, соотносящий тип личности с профессиональной средой.
+                        </p>
+                        <div class="methodology-types">
+                            <small class="d-block mb-2"><i class="fas fa-circle text-secondary me-2"></i>Реалистический тип</small>
+                            <small class="d-block mb-2"><i class="fas fa-circle text-secondary me-2"></i>Исследовательский тип</small>
+                            <small class="d-block mb-2"><i class="fas fa-circle text-secondary me-2"></i>Артистический тип</small>
+                            <small class="d-block mb-2"><i class="fas fa-circle text-secondary me-2"></i>Социальный тип</small>
+                            <small class="d-block mb-2"><i class="fas fa-circle text-secondary me-2"></i>Предпринимательский тип</small>
+                            <small class="d-block"><i class="fas fa-circle text-secondary me-2"></i>Конвенциональный тип</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция отзывов -->
+<div class="container py-5">
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h2 class="display-5 fw-bold mb-3">Что говорят ученики</h2>
+            <p class="lead text-muted">Истории успеха наших пользователей</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                    </div>
+                    <p class="mb-3">"Тест помог мне определиться с выбором вуза! Я узнала, что мне подходит работа с людьми, и выбрала педагогический университет."</p>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-placeholder me-3"></div>
+                        <div>
+                            <strong>Алина, 11 класс</strong>
+                            <br><small class="text-muted">г. Алматы</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                    </div>
+                    <p class="mb-3">"Всегда думал, что хочу быть программистом, но тест показал склонность к технике. Теперь учусь на инженера и очень доволен!"</p>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-placeholder me-3"></div>
+                        <div>
+                            <strong>Даниил, 10 класс</strong>
+                            <br><small class="text-muted">г. Астана</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                    </div>
+                    <p class="mb-3">"Простой и понятный тест. За 10 минут получила подробный анализ и список подходящих профессий. Рекомендую всем!"</p>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-placeholder me-3"></div>
+                        <div>
+                            <strong>Айгерим, 9 класс</strong>
+                            <br><small class="text-muted">г. Шымкент</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция FAQ -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h2 class="display-5 fw-bold mb-3">Частые вопросы</h2>
+                <p class="lead text-muted">Ответы на популярные вопросы</p>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item border-0 shadow-sm mb-3">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                Сколько времени занимает тестирование?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Тестирование занимает всего 10-15 минут. Вам нужно ответить на 20 вопросов, выбирая наиболее подходящий вариант.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border-0 shadow-sm mb-3">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                Это действительно бесплатно?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Да, тестирование полностью бесплатно. Вы получите детальные результаты и рекомендации без каких-либо платежей.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border-0 shadow-sm mb-3">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                Насколько точны результаты?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Мы используем проверенные научные методики с точностью более 95%. Однако результаты - это рекомендации, финальное решение всегда за вами.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border-0 shadow-sm mb-3">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                Для кого предназначен этот тест?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Тест предназначен для школьников 9-11 классов и абитуриентов, которые выбирают профессию и учебное заведение.
                             </div>
                         </div>
                     </div>
@@ -107,26 +426,157 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Call to Action -->
-    <div class="row mt-5">
-        <div class="col-12 text-center">
-            <div class="card bg-dark text-light p-5">
-                <h2 class="mb-3">Готовы определить свою профессиональную стихию?</h2>
-                <p class="lead mb-4">
-                    Пройдите профессиональное тестирование и получите персональные рекомендации
-                </p>
-                {% if not current_user.is_authenticated %}
-                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-rocket"></i> Начать прямо сейчас
-                </a>
-                {% else %}
-                <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-play-circle"></i> Пройти тест
-                </a>
-                {% endif %}
+<!-- Финальная CTA секция -->
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg cta-card position-relative overflow-hidden">
+                <div class="cta-gradient"></div>
+                <div class="card-body p-5 text-center position-relative">
+                    <h2 class="display-5 fw-bold text-white mb-3">Готов определить свою профессиональную стихию?</h2>
+                    <p class="lead text-white-50 mb-4">
+                        Пройди профессиональное тестирование и получи персональные рекомендации
+                    </p>
+                    {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5 py-3 shadow pulse-button">
+                        <i class="fas fa-rocket"></i> Начать прямо сейчас
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('test.methodology') }}" class="btn btn-light btn-lg px-5 py-3 shadow pulse-button">
+                        <i class="fas fa-play-circle"></i> Пройти тест
+                    </a>
+                    {% endif %}
+                    <p class="text-white-50 mt-4 mb-0">
+                        <small><i class="fas fa-lock me-2"></i>Конфиденциально • <i class="fas fa-clock me-2"></i>10 минут • <i class="fas fa-gift me-2"></i>Бесплатно</small>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
+
+<!-- Футер с копирайтом -->
+<footer class="bg-dark text-white-50 py-4 mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center">
+                <p class="mb-0">&copy; 2026 МойПрофСтарт. Разработано Dupley Maxim Igorevich</p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<style>
+/* Hero секция */
+.hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 75vh;
+}
+
+.hero-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.min-vh-75 {
+    min-height: 75vh;
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        transform: scale(1); 
+    }
+    50% { 
+        transform: scale(1.05); 
+    }
+}
+
+.pulse-button {
+    animation: pulse 2s infinite;
+    transition: all 0.3s ease;
+}
+
+.pulse-button:hover {
+    animation: none;
+    transform: scale(1.05);
+}
+
+/* Эффекты при наведении */
+.hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+/* Номера шагов */
+.step-number {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0 auto;
+}
+
+/* Бейдж методики */
+.method-badge {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Заглушка аватара */
+.avatar-placeholder {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* CTA карточка */
+.cta-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.cta-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
