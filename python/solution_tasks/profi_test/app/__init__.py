@@ -226,6 +226,7 @@ def create_app(config=None):
     from app.comments_api import comments_api
     from app.ratings_api import ratings_api
     from app.analytics_api import analytics_api
+    from app.notifications import notifications
     app.register_blueprint(analytics_api, url_prefix='/api/analytics')
     
     # Добавляем новые модули рекомендаций и поиска
@@ -265,6 +266,7 @@ def create_app(config=None):
     app.register_blueprint(user_api, url_prefix='/api/users')
     app.register_blueprint(comments_api, url_prefix='/api/comments')
     app.register_blueprint(notifications_api, url_prefix='/api/notifications')
+    app.register_blueprint(notifications)
     app.register_blueprint(ratings_api, url_prefix='/api/ratings')
     # api_docs_bp is registered in init_api_docs function
 
