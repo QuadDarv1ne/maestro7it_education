@@ -15,24 +15,35 @@ login_manager.login_message = 'Пожалуйста, войдите для до�
 # Инициализация кэша
 cache = Cache()
 
-def create_app(config_class=Config):
+def create_app(config=None):
     """
     Создает и настраивает экземпляр приложения Flask.
     
     Args:
-        config_class: Класс конфигурации приложения
+        config: Конфигурация приложения (словарь или класс)
         
     Returns:
         app: Настроенный экземпляр Flask-приложения
     """
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    
+    # Применяем конфигурацию
+    if config is None:
+        # Используем стандартную конфигурацию
+        app.config.from_object(Config)
+    elif isinstance(config, dict):
+        # Применяем словарь конфигурации
+        app.config.update(config)
+    else:
+        # Применяем класс конфигурации
+        app.config.from_object(config)
     
     # Инициализация расширений
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    cache.init_app(app)  # Инициализация кэша
+    # Инициализация кэша после применения конфигурации
+    cache.init_app(app)
     
     # Import models after db initialization to avoid circular imports
     from app.models import User
