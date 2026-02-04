@@ -145,7 +145,8 @@ class TestModels:
             db.session.commit()
             
             # Test relationship loading
-            user_from_db = User.query.get(user.id)
+            from app import db  # Import db to use session
+            user_from_db = db.session.get(User, user.id)
             assert len(user_from_db.test_results) == 1
             assert user_from_db.test_results[0].id == result.id
 

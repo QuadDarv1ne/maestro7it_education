@@ -9,7 +9,7 @@ from sqlalchemy.pool import Pool, QueuePool
 from sqlalchemy.engine import Engine
 from collections import defaultdict, deque
 from threading import Lock
-from datetime import datetime
+from datetime import datetime, timezone
 import psutil
 import os
 
@@ -60,7 +60,7 @@ class DatabaseConnectionManager:
                 self.pool_stats['connections_made'] += 1
                 self.connection_history.append({
                     'event': 'connect',
-                    'timestamp': datetime.utcnow().isoformat(),
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
                     'connection_id': id(dbapi_connection)
                 })
             
@@ -105,7 +105,7 @@ class DatabaseConnectionManager:
                 self.pool_stats['connections_closed'] += 1
                 self.connection_history.append({
                     'event': 'close',
-                    'timestamp': datetime.utcnow().isoformat(),
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
                     'connection_id': id(dbapi_connection)
                 })
         
@@ -305,7 +305,7 @@ def get_database_health():
             'pool_statistics': pool_stats,
             'slowest_queries': query_stats['top_slow_queries'],
             'issues': issues,
-            'timestamp': datetime.now(datetime.UTC).isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
     except Exception as e:
@@ -313,7 +313,7 @@ def get_database_health():
         return {
             'status': 'unhealthy',
             'error': str(e),
-            'timestamp': datetime.now(datetime.UTC).isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
 # Flask CLI commands for database management

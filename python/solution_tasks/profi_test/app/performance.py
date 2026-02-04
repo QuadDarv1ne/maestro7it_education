@@ -9,7 +9,7 @@ import json
 import time
 from collections import defaultdict, deque
 from threading import Lock
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 # Initialize cache - will be configured in app factory
@@ -33,7 +33,7 @@ class PerformanceMonitor:
                 self.slow_queries.append({
                     'query': query_name,
                     'duration': duration,
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(timezone.utc).isoformat()
                 })
     
     def record_metric(self, metric_name, value):

@@ -4,7 +4,7 @@ Advanced Logging System for Production Environment
 import logging
 import logging.handlers
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from flask import request, g
 import traceback
@@ -14,7 +14,7 @@ class CustomFormatter(logging.Formatter):
     
     def format(self, record):
         # Add timestamp
-        record.timestamp = datetime.utcnow().isoformat()
+        record.timestamp = datetime.now(timezone.utc).isoformat()
         
         # Safely add request context if available
         try:
@@ -130,14 +130,14 @@ def setup_logging(app):
     # Add request ID to each request
     @app.before_request
     def before_request():
-        g.request_start_time = datetime.utcnow()
+        g.request_start_time = datetime.now(timezone.utc)
         request.id = os.urandom(8).hex()
     
     # Log request completion
     @app.after_request
     def after_request(response):
         if hasattr(g, 'request_start_time'):
-            duration = (datetime.utcnow() - g.request_start_time).total_seconds()
+            duration = (datetime.now(timezone.utc) - g.request_start_time).total_seconds()
             logging.info(f"Request completed - {request.endpoint} - {response.status_code} - {duration:.3f}s")
         return response
     

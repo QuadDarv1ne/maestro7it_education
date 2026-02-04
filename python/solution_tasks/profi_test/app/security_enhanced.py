@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import secrets
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict, deque
 from threading import Lock
 from functools import wraps
@@ -249,7 +249,7 @@ class SecurityManager:
         event = {
             'type': event_type,
             'client_ip': client_ip,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'details': details or {}
         }
         
@@ -263,7 +263,7 @@ class SecurityManager:
         event = {
             'type': event_type,
             'client_ip': client_ip,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'details': details or {},
             'user_id': getattr(g, 'user_id', 'anonymous')
         }
@@ -284,7 +284,7 @@ class SecurityManager:
     
     def get_security_events(self, event_type=None, hours=24):
         """Get recent security events"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
         cutoff_timestamp = cutoff_time.isoformat()
         
         with self.lock:
@@ -342,7 +342,7 @@ class SecurityManager:
             'event_summary': dict(event_categories),
             'recent_events': recent_events[-10:],  # Last 10 events
             'blocked_ips': self.get_blocked_ips(),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
     
     def _calculate_security_score(self, total_events, blocked_ips, suspicious_requests):
@@ -450,7 +450,7 @@ def get_security_status():
         return {
             'status': 'error',
             'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
 # Flask CLI commands for security management

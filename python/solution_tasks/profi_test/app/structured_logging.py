@@ -6,7 +6,7 @@ import logging.handlers
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from collections import defaultdict
 from threading import Lock
@@ -114,7 +114,7 @@ class StructuredLogger:
         """Setup request tracking and timing"""
         @app.before_request
         def before_request():
-            g.request_start_time = datetime.utcnow()
+            g.request_start_time = datetime.now(timezone.utc)
             g.request_id = str(uuid.uuid4())
             if has_request_context():
                 self.request_stats['total_requests'] += 1
@@ -122,7 +122,7 @@ class StructuredLogger:
         @app.after_request
         def after_request(response):
             if hasattr(g, 'request_start_time'):
-                duration = (datetime.utcnow() - g.request_start_time).total_seconds()
+                duration = (datetime.now(timezone.utc) - g.request_start_time).total_seconds()
                 
                 # Log request completion
                 self.log_request_completion(
@@ -234,7 +234,7 @@ class StructuredLogger:
         with self.lock:
             self.metrics[metric_name].append({
                 'value': value,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'tags': tags or {}
             })
             
@@ -302,7 +302,7 @@ class StructuredFormatter(logging.Formatter):
     def format(self, record):
         # Create base log entry
         log_entry = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage()

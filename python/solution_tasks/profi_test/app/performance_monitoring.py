@@ -7,7 +7,7 @@ import psutil
 import os
 from collections import defaultdict, deque
 from threading import Lock, Thread
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
 import json
 
@@ -70,7 +70,7 @@ class DatabasePerformanceMonitor:
     
     def _collect_metrics(self):
         """Collect various performance metrics"""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         
         # Database metrics
         db_metrics = self._collect_database_metrics()
@@ -235,7 +235,7 @@ class DatabasePerformanceMonitor:
         alert = {
             'type': alert_type,
             'message': message,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'severity': self._determine_severity(alert_type)
         }
         
@@ -271,7 +271,7 @@ class DatabasePerformanceMonitor:
             if metric_name not in self.metrics:
                 return []
             
-            cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
             cutoff_timestamp = cutoff_time.isoformat()
             
             return [
@@ -295,7 +295,7 @@ class DatabasePerformanceMonitor:
             'trends': trends,
             'alerts': recent_alerts,
             'health_score': health_score,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'report_period_hours': hours
         }
     
@@ -309,7 +309,7 @@ class DatabasePerformanceMonitor:
                     continue
                 
                 # Get values from the specified time period
-                cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+                cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
                 cutoff_timestamp = cutoff_time.isoformat()
                 
                 recent_values = [
@@ -371,7 +371,7 @@ def get_database_performance_status():
         return {
             'status': 'error',
             'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
 def register_monitoring_commands(app):
