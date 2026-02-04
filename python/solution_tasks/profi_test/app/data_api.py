@@ -271,7 +271,7 @@ def get_user_progress_trends(user_id):
         
         for days in periods:
             # Получаем пользователей, зарегистрированных в указанный период
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = datetime.now(datetime.UTC) - timedelta(days=days)
             users_in_period = User.query.filter(User.created_at >= cutoff_date).all()
             
             if users_in_period:

@@ -129,7 +129,7 @@ def manage_calendar_event(event_id):
         event.recurrence_pattern = data.get('recurrencePattern', event.recurrence_pattern)
         event.reminder_minutes = data.get('reminderMinutes', event.reminder_minutes)
         
-        event.updated_at = datetime.utcnow()
+        event.updated_at = datetime.now(datetime.UTC)
         
         db.session.commit()
         
@@ -362,7 +362,7 @@ def manage_learning_path(path_id):
             
             # Update completed_at if status changes to completed
             if status == 'completed' and not path.completed_at:
-                path.completed_at = datetime.utcnow()
+                path.completed_at = datetime.now(datetime.UTC)
             elif status != 'completed':
                 path.completed_at = None
         
@@ -399,7 +399,7 @@ def schedule_learning_sessions():
     for path in learning_paths:
         # Для упрощения, создаем одно событие на начало траектории
         # В реальном приложении это будет более сложный алгоритм
-        start_date = datetime.utcnow() + timedelta(days=1)  # Начать завтра
+        start_date = datetime.now(datetime.UTC) + timedelta(days=1)  # Начать завтра
         
         event = CalendarEvent(
             user_id=current_user.id,

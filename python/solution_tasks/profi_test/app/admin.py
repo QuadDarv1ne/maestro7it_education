@@ -130,8 +130,8 @@ def admin_statistics():
     
     # Получить данные для графиков
     # Статистика регистраций
-    week_ago = datetime.utcnow() - timedelta(days=7)
-    month_ago = datetime.utcnow() - timedelta(days=30)
+    week_ago = datetime.now(datetime.UTC) - timedelta(days=7)
+    month_ago = datetime.now(datetime.UTC) - timedelta(days=30)
     
     weekly_registrations = User.query.filter(User.created_at >= week_ago).count()
     monthly_registrations = User.query.filter(User.created_at >= month_ago).count()

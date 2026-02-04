@@ -138,12 +138,12 @@ class AdvancedSecurityManager:
             return True
         
         attempt_info = self.failed_attempts[identifier]
-        if datetime.utcnow() < attempt_info['reset_time']:
+        if datetime.now(datetime.UTC) < attempt_info['reset_time']:
             if attempt_info['count'] >= self.security_config['max_login_attempts']:
                 return False
         
         # Сброс счетчика если прошло достаточно времени
-        if datetime.utcnow() >= attempt_info['reset_time']:
+        if datetime.now(datetime.UTC) >= attempt_info['reset_time']:
             del self.failed_attempts[identifier]
         
         return True
@@ -158,7 +158,7 @@ class AdvancedSecurityManager:
         if identifier not in self.failed_attempts:
             self.failed_attempts[identifier] = {
                 'count': 0,
-                'reset_time': datetime.utcnow() + timedelta(seconds=self.security_config['lockout_duration'])
+                'reset_time': datetime.now(datetime.UTC) + timedelta(seconds=self.security_config['lockout_duration'])
             }
         
         self.failed_attempts[identifier]['count'] += 1
@@ -187,16 +187,16 @@ class AdvancedSecurityManager:
         if identifier not in self.rate_limits:
             self.rate_limits[identifier] = {
                 'requests': 0,
-                'window_start': datetime.utcnow()
+                'window_start': datetime.now(datetime.UTC)
             }
         
         rate_info = self.rate_limits[identifier]
-        time_passed = (datetime.utcnow() - rate_info['window_start']).seconds
+        time_passed = (datetime.now(datetime.UTC) - rate_info['window_start']).seconds
         
         if time_passed >= self.security_config['rate_limit_window']:
             # Сброс окна ограничения
             rate_info['requests'] = 1
-            rate_info['window_start'] = datetime.utcnow()
+            rate_info['window_start'] = datetime.now(datetime.UTC)
             return False
         
         rate_info['requests'] += 1
@@ -299,8 +299,8 @@ class AdvancedSecurityManager:
         """
         payload = {
             'user_id': user_id,
-            'exp': datetime.utcnow() + timedelta(seconds=expires_in),
-            'iat': datetime.utcnow()
+            'exp': datetime.now(datetime.UTC) + timedelta(seconds=expires_in),
+            'iat': datetime.now(datetime.UTC)
         }
         
         secret = current_app.config.get('SECRET_KEY', 'fallback_secret')
@@ -340,8 +340,8 @@ class AdvancedSecurityManager:
         token = self.generate_secure_token()
         self.session_tokens[token] = {
             'user_id': user_id,
-            'created_at': datetime.utcnow(),
-            'last_activity': datetime.utcnow()
+            'created_at': datetime.now(datetime.UTC),
+            'last_activity': datetime.now(datetime.UTC)
         }
         return token
     
@@ -359,7 +359,7 @@ class AdvancedSecurityManager:
             return False
         
         session_info = self.session_tokens[token]
-        time_since_last_activity = datetime.utcnow() - session_info['last_activity']
+        time_since_last_activity = datetime.now(datetime.UTC) - session_info['last_activity']
         
         if time_since_last_activity.total_seconds() > self.security_config['session_timeout']:
             # Удаляем просроченную сессию
@@ -367,7 +367,7 @@ class AdvancedSecurityManager:
             return False
         
         # Обновляем время последней активности
-        session_info['last_activity'] = datetime.utcnow()
+        session_info['last_activity'] = datetime.now(datetime.UTC)
         return True
     
     def get_user_from_session_token(self, token: str) -> Optional[int]:
@@ -426,7 +426,7 @@ class AdvancedSecurityManager:
             details: Детали события
         """
         event = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'type': event_type.value,
             'severity': severity,
             'details': details
@@ -488,7 +488,7 @@ class AdvancedSecurityManager:
             dict: Отчет о безопасности
         """
         return {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(datetime.UTC).isoformat(),
             'security_level': self.security_config['security_level'].value,
             'failed_login_attempts': len(self.failed_attempts),
             'active_sessions': len(self.session_tokens),

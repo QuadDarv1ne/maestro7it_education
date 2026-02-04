@@ -397,7 +397,7 @@ class AdvancedConfigManager:
             'configured_parameters': len([k for k in self.config_data.keys() if k in self.required_fields]),
             'source_distribution': source_counts,
             'validation_status': 'passed' if self._is_valid() else 'failed',
-            'last_updated': datetime.utcnow().isoformat()
+            'last_updated': datetime.now(datetime.UTC).isoformat()
         }
     
     def _is_valid(self) -> bool:
