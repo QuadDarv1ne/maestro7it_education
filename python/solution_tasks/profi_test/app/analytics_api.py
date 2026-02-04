@@ -12,6 +12,47 @@ from datetime import datetime, timedelta
 analytics_api = Blueprint('analytics_api', __name__)
 
 
+def _get_report_type_description(report_type):
+    """Получает описание типа отчета."""
+    descriptions = {
+        ReportType.USER_ACTIVITY: 'Активность пользователей',
+        ReportType.TEST_PERFORMANCE: 'Производительность тестов',
+        ReportType.CONTENT_ANALYTICS: 'Аналитика контента',
+        ReportType.SYSTEM_PERFORMANCE: 'Производительность системы',
+        ReportType.BUSINESS_METRICS: 'Бизнес-метрики',
+        ReportType.USER_ENGAGEMENT: 'Вовлеченность пользователей',
+        ReportType.RETENTION_ANALYSIS: 'Анализ удержания',
+        ReportType.REVENUE_ANALYSIS: 'Анализ доходов'
+    }
+    return descriptions.get(report_type, 'Неизвестный тип')
+
+
+def _get_frequency_description(frequency):
+    """Получает описание частоты."""
+    descriptions = {
+        ReportFrequency.DAILY: 'Ежедневно',
+        ReportFrequency.WEEKLY: 'Еженедельно',
+        ReportFrequency.MONTHLY: 'Ежемесячно',
+        ReportFrequency.QUARTERLY: 'Ежеквартально',
+        ReportFrequency.YEARLY: 'Ежегодно',
+        ReportFrequency.CUSTOM: 'Пользовательская частота'
+    }
+    return descriptions.get(frequency, 'Неизвестная частота')
+
+
+def _get_dimension_description(dimension):
+    """Получает описание измерения."""
+    descriptions = {
+        AnalyticsDimension.TIME: 'Временные измерения',
+        AnalyticsDimension.USER: 'Пользовательские измерения',
+        AnalyticsDimension.CONTENT: 'Измерения контента',
+        AnalyticsDimension.GEOGRAPHY: 'Географические измерения',
+        AnalyticsDimension.DEVICE: 'Измерения устройств',
+        AnalyticsDimension.CHANNEL: 'Измерения каналов'
+    }
+    return descriptions.get(dimension, 'Неизвестное измерение')
+
+
 @analytics_api.route('/reports', methods=['POST'])
 @login_required
 def generate_report():
@@ -407,7 +448,7 @@ def get_report_types():
             type_data = {
                 'name': report_type.name,
                 'value': report_type.value,
-                'description': self._get_report_type_description(report_type)
+                'description': _get_report_type_description(report_type)
             }
             types_data.append(type_data)
         
@@ -421,19 +462,7 @@ def get_report_types():
             'message': str(e)
         }), 500
     
-    def _get_report_type_description(self, report_type):
-        """Получает описание типа отчета."""
-        descriptions = {
-            ReportType.USER_ACTIVITY: 'Активность пользователей',
-            ReportType.TEST_PERFORMANCE: 'Производительность тестов',
-            ReportType.CONTENT_ANALYTICS: 'Аналитика контента',
-            ReportType.SYSTEM_PERFORMANCE: 'Производительность системы',
-            ReportType.BUSINESS_METRICS: 'Бизнес-метрики',
-            ReportType.USER_ENGAGEMENT: 'Вовлеченность пользователей',
-            ReportType.RETENTION_ANALYSIS: 'Анализ удержания',
-            ReportType.REVENUE_ANALYSIS: 'Анализ доходов'
-        }
-        return descriptions.get(report_type, 'Неизвестный тип')
+
 
 
 @analytics_api.route('/reports/frequencies', methods=['GET'])
@@ -448,7 +477,7 @@ def get_report_frequencies():
             frequency_data = {
                 'name': frequency.name,
                 'value': frequency.value,
-                'description': self._get_frequency_description(frequency)
+                'description': _get_frequency_description(frequency)
             }
             frequencies_data.append(frequency_data)
         
@@ -462,17 +491,7 @@ def get_report_frequencies():
             'message': str(e)
         }), 500
     
-    def _get_frequency_description(self, frequency):
-        """Получает описание частоты."""
-        descriptions = {
-            ReportFrequency.DAILY: 'Ежедневно',
-            ReportFrequency.WEEKLY: 'Еженедельно',
-            ReportFrequency.MONTHLY: 'Ежемесячно',
-            ReportFrequency.QUARTERLY: 'Ежеквартально',
-            ReportFrequency.YEARLY: 'Ежегодно',
-            ReportFrequency.CUSTOM: 'Пользовательская частота'
-        }
-        return descriptions.get(frequency, 'Неизвестная частота')
+
 
 
 @analytics_api.route('/analytics/dimensions', methods=['GET'])
@@ -487,7 +506,7 @@ def get_analytics_dimensions():
             dimension_data = {
                 'name': dimension.name,
                 'value': dimension.value,
-                'description': self._get_dimension_description(dimension)
+                'description': _get_dimension_description(dimension)
             }
             dimensions_data.append(dimension_data)
         
@@ -501,17 +520,7 @@ def get_analytics_dimensions():
             'message': str(e)
         }), 500
     
-    def _get_dimension_description(self, dimension):
-        """Получает описание измерения."""
-        descriptions = {
-            AnalyticsDimension.TIME: 'Временные измерения',
-            AnalyticsDimension.USER: 'Пользовательские измерения',
-            AnalyticsDimension.CONTENT: 'Измерения контента',
-            AnalyticsDimension.GEOGRAPHY: 'Географические измерения',
-            AnalyticsDimension.DEVICE: 'Измерения устройств',
-            AnalyticsDimension.CHANNEL: 'Измерения каналов'
-        }
-        return descriptions.get(dimension, 'Неизвестное измерение')
+
 
 
 @analytics_api.route('/statistics', methods=['GET'])

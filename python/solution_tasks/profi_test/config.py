@@ -73,7 +73,7 @@ class TestConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
-    CACHE_TYPE = 'null'
+    CACHE_TYPE = 'simple'
     SERVER_NAME = 'localhost.localdomain'
     SECRET_KEY = 'test-secret-key'
     

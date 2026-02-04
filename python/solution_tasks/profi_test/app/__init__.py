@@ -45,6 +45,10 @@ def create_app(config=None):
     # Инициализация кэша после применения конфигурации
     cache.init_app(app)
     
+    # Инициализация кэша для производительности
+    from app.performance import cache as performance_cache
+    performance_cache.init_app(app)
+    
     # Import models after db initialization to avoid circular imports
     from app.models import User
     
@@ -148,7 +152,9 @@ def create_app(config=None):
     # Инициализация планировщика задач
     from app.task_scheduler import task_scheduler
     app.task_scheduler = task_scheduler
-    task_scheduler.start()  # Автозапуск планировщика
+    # Отложенная инициализация планировщика для ускорения запуска приложения
+    if not (config and hasattr(config, 'TESTING') and config.TESTING):
+        task_scheduler.start()  # Автозапуск планировщика только в продакшене
     
     # Инициализация менеджера безопасности
     from app.advanced_security import security_manager
@@ -157,6 +163,7 @@ def create_app(config=None):
     # Инициализация движка бизнес-аналитики
     from app.business_intelligence import bi_engine_v2
     app.bi_engine = bi_engine_v2
+    app.bi_engine_v2 = bi_engine_v2  # Avoid duplicate assignment
     
     # Инициализация менеджера пользователей
     from app.user_management import user_manager
@@ -172,8 +179,8 @@ def create_app(config=None):
     from app.advanced_comments import comment_manager
     app.comment_manager = comment_manager
     
-    # Инициализация менеджера уведомлений
-    from app.advanced_notifications import notification_manager
+    # Инициализация менеджера уведомлений - используем ту же переменную, чтобы избежать дублирования
+    # from app.advanced_notifications import notification_manager  # Уже импортирован выше
     app.notification_manager = notification_manager
     
     # Инициализация менеджера рейтингов
@@ -188,9 +195,7 @@ def create_app(config=None):
     from app.advanced_search import search_engine
     app.search_engine = search_engine
     
-    # Инициализация расширенного движка бизнес-аналитики
-    from app.business_intelligence import bi_engine_v2
-    app.bi_engine_v2 = bi_engine_v2
+    # bi_engine_v2 уже инициализован выше, избегаем дублирования
     
 
     
@@ -275,30 +280,31 @@ def create_app(config=None):
         except Exception as e:
             print(f"Ошибка при запуске планировщика уведомлений: {e}")
     
-        # Start ML recommendations scheduler
-        try:
-            from app.ml_recommendations import generate_ml_notifications
-            import schedule
-            import threading
-            import time
-            from datetime import datetime
-            
-            def run_ml_scheduler():
-                # Планируем генерацию ML-рекомендаций раз в день
-                schedule.every().day.at("10:00").do(generate_ml_notifications)
-                # Также раз в 12 часов
-                schedule.every(12).hours.do(generate_ml_notifications)
+        # Start ML recommendations scheduler only in production
+        if not (config and hasattr(config, 'TESTING') and config.TESTING):
+            try:
+                from app.ml_recommendations import generate_ml_notifications
+                import schedule
+                import threading
+                import time
+                from datetime import datetime
                 
-                while True:
-                    schedule.run_pending()
-                    time.sleep(60)  # Проверяем каждую минуту
-            
-            ml_scheduler_thread = threading.Thread(target=run_ml_scheduler, daemon=True)
-            ml_scheduler_thread.start()
-            
-            print(f"[{datetime.now()}] ML-рекомендательная система запущена")
-        except Exception as e:
-            print(f"Ошибка при запуске ML-рекомендательной системы: {e}")
+                def run_ml_scheduler():
+                    # Планируем генерацию ML-рекомендаций раз в день
+                    schedule.every().day.at("10:00").do(generate_ml_notifications)
+                    # Также раз в 12 часов
+                    schedule.every(12).hours.do(generate_ml_notifications)
+                    
+                    while True:
+                        schedule.run_pending()
+                        time.sleep(60)  # Проверяем каждую минуту
+                
+                ml_scheduler_thread = threading.Thread(target=run_ml_scheduler, daemon=True)
+                ml_scheduler_thread.start()
+                
+                print(f"[{datetime.now()}] ML-рекомендательная система запущена")
+            except Exception as e:
+                print(f"Ошибка при запуске ML-рекомендательной системы: {e}")
     else:
         print("Пропуск инициализации базы данных и планировщиков для тестовой среды")
     

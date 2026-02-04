@@ -12,11 +12,8 @@ from threading import Lock
 from datetime import datetime
 import logging
 
-# Initialize cache
-cache = Cache(config={
-    'CACHE_TYPE': 'simple',  # In-memory cache for development
-    'CACHE_DEFAULT_TIMEOUT': 300  # 5 minutes default
-})
+# Initialize cache - will be configured in app factory
+cache = Cache()
 
 # Performance monitoring
 class PerformanceMonitor:
