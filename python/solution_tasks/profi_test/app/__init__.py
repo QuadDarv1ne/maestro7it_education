@@ -83,6 +83,9 @@ def create_app(config=None):
     from app.database_optimization import initialize_database_optimization
     initialize_database_optimization(app)
     
+    # Инициализация пула соединений с базой данных (уже импортировано ранее)
+    # db_connection_manager.init_app(app)  # Уже вызывается в строках 87-89
+    
     # Инициализация пула соединений с базой данных
     from app.database_pooling import db_connection_manager, register_database_commands
     db_connection_manager.init_app(app)

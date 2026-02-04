@@ -1,355 +1,247 @@
 """
-Advanced database connection pooling and optimization configuration
+Database connection pooling and optimization module
 """
 import logging
+from sqlalchemy import event
+from sqlalchemy.pool import Pool
+from flask import current_app
+import threading
 import time
-from contextlib import contextmanager
-from sqlalchemy import event, text
-from sqlalchemy.pool import Pool, QueuePool
-from sqlalchemy.engine import Engine
-from collections import defaultdict, deque
-from threading import Lock
-from datetime import datetime, timezone
-import psutil
-import os
+from collections import defaultdict
 
-logger = logging.getLogger(__name__)
 
 class DatabaseConnectionManager:
-    """Advanced database connection pool manager with monitoring"""
+    """Manages database connection pooling and optimization"""
     
-    def __init__(self, app=None):
-        self.app = app
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.pool_stats = defaultdict(int)
-        self.query_stats = defaultdict(lambda: {'count': 0, 'total_time': 0, 'slow_queries': 0})
-        self.connection_history = deque(maxlen=1000)
-        self.lock = Lock()
-        self.slow_query_threshold = 0.5  # seconds
+        self.connection_times = []
+        self.lock = threading.Lock()
         
-        if app:
-            self.init_app(app)
-    
     def init_app(self, app):
         """Initialize with Flask app"""
         self.app = app
         
-        # Configure database connection pool
-        app.config.setdefault('SQLALCHEMY_ENGINE_OPTIONS', {
-            'poolclass': QueuePool,
-            'pool_size': 20,
-            'pool_recycle': 3600,  # Recycle connections after 1 hour
-            'pool_pre_ping': True,  # Verify connections before use
-            'pool_timeout': 30,
-            'max_overflow': 30,
-            'echo': app.config.get('SQLALCHEMY_ECHO', False),
-        })
-        
-        # Register event listeners
-        self._register_event_listeners()
-        
-        # Initialize database optimization
-        self._setup_database_optimization()
-    
-    def _register_event_listeners(self):
-        """Register SQLAlchemy event listeners for monitoring"""
-        
-        @event.listens_for(Engine, "connect")
-        def connect(dbapi_connection, connection_record):
-            """Track new database connections"""
-            with self.lock:
-                self.pool_stats['connections_made'] += 1
-                self.connection_history.append({
-                    'event': 'connect',
-                    'timestamp': datetime.now(timezone.utc).isoformat(),
-                    'connection_id': id(dbapi_connection)
-                })
-            
-            # Apply database-specific optimizations
-            try:
-                if 'sqlite' in str(dbapi_connection):
-                    cursor = dbapi_connection.cursor()
-                    # Enable WAL mode for better concurrency
-                    cursor.execute("PRAGMA journal_mode=WAL")
-                    # Set synchronous mode for performance
-                    cursor.execute("PRAGMA synchronous=NORMAL")
-                    # Increase cache size
-                    cursor.execute("PRAGMA cache_size=10000")
-                    # Enable foreign keys
-                    cursor.execute("PRAGMA foreign_keys=ON")
-                    cursor.close()
-            except Exception as e:
-                logger.warning(f"Database optimization failed: {e}")
-        
-        @event.listens_for(Engine, "checkout")
-        def checkout(dbapi_connection, connection_record, connection_proxy):
-            """Track connection checkout from pool"""
-            with self.lock:
-                self.pool_stats['checkouts'] += 1
-                connection_record.start_time = time.time()
-        
-        @event.listens_for(Engine, "checkin")
-        def checkin(dbapi_connection, connection_record):
-            """Track connection checkin to pool"""
-            with self.lock:
-                self.pool_stats['checkins'] += 1
-                if hasattr(connection_record, 'start_time'):
-                    duration = time.time() - connection_record.start_time
-                    self.pool_stats['total_checkout_time'] += duration
-                    if duration > 30:  # Long checkout time
-                        logger.warning(f"Long connection checkout: {duration:.2f}s")
-        
-        @event.listens_for(Engine, "close")
-        def close(dbapi_connection, connection_record):
-            """Track connection closure"""
-            with self.lock:
-                self.pool_stats['connections_closed'] += 1
-                self.connection_history.append({
-                    'event': 'close',
-                    'timestamp': datetime.now(timezone.utc).isoformat(),
-                    'connection_id': id(dbapi_connection)
-                })
-        
-        @event.listens_for(Engine, "before_cursor_execute")
-        def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-            """Track query execution start"""
-            context._query_start_time = time.time()
-            context._query_statement = statement[:100] + "..." if len(statement) > 100 else statement
-        
-        @event.listens_for(Engine, "after_cursor_execute")
-        def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-            """Track query execution completion"""
-            duration = time.time() - context._query_start_time
-            
-            with self.lock:
-                # Update query statistics
-                query_key = context._query_statement[:50]
-                self.query_stats[query_key]['count'] += 1
-                self.query_stats[query_key]['total_time'] += duration
-                
-                if duration > self.slow_query_threshold:
-                    self.query_stats[query_key]['slow_queries'] += 1
-                    logger.warning(f"Slow query ({duration:.3f}s): {context._query_statement}")
-                
-                # Update pool stats
-                self.pool_stats['queries_executed'] += 1
-                self.pool_stats['total_query_time'] += duration
-        
+        # Register connection pool event listeners
         @event.listens_for(Pool, "connect")
-        def set_sqlite_pragma(dbapi_conn, connection_record):
-            """SQLite-specific optimizations"""
-            try:
-                cursor = dbapi_conn.cursor()
-                cursor.execute("PRAGMA foreign_keys=ON")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            """Set SQLite pragmas for better performance"""
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                cursor = dbapi_connection.cursor()
+                # Improve performance with these pragmas
                 cursor.execute("PRAGMA journal_mode=WAL")
                 cursor.execute("PRAGMA synchronous=NORMAL")
                 cursor.execute("PRAGMA cache_size=10000")
+                cursor.execute("PRAGMA temp_store=MEMORY")
                 cursor.close()
-            except Exception:
-                pass  # Not SQLite or optimization failed
-    
-    def _setup_database_optimization(self):
-        """Apply database-specific optimizations"""
-        try:
-            from app import db
-            
-            # Apply general optimizations
-            db.engine.execute(text("PRAGMA optimize"))
-            
-            logger.info("Database optimization applied successfully")
-        except Exception as e:
-            logger.warning(f"Database optimization failed: {e}")
+                
+        @event.listens_for(Pool, "checkout")
+        def receive_checkout(dbapi_connection, connection_record, connection_proxy):
+            """Track connection checkout"""
+            with self.lock:
+                self.pool_stats['checkouts'] += 1
+                self.connection_times.append(time.time())
+                
+        @event.listens_for(Pool, "checkin")
+        def receive_checkin(dbapi_connection, connection_record):
+            """Track connection checkin"""
+            with self.lock:
+                self.pool_stats['checkins'] += 1
+                
+        @event.listens_for(Pool, "connect")
+        def track_connect(dbapi_connection, connection_record):
+            """Track new connections"""
+            with self.lock:
+                self.pool_stats['connects'] += 1
     
     def get_pool_statistics(self):
-        """Get current connection pool statistics"""
+        """Get current pool statistics"""
+        from app import db
+        
         with self.lock:
             stats = dict(self.pool_stats)
             
-            # Calculate derived metrics
-            if stats.get('checkouts', 0) > 0:
-                stats['avg_checkout_time'] = (
-                    stats.get('total_checkout_time', 0) / stats['checkouts']
-                )
-            else:
-                stats['avg_checkout_time'] = 0
-            
-            if stats.get('queries_executed', 0) > 0:
-                stats['avg_query_time'] = (
-                    stats.get('total_query_time', 0) / stats['queries_executed']
-                )
-            else:
-                stats['avg_query_time'] = 0
-            
-            # Add current pool status
-            try:
-                from app import db
-                if hasattr(db.engine.pool, 'size'):
-                    stats['pool_size'] = db.engine.pool.size()
-                if hasattr(db.engine.pool, 'checkedout'):
-                    stats['connections_in_use'] = db.engine.pool.checkedout()
-                if hasattr(db.engine.pool, 'overflow'):
-                    stats['overflow_connections'] = db.engine.pool.overflow()
-            except Exception:
-                pass
-            
-            return stats
-    
-    def get_query_statistics(self, limit=20):
-        """Get query performance statistics"""
-        with self.lock:
-            # Sort queries by total execution time
-            sorted_queries = sorted(
-                self.query_stats.items(),
-                key=lambda x: x[1]['total_time'],
-                reverse=True
-            )
-            
-            return {
-                'top_slow_queries': [
-                    {
-                        'query': query[:100] + "..." if len(query) > 100 else query,
-                        'count': stats['count'],
-                        'total_time': round(stats['total_time'], 3),
-                        'avg_time': round(stats['total_time'] / stats['count'], 4) if stats['count'] > 0 else 0,
-                        'slow_queries': stats['slow_queries']
-                    }
-                    for query, stats in sorted_queries[:limit]
-                ],
-                'total_queries': len(self.query_stats)
-            }
-    
-    def get_connection_history(self, limit=50):
-        """Get recent connection history"""
-        with self.lock:
-            return list(self.connection_history)[-limit:]
-    
-    def reset_statistics(self):
-        """Reset all statistics"""
-        with self.lock:
-            self.pool_stats.clear()
-            self.query_stats.clear()
-            self.connection_history.clear()
-    
-    def diagnose_pool_issues(self):
-        """Diagnose potential connection pool issues"""
-        issues = []
-        stats = self.get_pool_statistics()
-        
-        # Check for connection leaks
-        if stats.get('connections_made', 0) > stats.get('connections_closed', 0) * 2:
-            issues.append("Potential connection leak detected")
-        
-        # Check for long checkout times
-        if stats.get('avg_checkout_time', 0) > 5:
-            issues.append("Long connection checkout times detected")
-        
-        # Check for slow queries
-        query_stats = self.get_query_statistics()
-        slow_queries = sum(1 for q in query_stats['top_slow_queries'] if q['slow_queries'] > 0)
-        if slow_queries > 5:
-            issues.append(f"High number of slow queries detected: {slow_queries}")
-        
-        # Check system resources
+        # Add SQLAlchemy pool-specific stats
         try:
-            process = psutil.Process(os.getpid())
-            memory_mb = process.memory_info().rss / 1024 / 1024
-            if memory_mb > 500:  # 500MB threshold
-                issues.append(f"High memory usage: {memory_mb:.1f}MB")
-        except Exception:
-            pass
+            engine = db.engine
+            if hasattr(engine.pool, 'size'):
+                stats['pool_size'] = engine.pool.size()
+            if hasattr(engine.pool, 'checkedin'):
+                stats['checkedin_connections'] = engine.pool.checkedin()
+            if hasattr(engine.pool, 'overflow'):
+                stats['overflow_connections'] = engine.pool.overflow()
+        except Exception as e:
+            self.logger.warning(f"Could not get pool statistics: {e}")
+            
+        return stats
+    
+    def optimize_connection_settings(self):
+        """Apply database-specific optimizations"""
+        if self.app and 'sqlite' in self.app.config['SQLALCHEMY_DATABASE_URI']:
+            # SQLite-specific optimizations
+            from app import db
+            
+            with db.engine.connect() as conn:
+                conn.execute("PRAGMA mmap_size = 268435456")  # 256MB
+                conn.execute("PRAGMA read_uncommitted = true")
+                conn.execute("PRAGMA threads = 4")
+    
+    def cleanup_idle_connections(self):
+        """Clean up idle connections if needed"""
+        # This is a placeholder - actual cleanup depends on the database backend
+        pass
+
+
+class QueryOptimizer:
+    """Provides query optimization utilities"""
+    
+    @staticmethod
+    def optimize_query(query, entity_class=None, eager_load_relations=None):
+        """
+        Optimize query with proper loading strategies
         
-        return issues
+        Args:
+            query: SQLAlchemy query object
+            entity_class: Model class for the query
+            eager_load_relations: List of relations to eager load
+        """
+        from sqlalchemy.orm import selectinload, joinedload
+        
+        if eager_load_relations and entity_class:
+            for relation in eager_load_relations:
+                try:
+                    # Use selectinload for many-to-one or one-to-many relationships
+                    query = query.options(selectinload(getattr(entity_class, relation)))
+                except AttributeError:
+                    # Fallback to joinedload if selectinload fails
+                    query = query.options(joinedload(getattr(entity_class, relation)))
+        
+        return query
+    
+    @staticmethod
+    def add_query_timeout(query, timeout_seconds=30):
+        """Add timeout to query (database-specific)"""
+        # This is a simplified implementation - actual timeout handling depends on the database
+        return query.execution_options(query_timeout=timeout_seconds)
+    
+    @staticmethod
+    def optimize_pagination(query, page=1, per_page=20, max_per_page=100):
+        """Optimize paginated queries"""
+        # Limit per_page to prevent abuse
+        per_page = min(per_page, max_per_page)
+        
+        # Calculate offset
+        offset = (page - 1) * per_page
+        
+        # Apply pagination
+        paginated_query = query.offset(offset).limit(per_page)
+        
+        return paginated_query, offset, per_page
+
 
 # Global connection manager instance
 db_connection_manager = DatabaseConnectionManager()
 
-@contextmanager
-def database_transaction():
-    """Context manager for database transactions with monitoring"""
-    from app import db
-    
-    start_time = time.time()
-    try:
-        yield db.session
-        db.session.commit()
-        
-        duration = time.time() - start_time
-        if duration > 2:  # Long transaction
-            logger.warning(f"Long database transaction: {duration:.2f}s")
-            
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Database transaction failed: {e}")
-        raise
-    finally:
-        db.session.close()
 
-def get_database_health():
-    """Get comprehensive database health status"""
-    try:
-        from app import db
-        
-        # Test database connectivity
-        db.engine.execute(text("SELECT 1"))
-        
-        # Get pool statistics
-        pool_stats = db_connection_manager.get_pool_statistics()
-        
-        # Get query statistics
-        query_stats = db_connection_manager.get_query_statistics(5)
-        
-        # Check for issues
-        issues = db_connection_manager.diagnose_pool_issues()
-        
-        return {
-            'status': 'healthy' if not issues else 'degraded',
-            'pool_statistics': pool_stats,
-            'slowest_queries': query_stats['top_slow_queries'],
-            'issues': issues,
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Database health check failed: {e}")
-        return {
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        }
-
-# Flask CLI commands for database management
 def register_database_commands(app):
-    """Register database management CLI commands"""
+    """Register database optimization CLI commands"""
     import click
     from flask.cli import with_appcontext
     
+    @app.cli.command('db-optimize')
+    @with_appcontext
+    def optimize_database():
+        """Optimize database connections and settings"""
+        db_connection_manager.optimize_connection_settings()
+        click.echo("Database connections optimized.")
+        
+        stats = db_connection_manager.get_pool_statistics()
+        click.echo("Current pool statistics:")
+        for key, value in stats.items():
+            click.echo(f"  {key}: {value}")
+    
     @app.cli.command('db-stats')
     @with_appcontext
-    def database_stats():
-        """Show database connection pool statistics"""
+    def show_db_stats():
+        """Show database connection statistics"""
         stats = db_connection_manager.get_pool_statistics()
-        click.echo("Database Connection Pool Statistics:")
-        click.echo(f"  Connections made: {stats.get('connections_made', 0)}")
-        click.echo(f"  Connections closed: {stats.get('connections_closed', 0)}")
-        click.echo(f"  Checkouts: {stats.get('checkouts', 0)}")
-        click.echo(f"  Checkins: {stats.get('checkins', 0)}")
-        click.echo(f"  Average checkout time: {stats.get('avg_checkout_time', 0):.3f}s")
-        click.echo(f"  Queries executed: {stats.get('queries_executed', 0)}")
-        click.echo(f"  Average query time: {stats.get('avg_query_time', 0):.3f}s")
+        click.echo("Database connection statistics:")
+        for key, value in stats.items():
+            click.echo(f"  {key}: {value}")
+
+
+def optimize_model_queries(model_class, query_func, *args, **kwargs):
+    """
+    Generic function to optimize queries for a specific model
     
-    @app.cli.command('db-health')
-    @with_appcontext
-    def database_health():
-        """Check database health status"""
-        health = get_database_health()
-        click.echo(f"Database Status: {health['status']}")
-        if health['status'] != 'healthy':
-            click.echo("Issues found:")
-            for issue in health.get('issues', []):
-                click.echo(f"  - {issue}")
+    Args:
+        model_class: SQLAlchemy model class
+        query_func: Function that creates the base query
+        *args, **kwargs: Arguments for query optimization
+    """
+    from app import db
     
-    @app.cli.command('db-reset-stats')
-    @with_appcontext
-    def reset_stats():
-        """Reset database statistics"""
-        db_connection_manager.reset_statistics()
-        click.echo("Database statistics reset successfully")
+    # Create base query
+    query = query_func()
+    
+    # Apply common optimizations
+    query = db_connection_manager.optimize_query(
+        query, 
+        entity_class=model_class,
+        eager_load_relations=kwargs.get('eager_load', [])
+    )
+    
+    # Apply pagination if requested
+    if 'page' in kwargs and 'per_page' in kwargs:
+        query, _, _ = QueryOptimizer.optimize_pagination(
+            query, 
+            page=kwargs['page'], 
+            per_page=kwargs['per_page']
+        )
+    
+    return query.all()
+
+
+def get_optimized_user_query(user_id, include_relationships=None):
+    """Get optimized query for user with common relationships"""
+    from app import db
+    from app.models import User
+    
+    query = db.session.query(User).filter(User.id == user_id)
+    
+    if include_relationships is None:
+        include_relationships = [
+            'test_results',
+            'notifications',
+            'progress_records'
+        ]
+    
+    return db_connection_manager.optimize_query(
+        query,
+        entity_class=User,
+        eager_load_relations=include_relationships
+    ).first()
+
+
+def get_optimized_test_results_query(user_id, methodology=None, limit=50):
+    """Get optimized query for test results"""
+    from app import db
+    from app.models import TestResult
+    
+    query = db.session.query(TestResult).filter(TestResult.user_id == user_id)
+    
+    if methodology:
+        query = query.filter(TestResult.methodology == methodology)
+    
+    # Order by creation date descending
+    query = query.order_by(TestResult.created_at.desc())
+    
+    # Limit results
+    query = query.limit(limit)
+    
+    return db_connection_manager.optimize_query(
+        query,
+        entity_class=TestResult,
+        eager_load_relations=['user']
+    ).all()

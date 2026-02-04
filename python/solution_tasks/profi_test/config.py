@@ -25,9 +25,38 @@ class Config:
     SUPERJOB_API_KEY = os.environ.get('SUPERJOB_API_KEY')
     
     # Настройки кэширования
-    CACHE_TYPE = 'simple'
-    CACHE_DEFAULT_TIMEOUT = 300
-    CACHE_THRESHOLD = 1000
+    CACHE_TYPE = os.environ.get('CACHE_TYPE', 'redis')
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    CACHE_DEFAULT_TIMEOUT = int(os.environ.get('CACHE_DEFAULT_TIMEOUT', '300'))
+    CACHE_THRESHOLD = int(os.environ.get('CACHE_THRESHOLD', '1000'))
+    
+    # Настройки пула соединений с базой данных
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': int(os.environ.get('DB_POOL_SIZE', '10')),
+        'pool_recycle': int(os.environ.get('DB_POOL_RECYCLE', '300')),
+        'pool_pre_ping': True,
+        'max_overflow': int(os.environ.get('DB_MAX_OVERFLOW', '20')),
+        'pool_timeout': int(os.environ.get('DB_POOL_TIMEOUT', '30')),
+    }
+    
+    # Настройки Celery для фоновых задач
+    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+    
+    # Настройки ограничения частоты запросов
+    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'redis://localhost:6379/1')
+    
+    # Настройки производительности
+    PERF_MONITORING_ENABLED = os.environ.get('PERF_MONITORING_ENABLED', 'true').lower() == 'true'
+    PERF_MONITORING_INTERVAL = int(os.environ.get('PERF_MONITORING_INTERVAL', '30'))
+    
+    # Настройки логирования производительности
+    PERF_LOG_LEVEL = os.environ.get('PERF_LOG_LEVEL', 'INFO')
+    PERF_LOG_FILE = os.environ.get('PERF_LOG_FILE', 'performance.log')
+    
+    # Настройки асинхронной обработки
+    ASYNC_TASK_QUEUE = os.environ.get('ASYNC_TASK_QUEUE', 'celery')
+    WORKER_CONCURRENCY = int(os.environ.get('WORKER_CONCURRENCY', '4'))
     
     # Настройки безопасности
     WTF_CSRF_ENABLED = True

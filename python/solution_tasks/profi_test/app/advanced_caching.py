@@ -19,11 +19,28 @@ class AdvancedCacheManager:
     Обеспечивает интеллектуальное кэширование данных и оптимизацию производительности.
     """
     
-    def __init__(self, redis_url='redis://localhost:6379/0'):
+    def __init__(self, redis_url=None):
+        """
+        Initialize the cache manager.
+        
+        Args:
+            redis_url: Redis connection URL. If None, gets from app config.
+        """
         self.logger = logging.getLogger(__name__)
+        
+        # Get Redis URL from app config if not provided
+        if redis_url is None:
+            from flask import current_app
+            try:
+                redis_url = current_app.config.get('CACHE_REDIS_URL', 'redis://localhost:6379/0')
+            except RuntimeError:
+                # Not in app context, use default
+                redis_url = 'redis://localhost:6379/0'
+        
         try:
-            self.redis_client = redis.from_url(redis_url, decode_responses=True)
+            self.redis_client = redis.from_url(redis_url, decode_responses=False)  # Changed to decode_responses=False for binary data
             self.redis_available = True
+            self.logger.info("Redis cache initialized successfully")
         except Exception as e:
             self.logger.warning(f"Redis недоступен: {str(e)}. Используется только Flask-Cache.")
             self.redis_client = None
