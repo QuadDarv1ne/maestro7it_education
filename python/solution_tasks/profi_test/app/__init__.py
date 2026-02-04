@@ -75,6 +75,15 @@ def create_app(config=None):
     app.structured_logger = structured_logger
     register_logging_commands(app)
     
+    # Инициализация оптимизатора запуска приложения
+    from app.startup_optimizer import startup_optimizer, apply_startup_optimizations
+    apply_startup_optimizations(app)
+    
+    # Инициализация оптимизатора памяти
+    from app.memory_optimizer import memory_optimizer, periodic_memory_cleanup
+    import atexit
+    atexit.register(periodic_memory_cleanup)  # Clean up on exit
+    
     # Инициализация мониторинга производительности
     from app.performance import performance_monitor
     app.performance_monitor = performance_monitor

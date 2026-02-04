@@ -290,14 +290,62 @@ class DatabasePerformanceMonitor:
         # System health score
         health_score = self._calculate_health_score(current_metrics)
         
+        # Detailed metrics breakdown
+        detailed_metrics = self._get_detailed_metrics()
+        
         return {
             'current_metrics': current_metrics,
             'trends': trends,
             'alerts': recent_alerts,
             'health_score': health_score,
             'timestamp': datetime.now(timezone.utc).isoformat(),
-            'report_period_hours': hours
+            'report_period_hours': hours,
+            'detailed_metrics': detailed_metrics
         }
+    
+    def _get_detailed_metrics(self):
+        """Get detailed breakdown of performance metrics"""
+        with self.lock:
+            # Calculate more specific metrics
+            db_avg_times = []
+            db_slow_queries = 0
+            
+            for key, values in self.metrics.items():
+                if key.startswith('database.') and 'time' in key:
+                    db_avg_times.extend([v['value'] for v in values[-10:]])
+                elif key.startswith('database.') and 'slow' in key:
+                    db_slow_queries += sum(v['value'] for v in values[-10:])
+            
+            # Calculate averages
+            db_avg_time = sum(db_avg_times) / len(db_avg_times) if db_avg_times else 0
+            
+            # Request metrics
+            request_times = []
+            for key, values in self.metrics.items():
+                if key.startswith('application.request_time'):
+                    request_times.extend([v['value'] for v in values[-20:]])
+            
+            avg_request_time = sum(request_times) / len(request_times) if request_times else 0
+            max_request_time = max(request_times) if request_times else 0
+            
+            return {
+                'database': {
+                    'average_query_time': round(db_avg_time, 4),
+                    'recent_slow_queries': db_slow_queries,
+                    'active_connections': self.metrics.get('database.connections_in_use', [{'value': 0}])[-1]['value'] if 'database.connections_in_use' in self.metrics else 0,
+                    'total_connections': self.metrics.get('database.pool_size', [{'value': 0}])[-1]['value'] if 'database.pool_size' in self.metrics else 0,
+                },
+                'application': {
+                    'average_response_time': round(avg_request_time, 4),
+                    'max_response_time': round(max_request_time, 4),
+                    'request_throughput': len(request_times) / 60 if request_times else 0,  # requests per minute
+                },
+                'system': {
+                    'memory_usage_mb': self.metrics.get('system.memory_rss_mb', [{'value': 0}])[-1]['value'] if 'system.memory_rss_mb' in self.metrics else 0,
+                    'cpu_usage_percent': self.metrics.get('system.cpu_percent', [{'value': 0}])[-1]['value'] if 'system.cpu_percent' in self.metrics else 0,
+                    'process_threads': self.metrics.get('system.num_threads', [{'value': 0}])[-1]['value'] if 'system.num_threads' in self.metrics else 0,
+                }
+            }
     
     def _calculate_trends(self, hours):
         """Calculate metric trends over time"""
