@@ -134,19 +134,67 @@ class AdvancedCacheManager:
             key_pattern: Шаблон ключа для инвалидации
         """
         try:
+            invalidated_count = 0
+            
             if self.redis_available:
                 # Инвалидация в Redis
                 keys_to_delete = self.redis_client.keys(f"{key_pattern}*")
                 if keys_to_delete:
                     self.redis_client.delete(*keys_to_delete)
-                    self.logger.info(f"Инвалидировано {len(keys_to_delete)} ключей Redis")
+                    invalidated_count += len(keys_to_delete)
+                    self.logger.info(f"Инвалидировано {len(keys_to_delete)} ключей Redis по шаблону {key_pattern}")
             
-            # Инвалидация во Flask-Cache (ограниченная поддержка)
-            # Flask-Cache не поддерживает шаблоны, поэтому удаляем только конкретные ключи
-            # если они известны
+            # Flask-Cache не поддерживает шаблоны, но мы можем попробовать инвалидировать
+            # часто используемые ключи, если они соответствуют шаблону
+            # Для этого мы добавим метод инвалидации конкретных ключей
+            
+            return invalidated_count
             
         except Exception as e:
             self.logger.error(f"Ошибка при инвалидации кэша: {str(e)}")
+            return 0
+    
+    def invalidate_related_cache(self, entity_type, entity_id=None):
+        """
+        Инвалидирует связанные кэши при изменении сущности.
+        
+        Args:
+            entity_type: Тип сущности (user, test_result, etc.)
+            entity_id: ID сущности (опционально)
+        """
+        try:
+            invalidated_total = 0
+            
+            # Определяем шаблоны кэша, которые зависят от типа сущности
+            patterns = []
+            if entity_type == 'user':
+                patterns = [
+                    f'user:{entity_id}:' if entity_id else 'user:*:',
+                    f'*user*{entity_id}*' if entity_id else '*user*',
+                    f'*user_id*{entity_id}*' if entity_id else '*user_id*',
+                ]
+            elif entity_type == 'test_result':
+                patterns = [
+                    f'*test_result*{entity_id}*' if entity_id else '*test_result*',
+                    f'*result*{entity_id}*' if entity_id else '*result*',
+                ]
+            elif entity_type == 'notification':
+                patterns = [
+                    f'*notification*{entity_id}*' if entity_id else '*notification*',
+                    f'*notification_user*{entity_id}*' if entity_id else '*notification*',
+                ]
+            
+            # Инвалидируем каждый шаблон
+            for pattern in patterns:
+                count = self.invalidate_cache(pattern)
+                invalidated_total += count
+                
+            self.logger.info(f"Инвалидировано {invalidated_total} связанных кэшей для {entity_type}:{entity_id if entity_id else 'all'}")
+            return invalidated_total
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка при инвалидации связанных кэшей: {str(e)}")
+            return 0
     
     def get_cache_stats(self):
         """

@@ -84,6 +84,11 @@ def create_app(config=None):
     import atexit
     atexit.register(periodic_memory_cleanup)  # Clean up on exit
     
+    # Инициализация бенчмаркинга производительности
+    from app.performance_benchmark import register_benchmark_commands, add_benchmark_to_jinja
+    register_benchmark_commands(app)
+    add_benchmark_to_jinja(app)
+    
     # Инициализация мониторинга производительности
     from app.performance import performance_monitor
     app.performance_monitor = performance_monitor

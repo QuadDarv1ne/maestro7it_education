@@ -102,6 +102,20 @@ class DatabasePoolManager:
         # Создание движка
         engine = create_engine(database_uri, **final_config)
         
+        # Подписка на события пула для мониторинга
+        from sqlalchemy import event
+        
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            if database_uri.startswith('sqlite:'):
+                cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA synchronous=NORMAL")
+                cursor.execute("PRAGMA cache_size=10000")
+                cursor.execute("PRAGMA temp_store=MEMORY")
+                cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
+                cursor.close()
+        
         return engine
     
     def get_pool_stats(self):
@@ -111,16 +125,53 @@ class DatabasePoolManager:
         
         try:
             pool = self.engine.pool
-            return {
+            stats = {
                 'pool_size': pool.size(),
                 'checked_in': pool.checkedin() if hasattr(pool, 'checkedin') else 'N/A',
                 'checked_out': pool.checkedout() if hasattr(pool, 'checkedout') else 'N/A',
                 'overflow': pool.overflow() if hasattr(pool, 'overflow') else 'N/A',
                 'recycle': pool._recycle if hasattr(pool, '_recycle') else 'N/A'
             }
+            
+            # Add additional stats if available
+            if hasattr(pool, '_timeout'):
+                stats['timeout'] = pool._timeout
+            if hasattr(pool, '_max_overflow'):
+                stats['max_overflow_setting'] = pool._max_overflow
+            
+            return stats
         except Exception as e:
             logger.error(f"Ошибка получения статистики пула: {e}")
             return {'error': str(e)}
+    
+    def monitor_connection_health(self):
+        """Мониторинг состояния соединений"""
+        if not self.engine:
+            return {'error': 'Движок недоступен'}
+        
+        try:
+            # Проверка активности соединения
+            with self.engine.connect() as conn:
+                # Выполняем простой запрос для проверки работоспособности
+                result = conn.execute("SELECT 1").fetchone()
+                is_alive = result is not None
+            
+            stats = self.get_pool_stats()
+            stats['connection_alive'] = is_alive
+            
+            # Проверка производительности соединения
+            import time
+            start_time = time.time()
+            with self.engine.connect() as conn:
+                conn.execute("SELECT COUNT(*) FROM sqlite_master").fetchone()
+            query_time = time.time() - start_time
+            
+            stats['health_check_time'] = round(query_time * 1000, 2)  # milliseconds
+            
+            return stats
+        except Exception as e:
+            logger.error(f"Ошибка проверки состояния соединения: {e}")
+            return {'error': str(e), 'connection_alive': False}
     
     def dispose_pool(self):
         """Освобождение всех соединений в пуле"""
