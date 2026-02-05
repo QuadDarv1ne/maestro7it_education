@@ -34,13 +34,13 @@ class TestProfiTestApp(unittest.TestCase):
         """Test that registration page loads"""
         response = self.client.get('/register')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'\xd0\xa0\xd0\xb5\xd0\xb3\xd0\xb8\xd1\x81\xd1\x82\xd1\x80\xd0\xb0\xd1\x86\xd0\xb8\xd1\x8f', response.data)  # Registration in Russian
+        self.assertIn(b'Registration', response.data)  # Registration in English
     
     def test_login_page(self):
         """Test that login page loads"""
         response = self.client.get('/login')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'\xd0\x92\xd1\x85\xd0\xbe\xd0\xb4', response.data)  # Login in Russian
+        self.assertIn(b'Login', response.data)  # Login in English
     
     def test_user_registration(self):
         """Test user registration"""
