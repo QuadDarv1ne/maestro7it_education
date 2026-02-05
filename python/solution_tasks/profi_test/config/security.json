@@ -1,0 +1,9 @@
+{
+  "secret_key": "change-me-in-production",
+  "password_min_length": 8,
+  "session_timeout": 3600,
+  "rate_limit": {
+    "requests_per_minute": 60,
+    "requests_per_hour": 1000
+  }
+}

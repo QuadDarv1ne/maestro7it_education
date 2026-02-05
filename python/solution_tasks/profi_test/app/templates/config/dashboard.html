@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Configuration Management</h1>
+        </div>
+    </div>
+    
+    <!-- Configuration Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Configurations</h5>
+                    <h2 id="totalConfigs" class="display-4">0</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Valid Configurations</h5>
+                    <h2 id="validConfigs" class="display-4">0</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Invalid Configurations</h5>
+                    <h2 id="invalidConfigs" class="display-4">0</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Last Updated</h5>
+                    <h6 id="lastUpdated" class="mb-0">Never</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Control Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Configuration Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <button id="refreshConfigs" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button id="validateAll" class="btn btn-success">
+                            <i class="fas fa-check-circle"></i> Validate All
+                        </button>
+                        <button id="exportAll" class="btn btn-info">
+                            <i class="fas fa-file-export"></i> Export All
+                        </button>
+                        <button id="addConfig" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addConfigModal">
+                            <i class="fas fa-plus"></i> Add Configuration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Configuration List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Configurations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Scope</th>
+                                    <th>Version</th>
+                                    <th>Last Modified</th>
+                                    <th>Source</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="configTable">
+                                <!-- Configuration data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Configuration Modal -->
+<div class="modal fade" id="addConfigModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addConfigForm">
+                    <div class="mb-3">
+                        <label for="configName" class="form-label">Configuration Name</label>
+                        <input type="text" class="form-control" id="configName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="configScope" class="form-label">Scope</label>
+                        <select class="form-select" id="configScope" required>
+                            <option value="application">Application</option>
+                            <option value="global">Global</option>
+                            <option value="module">Module</option>
+                            <option value="user">User</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="configData" class="form-label">Configuration Data (JSON)</label>
+                        <textarea class="form-control" id="configData" rows="10" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveConfigBtn">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Configuration Modal -->
+<div class="modal fade" id="editConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editConfigForm">
+                    <input type="hidden" id="editConfigName">
+                    <div class="mb-3">
+                        <label for="editConfigData" class="form-label">Configuration Data (JSON)</label>
+                        <textarea class="form-control" id="editConfigData" rows="15" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="updateConfigBtn">Update Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables
+    let configurations = {};
+    let refreshInterval;
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+        startAutoRefresh();
+        loadConfigurations();
+    });
+    
+    function setupEventListeners() {
+        document.getElementById('refreshConfigs').addEventListener('click', loadConfigurations);
+        document.getElementById('validateAll').addEventListener('click', validateAllConfigs);
+        document.getElementById('exportAll').addEventListener('click', exportAllConfigs);
+        document.getElementById('saveConfigBtn').addEventListener('click', saveNewConfig);
+        document.getElementById('updateConfigBtn').addEventListener('click', updateConfig);
+    }
+    
+    function startAutoRefresh() {
+        refreshInterval = setInterval(loadConfigurations, 30000); // Refresh every 30 seconds
+    }
+    
+    function loadConfigurations() {
+        fetch('/admin/api/config')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    configurations = data.configs;
+                    updateSummary(data);
+                    updateConfigTable(data);
+                } else {
+                    showMessage('Error loading configurations: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error loading configurations: ' + error, 'danger');
+            });
+    }
+    
+    function updateSummary(data) {
+        const configCount = Object.keys(data.configs || {}).length;
+        document.getElementById('totalConfigs').textContent = configCount;
+        
+        // Update last modified time
+        let latestTime = 0;
+        for (const [name, metadata] of Object.entries(data.metadata || {})) {
+            if (metadata && metadata.last_modified > latestTime) {
+                latestTime = metadata.last_modified;
+            }
+        }
+        
+        if (latestTime > 0) {
+            const date = new Date(latestTime * 1000);
+            document.getElementById('lastUpdated').textContent = date.toLocaleString();
+        }
+        
+        // Validate configurations for status counts
+        validateConfigsForSummary();
+    }
+    
+    function validateConfigsForSummary() {
+        fetch('/admin/api/config/app/validate')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const validCount = Object.values(data.details).filter(v => v).length;
+                    const invalidCount = Object.values(data.details).filter(v => !v).length;
+                    
+                    document.getElementById('validConfigs').textContent = validCount;
+                    document.getElementById('invalidConfigs').textContent = invalidCount;
+                }
+            })
+            .catch(error => {
+                console.error('Error validating configs for summary:', error);
+            });
+    }
+    
+    function updateConfigTable(data) {
+        const tableBody = document.getElementById('configTable');
+        tableBody.innerHTML = '';
+        
+        for (const [name, config] of Object.entries(data.configs || {})) {
+            const metadata = data.metadata?.[name] || {};
+            const row = document.createElement('tr');
+            
+            const lastModified = metadata.last_modified ? 
+                new Date(metadata.last_modified * 1000).toLocaleString() : 'Unknown';
+            
+            const statusBadge = metadata.valid ? 
+                '<span class="badge bg-success">Valid</span>' : 
+                '<span class="badge bg-danger">Invalid</span>';
+            
+            row.innerHTML = `
+                <td>${name}</td>
+                <td>${metadata.scope || 'Unknown'}</td>
+                <td>${metadata.version || '1.0.0'}</td>
+                <td>${lastModified}</td>
+                <td>${metadata.source || 'Runtime'}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1" onclick="editConfig('${name}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-info me-1" onclick="viewConfig('${name}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success me-1" onclick="validateConfig('${name}')">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteConfig('${name}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        }
+    }
+    
+    function editConfig(name) {
+        const config = configurations[name];
+        if (!config) return;
+        
+        document.getElementById('editConfigName').value = name;
+        document.getElementById('editConfigData').value = JSON.stringify(config, null, 2);
+        
+        const modal = new bootstrap.Modal(document.getElementById('editConfigModal'));
+        modal.show();
+    }
+    
+    function viewConfig(name) {
+        const config = configurations[name];
+        if (!config) return;
+        
+        // Show config in a read-only modal
+        const modalHtml = `
+            <div class="modal fade" id="viewConfigModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Configuration: ${name}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <pre><code class="language-json">${JSON.stringify(config, null, 2)}</code></pre>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        const existingModal = document.getElementById('viewConfigModal');
+        if (existingModal) existingModal.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('viewConfigModal'));
+        modal.show();
+    }
+    
+    function validateConfig(name) {
+        fetch(`/admin/api/config/${name}/validate`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const status = data.valid ? 'valid' : 'invalid';
+                    const message = `Configuration ${name} is ${status}`;
+                    showMessage(message, data.valid ? 'success' : 'warning');
+                    loadConfigurations(); // Refresh to update status
+                } else {
+                    showMessage('Error validating configuration: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error validating configuration: ' + error, 'danger');
+            });
+    }
+    
+    function deleteConfig(name) {
+        if (confirm(`Are you sure you want to delete configuration "${name}"?`)) {
+            // In a real implementation, you'd have a DELETE endpoint
+            showMessage('Delete functionality not implemented in this demo', 'warning');
+        }
+    }
+    
+    function validateAllConfigs() {
+        fetch('/admin/api/config/app/validate')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const validCount = Object.values(data.details).filter(v => v).length;
+                    const totalCount = Object.keys(data.details).length;
+                    showMessage(`Validation complete: ${validCount}/${totalCount} configurations valid`, 'info');
+                    loadConfigurations();
+                } else {
+                    showMessage('Error validating configurations: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error validating configurations: ' + error, 'danger');
+            });
+    }
+    
+    function exportAllConfigs() {
+        // Export all configurations as JSON
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            configurations: configurations
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `configurations-export-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showMessage('Configurations exported successfully', 'success');
+    }
+    
+    function saveNewConfig() {
+        const name = document.getElementById('configName').value;
+        const scope = document.getElementById('configScope').value;
+        const data = document.getElementById('configData').value;
+        
+        try {
+            const configData = JSON.parse(data);
+            
+            // In a real implementation, you'd POST to create new config
+            // For now, we'll just show a message
+            showMessage('Add configuration functionality would POST to create new configuration', 'info');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addConfigModal'));
+            modal.hide();
+            
+        } catch (e) {
+            showMessage('Invalid JSON format: ' + e.message, 'danger');
+        }
+    }
+    
+    function updateConfig() {
+        const name = document.getElementById('editConfigName').value;
+        const data = document.getElementById('editConfigData').value;
+        
+        try {
+            const configData = JSON.parse(data);
+            
+            fetch(`/admin/api/config/${name}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(configData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Configuration updated successfully', 'success');
+                    loadConfigurations();
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editConfigModal'));
+                    modal.hide();
+                } else {
+                    showMessage('Error updating configuration: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error updating configuration: ' + error, 'danger');
+            });
+            
+        } catch (e) {
+            showMessage('Invalid JSON format: ' + e.message, 'danger');
+        }
+    }
+    
+    function showMessage(message, type) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alert.style.top = '20px';
+        alert.style.right = '20px';
+        alert.style.zIndex = '9999';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alert);
+        
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,7 @@
+{
+  "type": "redis",
+  "host": "localhost",
+  "port": 6379,
+  "db": 0,
+  "default_timeout": 300
+}

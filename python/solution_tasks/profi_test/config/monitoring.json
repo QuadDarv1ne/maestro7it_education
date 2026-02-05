@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "metrics_interval": 30,
+  "health_check_interval": 60,
+  "log_retention_days": 30
+}

@@ -169,6 +169,22 @@ def create_app(config=None):
     # Инициализация расширенных проверок состояния
     from app.health_check import health_api
     app.register_blueprint(health_api, url_prefix='/api')
+    # Инициализация комплексной системы проверки состояния
+    from app.health_check_comprehensive import init_health_check
+    init_health_check(app)
+    # Инициализация расширенного аудита безопасности
+    from app.security_audit_advanced import init_security_audit
+    init_security_audit(app)
+    # Инициализация расширенного управления конфигурацией
+    from app.config_management_advanced import init_config_management
+    init_config_management(app)
+
+    # Инициализация расширенного структурированного логирования
+    from app.structured_logging_advanced import init_structured_logging
+    init_structured_logging(app)
+
+
+
     
     # Инициализация middleware корреляции запросов
     from app.request_correlation import correlation_middleware
@@ -214,6 +230,10 @@ def create_app(config=None):
     # Регистрация команд управления профилированием
     from app.performance_profiler import register_profiling_commands
     register_profiling_commands(app)
+    
+    # Инициализация панели мониторинга производительности
+    from app.performance_dashboard import init_performance_monitoring
+    init_performance_monitoring(app)
     
     # Инициализация обработчика ошибок
     from app.error_handling import error_handler

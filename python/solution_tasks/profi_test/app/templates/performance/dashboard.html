@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Performance Dashboard</h1>
+        </div>
+    </div>
+    
+    <!-- Control Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Control Panel</h5>
+                </div>
+                <div class="card-body">
+                    <button id="startMonitoring" class="btn btn-success me-2">
+                        <i class="fas fa-play"></i> Start Monitoring
+                    </button>
+                    <button id="stopMonitoring" class="btn btn-danger me-2">
+                        <i class="fas fa-stop"></i> Stop Monitoring
+                    </button>
+                    <button id="refreshData" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Metrics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">CPU Usage</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 id="cpuPercent" class="display-4">0%</h2>
+                    <div class="progress mt-3">
+                        <div id="cpuProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">Memory Usage</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 id="memoryPercent" class="display-4">0%</h2>
+                    <div class="progress mt-3">
+                        <div id="memoryProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">Disk Usage</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 id="diskPercent" class="display-4">0%</h2>
+                    <div class="progress mt-3">
+                        <div id="diskProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metrics Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">CPU Usage History (Last Hour)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="cpuChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Memory Usage History (Last Hour)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="memoryChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Aggregated Metrics -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Aggregated Metrics (Last Hour)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Average</th>
+                                    <th>Minimum</th>
+                                    <th>Maximum</th>
+                                    <th>Latest</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody id="metricsTable">
+                                <!-- Metrics will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Global variables
+    let cpuChart, memoryChart;
+    let refreshInterval;
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCharts();
+        setupEventListeners();
+        startAutoRefresh();
+        loadDashboardData();
+    });
+    
+    function initializeCharts() {
+        // CPU Chart
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        cpuChart = new Chart(cpuCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'CPU %',
+                    data: [],
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+        
+        // Memory Chart
+        const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+        memoryChart = new Chart(memoryCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Memory %',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+    
+    function setupEventListeners() {
+        document.getElementById('startMonitoring').addEventListener('click', function() {
+            fetch('/admin/api/performance/start_monitoring')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Monitoring started', 'success');
+                    } else {
+                        showMessage('Error: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error starting monitoring: ' + error, 'danger');
+                });
+        });
+        
+        document.getElementById('stopMonitoring').addEventListener('click', function() {
+            fetch('/admin/api/performance/stop_monitoring')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Monitoring stopped', 'success');
+                    } else {
+                        showMessage('Error: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error stopping monitoring: ' + error, 'danger');
+                });
+        });
+        
+        document.getElementById('refreshData').addEventListener('click', function() {
+            loadDashboardData();
+        });
+    }
+    
+    function startAutoRefresh() {
+        refreshInterval = setInterval(loadDashboardData, 5000); // Refresh every 5 seconds
+    }
+    
+    function loadDashboardData() {
+        fetch('/admin/api/performance/metrics')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateDashboard(data.data);
+                } else {
+                    showMessage('Error loading data: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error loading dashboard data: ' + error, 'danger');
+            });
+    }
+    
+    function updateDashboard(data) {
+        // Update system metrics
+        if (data.system_metrics) {
+            updateSystemMetrics(data.system_metrics);
+        }
+        
+        // Update charts
+        if (data.recent_metrics) {
+            updateCharts(data.recent_metrics);
+        }
+        
+        // Update aggregated metrics table
+        if (data.aggregated_metrics) {
+            updateMetricsTable(data.aggregated_metrics);
+        }
+    }
+    
+    function updateSystemMetrics(metrics) {
+        // CPU
+        if (metrics.cpu_percent !== undefined) {
+            document.getElementById('cpuPercent').textContent = metrics.cpu_percent.toFixed(1) + '%';
+            const cpuWidth = metrics.cpu_percent + '%';
+            document.getElementById('cpuProgressBar').style.width = cpuWidth;
+            document.getElementById('cpuProgressBar').textContent = cpuWidth;
+        }
+        
+        // Memory
+        if (metrics.memory_percent !== undefined) {
+            document.getElementById('memoryPercent').textContent = metrics.memory_percent.toFixed(1) + '%';
+            const memoryWidth = metrics.memory_percent + '%';
+            document.getElementById('memoryProgressBar').style.width = memoryWidth;
+            document.getElementById('memoryProgressBar').textContent = memoryWidth;
+        }
+        
+        // Disk
+        if (metrics.disk_usage !== undefined) {
+            document.getElementById('diskPercent').textContent = metrics.disk_usage.toFixed(1) + '%';
+            const diskWidth = metrics.disk_usage + '%';
+            document.getElementById('diskProgressBar').style.width = diskWidth;
+            document.getElementById('diskProgressBar').textContent = diskWidth;
+        }
+    }
+    
+    function updateCharts(metrics) {
+        // Update CPU chart
+        if (metrics.cpu && metrics.cpu.length > 0) {
+            const cpuLabels = metrics.cpu.map(m => new Date(m.timestamp).toLocaleTimeString());
+            const cpuData = metrics.cpu.map(m => m.value);
+            
+            cpuChart.data.labels = cpuLabels;
+            cpuChart.data.datasets[0].data = cpuData;
+            cpuChart.update();
+        }
+        
+        // Update Memory chart
+        if (metrics.memory && metrics.memory.length > 0) {
+            const memoryLabels = metrics.memory.map(m => new Date(m.timestamp).toLocaleTimeString());
+            const memoryData = metrics.memory.map(m => m.value);
+            
+            memoryChart.data.labels = memoryLabels;
+            memoryChart.data.datasets[0].data = memoryData;
+            memoryChart.update();
+        }
+    }
+    
+    function updateMetricsTable(aggregatedMetrics) {
+        const tableBody = document.getElementById('metricsTable');
+        tableBody.innerHTML = '';
+        
+        for (const [metricName, stats] of Object.entries(aggregatedMetrics)) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${metricName}</td>
+                <td>${stats.avg !== undefined ? stats.avg.toFixed(2) : 'N/A'}</td>
+                <td>${stats.min !== undefined ? stats.min.toFixed(2) : 'N/A'}</td>
+                <td>${stats.max !== undefined ? stats.max.toFixed(2) : 'N/A'}</td>
+                <td>${stats.latest !== undefined ? stats.latest.toFixed(2) : 'N/A'}</td>
+                <td>${stats.count || 0}</td>
+            `;
+            tableBody.appendChild(row);
+        }
+    }
+    
+    function showMessage(message, type) {
+        // Create alert element
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alert.style.top = '20px';
+        alert.style.right = '20px';
+        alert.style.zIndex = '9999';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alert);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

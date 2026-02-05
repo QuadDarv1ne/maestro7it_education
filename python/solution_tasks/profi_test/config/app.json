@@ -1,0 +1,10 @@
+{
+  "name": "profi_test",
+  "version": "1.0.0",
+  "debug": false,
+  "environment": "production",
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}

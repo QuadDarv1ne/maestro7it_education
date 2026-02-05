@@ -1,0 +1,6 @@
+{
+  "url": "sqlite:///profi_test.db",
+  "pool_size": 10,
+  "pool_recycle": 3600,
+  "echo": false
+}
