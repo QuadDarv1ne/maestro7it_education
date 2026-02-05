@@ -164,6 +164,12 @@ def create_app(config=None):
     # Инициализация планировщика задач
     from app.task_scheduler import task_scheduler
     app.task_scheduler = task_scheduler
+    
+    # Инициализация Celery
+    from app.tasks import init_celery_app, define_tasks
+    init_celery_app(app)  # Initialize Celery with the app
+    define_tasks()  # Define all tasks after celery is initialized
+    
     # Отложенная инициализация планировщика для ускорения запуска приложения
     if not (config and hasattr(config, 'TESTING') and config.TESTING):
         task_scheduler.start()  # Автозапуск планировщика только в продакшене

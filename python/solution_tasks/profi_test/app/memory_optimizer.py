@@ -341,7 +341,13 @@ def periodic_memory_cleanup():
     # Force garbage collection
     gc.collect()
     
-    # Clear any accumulated caches
-    optimize_database_sessions()
-    
+    # Only try to clear database sessions if we are in an app context
+    try:
+        from flask import has_app_context
+        if has_app_context():
+            from app import db
+            db.session.expunge_all()
+    except:
+        # If anything goes wrong, just continue
+        pass
     logger.debug("Periodic memory cleanup completed")

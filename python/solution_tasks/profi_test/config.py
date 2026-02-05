@@ -30,14 +30,32 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = int(os.environ.get('CACHE_DEFAULT_TIMEOUT', '300'))
     CACHE_THRESHOLD = int(os.environ.get('CACHE_THRESHOLD', '1000'))
     
+    @classmethod
+    def get_db_engine_options(cls):
+        """Возвращает параметры подключения к базе данных в зависимости от типа БД"""
+        database_uri = os.environ.get('DATABASE_URL') or cls.SQLALCHEMY_DATABASE_URI
+        
+        # Если используется SQLite, не применяем параметры пула
+        if database_uri.startswith('sqlite:'):
+            from sqlalchemy.pool import StaticPool
+            return {
+                'poolclass': StaticPool,
+                'connect_args': {
+                    'check_same_thread': False
+                }
+            }
+        else:
+            # Для других баз данных (PostgreSQL, MySQL) используем пул соединений
+            return {
+                'pool_size': int(os.environ.get('DB_POOL_SIZE', '10')),
+                'pool_recycle': int(os.environ.get('DB_POOL_RECYCLE', '300')),
+                'pool_pre_ping': True,
+                'max_overflow': int(os.environ.get('DB_MAX_OVERFLOW', '20')),
+                'pool_timeout': int(os.environ.get('DB_POOL_TIMEOUT', '30')),
+            }
+    
     # Настройки пула соединений с базой данных
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': int(os.environ.get('DB_POOL_SIZE', '10')),
-        'pool_recycle': int(os.environ.get('DB_POOL_RECYCLE', '300')),
-        'pool_pre_ping': True,
-        'max_overflow': int(os.environ.get('DB_MAX_OVERFLOW', '20')),
-        'pool_timeout': int(os.environ.get('DB_POOL_TIMEOUT', '30')),
-    }
+    # Значение будет установлено после определения класса
     
     # Настройки Celery для фоновых задач
     CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
@@ -96,7 +114,6 @@ class Config:
         'max_instances': 3
     }
     SCHEDULER_API_ENABLED = True
-
 class TestConfig(Config):
     """Конфигурация для тестирования"""
     TESTING = True
@@ -105,6 +122,9 @@ class TestConfig(Config):
     CACHE_TYPE = 'simple'
     SERVER_NAME = 'localhost.localdomain'
     SECRET_KEY = 'test-secret-key'
+    
+    # Используем подходящие параметры движка для тестов
+    # Определяем после создания класса
     
     # Отключаем планировщик задач в тестах
     SCHEDULER_ENABLED = False
@@ -115,3 +135,12 @@ class TestConfig(Config):
     
     # Ускоряем работу сессий
     PRESERVE_CONTEXT_ON_EXCEPTION = False
+
+# Инициализируем параметры пула соединений после определения классов
+Config.SQLALCHEMY_ENGINE_OPTIONS = Config.get_db_engine_options()
+TestConfig.SQLALCHEMY_ENGINE_OPTIONS = {
+    'poolclass': __import__('sqlalchemy.pool').pool.StaticPool,
+    'connect_args': {
+        'check_same_thread': False
+    }
+}

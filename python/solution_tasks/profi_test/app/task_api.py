@@ -5,7 +5,7 @@ Provides access to background task functionality
 """
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.tasks import task_manager, TaskStatus
+from app.task_scheduler import task_manager, TaskStatus
 import json
 from datetime import datetime
 

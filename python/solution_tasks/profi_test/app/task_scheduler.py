@@ -406,3 +406,6 @@ class TaskScheduler:
 
 # Глобальный экземпляр планировщика
 task_scheduler = TaskScheduler()
+
+# Add task_manager alias for compatibility with task_api.py
+task_manager = task_scheduler
