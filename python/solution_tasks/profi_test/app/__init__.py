@@ -182,6 +182,10 @@ def create_app(config=None):
     # Инициализация расширенного структурированного логирования
     from app.structured_logging_advanced import init_structured_logging
     init_structured_logging(app)
+    # Инициализация расширенного тестирования API
+    from app.api_testing_advanced import init_api_testing
+    init_api_testing(app)
+
 
 
 

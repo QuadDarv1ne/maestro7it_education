@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+
+{% block title %}API Testing Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">API Testing Dashboard</h1>
+        </div>
+    </div>
+    
+    <!-- Test Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Tests</h5>
+                    <h2 id="totalTests" class="display-4">0</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Passed</h5>
+                    <h2 id="passedTests" class="display-4">0</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Failed</h5>
+                    <h2 id="failedTests" class="display-4">0</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Errors</h5>
+                    <h2 id="errorTests" class="display-4">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Rate and Performance -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Success Rate</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 id="successRate" class="display-3 text-primary">0%</h2>
+                    <div class="progress mt-3">
+                        <div id="successRateBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Total Time:</strong></p>
+                            <h4 id="totalTime" class="text-muted">0s</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Avg Time:</strong></p>
+                            <h4 id="avgTime" class="text-muted">0s</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Control Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Test Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <button id="runTests" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Run All Tests
+                        </button>
+                        <button id="runTestsParallel" class="btn btn-success">
+                            <i class="fas fa-bolt"></i> Run Parallel
+                        </button>
+                        <button id="refreshResults" class="btn btn-info">
+                            <i class="fas fa-sync-alt"></i> Refresh Results
+                        </button>
+                        <button id="generateReport" class="btn btn-warning">
+                            <i class="fas fa-file-alt"></i> Generate Report
+                        </button>
+                        <button id="viewHistory" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#historyModal">
+                            <i class="fas fa-history"></i> Test History
+                        </button>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="autoRefresh" checked>
+                            <label class="form-check-label" for="autoRefresh">
+                                Auto-refresh results
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="showDetails" checked>
+                            <label class="form-check-label" for="showDetails">
+                                Show test details
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Results -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Test Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Test Name</th>
+                                    <th>Endpoint</th>
+                                    <th>Method</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th>Response Code</th>
+                                    <th>Execution Time</th>
+                                    <th>Retries</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="testResultsTable">
+                                <!-- Test results will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="historyContent">
+                    <!-- History content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="reportContent">
+                    <!-- Report content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="exportReport">Export Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables
+    let testResults = {};
+    let refreshInterval;
+    let autoRefreshEnabled = true;
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+        startAutoRefresh();
+        loadTestResults();
+    });
+    
+    function setupEventListeners() {
+        document.getElementById('runTests').addEventListener('click', function() {
+            runTests(false);
+        });
+        
+        document.getElementById('runTestsParallel').addEventListener('click', function() {
+            runTests(true);
+        });
+        
+        document.getElementById('refreshResults').addEventListener('click', loadTestResults);
+        document.getElementById('generateReport').addEventListener('click', generateReport);
+        document.getElementById('viewHistory').addEventListener('click', loadTestHistory);
+        
+        document.getElementById('autoRefresh').addEventListener('change', function() {
+            autoRefreshEnabled = this.checked;
+            if (autoRefreshEnabled) {
+                startAutoRefresh();
+            } else {
+                stopAutoRefresh();
+            }
+        });
+        
+        document.getElementById('exportReport').addEventListener('click', exportReport);
+    }
+    
+    function startAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+        refreshInterval = setInterval(loadTestResults, 10000); // Refresh every 10 seconds
+    }
+    
+    function stopAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+            refreshInterval = null;
+        }
+    }
+    
+    function runTests(parallel) {
+        const button = parallel ? document.getElementById('runTestsParallel') : document.getElementById('runTests');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+        button.disabled = true;
+        
+        const url = `/admin/api/testing/run?parallel=${parallel}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateDashboard(data.summary);
+                    updateTestResultsTable(data.results);
+                    showMessage('Tests completed successfully', 'success');
+                } else {
+                    showMessage('Error running tests: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error running tests: ' + error, 'danger');
+            })
+            .finally(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+    }
+    
+    function loadTestResults() {
+        fetch('/admin/api/testing/results')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateDashboard(data.summary);
+                    updateTestResultsTable(data.results);
+                }
+            })
+            .catch(error => {
+                if (autoRefreshEnabled) {
+                    console.error('Error loading test results:', error);
+                } else {
+                    showMessage('Error loading test results: ' + error, 'danger');
+                }
+            });
+    }
+    
+    function updateDashboard(summary) {
+        document.getElementById('totalTests').textContent = summary.total_tests || 0;
+        document.getElementById('passedTests').textContent = summary.passed || 0;
+        document.getElementById('failedTests').textContent = summary.failed || 0;
+        document.getElementById('errorTests').textContent = summary.errors || 0;
+        
+        const successRate = ((summary.success_rate || 0) * 100).toFixed(1);
+        document.getElementById('successRate').textContent = successRate + '%';
+        document.getElementById('successRateBar').style.width = successRate + '%';
+        document.getElementById('successRateBar').textContent = successRate + '%';
+        
+        document.getElementById('totalTime').textContent = (summary.total_execution_time || 0).toFixed(2) + 's';
+        document.getElementById('avgTime').textContent = (summary.average_execution_time || 0).toFixed(3) + 's';
+    }
+    
+    function updateTestResultsTable(results) {
+        const tableBody = document.getElementById('testResultsTable');
+        tableBody.innerHTML = '';
+        
+        for (const [testId, result] of Object.entries(results)) {
+            const row = document.createElement('tr');
+            row.className = getStatusClass(result.status);
+            
+            const executionTime = result.execution_time ? result.execution_time.toFixed(3) + 's' : 'N/A';
+            const responseCode = result.response_status || 'N/A';
+            const retries = result.retry_count || 0;
+            
+            // Get test case details (this would come from test metadata in a real implementation)
+            const testCase = getTestCaseDetails(testId);
+            
+            row.innerHTML = `
+                <td>${testCase.name || testId}</td>
+                <td>${testCase.endpoint || 'Unknown'}</td>
+                <td>${testCase.method || 'GET'}</td>
+                <td>${testCase.category || 'functional'}</td>
+                <td>${getStatusBadge(result.status)}</td>
+                <td>${responseCode}</td>
+                <td>${executionTime}</td>
+                <td>${retries}</td>
+                <td>
+                    <button class="btn btn-sm btn-info" onclick="viewTestDetails('${testId}')">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        }
+    }
+    
+    function getStatusClass(status) {
+        switch(status) {
+            case 'passed': return 'table-success';
+            case 'failed': return 'table-warning';
+            case 'error': return 'table-danger';
+            default: return '';
+        }
+    }
+    
+    function getStatusBadge(status) {
+        switch(status) {
+            case 'passed': 
+                return '<span class="badge bg-success">Passed</span>';
+            case 'failed': 
+                return '<span class="badge bg-warning">Failed</span>';
+            case 'error': 
+                return '<span class="badge bg-danger">Error</span>';
+            case 'running': 
+                return '<span class="badge bg-info">Running</span>';
+            default: 
+                return '<span class="badge bg-secondary">Unknown</span>';
+        }
+    }
+    
+    function getTestCaseDetails(testId) {
+        // In a real implementation, this would come from the test case metadata
+        const testCases = {
+            'health_check_basic': {
+                name: 'Basic Health Check',
+                endpoint: '/health',
+                method: 'GET',
+                category: 'functional'
+            },
+            'health_check_detailed': {
+                name: 'Detailed Health Check',
+                endpoint: '/health/detailed',
+                method: 'GET',
+                category: 'functional'
+            },
+            'config_list': {
+                name: 'List Configurations',
+                endpoint: '/admin/api/config',
+                method: 'GET',
+                category: 'functional'
+            },
+            'security_summary': {
+                name: 'Security Summary',
+                endpoint: '/admin/api/security/audit/summary',
+                method: 'GET',
+                category: 'security'
+            },
+            'performance_metrics': {
+                name: 'Performance Metrics',
+                endpoint: '/admin/api/performance/metrics',
+                method: 'GET',
+                category: 'performance'
+            }
+        };
+        
+        return testCases[testId] || { name: testId, endpoint: 'Unknown', method: 'GET', category: 'unknown' };
+    }
+    
+    function viewTestDetails(testId) {
+        const result = testResults[testId];
+        if (!result) return;
+        
+        const details = `
+            <div class="card">
+                <div class="card-header">
+                    <h5>Test Details: ${testId}</h5>
+                </div>
+                <div class="card-body">
+                    <pre><code class="language-json">${JSON.stringify(result, null, 2)}</code></pre>
+                </div>
+            </div>
+        `;
+        
+        // Show in a modal or alert
+        alert('Test details would be shown here in a detailed view');
+    }
+    
+    function generateReport() {
+        fetch('/admin/api/testing/report')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayReport(data.report);
+                    const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+                    modal.show();
+                } else {
+                    showMessage('Error generating report: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error generating report: ' + error, 'danger');
+            });
+    }
+    
+    function displayReport(report) {
+        const content = document.getElementById('reportContent');
+        content.innerHTML = `
+            <h4>Test Report Summary</h4>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5>Total Tests</h5>
+                            <h2>${report.summary.total_tests}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5>Passed</h5>
+                            <h2>${report.summary.passed}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <h5>Failed</h5>
+                            <h2>${report.summary.failed}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5>Success Rate</h5>
+                            <h2>${(report.summary.success_rate * 100).toFixed(1)}%</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h4 class="mt-4">Detailed Results</h4>
+            <pre><code class="language-json">${JSON.stringify(report, null, 2)}</code></pre>
+        `;
+    }
+    
+    function loadTestHistory() {
+        fetch('/admin/api/testing/history?limit=10')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayTestHistory(data.history);
+                } else {
+                    showMessage('Error loading history: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage('Error loading history: ' + error, 'danger');
+            });
+    }
+    
+    function displayTestHistory(history) {
+        const content = document.getElementById('historyContent');
+        if (history.length === 0) {
+            content.innerHTML = '<p>No test history available</p>';
+            return;
+        }
+        
+        let historyHtml = '<div class="timeline">';
+        history.forEach((entry, index) => {
+            const timestamp = new Date(entry.timestamp * 1000).toLocaleString();
+            const successRate = (entry.summary.success_rate * 100).toFixed(1);
+            
+            historyHtml += `
+                <div class="timeline-item">
+                    <div class="timeline-badge ${getHistoryStatusClass(entry.summary)}">
+                        <i class="fas fa-${getHistoryStatusIcon(entry.summary)}"></i>
+                    </div>
+                    <div class="timeline-panel">
+                        <div class="timeline-heading">
+                            <h4 class="timeline-title">Test Run ${history.length - index}</h4>
+                            <p class="timeline-time">${timestamp}</p>
+                        </div>
+                        <div class="timeline-body">
+                            <div class="row">
+                                <div class="col-3">
+                                    <strong>Success Rate:</strong><br>
+                                    <span class="fs-5">${successRate}%</span>
+                                </div>
+                                <div class="col-3">
+                                    <strong>Passed:</strong><br>
+                                    <span class="fs-5">${entry.summary.passed}</span>
+                                </div>
+                                <div class="col-3">
+                                    <strong>Failed:</strong><br>
+                                    <span class="fs-5">${entry.summary.failed}</span>
+                                </div>
+                                <div class="col-3">
+                                    <strong>Avg Time:</strong><br>
+                                    <span class="fs-5">${entry.summary.average_execution_time.toFixed(3)}s</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        historyHtml += '</div>';
+        
+        content.innerHTML = historyHtml;
+    }
+    
+    function getHistoryStatusClass(summary) {
+        const successRate = summary.success_rate;
+        if (successRate >= 0.95) return 'bg-success';
+        if (successRate >= 0.80) return 'bg-warning';
+        return 'bg-danger';
+    }
+    
+    function getHistoryStatusIcon(summary) {
+        const successRate = summary.success_rate;
+        if (successRate >= 0.95) return 'check';
+        if (successRate >= 0.80) return 'exclamation';
+        return 'times';
+    }
+    
+    function exportReport() {
+        // In a real implementation, this would download the report
+        showMessage('Report export functionality would be implemented here', 'info');
+    }
+    
+    function showMessage(message, type) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alert.style.top = '20px';
+        alert.style.right = '20px';
+        alert.style.zIndex = '9999';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alert);
+        
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}
