@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Advanced API Testing and Documentation Generator
-Provides automated API testing, documentation generation, and validation
+Расширенная система тестирования и документирования API
+Предоставляет автоматическое тестирование API, генерацию документации и валидацию
 """
 import json
 import time
@@ -17,7 +17,7 @@ from app import db
 logger = logging.getLogger(__name__)
 
 class TestStatus(Enum):
-    """Test status enumeration"""
+    """Перечисление статусов тестов"""
     PENDING = "pending"
     RUNNING = "running"
     PASSED = "passed"
@@ -25,7 +25,7 @@ class TestStatus(Enum):
     ERROR = "error"
 
 class TestCategory(Enum):
-    """Test category enumeration"""
+    """Перечисление категорий тестов"""
     FUNCTIONAL = "functional"
     PERFORMANCE = "performance"
     SECURITY = "security"
@@ -34,7 +34,7 @@ class TestCategory(Enum):
 
 @dataclass
 class APITestCase:
-    """API test case definition"""
+    """Определение тестового случая API"""
     id: str
     name: str
     description: str
@@ -44,13 +44,13 @@ class APITestCase:
     headers: Dict[str, str]
     payload: Optional[Dict[str, Any]]
     expected_status: int
-    expected_response: Optional[Dict[str, Any]]
+    expected_response: Optional[Dict[str, Any]] = None
     timeout: int = 30
     retries: int = 3
 
 @dataclass
 class TestResult:
-    """Test result data"""
+    """Данные результата теста"""
     test_id: str
     status: TestStatus
     start_time: float
@@ -62,7 +62,7 @@ class TestResult:
     retry_count: int
 
 class APITestRunner:
-    """Advanced API test runner with parallel execution"""
+    """Расширенный раннер тестов API с параллельным выполнением"""
     
     def __init__(self, base_url: str = "http://localhost:5000"):
         self.base_url = base_url
@@ -71,12 +71,12 @@ class APITestRunner:
         self.test_history: List[Dict] = []
         self.running = False
         
-        # Initialize default test cases
+        # Инициализация тестовых случаев по умолчанию
         self._setup_default_tests()
     
     def _setup_default_tests(self):
-        """Setup default API test cases"""
-        # Health check tests
+        """Настройка тестовых случаев API по умолчанию"""
+        # Тесты проверки работоспособности
         self.add_test_case(APITestCase(
             id="health_check_basic",
             name="Basic Health Check",
@@ -101,7 +101,7 @@ class APITestRunner:
             expected_status=200
         ))
         
-        # Configuration API tests
+        # Тесты API конфигурации
         self.add_test_case(APITestCase(
             id="config_list",
             name="List Configurations",
@@ -114,7 +114,7 @@ class APITestRunner:
             expected_status=200
         ))
         
-        # Security API tests
+        # Тесты API безопасности
         self.add_test_case(APITestCase(
             id="security_summary",
             name="Security Summary",
@@ -127,7 +127,7 @@ class APITestRunner:
             expected_status=200
         ))
         
-        # Performance API tests
+        # Тесты API производительности
         self.add_test_case(APITestCase(
             id="performance_metrics",
             name="Performance Metrics",
@@ -141,31 +141,31 @@ class APITestRunner:
         ))
     
     def add_test_case(self, test_case: APITestCase):
-        """Add a test case"""
+        """Добавить тестовый случай"""
         self.test_cases.append(test_case)
         logger.info(f"Added test case: {test_case.name}")
     
     def remove_test_case(self, test_id: str):
-        """Remove a test case"""
+        """Удалить тестовый случай"""
         self.test_cases = [test for test in self.test_cases if test.id != test_id]
         logger.info(f"Removed test case: {test_id}")
     
     def run_single_test(self, test_case: APITestCase) -> TestResult:
-        """Run a single test case"""
+        """Выполнить один тестовый случай"""
         start_time = time.time()
         retry_count = 0
         last_error = None
         
         while retry_count <= test_case.retries:
             try:
-                # Prepare request
+                # Подготовка запроса
                 url = f"{self.base_url}{test_case.endpoint}"
                 headers = test_case.headers.copy()
                 
-                # Add authentication if needed (this would be enhanced in production)
+                # Добавление аутентификации при необходимости (будет улучшено в production)
                 # headers['Authorization'] = f'Bearer {self.get_auth_token()}'
                 
-                # Make request
+                # Выполнение запроса
                 if test_case.method.upper() == "GET":
                     response = requests.get(url, headers=headers, timeout=test_case.timeout)
                 elif test_case.method.upper() == "POST":
@@ -180,7 +180,7 @@ class APITestRunner:
                 end_time = time.time()
                 execution_time = end_time - start_time
                 
-                # Check response
+                # Проверка ответа
                 status_match = response.status_code == test_case.expected_status
                 response_data = None
                 
@@ -189,7 +189,7 @@ class APITestRunner:
                 except:
                     response_data = {"text": response.text}
                 
-                # Determine test status
+                # Определение статуса теста
                 if status_match:
                     status = TestStatus.PASSED
                     error_message = None
@@ -234,7 +234,7 @@ class APITestRunner:
                     return result
     
     def run_all_tests(self, parallel: bool = True) -> Dict[str, TestResult]:
-        """Run all test cases"""
+        """Выполнить все тестовые случаи"""
         if self.running:
             raise RuntimeError("Tests are already running")
         
@@ -243,7 +243,7 @@ class APITestRunner:
         
         try:
             if parallel:
-                # Run tests in parallel using threads
+                # Выполнение тестов параллельно с использованием потоков
                 threads = []
                 thread_results = {}
                 
@@ -278,7 +278,7 @@ class APITestRunner:
             self.running = False
     
     def _store_test_history(self, results: Dict[str, TestResult]):
-        """Store test results in history"""
+        """Сохранить результаты тестов в истории"""
         history_entry = {
             "timestamp": time.time(),
             "results": {test_id: asdict(result) for test_id, result in results.items()},
@@ -286,12 +286,12 @@ class APITestRunner:
         }
         self.test_history.append(history_entry)
         
-        # Keep only recent history
+        # Сохранять только недавнюю историю
         if len(self.test_history) > 100:
             self.test_history = self.test_history[-100:]
     
     def get_test_summary(self, results: Dict[str, TestResult]) -> Dict[str, Any]:
-        """Get summary of test results"""
+        """Получить сводку результатов тестов"""
         total_tests = len(results)
         passed_tests = len([r for r in results.values() if r.status == TestStatus.PASSED])
         failed_tests = len([r for r in results.values() if r.status == TestStatus.FAILED])
@@ -312,15 +312,15 @@ class APITestRunner:
         }
     
     def get_test_results(self) -> Dict[str, TestResult]:
-        """Get all test results"""
+        """Получить все результаты тестов"""
         return self.test_results.copy()
     
     def get_test_history(self, limit: int = 10) -> List[Dict]:
-        """Get test history"""
+        """Получить историю тестов"""
         return self.test_history[-limit:]
     
     def generate_test_report(self) -> Dict[str, Any]:
-        """Generate comprehensive test report"""
+        """Сгенерировать подробный отчет о тестах"""
         if not self.test_results:
             return {"error": "No test results available"}
         
@@ -348,27 +348,27 @@ class APITestRunner:
         }
 
 class APIDocumentationGenerator:
-    """Advanced API documentation generator"""
+    """Расширенный генератор документации API"""
     
     def __init__(self):
         self.api_specs = {}
         self.examples = {}
         
     def register_endpoint(self, endpoint: str, method: str, spec: Dict[str, Any]):
-        """Register API endpoint specification"""
+        """Зарегистрировать спецификацию конечной точки API"""
         key = f"{method.upper()} {endpoint}"
         self.api_specs[key] = spec
         logger.info(f"Registered API endpoint: {key}")
     
     def add_example(self, endpoint: str, method: str, example: Dict[str, Any]):
-        """Add example for API endpoint"""
+        """Добавить пример для конечной точки API"""
         key = f"{method.upper()} {endpoint}"
         if key not in self.examples:
             self.examples[key] = []
         self.examples[key].append(example)
     
     def generate_openapi_spec(self) -> Dict[str, Any]:
-        """Generate OpenAPI 3.0 specification"""
+        """Сгенерировать спецификацию OpenAPI 3.0"""
         spec = {
             "openapi": "3.0.0",
             "info": {
@@ -403,7 +403,7 @@ class APIDocumentationGenerator:
             }
         }
         
-        # Add paths from registered endpoints
+        # Добавление путей из зарегистрированных конечных точек
         for key, endpoint_spec in self.api_specs.items():
             method, path = key.split(" ", 1)
             
@@ -463,7 +463,7 @@ class APIDocumentationGenerator:
         return spec
     
     def generate_markdown_docs(self) -> str:
-        """Generate Markdown documentation"""
+        """Сгенерировать документацию в формате Markdown"""
         lines = []
         lines.append("# ProfiTest API Documentation")
         lines.append("")
@@ -471,7 +471,7 @@ class APIDocumentationGenerator:
         lines.append("Enterprise Career Guidance System API")
         lines.append("")
         
-        # Group endpoints by path
+        # Группировка конечных точек по путям
         endpoints_by_path = {}
         for key, spec in self.api_specs.items():
             method, path = key.split(" ", 1)
@@ -479,7 +479,7 @@ class APIDocumentationGenerator:
                 endpoints_by_path[path] = []
             endpoints_by_path[path].append((method, spec))
         
-        # Generate documentation for each path
+        # Генерация документации для каждого пути
         for path, methods in endpoints_by_path.items():
             lines.append(f"## {path}")
             lines.append("")
@@ -524,11 +524,11 @@ class APIDocumentationGenerator:
         
         return "\n".join(lines)
 
-# Global instances
+# Глобальные экземпляры
 api_test_runner = APITestRunner()
 api_doc_generator = APIDocumentationGenerator()
 
-# Flask blueprint for API testing and documentation
+# Flask blueprint для тестирования и документирования API
 api_test_bp = Blueprint('api_testing', __name__)
 
 @api_test_bp.route('/admin/api/testing/run')
@@ -636,11 +636,11 @@ def get_markdown_docs():
         }), 500
 
 def init_api_testing(app):
-    """Initialize API testing and documentation system"""
-    # Register blueprint
+    """Инициализировать систему тестирования и документирования API"""
+    # Регистрация blueprint
     app.register_blueprint(api_test_bp)
     
-    # Register common API endpoints
+    # Регистрация общих конечных точек API
     api_doc_generator.register_endpoint(
         "/health",
         "GET",
@@ -669,7 +669,7 @@ def init_api_testing(app):
         }
     )
     
-    # Add examples
+    # Добавление примеров
     api_doc_generator.add_example(
         "/health",
         "GET",
