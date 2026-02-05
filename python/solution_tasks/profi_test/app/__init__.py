@@ -258,7 +258,10 @@ def create_app(config=None):
     
     # Отложенная инициализация планировщика для ускорения запуска приложения
     if not (config and hasattr(config, 'TESTING') and config.TESTING):
-        task_scheduler.start()  # Автозапуск планировщика только в продакшене
+        # Запуск планировщика в отдельном потоке для ускорения старта приложения
+        import threading
+        scheduler_thread = threading.Thread(target=task_scheduler.start, daemon=True)
+        scheduler_thread.start()  # Автозапуск планировщика только в продакшене в отдельном потоке
     
     # Инициализация менеджера безопасности
     from app.advanced_security import security_manager
@@ -392,10 +395,12 @@ def create_app(config=None):
         with app.app_context():
             db.create_all()
         
-        # Start vacancy alerts scheduler
+        # Start vacancy alerts scheduler in a separate thread for faster startup
         try:
             from app.vacancy_alerts import start_scheduler
-            start_scheduler()
+            import threading
+            scheduler_thread = threading.Thread(target=start_scheduler, daemon=True)
+            scheduler_thread.start()
         except Exception as e:
             print(f"Ошибка при запуске планировщика уведомлений: {e}")
     

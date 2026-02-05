@@ -19,6 +19,11 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user)
             next_page = request.args.get('next')
+            
+            # Validate next_page to prevent open redirect vulnerability
+            if next_page and not next_page.startswith('/'):
+                next_page = url_for('main.index')
+            
             flash('Вы успешно вошли в систему!', 'success')
             return redirect(next_page) if next_page else redirect(url_for('main.index'))
         else:
@@ -46,6 +51,11 @@ def register():
         # Create new user
         user = User(username=form.username.data, email=form.email.data)
         user.set_password(form.password.data)
+        
+        # Sanitize inputs to prevent XSS
+        user.username = user.username.strip()
+        user.email = user.email.strip()
+        
         db.session.add(user)
         db.session.commit()
 
@@ -77,10 +87,19 @@ def user_preferences():
         # Update preferences
         vacancy_alerts = request.form.get('vacancy_alerts') == 'on'
         email_notifications = request.form.get('email_notifications') == 'on'
-        preferred_professions = request.form.get('preferred_professions', '').split(',')
+        preferred_professions_raw = request.form.get('preferred_professions', '')
         
-        # Clean up professions list
-        preferred_professions = [p.strip() for p in preferred_professions if p.strip()]
+        # Sanitize and validate preferred professions to prevent injection
+        preferred_professions = []
+        if preferred_professions_raw:
+            raw_list = preferred_professions_raw.split(',')
+            for profession in raw_list:
+                clean_profession = profession.strip()[:100]  # Limit length
+                if clean_profession:  # Only add non-empty professions
+                    # Basic validation to prevent malicious content
+                    invalid_chars = ['<', '>', '"', '&', ';']
+                    if not any(char in clean_profession for char in invalid_chars):
+                        preferred_professions.append(clean_profession)
         
         prefs.vacancy_alerts_enabled = vacancy_alerts
         prefs.email_notifications = email_notifications

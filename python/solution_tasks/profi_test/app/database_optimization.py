@@ -181,21 +181,27 @@ class DatabaseOptimizer:
         
         # Enable query cache for frequently used queries
         try:
-            db.engine.execute(text("PRAGMA cache_size = 10000"))  # Increase cache size
+            with db.engine.connect() as conn:
+                conn.execute(text("PRAGMA cache_size = 10000"))  # Increase cache size
+                conn.commit()
             optimizations.append("Query cache enabled")
         except Exception as e:
             logger.warning(f"Could not enable query cache: {e}")
         
         # Enable foreign key constraints for data integrity
         try:
-            db.engine.execute(text("PRAGMA foreign_keys = ON"))
+            with db.engine.connect() as conn:
+                conn.execute(text("PRAGMA foreign_keys = ON"))
+                conn.commit()
             optimizations.append("Foreign key constraints enabled")
         except Exception as e:
             logger.warning(f"Could not enable foreign keys: {e}")
         
         # Optimize database storage
         try:
-            db.engine.execute(text("PRAGMA optimize"))
+            with db.engine.connect() as conn:
+                conn.execute(text("PRAGMA optimize"))
+                conn.commit()
             optimizations.append("Database optimized")
         except Exception as e:
             logger.warning(f"Could not optimize database: {e}")

@@ -201,6 +201,23 @@ def submit_test(method):
         if method not in ['klimov', 'holland']:
             return jsonify({'error': 'Неверная методика'}), 400
         
+        # Additional validation for answers
+        if not answers:
+            return jsonify({'error': 'Answers cannot be empty'}), 400
+        
+        # Validate answer values (should be integers/numbers)
+        for key, value in answers.items():
+            try:
+                int(value)  # Attempt to convert to int
+                if int(value) < 0:  # Ensure non-negative values
+                    return jsonify({'error': f'Answer value for question {key} must be non-negative'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'error': f'Invalid answer value for question {key}'}), 400
+        
+        # Validate maximum number of answers to prevent abuse
+        if len(answers) > 100:  # Adjust as needed
+            return jsonify({'error': 'Too many answers provided'}), 400
+        
         # Calculate results with caching
         result_key = f"test_result_{method}_{hashlib.md5(str(answers).encode()).hexdigest()}"
         result = cache.get(result_key)
