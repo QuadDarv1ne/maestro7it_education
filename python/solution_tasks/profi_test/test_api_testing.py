@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test script for API testing system
+Тестовый скрипт для системы тестирования API
 """
 import sys
 import os
@@ -9,18 +9,18 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.api_testing_advanced import APITestRunner, APIDocumentationGenerator
 
 def test_api_testing_system():
-    """Test the API testing system"""
+    """Тестирование системы тестирования API"""
     print("Testing API Testing System...")
     
-    # Test API test runner
+    # Тестирование раннера API тестов
     test_runner = APITestRunner()
-    print(f"✓ Created test runner with {len(test_runner.test_cases)} default test cases")
+    print(f"✓ Создан раннер тестов с {len(test_runner.test_cases)} тестовыми случаями по умолчанию")
     
-    # Test documentation generator
+    # Тестирование генератора документации
     doc_generator = APIDocumentationGenerator()
-    print("✓ Created documentation generator")
+    print("✓ Создан генератор документации")
     
-    # Register a test endpoint
+    # Регистрация тестовой конечной точки
     doc_generator.register_endpoint(
         "/test",
         "GET", 
@@ -30,22 +30,22 @@ def test_api_testing_system():
         }
     )
     
-    # Add example
+    # Добавление примера
     doc_generator.add_example(
         "/test",
         "GET",
         {"message": "Hello World"}
     )
     
-    # Generate OpenAPI spec
+    # Генерация спецификации OpenAPI
     openapi_spec = doc_generator.generate_openapi_spec()
-    print(f"✓ Generated OpenAPI spec with {len(openapi_spec['paths'])} endpoints")
+    print(f"✓ Сгенерирована спецификация OpenAPI с {len(openapi_spec['paths'])} конечными точками")
     
-    # Generate markdown docs
+    # Генерация документации в формате markdown
     markdown_docs = doc_generator.generate_markdown_docs()
-    print(f"✓ Generated markdown docs ({len(markdown_docs)} characters)")
+    print(f"✓ Сгенерирована документация markdown ({len(markdown_docs)} символов)")
     
-    print("\nAPI Testing System Test: PASSED")
+    print("\nТест системы тестирования API: ПРОЙДЕН")
 
 if __name__ == "__main__":
     test_api_testing_system()
