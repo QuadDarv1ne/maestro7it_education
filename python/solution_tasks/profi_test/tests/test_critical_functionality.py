@@ -88,7 +88,7 @@ class TestCriticalUserAuthentication:
         
         assert response.status_code == 200
         # Should show error about weak password
-        assert b'error' in response.data or b'ошибка' in response.data
+        assert b'error' in response.data or 'ошибка'.encode('utf-8') in response.data
         
         # Test registration with existing username
         response = client.post('/register', data={
@@ -100,7 +100,7 @@ class TestCriticalUserAuthentication:
         
         assert response.status_code == 200
         # Should show error about existing user
-        assert b'уже существует' in response.data
+        assert 'уже существует'.encode('utf-8') in response.data
     
     def test_user_login_logout(self, client):
         """Test user login and logout functionality"""
@@ -119,7 +119,7 @@ class TestCriticalUserAuthentication:
         
         assert response.status_code == 200
         # Should show success message or user content
-        assert b'вошли в систему' in response.data or b'profile' in response.data
+        assert 'вошли в систему'.encode('utf-8') in response.data or b'profile' in response.data
         
         # Test login with wrong password
         response = client.post('/login', data={
@@ -129,13 +129,13 @@ class TestCriticalUserAuthentication:
         
         assert response.status_code == 200
         # Should show error message
-        assert b'Неправильное имя пользователя или пароль' in response.data
+        assert 'Неправильное имя пользователя или пароль'.encode('utf-8') in response.data
         
         # Test logout
         response = client.get('/logout', follow_redirects=True)
         assert response.status_code == 200
         # Should show logout message
-        assert b'вышли из системы' in response.data
+        assert 'вышли из системы'.encode('utf-8') in response.data
     
     def test_password_strength_validation(self):
         """Test password strength validator"""
