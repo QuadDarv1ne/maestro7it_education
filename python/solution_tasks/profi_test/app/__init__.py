@@ -96,9 +96,13 @@ def create_app(config=None):
     # db_connection_manager.init_app(app)  # Уже вызывается в строках 87-89
     
     # Инициализация пула соединений с базой данных
-    from app.database_pooling import db_connection_manager, register_database_commands
-    db_connection_manager.init_app(app)
-    register_database_commands(app)
+    from app.database_pooling_config import db_pool_manager
+    app.db_pool_manager = db_pool_manager
+    db_pool_manager.init_app(app)
+    
+    # Регистрация команд управления пулом
+    from app.database_pooling_config import register_pool_commands
+    register_pool_commands(app)
     
     # Инициализация расширенного мониторинга производительности
     from app.performance_monitoring import db_performance_monitor, register_monitoring_commands
@@ -149,9 +153,67 @@ def create_app(config=None):
     from app.advanced_caching import cache_manager
     app.cache_manager = cache_manager
     
+    # Инициализация Redis кэша
+    from app.redis_cache import redis_cache_manager
+    app.redis_cache = redis_cache_manager
+    redis_cache_manager.init_app(app)
+    
+    # Регистрация команд управления кэшем
+    from app.redis_cache import register_cache_commands
+    register_cache_commands(app)
+    
     # Инициализация системного монитора
     from app.system_monitoring import system_monitor
     app.system_monitor = system_monitor
+    
+    # Инициализация расширенных проверок состояния
+    from app.health_check import health_api
+    app.register_blueprint(health_api, url_prefix='/api')
+    
+    # Инициализация middleware корреляции запросов
+    from app.request_correlation import correlation_middleware
+    app.correlation_middleware = correlation_middleware
+    correlation_middleware.init_app(app)
+    
+    # Регистрация команд управления correlation ID
+    from app.request_correlation import register_correlation_commands
+    register_correlation_commands(app)
+    
+    # Инициализация продвинутого оптимизатора запросов
+    from app.advanced_query_optimizer import query_optimizer
+    app.query_optimizer = query_optimizer
+    query_optimizer.init_app(app)
+    
+    # Регистрация команд управления оптимизатором
+    from app.advanced_query_optimizer import register_optimizer_commands
+    register_optimizer_commands(app)
+    
+    # Инициализация умной системы прогрева кэша
+    from app.smart_cache_warming import cache_warmer
+    app.cache_warmer = cache_warmer
+    cache_warmer.init_app(app)
+    
+    # Регистрация команд управления прогревом кэша
+    from app.smart_cache_warming import register_cache_warming_commands
+    register_cache_warming_commands(app)
+    
+    # Инициализация анализатора планов запросов
+    from app.query_plan_analyzer import query_plan_analyzer
+    app.query_plan_analyzer = query_plan_analyzer
+    query_plan_analyzer.init_app(app)
+    
+    # Регистрация команд управления анализатором
+    from app.query_plan_analyzer import register_query_plan_commands
+    register_query_plan_commands(app)
+    
+    # Инициализация профилировщика производительности
+    from app.performance_profiler import performance_profiler, profiling_api
+    app.performance_profiler = performance_profiler
+    app.register_blueprint(profiling_api, url_prefix='/api/profiling')
+    
+    # Регистрация команд управления профилированием
+    from app.performance_profiler import register_profiling_commands
+    register_profiling_commands(app)
     
     # Инициализация обработчика ошибок
     from app.error_handling import error_handler
@@ -177,6 +239,15 @@ def create_app(config=None):
     # Инициализация менеджера безопасности
     from app.advanced_security import security_manager
     app.security_manager = security_manager
+    
+    # Инициализация расширенного менеджера безопасности
+    from app.enhanced_security import enhanced_security
+    app.enhanced_security = enhanced_security
+    enhanced_security.init_app(app)
+    
+    # Регистрация команд управления безопасностью
+    from app.enhanced_security import register_security_commands
+    register_security_commands(app)
     
     # Инициализация движка бизнес-аналитики
     from app.business_intelligence import bi_engine_v2
