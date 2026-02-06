@@ -190,6 +190,43 @@ def create_app(config=None):
     # Инициализация расширенного тестирования API
     from app.api_testing_advanced import init_api_testing
     init_api_testing(app)
+    
+    # Инициализация продвинутой асинхронной обработки задач
+    from app.async_task_processor import async_task_processor, register_async_commands
+    async_task_processor.init_app(app)
+    register_async_commands(app)
+    
+    # Инициализация middleware сжатия запросов/ответов
+    from app.compression_middleware import CompressionMiddleware, register_compression_commands
+    compression_middleware = CompressionMiddleware(app)
+    register_compression_commands(app)
+    
+    # Инициализация продвинутого пула соединений с БД
+    from app.database_pooling_advanced import advanced_connection_pool, register_pool_advanced_commands
+    advanced_connection_pool.init_app(app)
+    register_pool_advanced_commands(app)
+    
+    # Инициализация кэширования результатов запросов
+    from app.query_result_cache import cache_manager, register_cache_result_commands
+    cache_manager.init_app(app)
+    register_cache_result_commands(app)
+    
+    # Инициализация оптимизации статических ресурсов
+    from app.static_asset_optimizer import static_asset_optimizer, cdn_manager, register_static_asset_commands
+    static_asset_optimizer.init_app(app)
+    cdn_manager.init_app(app)
+    register_static_asset_commands(app)
+    
+    # Инициализация пакетной обработки запросов
+    from app.request_batching import request_batcher, bulk_manager, register_batching_commands
+    request_batcher.init_app(app)
+    bulk_manager.init_app(app)
+    register_batching_commands(app)
+    
+    # Инициализация расширенной панели мониторинга производительности
+    from app.performance_dashboard_enhanced import performance_monitor, register_performance_dashboard_commands
+    performance_monitor.init_app(app)
+    register_performance_dashboard_commands(app)
 
 
 
@@ -260,6 +297,10 @@ def create_app(config=None):
     from app.tasks import init_celery_app, define_tasks
     init_celery_app(app)  # Initialize Celery with the app
     define_tasks()  # Define all tasks after celery is initialized
+    
+    # Инициализация продвинутого асинхронного процессора задач
+    from app.async_task_processor import async_task_processor
+    app.async_task_processor = async_task_processor
     
     # Отложенная инициализация планировщика для ускорения запуска приложения
     if not (config and hasattr(config, 'TESTING') and config.TESTING):
