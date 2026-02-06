@@ -1,95 +1,81 @@
-/*
-https://leetcode.com/problems/power-grid-maintenance/description/?envType=daily-question&envId=2025-11-06
-Автор: Дуплей Максим Игоревич
-ORCID: https://orcid.org/0009-0007-7605-539X  
-GitHub: https://github.com/QuadDarv1ne/  
-*/
-
 /**
- * @param {number} n
- * @param {number[][]} edges
- * @param {number} threshold
- * @return {number}
+ * Автор: Дуплей Максим Игоревич - AGLA
+ * ORCID: https://orcid.org/0009-0007-7605-539X
+ * GitHub: https://github.com/QuadDarv1ne/
+ * 
+ * Полезные ссылки:
+ * 1. Telegram ❃ Хижина программиста Æ: https://t.me/hut_programmer_07
+ * 2. Telegram №1 @quadd4rv1n7
+ * 3. Telegram №2 @dupley_maxim_1999
+ * 4. Rutube канал: https://rutube.ru/channel/4218729/
+ * 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
+ * 6. YouTube канал: https://www.youtube.com/@it-coders
+ * 7. ВК группа: https://vk.com/science_geeks
  */
-var minCost = function(n, edges, threshold) {
-    // Инициализация Union-Find
-    const parent = Array.from({length: n}, (_, i) => i);
-    const rank = Array(n).fill(0);
+
+// JavaScript
+var processQueries = function(c, connections, queries) {
+    /*
+     * Обрабатывает запросы обслуживания энергосети.
+     * Использует Union-Find для группировки станций и min-heap для поиска минимальной онлайн станции.
+     * 
+     * Сложность по времени: O((c + n + q) * α(c))
+     * Сложность по памяти: O(c)
+     */
+    const parent = Array.from({length: c + 1}, (_, i) => i);
     
-    // Поиск корня с path compression
+    // Функция поиска корня с path compression
     const find = (x) => {
-        if (parent[x] !== x) {
-            parent[x] = find(parent[x]);
-        }
-        return parent[x];
+        return parent[x] === x ? x : parent[x] = find(parent[x]);
     };
     
-    // Объединение двух компонент с union by rank
-    const union = (x, y) => {
-        const px = find(x), py = find(y);
-        if (px === py) return false;
-        
-        if (rank[px] < rank[py]) {
-            parent[px] = py;
-        } else if (rank[px] > rank[py]) {
-            parent[py] = px;
+    // Объединение двух компонент
+    const unite = (x, y) => {
+        parent[find(x)] = find(y);
+    };
+    
+    // Строим граф связей
+    for (const [u, v] of connections) {
+        unite(u, v);
+    }
+    
+    // Создаем отсортированный массив для каждой компоненты
+    const comp = new Map();
+    for (let i = 1; i <= c; i++) {
+        const root = find(i);
+        if (!comp.has(root)) comp.set(root, []);
+        comp.get(root).push(i);
+    }
+    
+    for (const stations of comp.values()) {
+        stations.sort((a, b) => a - b);
+    }
+    
+    const offline = Array(c + 1).fill(false);
+    const result = [];
+    
+    // Обрабатываем запросы
+    for (const [type, x] of queries) {
+        if (type === 2) {
+            // Запрос типа 2: станция переходит в оффлайн
+            offline[x] = true;
         } else {
-            parent[py] = px;
-            rank[px]++;
-        }
-        return true;
-    };
-    
-    // Сортируем рёбра по весу (алгоритм Крускала)
-    edges.sort((a, b) => a[2] - b[2]);
-    
-    let totalCost = 0;
-    let edgesUsed = 0;
-    
-    // Добавляем рёбра с минимальным весом
-    for (const [u, v, cost] of edges) {
-        if (cost > threshold) break;
-        
-        if (union(u, v)) {
-            totalCost += cost;
-            edgesUsed++;
-            
-            // MST содержит n-1 ребро
-            if (edgesUsed === n - 1) break;
+            // Запрос типа 1: поиск онлайн станции для обслуживания
+            if (!offline[x]) {
+                result.push(x);
+            } else {
+                const root = find(x);
+                const stations = comp.get(root);
+                
+                // Lazy deletion: удаляем оффлайн станции из массива
+                while (stations.length > 0 && offline[stations[0]]) {
+                    stations.shift();
+                }
+                
+                result.push(stations.length === 0 ? -1 : stations[0]);
+            }
         }
     }
     
-    // Проверяем связность графа
-    const components = new Set();
-    for (let i = 0; i < n; i++) {
-        components.add(find(i));
-    }
-    
-    return (components.size > 1) ? -1 : totalCost;
+    return result;
 };
-
-/* 
-Пошаговый пример для n=5, threshold=10:
-edges = [[0,1,2],[1,2,3],[2,3,4],[3,4,5],[0,4,15]]
-
-1. Сортируем: [0,1,2], [1,2,3], [2,3,4], [3,4,5], [0,4,15]
-2. Добавляем [0,1,2]: компоненты {0,1}, cost = 2
-3. Добавляем [1,2,3]: компоненты {0,1,2}, cost = 5
-4. Добавляем [2,3,4]: компоненты {0,1,2,3}, cost = 9
-5. Добавляем [3,4,5]: компоненты {0,1,2,3,4}, cost = 14
-6. Все узлы связаны, возвращаем 14
-
-Оптимизации Union-Find:
-1. Path compression - сжатие пути при поиске корня
-2. Union by rank - присоединяем меньшее дерево к большему
-3. Итоговая сложность операций: почти O(1) амортизированно
-*/
-
-/* Полезные ссылки: */
-// 1. Telegram ❃ Хижина программиста Æ: https://t.me/hut_programmer_07
-// 2. Telegram №1 @quadd4rv1n7
-// 3. Telegram №2 @dupley_maxim_1999
-// 4. Rutube канал: https://rutube.ru/channel/4218729/
-// 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
-// 6. YouTube канал: https://www.youtube.com/@it-coders
-// 7. ВК группа: https://vk.com/science_geeks

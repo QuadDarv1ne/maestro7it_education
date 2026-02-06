@@ -1,103 +1,83 @@
-/*
-https://leetcode.com/problems/power-grid-maintenance/description/?envType=daily-question&envId=2025-11-06
-Автор: Дуплей Максим Игоревич
-ORCID: https://orcid.org/0009-0007-7605-539X  
-GitHub: https://github.com/QuadDarv1ne/  
-*/
+/**
+ * Автор: Дуплей Максим Игоревич - AGLA
+ * ORCID: https://orcid.org/0009-0007-7605-539X
+ * GitHub: https://github.com/QuadDarv1ne/
+ * 
+ * Полезные ссылки:
+ * 1. Telegram ❃ Хижина программиста Æ: https://t.me/hut_programmer_07
+ * 2. Telegram №1 @quadd4rv1n7
+ * 3. Telegram №2 @dupley_maxim_1999
+ * 4. Rutube канал: https://rutube.ru/channel/4218729/
+ * 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
+ * 6. YouTube канал: https://www.youtube.com/@it-coders
+ * 7. ВК группа: https://vk.com/science_geeks
+ */
 
+// Java
 class Solution {
-    private int[] parent;
-    private int[] rank;
+    /*
+     * Обрабатывает запросы обслуживания энергосети.
+     * Используется Union-Find для группировки станций и min-heap для поиска минимальной онлайн станции.
+     * 
+     * Сложность по времени: O((c + n + q) * α(c))
+     * Сложность по памяти: O(c)
+     */
+    int[] parent;
     
-    public int minCost(int n, int[][] edges, int threshold) {
-        // Инициализация Union-Find
-        parent = new int[n];
-        rank = new int[n];
+    // Функция поиска корня с path compression
+    int find(int x) {
+        return parent[x] == x ? x : (parent[x] = find(parent[x]));
+    }
+    
+    // Объединение двух компонент
+    void unite(int x, int y) {
+        parent[find(x)] = find(y);
+    }
+    
+    public int[] processQueries(int c, int[][] connections, int[][] queries) {
+        parent = new int[c + 1];
+        for (int i = 0; i <= c; i++) parent[i] = i;
         
-        for (int i = 0; i < n; i++) {
-            parent[i] = i;
+        // Строим граф связей
+        for (int[] conn : connections) {
+            unite(conn[0], conn[1]);
         }
         
-        // Сортируем рёбра по весу (стоимости)
-        Arrays.sort(edges, (a, b) -> Integer.compare(a[2], b[2]));
+        // Создаем min-heap для каждой компоненты
+        Map<Integer, PriorityQueue<Integer>> comp = new HashMap<>();
+        for (int i = 1; i <= c; i++) {
+            int root = find(i);
+            comp.putIfAbsent(root, new PriorityQueue<>());
+            comp.get(root).offer(i);
+        }
         
-        int totalCost = 0;
-        int edgesUsed = 0;
+        boolean[] offline = new boolean[c + 1];
+        List<Integer> result = new ArrayList<>();
         
-        // Алгоритм Крускала: добавляем рёбра с минимальным весом
-        for (int[] edge : edges) {
-            int u = edge[0], v = edge[1], cost = edge[2];
-            
-            // Если стоимость превышает threshold, прерываем
-            if (cost > threshold) break;
-            
-            // Если ребро соединяет разные компоненты
-            if (union(u, v)) {
-                totalCost += cost;
-                edgesUsed++;
-                
-                // MST для n узлов содержит n-1 ребро
-                if (edgesUsed == n - 1) break;
+        // Обрабатываем запросы
+        for (int[] q : queries) {
+            if (q[0] == 2) {
+                // Запрос типа 2: станция переходит в оффлайн
+                offline[q[1]] = true;
+            } else {
+                // Запрос типа 1: поиск онлайн станции для обслуживания
+                int x = q[1];
+                if (!offline[x]) {
+                    result.add(x);
+                } else {
+                    int root = find(x);
+                    PriorityQueue<Integer> pq = comp.get(root);
+                    
+                    // Lazy deletion: удаляем оффлайн станции из heap
+                    while (!pq.isEmpty() && offline[pq.peek()]) {
+                        pq.poll();
+                    }
+                    
+                    result.add(pq.isEmpty() ? -1 : pq.peek());
+                }
             }
         }
         
-        // Проверяем, что граф связный
-        int components = 0;
-        for (int i = 0; i < n; i++) {
-            if (find(i) == i) components++;
-        }
-        
-        return (components > 1) ? -1 : totalCost;
-    }
-    
-    private int find(int x) {
-        if (parent[x] != x) {
-            parent[x] = find(parent[x]); // Path compression
-        }
-        return parent[x];
-    }
-    
-    private boolean union(int x, int y) {
-        int px = find(x), py = find(y);
-        if (px == py) return false;
-        
-        // Union by rank
-        if (rank[px] < rank[py]) {
-            parent[px] = py;
-        } else if (rank[px] > rank[py]) {
-            parent[py] = px;
-        } else {
-            parent[py] = px;
-            rank[px]++;
-        }
-        return true;
+        return result.stream().mapToInt(i -> i).toArray();
     }
 }
-
-/* 
-Теория графов:
-MST (Minimum Spanning Tree) - остовное дерево минимального веса
-- Содержит все вершины графа
-- Не содержит циклов
-- Имеет n-1 рёбер для n вершин
-- Минимизирует суммарный вес рёбер
-
-Алгоритмы построения MST:
-1. Крускала - сортируем рёбра, добавляем жадно (используется здесь)
-2. Прима - растим дерево от начальной вершины
-3. Борувки - параллельно растим несколько деревьев
-
-Сложность алгоритма Крускала:
-- Сортировка: O(E log E)
-- Union-Find операции: O(E * α(N)) ≈ O(E)
-- Итоговая: O(E log E)
-*/
-
-/* Полезные ссылки: */
-// 1. Telegram ❃ Хижина программиста Æ: https://t.me/hut_programmer_07
-// 2. Telegram №1 @quadd4rv1n7
-// 3. Telegram №2 @dupley_maxim_1999
-// 4. Rutube канал: https://rutube.ru/channel/4218729/
-// 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
-// 6. YouTube канал: https://www.youtube.com/@it-coders
-// 7. ВК группа: https://vk.com/science_geeks
