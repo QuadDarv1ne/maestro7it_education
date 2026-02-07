@@ -11,8 +11,7 @@
 - Анализ жанров
 - Отчеты по продажам
 
-📁 `src/chinook/` - SQL queries and examples
-📁 `data/sample_data/` - Sample CSV data
+📁 `src/chinook/` - SQL запросы и примеры
 
 ### 2. [NorthWind](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/jpwhite3/northwind-SQLite3/master/dist/northwind.db)
 **База данных бизнеса/торговли**
@@ -21,8 +20,7 @@
 - Управление запасами
 - Аналитика продаж
 
-📁 `src/northwind/` - SQL queries and examples
-📁 `data/sample_data/` - Sample CSV data
+📁 `src/northwind/` - SQL запросы и примеры
 
 ### 3. [CNF](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/ladieslearningcode/llc-sql/master/data/cnf.db)
 **База данных Canadian National Railway**
@@ -31,7 +29,7 @@
 - Оптимизация маршрутов
 - Метрики производительности
 
-📁 `src/cnf/` - SQL queries and examples
+📁 `src/cnf/` - SQL запросы и примеры
 
 ### 4. [BasketBall](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/wyattowalsh/sports-analytics/main/basketball/data/basketball.sqlite)
 **База данных спортивной аналитики**
@@ -40,8 +38,7 @@
 - Производительность команд
 - Анализ сезона
 
-📁 `src/basketball/` - SQL queries and examples
-📁 `data/sample_data/` - Sample CSV data
+📁 `src/basketball/` - SQL запросы и примеры
 
 ### 5. [Sakila](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/ivanceras/sakila/master/sqlite-sakila-db/sakila.db)
 **База данных DVD-проката**
@@ -50,7 +47,7 @@
 - Отслеживание инвентаря
 - Анализ доходов
 
-📁 `src/sakila/` - SQL queries and examples
+📁 `src/sakila/` - SQL запросы и примеры
 
 ## 📁 Структура проекта
 
@@ -171,13 +168,13 @@ npx expo start
 
 ## 📊 Включенные образцы данных
 
-All databases include sample CSV data for offline practice:
-- Artists, Albums, Tracks (Chinook)
-- Products, Orders, Customers (NorthWind)
-- Teams, Players, Games (Basketball)
-- And more...
+Все базы данных содержат примеры CSV данных для автономной практики:
+- Исполнители, Альбомы, Треки (Chinook)
+- Продукты, Заказы, Клиенты (NorthWind)
+- Команды, Игроки, Игры (Basketball)
+- И другие примеры...
 
-## 🎯 Практические применения
+## Практические применения
 
 - **Бизнес-аналитика**: Анализ продаж, сегментация клиентов
 - **Анализ данных**: Выявление трендов, метрики производительности
@@ -202,19 +199,11 @@ All databases include sample CSV data for offline practice:
 - Созданы реальные SQL-файлы запросов для каждой базы данных
 - Добавлены образцы CSV-данных для офлайн-практики
 - Улучшена документация и путь обучения
+- Добавлены Docker-окружение и мобильное приложение
+- Полная локализация документации на русский язык
 
 **Версия 1.0** - Март 2025
 - Первоначальный выпуск со ссылками на базы данных
-
-## 📬 Contact
-
-💼 **Author:** Дуплей Максим Игоревич
-
-📲 **Telegram №1:** [@quadd4rv1n7](https://t.me/quadd4rv1n7)
-
-📲 **Telegram №2:** [@dupley_maxim_1999](https://t.me/dupley_maxim_1999)
-
-📧 **Email:** maksimqwe42@mail.ru
 
 ---
 
