@@ -197,6 +197,52 @@ class AdvancedStructuredLogger:
         
         return entry
     
+    def _log_direct(self, level: LogLevel, message: str, **kwargs):
+        """Вспомогательный метод для прямой записи в логгер без создания LogEntry"""
+        log_entry = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'level': level.value,
+            'message': message,
+            'module': kwargs.get('module', ''),
+            'function': kwargs.get('function', ''),
+            'thread_id': threading.current_thread().ident,
+            'process_id': os.getpid(),
+            'metadata': kwargs.get('metadata', {}),
+            'correlation_id': kwargs.get('correlation_id'),
+            'user_id': kwargs.get('user_id'),
+            'request_id': kwargs.get('request_id'),
+            'performance_data': kwargs.get('performance_data'),
+            'trace_id': kwargs.get('trace_id'),
+        }
+        
+        # Добавление любых дополнительных полей
+        for key, value in kwargs.items():
+            if key not in log_entry:
+                log_entry[key] = value
+        
+        # Добавление в очередь
+        queue_name = self._get_queue_name(level)
+        with self.lock:
+            self.log_queues[queue_name].append(log_entry)
+            self.stats[f'{level.value.lower()}_count'] += 1
+        
+        # Запись в логгер
+        log_msg = json.dumps(log_entry, ensure_ascii=False)
+        if level == LogLevel.DEBUG:
+            self.logger.debug(log_msg)
+        elif level == LogLevel.INFO:
+            self.logger.info(log_msg)
+        elif level == LogLevel.WARNING:
+            self.logger.warning(log_msg)
+        elif level == LogLevel.ERROR:
+            self.logger.error(log_msg)
+        elif level == LogLevel.CRITICAL:
+            self.logger.critical(log_msg)
+        else:
+            self.logger.info(log_msg)
+        
+        return log_entry
+    
     def _get_queue_name(self, level: LogLevel) -> str:
         """Определение очереди для уровня логирования"""
         if level == LogLevel.PERFORMANCE:
@@ -274,7 +320,7 @@ class AdvancedStructuredLogger:
             self.stats['alerts_count'] += 1
         
         # Логирование алерта
-        self.warning(f"ALERT: {message}", metadata=metadata, alert_type=alert_type)
+        self._log_direct(LogLevel.WARNING, f"ALERT: {message}", metadata=metadata, alert_type=alert_type)
     
     def _get_alert_severity(self, alert_type: str) -> str:
         """Определение серьезности алерта"""
