@@ -242,6 +242,52 @@ def create_app(config=None):
     from app.performance_predictor import PerformancePredictor, register_prediction_commands
     performance_predictor = PerformancePredictor(app)
     register_prediction_commands(app)
+    
+    # Инициализация интеллектуального оптимизатора запросов
+    from app.intelligent_query_optimizer import intelligent_optimizer, register_intelligent_optimization_commands
+    intelligent_optimizer.init_app(app)
+    register_intelligent_optimization_commands(app)
+    
+    # Инициализация оптимизатора памяти
+    from app.memory_optimizer import memory_optimizer, register_memory_commands
+    memory_optimizer.init_app(app)
+    register_memory_commands(app)
+    
+    # Инициализация продвинутого сжатия
+    from app.advanced_compression import compression_middleware, register_compression_commands
+    compression_middleware.init_app(app)
+    register_compression_commands(app)
+    
+    # Инициализация расширенного структурированного логирования
+    from app.structured_logging_advanced import structured_logger, register_structured_logging_commands
+    structured_logger.init_app(app)
+    register_structured_logging_commands(app)
+    
+    # Инициализация предиктивной аналитики и машинного обучения
+    from app.predictive_analytics_ml import predictive_analytics, register_predictive_analytics_commands
+    predictive_analytics.init_app(app)
+    register_predictive_analytics_commands(app)
+    
+    # Инициализация комплексного мониторинга здоровья системы
+    from app.system_health_monitor import health_monitor, register_health_monitor_commands, register_default_health_checks
+    health_monitor.init_app(app)
+    register_health_monitor_commands(app)
+    register_default_health_checks(app)
+    
+    # Инициализация продвинутого менеджера безопасности
+    from app.advanced_security_manager import security_manager, register_security_commands
+    security_manager.init_app(app)
+    register_security_commands(app)
+    
+    # Инициализация продвинутого движка аналитики
+    from app.advanced_analytics_engine import analytics_engine, register_analytics_commands
+    analytics_engine.init_app(app)
+    register_analytics_commands(app)
+    
+    # Инициализация менеджера пользовательского опыта
+    from app.ux_manager import ux_manager, register_ux_commands
+    ux_manager.init_app(app)
+    register_ux_commands(app)
 
 
 
