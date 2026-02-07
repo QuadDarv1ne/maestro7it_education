@@ -223,6 +223,7 @@ def create_app(config=None):
     # Инициализация расширенного структурированного логирования
     from app.structured_logging_advanced import structured_logger, register_structured_logging_commands
     structured_logger.init_app(app)
+    app.structured_logger = structured_logger  # Reassign to ensure advanced version is used
     register_structured_logging_commands(app)
     
     # Инициализация предиктивной аналитики и машинного обучения

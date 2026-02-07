@@ -79,22 +79,81 @@ class PerformanceMonitor:
                     current[metric_key] = values[-1]['value']
             return current
     
-    def get_metrics_history(self, hours=1):
+    def get_metrics_history(self, hours=1, start_time=None, end_time=None, interval_minutes=None):
         """Get historical metrics for all tracked metrics"""
         from datetime import datetime, timezone, timedelta
         
         with self.lock:
             history = {}
-            cutoff_time = time.time() - (hours * 3600)  # Convert hours to seconds
+            
+            # Use start_time/end_time if provided, otherwise calculate from hours
+            if start_time and end_time:
+                start_timestamp = start_time.timestamp()
+                end_timestamp = end_time.timestamp()
+            else:
+                start_timestamp = time.time() - (hours * 3600)  # Convert hours to seconds
+                end_timestamp = time.time()
             
             for metric_key, values in self.metrics.items():
-                recent_values = [
-                    entry for entry in values
-                    if entry['timestamp'] >= cutoff_time
-                ]
-                history[metric_key] = recent_values
+                filtered_values = []
+                
+                for entry in values:
+                    if start_timestamp <= entry['timestamp'] <= end_timestamp:
+                        # Convert timestamp to datetime object for the returned data
+                        dt_obj = datetime.fromtimestamp(entry['timestamp'])
+                        filtered_values.append({
+                            'value': entry['value'],
+                            'timestamp': dt_obj,
+                            'timestamp_raw': entry['timestamp']
+                        })
+                
+                # If interval_minutes is specified, aggregate data
+                if interval_minutes and filtered_values:
+                    aggregated_values = self._aggregate_by_interval(filtered_values, interval_minutes)
+                    history[metric_key] = aggregated_values
+                else:
+                    history[metric_key] = filtered_values
                 
             return history
+    
+    def _aggregate_by_interval(self, values, interval_minutes):
+        """Aggregate values by time interval"""
+        from datetime import timedelta
+        import math
+        
+        if not values:
+            return []
+        
+        # Sort values by timestamp
+        sorted_values = sorted(values, key=lambda x: x['timestamp'])
+        
+        # Group by time intervals
+        intervals = {}
+        interval_seconds = interval_minutes * 60
+        
+        for value in sorted_values:
+            # Calculate interval key
+            interval_start_ts = int(value['timestamp'].timestamp() / interval_seconds) * interval_seconds
+            interval_start = datetime.fromtimestamp(interval_start_ts)
+            
+            if interval_start not in intervals:
+                intervals[interval_start] = []
+            intervals[interval_start].append(value['value'])
+        
+        # Aggregate each interval (calculate average)
+        result = []
+        for interval_start, interval_values in intervals.items():
+            avg_value = sum(interval_values) / len(interval_values)
+            result.append({
+                'value': avg_value,
+                'timestamp': interval_start,
+                'count': len(interval_values),
+                'min': min(interval_values),
+                'max': max(interval_values)
+            })
+        
+        # Sort by timestamp
+        return sorted(result, key=lambda x: x['timestamp'])
 
 # Global performance monitor instance
 performance_monitor = PerformanceMonitor()
