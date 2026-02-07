@@ -1,40 +1,59 @@
-'''
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Настройка базы данных товаров Ozon
+
+Полный скрипт для создания и заполнения базы данных товаров Ozon с использованием DuckDB.
+Этот скрипт создает таблицу, вставляет примеры данных и выполняет аналитические запросы.
+
 Автор: Дуплей Максим Игоревич
 ORCID: https://orcid.org/0009-0007-7605-539X
 GitHub: https://github.com/QuadDarv1ne/
-'''
-
-# ozon_db_setup.py
-# Полный скрипт для создания и заполнения базы данных товаров Ozon с использованием DuckDB
+"""
 
 import duckdb
 import json
+import os
+import sys
 from datetime import datetime
 
+# Конфигурация
+DATABASE_NAME = os.getenv('DUCKDB_DATABASE_NAME', 'ozon_products.duckdb')
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'False').lower() == 'true'
+
 # === ШАГ №1: Подключение к базе данных (файл на диске) ===
-# Если файла нет — он создастся автоматически
-con = duckdb.connect('ozon_products.duckdb')
+try:
+    con = duckdb.connect(DATABASE_NAME)
+    if DEBUG_MODE:
+        print(f"✅ Подключено к базе данных: {DATABASE_NAME}")
+except Exception as e:
+    print(f"❌ Ошибка подключения к базе данных: {e}")
+    sys.exit(1)
 
 # === ШАГ №2: Создание таблицы товаров ===
-con.execute("""
-CREATE TABLE IF NOT EXISTS ozon_products (
-    product_id      BIGINT PRIMARY KEY,
-    name            VARCHAR,
-    brand           VARCHAR,
-    category        VARCHAR,
-    price           DOUBLE,
-    old_price       DOUBLE,
-    rating          DOUBLE,
-    review_count    INTEGER,
-    is_in_stock     BOOLEAN,
-    url             VARCHAR,
-    description     VARCHAR,
-    characteristics VARCHAR,  -- хранится как JSON-строка
-    scraped_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-""")
-
-print("✅ Таблица 'ozon_products' создана или уже существует.")
+try:
+    con.execute("""
+    CREATE TABLE IF NOT EXISTS ozon_products (
+        product_id      BIGINT PRIMARY KEY,
+        name            VARCHAR,
+        brand           VARCHAR,
+        category        VARCHAR,
+        price           DOUBLE,
+        old_price       DOUBLE,
+        rating          DOUBLE,
+        review_count    INTEGER,
+        is_in_stock     BOOLEAN,
+        url             VARCHAR,
+        description     VARCHAR,
+        characteristics VARCHAR,  -- хранится как JSON-строка
+        scraped_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    print("✅ Таблица 'ozon_products' создана или уже существует.")
+except Exception as e:
+    print(f"❌ Ошибка создания таблицы: {e}")
+    con.close()
+    sys.exit(1)
 
 # === ШАГ №3: Пример добавления данных (в реальности — из парсера или API) ===
 # Пример товара (реальные данные можно получать через скрапинг или API)
@@ -315,65 +334,95 @@ products = [
 ]
 
 # === ШАГ №4: Вставка всех 15 записей ===
-for p in products:
-    con.execute("""
-    INSERT INTO ozon_products (
-        product_id, name, brand, category, price, old_price,
-        rating, review_count, is_in_stock, url, description, characteristics
-    ) VALUES (
-        ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?
-    )
-    ON CONFLICT (product_id) DO UPDATE SET
-        price = EXCLUDED.price,
-        old_price = EXCLUDED.old_price,
-        rating = EXCLUDED.rating,
-        review_count = EXCLUDED.review_count,
-        is_in_stock = EXCLUDED.is_in_stock,
-        scraped_at = CURRENT_TIMESTAMP;
-    """, list(p.values()))
-
-print(f"✅ Добавлено {len(products)} товаров в базу.")
+try:
+    successful_inserts = 0
+    for p in products:
+        con.execute("""
+        INSERT INTO ozon_products (
+            product_id, name, brand, category, price, old_price,
+            rating, review_count, is_in_stock, url, description, characteristics
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?
+        )
+        ON CONFLICT (product_id) DO UPDATE SET
+            price = EXCLUDED.price,
+            old_price = EXCLUDED.old_price,
+            rating = EXCLUDED.rating,
+            review_count = EXCLUDED.review_count,
+            is_in_stock = EXCLUDED.is_in_stock,
+            scraped_at = NOW();
+        """, list(p.values()))
+        successful_inserts += 1
+    
+    print(f"✅ Добавлено {successful_inserts} товаров в базу.")
+except Exception as e:
+    print(f"❌ Ошибка вставки данных: {e}")
+    con.close()
+    sys.exit(1)
 
 # === ШАГ №5: Проверка данных ===
-result = con.execute("SELECT * FROM ozon_products LIMIT 1;").fetchdf()
-print("\n🔍 Пример записи из базы:")
-print(result)
+try:
+    result = con.execute("SELECT * FROM ozon_products LIMIT 1;").fetchdf()
+    print("\n🔍 Пример записи из базы:")
+    print(result)
+except Exception as e:
+    print(f"❌ Ошибка получения данных для проверки: {e}")
 
 # === ШАГ №6: Полезные аналитические запросы ===
-print("\n📊 Топ-3 самых дорогих товаров:")
-top_expensive = con.execute("""
-    SELECT name, brand, price
-    FROM ozon_products
-    ORDER BY price DESC
-    LIMIT 3;
-""").fetchdf()
-print(top_expensive)
+try:
+    print("\n📊 Топ-3 самых дорогих товаров:")
+    top_expensive = con.execute("""
+        SELECT name, brand, price
+        FROM ozon_products
+        ORDER BY price DESC
+        LIMIT 3;
+    """).fetchdf()
+    print(top_expensive)
+except Exception as e:
+    print(f"❌ Ошибка запроса топ-3 дорогих товаров: {e}")
 
-print("\n📈 Средний рейтинг по брендам:")
-avg_rating = con.execute("""
-    SELECT brand, AVG(rating) AS avg_rating, COUNT(*) AS products
-    FROM ozon_products
-    WHERE rating IS NOT NULL
-    GROUP BY brand
-    ORDER BY avg_rating DESC;
-""").fetchdf()
-print(avg_rating)
+try:
+    print("\n📈 Средний рейтинг по брендам:")
+    avg_rating = con.execute("""
+        SELECT brand, AVG(rating) AS avg_rating, COUNT(*) AS products
+        FROM ozon_products
+        WHERE rating IS NOT NULL
+        GROUP BY brand
+        ORDER BY avg_rating DESC;
+    """).fetchdf()
+    print(avg_rating)
+except Exception as e:
+    print(f"❌ Ошибка запроса среднего рейтинга по брендам: {e}")
 
-print("\n📊 Топ-5 самых дорогих товаров:")
-print(con.execute("""
-    SELECT name, brand, price FROM ozon_products
-    ORDER BY price DESC LIMIT 5;
-""").fetchdf())
+try:
+    print("\n📊 Топ-5 самых дорогих товаров:")
+    top_5_expensive = con.execute("""
+        SELECT name, brand, price FROM ozon_products
+        ORDER BY price DESC LIMIT 5;
+    """).fetchdf()
+    print(top_5_expensive)
+except Exception as e:
+    print(f"❌ Ошибка запроса топ-5 дорогих товаров: {e}")
 
-print("\n📈 Товары с рейтингом выше 4.7:")
-print(con.execute("""
-    SELECT name, rating, review_count
-    FROM ozon_products
-    WHERE rating > 4.7
-    ORDER BY review_count DESC;
-""").fetchdf())
+try:
+    print("\n📈 Товары с рейтингом выше 4.7:")
+    high_rated = con.execute("""
+        SELECT name, rating, review_count
+        FROM ozon_products
+        WHERE rating > 4.7
+        ORDER BY review_count DESC;
+    """).fetchdf()
+    print(high_rated)
+except Exception as e:
+    print(f"❌ Ошибка запроса товаров с высоким рейтингом: {e}")
 
 # Закрытие соединения и правильная утилизация данных
-con.close()
-print("\n💾 База сохранена в 'ozon_products.duckdb'")
+try:
+    con.close()
+    print(f"\n💾 База сохранена в '{DATABASE_NAME}'")
+    if DEBUG_MODE:
+        print("🔧 Режим отладки включен")
+    print("✨ Выполнение завершено успешно")
+except Exception as e:
+    print(f"⚠️  Предупреждение при закрытии соединения: {e}")
