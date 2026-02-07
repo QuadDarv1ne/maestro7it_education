@@ -280,3 +280,34 @@ def main():
     
     try:
         recovery_system = ErrorRecoverySystem()
+        
+        print("🔧 СИСТЕМА ВОССТАНОВЛЕНИЯ ПОСЛЕ ОШИБОК")
+        print("="*60)
+        
+        # Создать точку восстановления
+        print("1. Создание точки восстановления...")
+        recovery_path = recovery_system.create_recovery_point("initial_state")
+        print(f"   ✅ Точка восстановления создана: {os.path.basename(recovery_path)}")
+        
+        # Показать список точек восстановления
+        print("\n2. Список точек восстановления:")
+        recovery_points = recovery_system.list_recovery_points()
+        for i, rp in enumerate(recovery_points, 1):
+            print(f"   {i}. {rp['name']} - {rp['size']} байт - {rp['timestamp']}")
+        
+        # Показать статистику
+        print("\n3. Статистика восстановления:")
+        stats = recovery_system.get_recovery_statistics()
+        print(f"   Всего точек восстановления: {stats['total_recovery_points']}")
+        print(f"   Общий размер: {stats['total_size_bytes']} байт")
+        print(f"   Последняя точка: {stats['latest_recovery_point']}")
+        
+        print(f"\n✨ Система восстановления после ошибок работает!")
+        
+    except Exception as e:
+        logger.error(f"Ошибка в системе восстановления: {e}")
+        print(f"❌ Ошибка: {e}")
+
+
+if __name__ == "__main__":
+    main()

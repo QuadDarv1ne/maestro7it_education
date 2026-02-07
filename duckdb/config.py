@@ -16,10 +16,14 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXPORT_DIR = os.path.join(BASE_DIR, 'exports')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
+CHARTS_DIR = os.path.join(BASE_DIR, 'charts')
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 
 # Создание директорий если они не существуют
 os.makedirs(EXPORT_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(CHARTS_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
 
 # Настройки аналитики
 ANALYTICS_CONFIG = {

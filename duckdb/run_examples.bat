@@ -22,10 +22,14 @@ echo 8. Проверка качества данных
 echo 9. Мониторинг производительности
 echo 10. Резервное копирование
 echo 11. Полная демонстрация проекта
+echo 12. Оптимизация запросов
+echo 13. Визуализация данных
+echo 14. Восстановление после ошибок
+echo 15. Миграции базы данных
 echo 0. Выход
 echo.
 
-set /p choice="Введите номер (0-11): "
+set /p choice="Введите номер (0-15): "
 
 if "%choice%"=="1" goto full_analysis
 if "%choice%"=="2" goto init_db
@@ -38,9 +42,13 @@ if "%choice%"=="8" goto data_validation
 if "%choice%"=="9" goto perf_monitor
 if "%choice%"=="10" goto backup_manager
 if "%choice%"=="11" goto demo_complete
+if "%choice%"=="12" goto query_opt
+if "%choice%"=="13" goto data_viz
+if "%choice%"=="14" goto error_recov
+if "%choice%"=="15" goto db_migrate
 if "%choice%"=="0" goto exit_script
 
-echo Неверный выбор. Пожалуйста, введите число от 0 до 7.
+echo Неверный выбор. Пожалуйста, введите число от 0 до 15.
 goto menu
 
 :full_analysis
@@ -117,6 +125,34 @@ goto menu
 echo.
 echo Полная демонстрация проекта...
 python demo_complete.py
+pause
+goto menu
+
+:query_opt
+echo.
+echo Оптимизация запросов...
+python query_optimizer.py
+pause
+goto menu
+
+:data_viz
+echo.
+echo Визуализация данных...
+python data_visualizer.py
+pause
+goto menu
+
+:error_recov
+echo.
+echo Восстановление после ошибок...
+python error_recovery.py
+pause
+goto menu
+
+:db_migrate
+echo.
+echo Миграции базы данных...
+python db_migration.py
 pause
 goto menu
 

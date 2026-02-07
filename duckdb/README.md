@@ -73,6 +73,10 @@
 - `backup_manager.py` - Модуль для резервного копирования и восстановления базы данных
 - `data_validator.py` - Модуль для проверки качества данных
 - `performance_monitor.py` - Модуль для мониторинга производительности запросов
+- `query_optimizer.py` - Модуль оптимизации SQL-запросов с анализом производительности
+- `data_visualizer.py` - Модуль визуализации данных с созданием графиков и диаграмм
+- `error_recovery.py` - Система восстановления после ошибок с точками восстановления
+- `db_migration.py` - Система управления миграциями базы данных
 - `run_examples.bat` - Скрипт для удобного запуска различных компонентов проекта
 
 ## Руководство по синтаксису SQL в DuckDB
@@ -206,6 +210,11 @@ FROM daily_sales;
 - Automated setup and deployment scripts
 - Rich export capabilities with multiple formats
 - Interactive batch script for easy access to all features
+- Advanced query optimization with performance analysis
+- Data visualization with charts and graphs
+- Error recovery system with restoration points
+- Database migration management with versioning
+- Comprehensive monitoring and diagnostic tools
 
 ## DuckDB с Python - Полное руководство
 
@@ -426,6 +435,26 @@ while True:
    python backup_manager.py
    ```
 
+10. To run query optimization:
+   ```
+   python query_optimizer.py
+   ```
+
+11. To run data visualization:
+   ```
+   python data_visualizer.py
+   ```
+
+12. To run error recovery system:
+   ```
+   python error_recovery.py
+   ```
+
+13. To run database migration system:
+   ```
+   python db_migration.py
+   ```
+
 3. To run in debug mode:
    ```
    DEBUG_MODE=True python ozon_db_setup.py
@@ -534,3 +563,7 @@ DuckDB универсален и может использоваться в ра
 5. **`performance_monitor.py`** - Система мониторинга производительности запросов, с измерением времени выполнения и использования ресурсов
 6. **`backup_manager.py`** - Механизмы резервного копирования и восстановления базы данных
 7. **`demo_complete.py`** - Комплексная демонстрация всех возможностей проекта в одном скрипте
+8. **`query_optimizer.py`** - Инструмент для анализа и оптимизации SQL-запросов с рекомендациями по производительности
+9. **`data_visualizer.py`** - Модуль визуализации данных с созданием графиков и диаграмм
+10. **`error_recovery.py`** - Система восстановления после ошибок с точками восстановления и автоматическим восстановлением
+11. **`db_migration.py`** - Система управления миграциями базы данных с поддержкой версионирования схемы
