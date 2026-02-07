@@ -1,0 +1,74 @@
+# Файлы дампов MySQL
+*.sql.bak
+*.sql.backup
+*.dump
+*.dmp
+
+# Файлы конфигурации базы данных с паролями
+config/database.php
+config/db_config.*
+.env
+.env.local
+.env.production
+.env.*
+
+# Файлы резервных копий
+*.bak
+*.backup
+backup/
+backups/
+
+# Лог-файлы
+*.log
+logs/
+log/
+
+# Временные файлы
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Файлы IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Файлы, созданные операционной системой
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Файлы локальной разработки
+local/
+dev/
+development/
+
+# Файлы с паролями и учетными данными
+*.pass
+*.pwd
+credentials.*
+passwords.*
+
+# Экспортированные файлы данных
+*.csv
+*.xlsx
+*.xls
+export/
+exports/
+
+# Файлы кэша
+cache/
+*.cache
+
+# Файлы операционной системы
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+.directory
+.Trashes
+*.nfs
+*~
+.#*
