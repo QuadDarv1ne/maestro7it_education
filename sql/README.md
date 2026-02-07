@@ -62,22 +62,63 @@ sql/
 │   ├── cnf/               # Railway queries
 │   ├── basketball/        # Sports queries
 │   └── sakila/            # DVD rental queries
-├── data/                  # Sample data
-│   └── sample_data/       # CSV files for practice
+├── data/                  # Data files
+│   ├── sample_data/       # CSV files for practice
+│   ├── databases/         # Downloaded SQLite databases
+│   └── test_data/         # Test datasets and frameworks
+├── scripts/               # Automation scripts
+│   ├── download_databases.py  # Database downloader
+│   └── sql_tester.py      # SQL query tester
+├── notebooks/             # Jupyter notebooks
+│   ├── chinook_interactive.ipynb
+│   └── northwind_interactive.ipynb
+├── templates/             # Project templates
+│   ├── retail_analysis_template.sql
+│   ├── sports_analytics_template.sql
+│   └── music_analytics_template.sql
+├── solutions/             # Exercise solutions
+│   ├── chinook_solutions.sql
+│   ├── northwind_solutions.sql
+│   └── basketball_solutions.sql
 ├── docs/                  # Documentation
 ├── basketball/            # Basketball resources
 ├── img/                   # Images
 ├── .gitignore            # Git ignore rules
+├── LICENSE               # MIT License
+├── CONTRIBUTING.md       # Contribution guidelines
 └── README.md             # This file
 ```
 
 ## 🚀 Начало работы
 
-1. **Choose a database** from the examples above
-2. **Open in SQLite Online** using the provided links
-3. **Explore the schema** using: `SELECT name FROM sqlite_master WHERE type = 'table';`
-4. **Run sample queries** from the `src/` directory
-5. **Practice with sample data** from `data/sample_data/`
+### Быстрый старт:
+
+1. **Загрузите базы данных**:
+   ```bash
+   python scripts/download_databases.py
+   ```
+
+2. **Изучите структуру**:
+   ```sql
+   SELECT name FROM sqlite_master WHERE type = 'table';
+   ```
+
+3. **Запустите интерактивные notebook'ы**:
+   - `notebooks/chinook_interactive.ipynb`
+   - `notebooks/northwind_interactive.ipynb`
+
+4. **Практикуйтесь с тестовыми данными**:
+   - `data/test_data/test_dataset.sql`
+   - `data/test_data/testing_framework.md`
+
+### Альтернативные способы:
+
+- **Используйте онлайн SQLite** с предоставленными ссылками
+- **Запустите SQL-тестер** для проверки запросов:
+  ```bash
+  python scripts/sql_tester.py
+  ```
+- **Изучите шаблоны проектов** в папке `templates/`
 
 ## 📖 Путь обучения
 
