@@ -1,0 +1,920 @@
+{% extends "base.html" %}
+
+{% block title %}О проекте - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<style>
+:root {
+    --gradient-about-ultra: conic-gradient(from 0deg at 50% 50%, 
+        #ff0080, #ff8c00, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff00ff, #ff0080);
+    --gradient-dark-ultra-about: linear-gradient(135deg, 
+        #000428, 
+        #004e92, 
+        #000428, 
+        #001510, 
+        #000428, 
+        #000000);
+    --gradient-light-ultra-about: linear-gradient(135deg, 
+        #f6d365, 
+        #fda085, 
+        #fbc2eb, 
+        #a6c1ee, 
+        #c2e9fb, 
+        #f6d365);
+    --transition-ultra-about: all 0.7s cubic-bezier(0.76, 0, 0.24, 1);
+    --shadow-ultra-about: 0 0 100px rgba(255, 0, 128, 0.7);
+    --border-radius-ultra-about: 45px;
+    --glow-ultra-about: 0 0 60px rgba(255, 0, 128, 1);
+    --pulse-duration-ultra: 4s;
+}
+
+/* Ультра-контейнер "О проекте" */
+.about-ultra-container {
+    min-height: 100vh;
+    background: var(--gradient-dark-ultra-about);
+    background-attachment: fixed;
+    position: relative;
+    overflow: hidden;
+    animation: gradientShiftUltraAbout 35s ease infinite;
+}
+
+@keyframes gradientShiftUltraAbout {
+    0%, 100% { 
+        background-position: 0% 0%;
+        filter: hue-rotate(0deg) brightness(1);
+    }
+    25% { 
+        background-position: 100% 0%;
+        filter: hue-rotate(90deg) brightness(1.2);
+    }
+    50% { 
+        background-position: 100% 100%;
+        filter: hue-rotate(180deg) brightness(1.4);
+    }
+    75% { 
+        background-position: 0% 100%;
+        filter: hue-rotate(270deg) brightness(1.2);
+    }
+}
+
+/* 5D-фон с квантовыми полями */
+.quantum-field-about {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.quantum-particle-about {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, 
+        rgba(255, 255, 255, 0.95) 0%, 
+        rgba(255, 0, 128, 0.7) 30%, 
+        transparent 70%);
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.9);
+    animation: quantumFloatAbout 30s infinite linear;
+}
+
+.quantum-particle-about-1 { width: 8px; height: 8px; left: 3%; top: 12%; animation-delay: 0s; }
+.quantum-particle-about-2 { width: 12px; height: 12px; left: 18%; top: 88%; animation-delay: 5s; }
+.quantum-particle-about-3 { width: 6px; height: 6px; left: 85%; top: 22%; animation-delay: 10s; }
+.quantum-particle-about-4 { width: 10px; height: 10px; left: 95%; top: 78%; animation-delay: 3s; }
+.quantum-particle-about-5 { width: 15px; height: 15px; left: 50%; top: 42%; animation-delay: 8s; }
+.quantum-particle-about-6 { width: 5px; height: 5px; left: 25%; top: 68%; animation-delay: 12s; }
+.quantum-particle-about-7 { width: 14px; height: 14px; left: 75%; top: 32%; animation-delay: 2s; }
+.quantum-particle-about-8 { width: 7px; height: 7px; left: 12%; top: 98%; animation-delay: 9s; }
+.quantum-particle-about-9 { width: 11px; height: 11px; left: 88%; top: 8%; animation-delay: 6s; }
+.quantum-particle-about-10 { width: 9px; height: 9px; left: 35%; top: 58%; animation-delay: 11s; }
+.quantum-particle-about-11 { width: 13px; height: 13px; left: 65%; top: 28%; animation-delay: 4s; }
+.quantum-particle-about-12 { width: 6px; height: 6px; left: 5%; top: 45%; animation-delay: 13s; }
+
+@keyframes quantumFloatAbout {
+    0% { 
+        transform: translateY(100vh) translateX(0) translateZ(0) rotate(0deg) scale(0.3);
+        opacity: 0;
+    }
+    8% { opacity: 1; transform: scale(1); }
+    92% { opacity: 1; transform: scale(1); }
+    100% { 
+        transform: translateY(-100px) translateX(250px) translateZ(150px) rotate(1440deg) scale(0.2);
+        opacity: 0;
+    }
+}
+
+/* Hero-секция "О проекте" с ультра-эффектами */
+.hero-about-ultra {
+    position: relative;
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    padding: 3rem;
+}
+
+.hero-content-about-ultra {
+    text-align: center;
+    max-width: 1200px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(40px);
+    border-radius: var(--border-radius-ultra-about);
+    padding: 6rem;
+    border: 3px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 200px rgba(255, 0, 128, 0.6);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(2000px) rotateX(1deg) rotateY(1deg) rotateZ(0.5deg);
+    animation: heroEntranceAboutUltra 4s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+}
+
+@keyframes heroEntranceAboutUltra {
+    0% { 
+        opacity: 0;
+        transform: perspective(2000px) rotateX(90deg) rotateY(45deg) rotateZ(30deg) translateY(150px) scale(0.5);
+        filter: blur(30px);
+    }
+    100% { 
+        opacity: 1;
+        transform: perspective(2000px) rotateX(1deg) rotateY(1deg) rotateZ(0.5deg) translateY(0) scale(1);
+        filter: blur(0px);
+    }
+}
+
+.hero-content-about-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse, 
+        transparent 20%, 
+        rgba(255, 0, 128, 0.3) 40%, 
+        rgba(0, 255, 255, 0.3) 60%, 
+        transparent 80%);
+    animation: quantumSpotlightAbout 15s infinite alternate;
+    z-index: -1;
+}
+
+@keyframes quantumSpotlightAbout {
+    0% { 
+        transform: rotate(0deg) translate(50px, 50px) scale(1);
+        opacity: 0.4;
+    }
+    100% { 
+        transform: rotate(360deg) translate(-50px, -50px) scale(2);
+        opacity: 0.8;
+    }
+}
+
+/* Ультра-титульные стили с 5D-эффектами */
+.about-title-ultra {
+    font-size: 7rem;
+    font-weight: 900;
+    background: linear-gradient(45deg, 
+        #ffffff, 
+        #ff0080, 
+        #ff8c00, 
+        #ffff00, 
+        #00ff00, 
+        #00ffff, 
+        #0000ff, 
+        #8000ff, 
+        #ff00ff, 
+        #ffffff);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 70px rgba(255, 255, 255, 0.9);
+    letter-spacing: -6px;
+    margin-bottom: 3rem;
+    position: relative;
+    animation: textQuantumPulseAbout 5s ease-in-out infinite;
+}
+
+@keyframes textQuantumPulseAbout {
+    0%, 100% { 
+        background-position: 0% 50%;
+        text-shadow: 0 0 50px rgba(255, 255, 255, 0.8);
+        transform: scale(1);
+    }
+    12.5% { 
+        background-position: 25% 50%;
+        text-shadow: 0 0 100px rgba(255, 0, 128, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+    25% { 
+        background-position: 50% 50%;
+        text-shadow: 0 0 80px rgba(255, 140, 0, 1), 0 0 100px rgba(255, 255, 255, 0.9);
+        transform: scale(1);
+    }
+    37.5% { 
+        background-position: 75% 50%;
+        text-shadow: 0 0 100px rgba(255, 255, 0, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+    50% { 
+        background-position: 100% 50%;
+        text-shadow: 0 0 80px rgba(0, 255, 0, 1), 0 0 100px rgba(255, 255, 255, 0.9);
+        transform: scale(1);
+    }
+    62.5% { 
+        background-position: 75% 100%;
+        text-shadow: 0 0 100px rgba(0, 255, 255, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+    75% { 
+        background-position: 50% 100%;
+        text-shadow: 0 0 80px rgba(0, 0, 255, 1), 0 0 100px rgba(255, 255, 255, 0.9);
+        transform: scale(1);
+    }
+    87.5% { 
+        background-position: 25% 100%;
+        text-shadow: 0 0 100px rgba(128, 0, 255, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+}
+
+.about-subtitle-ultra {
+    font-size: 3.5rem;
+    color: rgba(255, 255, 255, 0.98);
+    font-weight: 300;
+    margin-bottom: 4rem;
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    animation: subtitleQuantumEntranceAbout 4.5s ease-out 1.5s forwards;
+    opacity: 0;
+    transform: translateY(50px) rotateX(40deg) translateZ(100px);
+}
+
+@keyframes subtitleQuantumEntranceAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) rotateX(0deg) translateZ(0);
+    }
+}
+
+.about-description-ultra {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 2.3;
+    margin-bottom: 5rem;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    z-index: 2;
+    animation: descriptionQuantumEntranceAbout 5s ease-out 2.2s forwards;
+    opacity: 0;
+    transform: translateY(50px) translateZ(150px);
+}
+
+@keyframes descriptionQuantumEntranceAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+/* Ультра-кнопки с 5D-эффектами */
+.about-buttons-ultra {
+    display: flex;
+    gap: 4rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 4rem;
+    position: relative;
+    z-index: 2;
+    animation: buttonsQuantumEntranceAbout 5.5s ease-out 2.8s forwards;
+    opacity: 0;
+    transform: translateY(60px) translateZ(200px);
+}
+
+@keyframes buttonsQuantumEntranceAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+.about-btn-ultra {
+    padding: 2.5rem 5rem;
+    font-size: 1.8rem;
+    font-weight: 800;
+    border: none;
+    border-radius: 70px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(25deg) rotateY(15deg) rotateZ(5deg);
+    transition: var(--transition-ultra-about);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    z-index: 2;
+    min-width: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.about-btn-ultra-primary {
+    background: linear-gradient(45deg, 
+        #ff0080, 
+        #ff8c00, 
+        #ffff00, 
+        #00ff00);
+    background-size: 300% 300%;
+    color: white;
+    animation: btnQuantumGlowAbout 4s ease-in-out infinite alternate, btnGradientShift 8s ease-in-out infinite;
+}
+
+@keyframes btnGradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.about-btn-ultra-secondary {
+    background: transparent;
+    border: 5px solid rgba(255, 255, 255, 0.8);
+    color: white;
+    backdrop-filter: blur(25px);
+}
+
+@keyframes btnQuantumGlowAbout {
+    0% { 
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+        transform: perspective(1000px) rotateX(25deg) rotateY(15deg) rotateZ(5deg) translateY(0);
+    }
+    100% { 
+        box-shadow: 0 50px 100px rgba(255, 0, 128, 0.9), 0 0 100px rgba(255, 0, 128, 0.7);
+        transform: perspective(1000px) rotateX(25deg) rotateY(15deg) rotateZ(5deg) translateY(-15px);
+    }
+}
+
+.about-btn-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.5), 
+        transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-ultra-about);
+    animation: btnShineAbout 3s infinite;
+}
+
+@keyframes btnShineAbout {
+    0% { transform: rotate(45deg) translate(-150%, -150%); }
+    100% { transform: rotate(45deg) translate(150%, 150%); }
+}
+
+.about-btn-ultra:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
+}
+
+.about-btn-ultra:hover {
+    transform: perspective(1000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(-20px) scale(1.15);
+    box-shadow: 0 60px 120px rgba(0, 0, 0, 0.7);
+}
+
+/* Ультра-секции с 5D-эффектами */
+.section-ultra-about {
+    padding: 10rem 3rem;
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(25px);
+    margin: 8rem 0;
+    border-radius: var(--border-radius-ultra-about);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    animation: sectionQuantumFadeInAbout 2.5s ease-out forwards;
+    opacity: 0;
+    transform: translateY(80px) translateZ(200px);
+}
+
+.section-ultra-about:nth-child(1) { animation-delay: 3.2s; }
+.section-ultra-about:nth-child(2) { animation-delay: 3.6s; }
+.section-ultra-about:nth-child(3) { animation-delay: 4.0s; }
+.section-ultra-about:nth-child(4) { animation-delay: 4.4s; }
+
+@keyframes sectionQuantumFadeInAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+.section-title-ultra-about {
+    text-align: center;
+    font-size: 5rem;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 5rem;
+    text-shadow: 0 0 70px rgba(255, 255, 255, 0.8);
+    position: relative;
+}
+
+.section-title-ultra-about::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    height: 8px;
+    background: var(--gradient-about-ultra);
+    border-radius: 5px;
+    animation: lineQuantumPulseAbout 5s ease-in-out infinite;
+}
+
+@keyframes lineQuantumPulseAbout {
+    0%, 100% { 
+        width: 250px;
+        box-shadow: 0 0 40px rgba(255, 255, 255, 0.7);
+        transform: translateX(-50%) scaleY(1);
+    }
+    50% { 
+        width: 350px;
+        box-shadow: 0 0 80px rgba(255, 0, 128, 1), 0 0 100px rgba(255, 255, 255, 1);
+        transform: translateX(-50%) scaleY(1.8);
+    }
+}
+
+/* Ультра-карточки с 5D-эффектами */
+.ultra-cards-about {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 5rem;
+    margin-top: 6rem;
+}
+
+.ultra-card-about {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(40px);
+    border-radius: 40px;
+    padding: 5rem;
+    text-align: center;
+    transition: var(--transition-ultra-about);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(2000px) rotateX(12deg) rotateY(8deg) rotateZ(3deg);
+    animation: cardQuantumEntranceAbout 3s ease-out forwards;
+    opacity: 0;
+    transform-origin: center;
+}
+
+.ultra-card-about:nth-child(1) { animation-delay: 4.8s; }
+.ultra-card-about:nth-child(2) { animation-delay: 5.2s; }
+.ultra-card-about:nth-child(3) { animation-delay: 5.6s; }
+
+@keyframes cardQuantumEntranceAbout {
+    0% {
+        opacity: 0;
+        transform: perspective(2000px) rotateX(90deg) rotateY(60deg) rotateZ(45deg) translateY(150px) scale(0.7);
+    }
+    100% {
+        opacity: 1;
+        transform: perspective(2000px) rotateX(12deg) rotateY(8deg) rotateZ(3deg) translateY(0) scale(1);
+    }
+}
+
+.ultra-card-about::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        transparent 30%, 
+        rgba(255, 255, 255, 0.25) 100%);
+    opacity: 0;
+    transition: var(--transition-ultra-about);
+}
+
+.ultra-card-about:hover::before {
+    opacity: 1;
+}
+
+.ultra-card-about:hover {
+    transform: perspective(2000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(-40px) scale(1.12);
+    box-shadow: 0 50px 100px rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.card-icon-ultra-about {
+    font-size: 6.5rem;
+    margin-bottom: 3rem;
+    color: white;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.9);
+    transition: var(--transition-ultra-about);
+    position: relative;
+    z-index: 2;
+    animation: iconFloatUltraAbout 8s ease-in-out infinite;
+}
+
+@keyframes iconFloatUltraAbout {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg) scale(1);
+    }
+    25% { 
+        transform: translateY(-20px) rotate(8deg) scale(1.15);
+    }
+    50% { 
+        transform: translateY(-12px) rotate(0deg) scale(1);
+    }
+    75% { 
+        transform: translateY(-16px) rotate(-8deg) scale(1.15);
+    }
+}
+
+.ultra-card-about:hover .card-icon-ultra-about {
+    transform: scale(1.8) rotate(30deg);
+    text-shadow: 0 0 70px rgba(255, 255, 255, 1);
+}
+
+.card-title-ultra-about {
+    font-size: 3rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.card-text-ultra-about {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1.5rem;
+    line-height: 2.1;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ультра-статистика с квантовыми эффектами */
+.stats-ultra-about {
+    display: flex;
+    justify-content: center;
+    gap: 6rem;
+    margin-top: 7rem;
+    flex-wrap: wrap;
+}
+
+.stat-ultra-item-about {
+    text-align: center;
+    padding: 4.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(30px);
+    border-radius: 35px;
+    border: 3px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+    transition: var(--transition-ultra-about);
+    min-width: 280px;
+    position: relative;
+    overflow: hidden;
+    animation: statUltraEntrance 2s ease-out forwards;
+    transform: translateY(60px) rotateX(35deg);
+    opacity: 0;
+}
+
+.stat-ultra-item-about:nth-child(1) { animation-delay: 6.0s; }
+.stat-ultra-item-about:nth-child(2) { animation-delay: 6.3s; }
+.stat-ultra-item-about:nth-child(3) { animation-delay: 6.6s; }
+.stat-ultra-item-about:nth-child(4) { animation-delay: 6.9s; }
+
+@keyframes statUltraEntrance {
+    to {
+        transform: translateY(0) rotateX(0deg);
+        opacity: 1;
+    }
+}
+
+.stat-ultra-item-about::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: var(--gradient-about-ultra);
+    animation: gradientSlideUltraAbout 6s linear infinite;
+}
+
+@keyframes gradientSlideUltraAbout {
+    0% { transform: translateX(-100%) scaleX(0.2); }
+    50% { transform: translateX(0) scaleX(1.8); }
+    100% { transform: translateX(100%) scaleX(0.2); }
+}
+
+.stat-ultra-item-about:hover {
+    transform: translateY(-30px) scale(1.15) rotateX(15deg);
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.45);
+}
+
+.stat-number-ultra-about {
+    font-size: 5.5rem;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+    position: relative;
+    z-index: 2;
+    animation: numberQuantumPulseAbout 5s ease-in-out infinite;
+}
+
+@keyframes numberQuantumPulseAbout {
+    0%, 100% { 
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
+        transform: scale(1);
+    }
+    50% { 
+        text-shadow: 0 0 70px rgba(255, 0, 128, 1), 0 0 90px rgba(255, 255, 255, 1);
+        transform: scale(1.08);
+    }
+}
+
+.stat-label-ultra-about {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.6rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ультра-команда */
+.team-ultra-about {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 4rem;
+    margin-top: 5rem;
+}
+
+.team-member-ultra-about {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(25px);
+    border-radius: 30px;
+    padding: 3.5rem;
+    text-align: center;
+    transition: var(--transition-ultra-about);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: teamMemberEntrance 2.2s ease-out forwards;
+    opacity: 0;
+    transform: translateY(40px) rotateX(25deg);
+}
+
+.team-member-ultra-about:nth-child(1) { animation-delay: 7.2s; }
+.team-member-ultra-about:nth-child(2) { animation-delay: 7.5s; }
+.team-member-ultra-about:nth-child(3) { animation-delay: 7.8s; }
+
+@keyframes teamMemberEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0) rotateX(0deg);
+    }
+}
+
+.team-member-ultra-about::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        transparent 40%, 
+        rgba(255, 255, 255, 0.15) 100%);
+    opacity: 0;
+    transition: var(--transition-ultra-about);
+}
+
+.team-member-ultra-about:hover::before {
+    opacity: 1;
+}
+
+.team-member-ultra-about:hover {
+    transform: translateY(-20px) scale(1.08);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.team-avatar-ultra-about {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin: 0 auto 2.5rem;
+    background: linear-gradient(45deg, #ff0080, #00ffff, #ffff00);
+    background-size: 200% 200%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    color: white;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+    border: 5px solid rgba(255, 255, 255, 0.6);
+    transition: var(--transition-ultra-about);
+    position: relative;
+    z-index: 2;
+    animation: avatarGradientShiftTeam 7s ease-in-out infinite;
+}
+
+@keyframes avatarGradientShiftTeam {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.team-member-ultra-about:hover .team-avatar-ultra-about {
+    transform: scale(1.2) rotate(15deg);
+    box-shadow: 0 30px 60px rgba(255, 0, 128, 0.6);
+}
+
+.team-name-ultra-about {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1.2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.team-role-ultra-about {
+    font-size: 1.4rem;
+    color: #ff0080;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.team-bio-ultra-about {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    line-height: 1.8;
+    position: relative;
+    z-index: 2;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .about-title-ultra {
+        font-size: 4rem;
+    }
+    
+    .about-subtitle-ultra {
+        font-size: 2.2rem;
+    }
+    
+    .about-description-ultra {
+        font-size: 1.4rem;
+    }
+    
+    .about-buttons-ultra {
+        flex-direction: column;
+        align-items: center;
+        gap: 3rem;
+    }
+    
+    .about-btn-ultra {
+        width: 100%;
+        max-width: 380px;
+    }
+    
+    .section-title-ultra-about {
+        font-size: 3rem;
+    }
+    
+    .ultra-cards-about {
+        grid-template-columns: 1fr;
+        gap: 3.5rem;
+    }
+    
+    .stats-ultra-about {
+        gap: 3rem;
+    }
+    
+    .stat-ultra-item-about {
+        min-width: 200px;
+        padding: 3rem;
+    }
+    
+    .stat-number-ultra-about {
+        font-size: 4rem;
+    }
+    
+    .team-ultra-about {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+    }
+    
+    .section-ultra-about {
+        padding: 6rem 2rem;
+    }
+}
+
+/* Дополнительные эффекты */
+.ultra-glow {
+    animation: ultraGlowPulse 6s ease-in-out infinite alternate;
+}
+
+@keyframes ultraGlowPulse {
+    0% { 
+        filter: brightness(1) saturate(1) hue-rotate(0deg);
+        box-shadow: 0 0 40px rgba(255, 0, 128, 0.4);
+    }
+    100% { 
+        filter: brightness(1.6) saturate(2.2) hue-rotate(360deg);
+        box-shadow: 0 0 100px rgba(255, 0, 128, 0.8), 0 0 120px rgba(0, 255, 255, 0.6);
+    }
+}
+
+.quantum-float {
+    animation: quantumFloat3D 15s ease-in-out infinite;
+}
+
+@keyframes quantumFloat3D {
+    0%, 100% { 
+        transform: translateY(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    }
+    25% { 
+        transform: translateY(-35px) rotateX(20deg) rotateY(20deg) rotateZ(15deg);
+    }
+    50% { 
+        transform: translateY(-25px) rotateX(0deg) rotateY(40deg) rotateZ(30deg);
+    }
+    75% { 
+        transform: translateY(-30px) rotateX(-20deg) rotateY(20deg) rotateZ(15deg);
+    }
+}
+
+/* Интерактивные элементы */
+.interactive-element-ultra-about {
+    cursor: pointer;
+    transition: var(--transition-ultra-about);
+}
+
+.interactive-element-ultra-about:hover {
+    animation: hoverQuantumPopAbout 0.6s ease-out;
+}
+
+@keyframes hoverQuantumPopAbout {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.12); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для контента */
+.text-white-ultra-about {
+    color: white;
+}
+
+.text-gradient-ultra-about {
+    background: linear-gradient(45deg, 
+        #ffffff, 
+        #ff0080, 
+        #ff8c00, 
+        #ffff00, 
+        #00ff00, 
+        #00ffff, 
+        #0000ff, 
+        #8000ff, 
+        #ff00ff, 
+        #ffffff);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: textGradientShiftUltraAbout 10s ease-in-out infinite;
+}
+
+@keyframes textGradientShiftUltraAbout {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.bg-transparent-ultra-about {
+    background: transparent;
+}
+
+.border-ultra-about {
+    border: 3px solid rgba(255, 255, 255, 0.6);
+}
+
+.shadow-ultra-about-card {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}

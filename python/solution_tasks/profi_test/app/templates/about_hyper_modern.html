@@ -1,0 +1,703 @@
+{% extends "base.html" %}
+
+{% block title %}О проекте - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<style>
+:root {
+    --gradient-about-hyper: conic-gradient(from 0deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe, #667eea);
+    --gradient-dark-hyper: linear-gradient(135deg, #0f0c29, #302b63, #24243e, #0f0c29);
+    --gradient-light-hyper: linear-gradient(135deg, #f5f7fa, #c3cfe2, #a8edea, #fed6e3);
+    --transition-hyper: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --shadow-hyper: 0 0 50px rgba(102, 126, 234, 0.4);
+    --border-radius-hyper: 30px;
+    --glow-hyper: 0 0 30px rgba(102, 126, 234, 0.8);
+}
+
+/* Гипер-контейнер "О проекте" */
+.about-hyper-container {
+    min-height: 100vh;
+    background: var(--gradient-dark-hyper);
+    background-attachment: fixed;
+    position: relative;
+    overflow: hidden;
+    animation: gradientShiftHyper 25s ease infinite;
+}
+
+@keyframes gradientShiftHyper {
+    0%, 100% { background-position: 0% 0%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+}
+
+/* 3D-фон с гипер-частицами */
+.particle-field-hyper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.particle-hyper {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.7);
+    animation: floatHyper3D 20s infinite linear;
+}
+
+.particle-hyper-1 { width: 5px; height: 5px; left: 5%; top: 10%; animation-delay: 0s; }
+.particle-hyper-2 { width: 8px; height: 8px; left: 15%; top: 80%; animation-delay: 3s; }
+.particle-hyper-3 { width: 4px; height: 4px; left: 85%; top: 20%; animation-delay: 6s; }
+.particle-hyper-4 { width: 6px; height: 6px; left: 95%; top: 70%; animation-delay: 2s; }
+.particle-hyper-5 { width: 7px; height: 7px; left: 50%; top: 40%; animation-delay: 5s; }
+.particle-hyper-6 { width: 3px; height: 3px; left: 25%; top: 60%; animation-delay: 8s; }
+.particle-hyper-7 { width: 9px; height: 9px; left: 75%; top: 30%; animation-delay: 1s; }
+.particle-hyper-8 { width: 5px; height: 5px; left: 10%; top: 90%; animation-delay: 4s; }
+
+@keyframes floatHyper3D {
+    0% { 
+        transform: translateY(100vh) translateX(0) translateZ(0) rotate(0deg);
+        opacity: 0;
+    }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { 
+        transform: translateY(-100px) translateX(150px) translateZ(50px) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Hero-секция "О проекте" */
+.hero-about-hyper {
+    position: relative;
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    padding: 2rem;
+}
+
+.hero-content-hyper {
+    text-align: center;
+    max-width: 1000px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(25px);
+    border-radius: var(--border-radius-hyper);
+    padding: 5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 100px rgba(102, 126, 234, 0.4);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(3deg);
+    animation: heroEntranceAbout 2.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes heroEntranceAbout {
+    0% { 
+        opacity: 0;
+        transform: perspective(1000px) rotateX(90deg) translateY(100px) scale(0.8);
+    }
+    100% { 
+        opacity: 1;
+        transform: perspective(1000px) rotateX(3deg) translateY(0) scale(1);
+    }
+}
+
+.hero-content-hyper::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, transparent 30%, rgba(255, 255, 255, 0.15) 100%);
+    animation: spotlightHyper 10s infinite alternate;
+    z-index: -1;
+}
+
+@keyframes spotlightHyper {
+    0% { transform: rotate(0deg) translate(30px, 30px) scale(1); }
+    100% { transform: rotate(360deg) translate(-30px, -30px) scale(1.2); }
+}
+
+/* Титульные стили с гипер-неон-эффектами */
+.about-title-hyper {
+    font-size: 5rem;
+    font-weight: 800;
+    background: linear-gradient(45deg, #ffffff, #e0e0ff, #b3e0ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
+    letter-spacing: -4px;
+    margin-bottom: 2rem;
+    position: relative;
+    animation: textPulseHyper 4s ease-in-out infinite;
+}
+
+.about-subtitle-hyper {
+    font-size: 2.5rem;
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 300;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    animation: subtitleEntrance 3s ease-out 1s forwards;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+@keyframes subtitleEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.about-description-hyper {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.9;
+    margin-bottom: 3.5rem;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    z-index: 2;
+    animation: descriptionEntrance 3.5s ease-out 1.5s forwards;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+@keyframes descriptionEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes textPulseHyper {
+    0%, 100% { 
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
+        transform: scale(1);
+    }
+    50% { 
+        text-shadow: 0 0 60px rgba(255, 255, 255, 0.9), 0 0 80px rgba(102, 126, 234, 0.7);
+        transform: scale(1.03);
+    }
+}
+
+/* Гипер-кнопки с 3D-эффектами */
+.about-buttons-hyper {
+    display: flex;
+    gap: 2.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2.5rem;
+    position: relative;
+    z-index: 2;
+    animation: buttonsEntrance 4s ease-out 2s forwards;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+@keyframes buttonsEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.about-btn-hyper {
+    padding: 1.8rem 3.5rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transform: perspective(500px) rotateX(15deg);
+    transition: var(--transition-hyper);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    z-index: 2;
+    min-width: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+}
+
+.about-btn-hyper-primary {
+    background: linear-gradient(45deg, #667eea, #764ba2, #f093fb);
+    color: white;
+    animation: btnGlowHyper 2.5s ease-in-out infinite alternate;
+}
+
+.about-btn-hyper-secondary {
+    background: transparent;
+    border: 3px solid rgba(255, 255, 255, 0.6);
+    color: white;
+    backdrop-filter: blur(15px);
+}
+
+@keyframes btnGlowHyper {
+    0% { 
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        transform: perspective(500px) rotateX(15deg) translateY(0);
+    }
+    100% { 
+        box-shadow: 0 30px 60px rgba(102, 126, 234, 0.7), 0 0 60px rgba(102, 126, 234, 0.5);
+        transform: perspective(500px) rotateX(15deg) translateY(-8px);
+    }
+}
+
+.about-btn-hyper::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-hyper);
+}
+
+.about-btn-hyper:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
+}
+
+.about-btn-hyper:hover {
+    transform: perspective(500px) rotateX(0deg) translateY(-15px) scale(1.08);
+    box-shadow: 0 35px 70px rgba(0, 0, 0, 0.5);
+}
+
+/* Гипер-секции */
+.section-hyper {
+    padding: 7rem 2rem;
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
+    margin: 5rem 0;
+    border-radius: var(--border-radius-hyper);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    animation: sectionFadeIn 1.5s ease-out forwards;
+    opacity: 0;
+    transform: translateY(50px);
+}
+
+.section-hyper:nth-child(1) { animation-delay: 0.2s; }
+.section-hyper:nth-child(2) { animation-delay: 0.4s; }
+.section-hyper:nth-child(3) { animation-delay: 0.6s; }
+.section-hyper:nth-child(4) { animation-delay: 0.8s; }
+
+@keyframes sectionFadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section-title-hyper {
+    text-align: center;
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 3.5rem;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
+    position: relative;
+}
+
+.section-title-hyper::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 5px;
+    background: var(--gradient-about-hyper);
+    border-radius: 3px;
+    animation: linePulseHyper 3s ease-in-out infinite;
+}
+
+@keyframes linePulseHyper {
+    0%, 100% { 
+        width: 150px;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    }
+    50% { 
+        width: 250px;
+        box-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+    }
+}
+
+/* Гипер-карточки с 3D-эффектами */
+.hyper-cards-hyper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 3rem;
+    margin-top: 4rem;
+}
+
+.hyper-card-hyper {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(25px);
+    border-radius: 28px;
+    padding: 3rem;
+    text-align: center;
+    transition: var(--transition-hyper);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(8deg);
+}
+
+.hyper-card-hyper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.15) 100%);
+    opacity: 0;
+    transition: var(--transition-hyper);
+}
+
+.hyper-card-hyper:hover::before {
+    opacity: 1;
+}
+
+.hyper-card-hyper:hover {
+    transform: perspective(1000px) rotateX(0deg) translateY(-25px) scale(1.05);
+    box-shadow: 0 35px 70px rgba(0, 0, 0, 0.35);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.card-icon-hyper {
+    font-size: 4.5rem;
+    margin-bottom: 2rem;
+    color: white;
+    text-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+    transition: var(--transition-hyper);
+    position: relative;
+    z-index: 2;
+}
+
+.hyper-card-hyper:hover .card-icon-hyper {
+    transform: scale(1.4) rotate(20deg);
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.9);
+}
+
+.card-title-hyper {
+    font-size: 2rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.card-text-hyper {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    line-height: 1.8;
+    position: relative;
+    z-index: 2;
+}
+
+/* Гипер-статистика */
+.stats-hyper {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    margin-top: 5rem;
+    flex-wrap: wrap;
+}
+
+.stat-hyper-item {
+    text-align: center;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    transition: var(--transition-hyper);
+    min-width: 220px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-hyper-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradient-about-hyper);
+    animation: gradientSlideHyper 4s linear infinite;
+}
+
+@keyframes gradientSlideHyper {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.stat-hyper-item:hover {
+    transform: translateY(-20px) scale(1.08);
+    background: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+.stat-number-hyper {
+    font-size: 4rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+    position: relative;
+    z-index: 2;
+}
+
+.stat-label-hyper {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.3rem;
+    font-weight: 500;
+    position: relative;
+    z-index: 2;
+}
+
+/* Гипер-команда */
+.team-hyper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 3rem;
+    margin-top: 4rem;
+}
+
+.team-member-hyper {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    padding: 2.5rem;
+    text-align: center;
+    transition: var(--transition-hyper);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.team-member-hyper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: var(--transition-hyper);
+}
+
+.team-member-hyper:hover::before {
+    opacity: 1;
+}
+
+.team-member-hyper:hover {
+    transform: translateY(-15px) scale(1.03);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.team-avatar-hyper {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    margin: 0 auto 2rem;
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    color: white;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border: 4px solid rgba(255, 255, 255, 0.5);
+    transition: var(--transition-hyper);
+    position: relative;
+    z-index: 2;
+}
+
+.team-member-hyper:hover .team-avatar-hyper {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 25px 50px rgba(240, 147, 251, 0.5);
+}
+
+.team-name-hyper {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.8rem;
+    position: relative;
+    z-index: 2;
+}
+
+.team-role-hyper {
+    font-size: 1.2rem;
+    color: #f093fb;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.team-bio-hyper {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.1rem;
+    line-height: 1.7;
+    position: relative;
+    z-index: 2;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .about-title-hyper {
+        font-size: 3rem;
+    }
+    
+    .about-subtitle-hyper {
+        font-size: 1.8rem;
+    }
+    
+    .about-description-hyper {
+        font-size: 1.2rem;
+    }
+    
+    .about-buttons-hyper {
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+    }
+    
+    .about-btn-hyper {
+        width: 100%;
+        max-width: 320px;
+    }
+    
+    .section-title-hyper {
+        font-size: 2.5rem;
+    }
+    
+    .hyper-cards-hyper {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .stats-hyper {
+        gap: 2rem;
+    }
+    
+    .stat-hyper-item {
+        min-width: 160px;
+        padding: 2rem;
+    }
+    
+    .stat-number-hyper {
+        font-size: 3rem;
+    }
+    
+    .team-hyper {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .section-hyper {
+        padding: 4rem 1.5rem;
+    }
+}
+
+/* Дополнительные эффекты */
+.glow-effect-hyper {
+    animation: glowPulseHyperAbout 4s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulseHyperAbout {
+    0% { 
+        filter: brightness(1) saturate(1) hue-rotate(0deg);
+    }
+    100% { 
+        filter: brightness(1.4) saturate(1.6) hue-rotate(20deg);
+    }
+}
+
+.floating-effect-hyper {
+    animation: float3DHyper 10s ease-in-out infinite;
+}
+
+@keyframes float3DHyper {
+    0%, 100% { 
+        transform: translateY(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    }
+    25% { 
+        transform: translateY(-25px) rotateX(10deg) rotateY(10deg) rotateZ(5deg);
+    }
+    50% { 
+        transform: translateY(-15px) rotateX(0deg) rotateY(20deg) rotateZ(10deg);
+    }
+    75% { 
+        transform: translateY(-20px) rotateX(-10deg) rotateY(10deg) rotateZ(5deg);
+    }
+}
+
+/* Интерактивные элементы */
+.interactive-element-hyper {
+    cursor: pointer;
+    transition: var(--transition-hyper);
+}
+
+.interactive-element-hyper:hover {
+    animation: hoverPopHyperAbout 0.4s ease-out;
+}
+
+@keyframes hoverPopHyperAbout {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для контента */
+.text-white-hyper {
+    color: white;
+}
+
+.text-gradient-hyper {
+    background: linear-gradient(45deg, #ffffff, #e0e0ff, #b3e0ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.bg-transparent-hyper {
+    background: transparent;
+}
+
+.border-hyper {
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.shadow-hyper {
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+}

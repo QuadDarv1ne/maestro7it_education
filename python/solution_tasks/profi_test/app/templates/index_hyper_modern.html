@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<style>
+:root {
+    --gradient-hyper: conic-gradient(from 0deg, #667eea, #764ba2, #f093fb, #f5576c, #667eea);
+    --gradient-dark: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    --gradient-light: linear-gradient(135deg, #f5f7fa, #c3cfe2, #a8edea);
+    --transition-hyper: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --shadow-hyper: 0 0 50px rgba(102, 126, 234, 0.4);
+    --border-radius-hyper: 30px;
+    --glow-hyper: 0 0 30px rgba(102, 126, 234, 0.8);
+}
+
+/* Гипер-современный контейнер */
+.hyper-container {
+    min-height: 100vh;
+    background: var(--gradient-dark);
+    background-attachment: fixed;
+    position: relative;
+    overflow: hidden;
+    animation: gradientShift 20s ease infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* 3D-фон с частицами */
+.particle-field {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    animation: floatHyper 15s infinite linear;
+}
+
+.particle-1 { width: 4px; height: 4px; left: 10%; top: 20%; animation-delay: 0s; }
+.particle-2 { width: 6px; height: 6px; left: 20%; top: 70%; animation-delay: 2s; }
+.particle-3 { width: 3px; height: 3px; left: 80%; top: 30%; animation-delay: 4s; }
+.particle-4 { width: 5px; height: 5px; left: 90%; top: 80%; animation-delay: 1s; }
+.particle-5 { width: 4px; height: 4px; left: 50%; top: 50%; animation-delay: 3s; }
+.particle-6 { width: 7px; height: 7px; left: 15%; top: 40%; animation-delay: 5s; }
+.particle-7 { width: 3px; height: 3px; left: 75%; top: 60%; animation-delay: 2s; }
+
+@keyframes floatHyper {
+    0% { 
+        transform: translateY(100vh) translateX(0) rotate(0deg);
+        opacity: 0;
+    }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { 
+        transform: translateY(-100px) translateX(100px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Hero-секция с гипер-эффектами */
+.hero-hyper {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    padding: 2rem;
+}
+
+.hero-content {
+    text-align: center;
+    max-width: 900px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-hyper);
+    padding: 4rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 100px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(5deg);
+    animation: heroEntrance 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes heroEntrance {
+    0% { 
+        opacity: 0;
+        transform: perspective(1000px) rotateX(90deg) translateY(50px);
+    }
+    100% { 
+        opacity: 1;
+        transform: perspective(1000px) rotateX(5deg) translateY(0);
+    }
+}
+
+.hero-content::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, transparent 40%, rgba(255, 255, 255, 0.1) 100%);
+    animation: spotlight 8s infinite alternate;
+    z-index: -1;
+}
+
+@keyframes spotlight {
+    0% { transform: rotate(0deg) translate(20px, 20px); }
+    100% { transform: rotate(360deg) translate(-20px, -20px); }
+}
+
+/* Титульные стили с неон-эффектами */
+.hyper-title {
+    font-size: 4.5rem;
+    font-weight: 800;
+    background: linear-gradient(45deg, #ffffff, #e0e0ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+    letter-spacing: -3px;
+    margin-bottom: 1.5rem;
+    position: relative;
+    animation: textPulse 3s ease-in-out infinite;
+}
+
+.hyper-subtitle {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 300;
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+}
+
+.hyper-description {
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.8;
+    margin-bottom: 3rem;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes textPulse {
+    0%, 100% { 
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        transform: scale(1);
+    }
+    50% { 
+        text-shadow: 0 0 40px rgba(255, 255, 255, 0.8), 0 0 60px rgba(102, 126, 234, 0.6);
+        transform: scale(1.02);
+    }
+}
+
+/* Гипер-кнопки с 3D-эффектами */
+.hyper-buttons {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.hyper-btn {
+    padding: 1.5rem 3rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transform: perspective(500px) rotateX(10deg);
+    transition: var(--transition-hyper);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+    min-width: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.hyper-btn-primary {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    animation: btnGlow 2s ease-in-out infinite alternate;
+}
+
+.hyper-btn-secondary {
+    background: transparent;
+    border: 3px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    backdrop-filter: blur(10px);
+}
+
+@keyframes btnGlow {
+    0% { 
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        transform: perspective(500px) rotateX(10deg) translateY(0);
+    }
+    100% { 
+        box-shadow: 0 25px 50px rgba(102, 126, 234, 0.6), 0 0 50px rgba(102, 126, 234, 0.4);
+        transform: perspective(500px) rotateX(10deg) translateY(-5px);
+    }
+}
+
+.hyper-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-hyper);
+}
+
+.hyper-btn:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
+}
+
+.hyper-btn:hover {
+    transform: perspective(500px) rotateX(0deg) translateY(-10px) scale(1.05);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Статистика с гипер-анимациями */
+.hyper-stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 4rem;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 2;
+}
+
+.stat-hyper {
+    text-align: center;
+    padding: 2.5rem;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    transition: var(--transition-hyper);
+    min-width: 200px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-hyper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-hyper);
+    animation: gradientSlide 3s linear infinite;
+}
+
+@keyframes gradientSlide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.stat-hyper:hover {
+    transform: translateY(-15px) scale(1.05);
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+.stat-number-hyper {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    position: relative;
+    z-index: 2;
+}
+
+.stat-label-hyper {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.2rem;
+    font-weight: 500;
+    position: relative;
+    z-index: 2;
+}
+
+/* Секция с гипер-картами */
+.hyper-section {
+    padding: 6rem 2rem;
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    margin: 4rem 0;
+    border-radius: var(--border-radius-hyper);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title-hyper {
+    text-align: center;
+    font-size: 3rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 3rem;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+    position: relative;
+}
+
+.section-title-hyper::after {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: var(--gradient-hyper);
+    border-radius: 2px;
+    animation: linePulse 2s ease-in-out infinite;
+}
+
+@keyframes linePulse {
+    0%, 100% { width: 100px; }
+    50% { width: 200px; }
+}
+
+/* Гипер-карточки с 3D-эффектами */
+.hyper-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2.5rem;
+    margin-top: 3rem;
+}
+
+.hyper-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    padding: 2.5rem;
+    text-align: center;
+    transition: var(--transition-hyper);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(5deg);
+}
+
+.hyper-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: var(--transition-hyper);
+}
+
+.hyper-card:hover::before {
+    opacity: 1;
+}
+
+.hyper-card:hover {
+    transform: perspective(1000px) rotateX(0deg) translateY(-20px) scale(1.03);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.card-icon-hyper {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    color: white;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    transition: var(--transition-hyper);
+    position: relative;
+    z-index: 2;
+}
+
+.hyper-card:hover .card-icon-hyper {
+    transform: scale(1.3) rotate(15deg);
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+}
+
+.card-title-hyper {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+.card-text-hyper {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.1rem;
+    line-height: 1.7;
+    position: relative;
+    z-index: 2;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .hyper-title {
+        font-size: 2.5rem;
+    }
+    
+    .hyper-subtitle {
+        font-size: 1.5rem;
+    }
+    
+    .hyper-description {
+        font-size: 1.1rem;
+    }
+    
+    .hyper-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    
+    .hyper-btn {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .hyper-stats {
+        gap: 1.5rem;
+    }
+    
+    .stat-hyper {
+        min-width: 150px;
+        padding: 1.5rem;
+    }
+    
+    .stat-number-hyper {
+        font-size: 2.5rem;
+    }
+    
+    .section-title-hyper {
+        font-size: 2rem;
+    }
+    
+    .hyper-cards {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+}
+
+/* Дополнительные эффекты */
+.glow-effect {
+    animation: glowPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulse {
+    0% { filter: brightness(1) saturate(1); }
+    100% { filter: brightness(1.2) saturate(1.3); }
+}
+
+.floating-effect {
+    animation: float3D 6s ease-in-out infinite;
+}
+
+@keyframes float3D {
+    0%, 100% { 
+        transform: translateY(0px) rotateX(0deg) rotateY(0deg);
+    }
+    25% { 
+        transform: translateY(-20px) rotateX(5deg) rotateY(5deg);
+    }
+    50% { 
+        transform: translateY(-10px) rotateX(0deg) rotateY(10deg);
+    }
+    75% { 
+        transform: translateY(-15px) rotateX(-5deg) rotateY(5deg);
+    }
+}
+
+/* Интерактивные элементы */
+.interactive-element {
+    cursor: pointer;
+    transition: var(--transition-hyper);
+}
+
+.interactive-element:hover {
+    animation: hoverPop 0.3s ease-out;
+}
+
+@keyframes hoverPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для контента */
+.text-white-hyper {
+    color: white;
+}
+
+.text-gradient-hyper {
+    background: linear-gradient(45deg, #ffffff, #e0e0ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.bg-transparent-hyper {
+    background: transparent;
+}
+
+.border-hyper {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.shadow-hyper {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
