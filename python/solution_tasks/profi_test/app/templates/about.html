@@ -3,1003 +3,918 @@
 {% block title %}О проекте - Профориентационное тестирование{% endblock %}
 
 {% block content %}
-<div class="about-container py-5">
-    <!-- Hero секция -->
-    <div class="hero-section position-relative overflow-hidden mb-5">
-        <div class="hero-gradient"></div>
-        <div class="container py-5 position-relative">
-            <div class="row justify-content-center align-items-center">
-                <div class="col-lg-8 text-center">
-                    <div class="animate-fade-in">
-                        <h1 class="display-2 fw-bold text-white mb-4 hero-title">
-                            <span class="d-block">Мой</span>
-                            <span class="d-block gradient-text">ПрофСтарт</span>
-                        </h1>
-                        <p class="lead text-white-50 mb-4 fs-3 hero-subtitle">
-                            Профессиональная ориентация школьников будущего
-                        </p>
-                        <p class="text-white-50 hero-description">
-                            Научно обоснованная платформа для выбора профессии с использованием 
-                            проверенных психологических методик
-                        </p>
-                        <div class="mt-4">
-                            <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5 py-3 me-3 shadow-lg pulse-button">
-                                <i class="fas fa-rocket me-2"></i>Начать путь
-                            </a>
-                            <a href="#mission" class="btn btn-outline-light btn-lg px-5 py-3 smooth-scroll">
-                                <i class="fas fa-info-circle me-2"></i>Узнать больше
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Миссия и видение -->
-    <div class="container mb-5" id="mission">
-        <div class="row">
-            <div class="col-12">
-                <div class="card border-0 shadow-xl">
-                    <div class="card-body p-5">
-                        <div class="text-center mb-5">
-                            <span class="badge bg-gradient-primary text-white px-4 py-2 mb-3">Наша миссия</span>
-                            <h2 class="display-4 fw-bold text-gradient mb-4">Помочь каждому найти свой путь</h2>
-                            <p class="lead text-muted">
-                                Мы верим, что правильный выбор профессии - ключ к успеху и счастью в жизни
-                            </p>
-                        </div>
-                        
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <div class="mission-card p-4 bg-primary-subtle rounded-4 h-100">
-                                    <div class="d-flex align-items-start mb-4">
-                                        <div class="icon-wrapper bg-primary text-white rounded-circle p-3 me-4">
-                                            <i class="fas fa-bullseye fa-2x"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="h4 fw-bold mb-3">Наша миссия</h3>
-                                            <p class="mb-0">
-                                                Помочь школьникам и абитуриентам сделать осознанный выбор профессии 
-                                                через научно обоснованные методики профориентации, доступные каждому.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="vision-card p-4 bg-success-subtle rounded-4 h-100">
-                                    <div class="d-flex align-items-start mb-4">
-                                        <div class="icon-wrapper bg-success text-white rounded-circle p-3 me-4">
-                                            <i class="fas fa-eye fa-2x"></i>
-                                        </div>
-                                        <div>
-                                            <h3 class="h4 fw-bold mb-3">Наше видение</h3>
-                                            <p class="mb-0">
-                                                Стать ведущей платформой профориентации в Казахстане и странах СНГ, 
-                                                где каждый молодой человек найдет свой профессиональный путь.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Наши ценности -->
-    <div class="bg-gradient-primary py-5 mb-5">
-        <div class="container">
-            <div class="row mb-5">
-                <div class="col-12 text-center">
-                    <h2 class="display-4 fw-bold text-white mb-3">Наши ценности</h2>
-                    <p class="lead text-white-50">Основные принципы нашей работы</p>
-                </div>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="value-card card border-0 shadow-lg h-100 animate-on-scroll">
-                        <div class="card-body p-4 text-center">
-                            <div class="value-icon mb-4">
-                                <div class="icon-wrapper bg-white text-primary rounded-circle p-4 d-inline-block">
-                                    <i class="fas fa-flask fa-3x"></i>
-                                </div>
-                            </div>
-                            <h3 class="h4 fw-bold mb-3 text-white">Научный подход</h3>
-                            <p class="text-white-50">
-                                Используем только проверенные научные методики и психологические инструменты, 
-                                основанные на многолетних исследованиях
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="value-card card border-0 shadow-lg h-100 animate-on-scroll">
-                        <div class="card-body p-4 text-center">
-                            <div class="value-icon mb-4">
-                                <div class="icon-wrapper bg-white text-success rounded-circle p-4 d-inline-block">
-                                    <i class="fas fa-user-shield fa-3x"></i>
-                                </div>
-                            </div>
-                            <h3 class="h4 fw-bold mb-3 text-white">Конфиденциальность</h3>
-                            <p class="text-white-50">
-                                Строго соблюдаем конфиденциальность всех данных пользователей и 
-                                не передаем информацию третьим лицам
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="value-card card border-0 shadow-lg h-100 animate-on-scroll">
-                        <div class="card-body p-4 text-center">
-                            <div class="value-icon mb-4">
-                                <div class="icon-wrapper bg-white text-info rounded-circle p-4 d-inline-block">
-                                    <i class="fas fa-hands-helping fa-3x"></i>
-                                </div>
-                            </div>
-                            <h3 class="h4 fw-bold mb-3 text-white">Доступность</h3>
-                            <p class="text-white-50">
-                                Делаем профессиональную ориентацию доступной для всех, 
-                                независимо от финансового положения
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="value-card card border-0 shadow-lg h-100 animate-on-scroll">
-                        <div class="card-body p-4 text-center">
-                            <div class="value-icon mb-4">
-                                <div class="icon-wrapper bg-white text-warning rounded-circle p-4 d-inline-block">
-                                    <i class="fas fa-lightbulb fa-3x"></i>
-                                </div>
-                            </div>
-                            <h3 class="h4 fw-bold mb-3 text-white">Инновации</h3>
-                            <p class="text-white-50">
-                                Постоянно развиваемся и внедряем новые технологии для 
-                                улучшения качества наших услуг
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="value-card card border-0 shadow-lg h-100 animate-on-scroll">
-                        <div class="card-body p-4 text-center">
-                            <div class="value-icon mb-4">
-                                <div class="icon-wrapper bg-white text-danger rounded-circle p-4 d-inline-block">
-                                    <i class="fas fa-heart fa-3x"></i>
-                                </div>
-                            </div>
-                            <h3 class="h4 fw-bold mb-3 text-white">Эмпатия</h3>
-                            <p class="text-white-50">
-                                Понимаем важность выбора профессии и подходим к каждому 
-                                пользователю с теплотой и вниманием
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="value-card card border-0 shadow-lg h-100 animate-on-scroll">
-                        <div class="card-body p-4 text-center">
-                            <div class="value-icon mb-4">
-                                <div class="icon-wrapper bg-white text-purple rounded-circle p-4 d-inline-block">
-                                    <i class="fas fa-graduation-cap fa-3x"></i>
-                                </div>
-                            </div>
-                            <h3 class="h4 fw-bold mb-3 text-white">Образование</h3>
-                            <p class="text-white-50">
-                                Не просто помогаем выбрать профессию, но и educate пользователей 
-                                о мире профессий и возможностях
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Используемые методики -->
-    <div class="container mb-5">
-        <div class="row mb-5">
-            <div class="col-12 text-center">
-                <h2 class="display-4 fw-bold text-gradient mb-3">Используемые методики</h2>
-                <p class="lead text-muted">Проверенные временем научные подходы</p>
-            </div>
-        </div>
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="methodology-card card border-0 shadow-lg h-100">
-                    <div class="card-body p-5">
-                        <div class="d-flex align-items-start mb-4">
-                            <div class="method-badge bg-success rounded-circle me-4 flex-shrink-0">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-success mb-3">Методика Климова</h3>
-                                <div class="d-flex flex-wrap gap-2 mb-3">
-                                    <span class="badge bg-success-subtle text-success">Готово к использованию</span>
-                                    <span class="badge bg-primary-subtle text-primary">20 вопросов</span>
-                                    <span class="badge bg-warning-subtle text-warning">Высокая точность</span>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="lead mb-4">
-                            Дифференциально-диагностический опросник Е.А. Климова для выявления 
-                            профессиональных склонностей по пяти типовым сферам труда.
-                        </p>
-                        <div class="method-spheres">
-                            <h5 class="mb-3">Сферы деятельности:</h5>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="sphere-item bg-primary-subtle text-primary">
-                                    <i class="fas fa-seedling me-1"></i>Человек-Природа
-                                </span>
-                                <span class="sphere-item bg-success-subtle text-success">
-                                    <i class="fas fa-wrench me-1"></i>Человек-Техника
-                                </span>
-                                <span class="sphere-item bg-info-subtle text-info">
-                                    <i class="fas fa-users me-1"></i>Человек-Человек
-                                </span>
-                                <span class="sphere-item bg-warning-subtle text-warning">
-                                    <i class="fas fa-calculator me-1"></i>Человек-Знак
-                                </span>
-                                <span class="sphere-item bg-danger-subtle text-danger">
-                                    <i class="fas fa-palette me-1"></i>Человек-Художественный образ
-                                </span>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <div class="d-flex justify-content-between">
-                                <small class="text-muted">Точность методики:</small>
-                                <small class="fw-bold text-success">95%</small>
-                            </div>
-                            <div class="progress mt-2" style="height: 8px;">
-                                <div class="progress-bar bg-success" style="width: 95%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="methodology-card card border-0 shadow-lg h-100 opacity-75">
-                    <div class="card-body p-5">
-                        <div class="d-flex align-items-start mb-4">
-                            <div class="method-badge bg-secondary rounded-circle me-4 flex-shrink-0">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-secondary mb-3">Методика Холланда</h3>
-                                <div class="d-flex flex-wrap gap-2 mb-3">
-                                    <span class="badge bg-secondary-subtle text-secondary">В разработке</span>
-                                    <span class="badge bg-info-subtle text-info">120 вопросов</span>
-                                    <span class="badge bg-warning-subtle text-warning">6 профессиональных типов</span>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="lead mb-4">
-                            Опросник профессиональных предпочтений Дж. Холланда, 
-                            соотносящий тип личности с профессиональной средой.
-                        </p>
-                        <div class="method-spheres">
-                            <h5 class="mb-3">Профессиональные типы:</h5>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="sphere-item bg-secondary-subtle text-secondary opacity-50">
-                                    <i class="fas fa-circle me-1"></i>Реалистический
-                                </span>
-                                <span class="sphere-item bg-secondary-subtle text-secondary opacity-50">
-                                    <i class="fas fa-circle me-1"></i>Исследовательский
-                                </span>
-                                <span class="sphere-item bg-secondary-subtle text-secondary opacity-50">
-                                    <i class="fas fa-circle me-1"></i>Артистический
-                                </span>
-                                <span class="sphere-item bg-secondary-subtle text-secondary opacity-50">
-                                    <i class="fas fa-circle me-1"></i>Социальный
-                                </span>
-                                <span class="sphere-item bg-secondary-subtle text-secondary opacity-50">
-                                    <i class="fas fa-circle me-1"></i>Предпринимательский
-                                </span>
-                                <span class="sphere-item bg-secondary-subtle text-secondary opacity-50">
-                                    <i class="fas fa-circle me-1"></i>Конвенциональный
-                                </span>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <div class="alert alert-info mb-0">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Методика находится в стадии разработки и будет доступна в ближайшее время
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Команда проекта -->
-    <div class="bg-light py-5 mb-5">
-        <div class="container">
-            <div class="row mb-5">
-                <div class="col-12 text-center">
-                    <h2 class="display-4 fw-bold text-gradient mb-3">Наша команда</h2>
-                    <p class="lead text-muted">Профессионалы, создающие будущее профориентации</p>
-                </div>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="team-member card border-0 shadow-sm h-100">
-                        <div class="card-body p-4 text-center">
-                            <div class="member-avatar mb-4 mx-auto">
-                                <div class="avatar-placeholder bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center">
-                                    <i class="fas fa-user fa-3x"></i>
-                                </div>
-                            </div>
-                            <h4 class="h5 fw-bold mb-2">Dupley Maxim Igorevich</h4>
-                            <p class="text-primary mb-3">Lead Developer & Founder</p>
-                            <p class="text-muted small">
-                                Разработчик и создатель платформы. Отвечает за техническую 
-                                реализацию и архитектуру проекта.
-                            </p>
-                            <div class="social-links mt-3">
-                                <a href="#" class="btn btn-outline-primary btn-sm me-2">
-                                    <i class="fab fa-github"></i>
-                                </a>
-                                <a href="#" class="btn btn-outline-info btn-sm">
-                                    <i class="fab fa-linkedin-in"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="team-member card border-0 shadow-sm h-100">
-                        <div class="card-body p-4 text-center">
-                            <div class="member-avatar mb-4 mx-auto">
-                                <div class="avatar-placeholder bg-gradient-success text-white rounded-circle d-flex align-items-center justify-content-center">
-                                    <i class="fas fa-user-tie fa-3x"></i>
-                                </div>
-                            </div>
-                            <h4 class="h5 fw-bold mb-2">Консультант по психологии</h4>
-                            <p class="text-success mb-3">Psychological Advisor</p>
-                            <p class="text-muted small">
-                                Профессиональный психолог, курирующий методическую 
-                                часть профориентационных тестов.
-                            </p>
-                            <div class="social-links mt-3">
-                                <span class="badge bg-success-subtle text-success">Профессионал</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="team-member card border-0 shadow-sm h-100">
-                        <div class="card-body p-4 text-center">
-                            <div class="member-avatar mb-4 mx-auto">
-                                <div class="avatar-placeholder bg-gradient-info text-white rounded-circle d-flex align-items-center justify-content-center">
-                                    <i class="fas fa-users fa-3x"></i>
-                                </div>
-                            </div>
-                            <h4 class="h5 fw-bold mb-2">Команда разработчиков</h4>
-                            <p class="text-info mb-3">Development Team</p>
-                            <p class="text-muted small">
-                                Команда опытных разработчиков, создающих современный 
-                                и удобный интерфейс для пользователей.
-                            </p>
-                            <div class="social-links mt-3">
-                                <span class="badge bg-info-subtle text-info">5+ специалистов</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Достижения и статистика -->
-    <div class="container mb-5">
-        <div class="row mb-5">
-            <div class="col-12 text-center">
-                <h2 class="display-4 fw-bold text-gradient mb-3">Наши достижения</h2>
-                <p class="lead text-muted">Результаты нашей работы</p>
-            </div>
-        </div>
-        <div class="row g-4 text-center">
-            <div class="col-md-3 col-6">
-                <div class="achievement-item p-4 bg-white rounded-4 shadow-sm animate-on-scroll">
-                    <div class="achievement-icon mb-3">
-                        <i class="fas fa-users fa-3x text-primary"></i>
-                    </div>
-                    <div class="achievement-number display-4 fw-bold text-primary mb-2" data-count="2500">0</div>
-                    <div class="achievement-label text-muted">Пройденных тестов</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="achievement-item p-4 bg-white rounded-4 shadow-sm animate-on-scroll">
-                    <div class="achievement-icon mb-3">
-                        <i class="fas fa-user-graduate fa-3x text-success"></i>
-                    </div>
-                    <div class="achievement-number display-4 fw-bold text-success mb-2" data-count="850">0</div>
-                    <div class="achievement-label text-muted">Уверенных выборов</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="achievement-item p-4 bg-white rounded-4 shadow-sm animate-on-scroll">
-                    <div class="achievement-icon mb-3">
-                        <i class="fas fa-school fa-3x text-info"></i>
-                    </div>
-                    <div class="achievement-number display-4 fw-bold text-info mb-2" data-count="150">0</div>
-                    <div class="achievement-label text-muted">Школ подключено</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="achievement-item p-4 bg-white rounded-4 shadow-sm animate-on-scroll">
-                    <div class="achievement-icon mb-3">
-                        <i class="fas fa-star fa-3x text-warning"></i>
-                    </div>
-                    <div class="achievement-number display-4 fw-bold text-warning mb-2">95%</div>
-                    <div class="achievement-label text-muted">Точность результатов</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Отзывы пользователей -->
-    <div class="bg-gradient-secondary py-5">
-        <div class="container">
-            <div class="row mb-5">
-                <div class="col-12 text-center">
-                    <h2 class="display-4 fw-bold text-white mb-3">Отзывы пользователей</h2>
-                    <p class="lead text-white-50">Что говорят те, кто уже с нами</p>
-                </div>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="testimonial-card card border-0 shadow h-100">
-                        <div class="card-body p-4">
-                            <div class="mb-3">
-                                {% for i in range(5) %}
-                                    <i class="fas fa-star text-warning me-1"></i>
-                                {% endfor %}
-                            </div>
-                            <p class="mb-4">
-                                "Платформа действительно помогла определиться с выбором специальности. 
-                                Результаты точные, рекомендации полезные. Спасибо за отличный сервис!"
-                            </p>
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-placeholder bg-primary me-3"></div>
-                                <div>
-                                    <strong>Алина Мусабекова</strong>
-                                    <br><small class="text-muted">11 класс, г. Алматы</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="testimonial-card card border-0 shadow h-100">
-                        <div class="card-body p-4">
-                            <div class="mb-3">
-                                {% for i in range(5) %}
-                                    <i class="fas fa-star text-warning me-1"></i>
-                                {% endfor %}
-                                <i class="fas fa-star-half-alt text-warning"></i>
-                            </div>
-                            <p class="mb-4">
-                                "Использовал платформу для сравнения результатов Климова и Холланда. 
-                                Интересный подход к профориентации. Очень рекомендую школьникам!"
-                            </p>
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-placeholder bg-success me-3"></div>
-                                <div>
-                                    <strong>Даниил Семенов</strong>
-                                    <br><small class="text-muted">10 класс, г. Астана</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="testimonial-card card border-0 shadow h-100">
-                        <div class="card-body p-4">
-                            <div class="mb-3">
-                                {% for i in range(5) %}
-                                    <i class="fas fa-star text-warning me-1"></i>
-                                {% endfor %}
-                            </div>
-                            <p class="mb-4">
-                                "Бесплатно, качественно, удобно. Что еще нужно школьнику? 
-                                Прошел тест за 10 минут и получил полезные рекомендации для выбора вуза."
-                            </p>
-                            <div class="d-flex align-items-center">
-                                <div class="avatar-placeholder bg-info me-3"></div>
-                                <div>
-                                    <strong>Айгерим Турсунова</strong>
-                                    <br><small class="text-muted">9 класс, г. Шымкент</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- CTA секция -->
-    <div class="container py-5">
-        <div class="row">
-            <div class="col-12">
-                <div class="card border-0 shadow-xl cta-card position-relative overflow-hidden">
-                    <div class="cta-gradient"></div>
-                    <div class="card-body p-5 text-center position-relative">
-                        <div class="mb-5">
-                            <h2 class="display-4 fw-bold text-white mb-4">Готовы определить свой профессиональный путь?</h2>
-                            <p class="lead text-white-50 mb-5">
-                                Присоединяйтесь к тысячам школьников, которые уже нашли свою стихию
-                            </p>
-                        </div>
-                        <div class="cta-buttons">
-                            <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5 py-3 me-3 shadow-lg pulse-button">
-                                <i class="fas fa-rocket me-2"></i>Начать прямо сейчас
-                            </a>
-                            <a href="{{ url_for('test.methodology') }}" class="btn btn-outline-light btn-lg px-5 py-3">
-                                <i class="fas fa-clipboard-list me-2"></i>Узнать о методиках
-                            </a>
-                        </div>
-                        <div class="mt-5">
-                            <div class="d-flex justify-content-center flex-wrap gap-4">
-                                <div class="feature-badge text-white">
-                                    <i class="fas fa-lock me-2"></i>100% конфиденциально
-                                </div>
-                                <div class="feature-badge text-white">
-                                    <i class="fas fa-gift me-2"></i>Бесплатно для всех
-                                </div>
-                                <div class="feature-badge text-white">
-                                    <i class="fas fa-bullseye me-2"></i>95% точность
-                                </div>
-                                <div class="feature-badge text-white">
-                                    <i class="fas fa-clock me-2"></i>10 минут времени
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
-/* CSS переменные */
 :root {
-    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --gradient-success: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --gradient-warning: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --gradient-danger: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
-    --gradient-purple: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+    --gradient-about-ultra: conic-gradient(from 0deg at 50% 50%, 
+        #ff0080, #ff8c00, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff00ff, #ff0080);
+    --gradient-dark-ultra-about: linear-gradient(135deg, 
+        #000428, 
+        #004e92, 
+        #000428, 
+        #001510, 
+        #000428, 
+        #000000);
+    --gradient-light-ultra-about: linear-gradient(135deg, 
+        #f6d365, 
+        #fda085, 
+        #fbc2eb, 
+        #a6c1ee, 
+        #c2e9fb, 
+        #f6d365);
+    --transition-ultra-about: all 0.7s cubic-bezier(0.76, 0, 0.24, 1);
+    --shadow-ultra-about: 0 0 100px rgba(255, 0, 128, 0.7);
+    --border-radius-ultra-about: 45px;
+    --glow-ultra-about: 0 0 60px rgba(255, 0, 128, 1);
+    --pulse-duration-ultra: 4s;
 }
 
-/* Основной контейнер */
-.about-container {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+/* Ультра-контейнер "О проекте" */
+.about-ultra-container {
     min-height: 100vh;
-}
-
-/* Hero секция */
-.hero-section {
-    background: var(--gradient-primary);
-    min-height: 60vh;
+    background: var(--gradient-dark-ultra-about);
+    background-attachment: fixed;
     position: relative;
-    border-radius: 0 0 50px 50px;
     overflow: hidden;
+    animation: gradientShiftUltraAbout 35s ease infinite;
 }
 
-.hero-gradient {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' fill-opacity='0.05' d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'%3E%3C/path%3E%3C/svg%3E");
-    opacity: 0.2;
-}
-
-/* Градиентный текст */
-.gradient-text {
-    background: linear-gradient(45deg, #fff, #e0e0e0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.text-gradient {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Карточки значений */
-.value-card {
-    transition: all 0.4s ease;
-    border-radius: 20px;
-    overflow: hidden;
-}
-
-.value-card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
-}
-
-/* Иконки в карточках */
-.icon-wrapper {
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.value-card:hover .icon-wrapper,
-.methodology-card:hover .icon-wrapper {
-    transform: scale(1.1) rotate(5deg);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-}
-
-/* Методики */
-.method-badge {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 24px;
-    font-weight: bold;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.sphere-item {
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    transition: all 0.3s ease;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-}
-
-.sphere-item:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-/* Члены команды */
-.team-member {
-    transition: all 0.3s ease;
-    border-radius: 20px;
-    overflow: hidden;
-}
-
-.team-member:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
-}
-
-.avatar-placeholder {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-
-/* Отзывы */
-.testimonial-card {
-    transition: all 0.3s ease;
-    border-radius: 15px;
-    overflow: hidden;
-}
-
-.testimonial-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-}
-
-/* Ачивки */
-.achievement-item {
-    transition: all 0.3s ease;
-    border-radius: 20px;
-}
-
-.achievement-item:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
-}
-
-.achievement-number {
-    font-weight: 700;
-    transition: all 0.5s ease;
-}
-
-/* CTA карточка */
-.cta-card {
-    background: var(--gradient-primary);
-    border-radius: 25px;
-    overflow: hidden;
-    position: relative;
-}
-
-.cta-gradient {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' fill-opacity='0.05' d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'%3E%3C/path%3E%3C/svg%3E");
-    opacity: 0.1;
-}
-
-.feature-badge {
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    background: rgba(255,255,255,0.2);
-    transition: all 0.3s ease;
-    margin: 0 0.5rem 1rem 0.5rem;
-}
-
-.feature-badge:hover {
-    background: rgba(255,255,255,0.3);
-    transform: translateY(-2px);
-}
-
-/* Анимации */
-@keyframes fadeIn {
-    from { 
-        opacity: 0; 
-        transform: translateY(30px); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
-}
-
-@keyframes pulse {
+@keyframes gradientShiftUltraAbout {
     0%, 100% { 
-        transform: scale(1); 
-        box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+        background-position: 0% 0%;
+        filter: hue-rotate(0deg) brightness(1);
+    }
+    25% { 
+        background-position: 100% 0%;
+        filter: hue-rotate(90deg) brightness(1.2);
     }
     50% { 
-        transform: scale(1.05); 
-        box-shadow: 0 0 0 15px rgba(255,255,255,0);
+        background-position: 100% 100%;
+        filter: hue-rotate(180deg) brightness(1.4);
+    }
+    75% { 
+        background-position: 0% 100%;
+        filter: hue-rotate(270deg) brightness(1.2);
     }
 }
 
-.animate-fade-in {
-    animation: fadeIn 0.8s ease-out;
+/* 5D-фон с квантовыми полями */
+.quantum-field-about {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
 }
 
-.pulse-button {
-    animation: pulse 2s infinite;
-    transition: all 0.3s ease;
+.quantum-particle-about {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, 
+        rgba(255, 255, 255, 0.95) 0%, 
+        rgba(255, 0, 128, 0.7) 30%, 
+        transparent 70%);
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.9);
+    animation: quantumFloatAbout 30s infinite linear;
 }
 
-.pulse-button:hover {
-    animation: none;
-    transform: scale(1.05);
+.quantum-particle-about-1 { width: 8px; height: 8px; left: 3%; top: 12%; animation-delay: 0s; }
+.quantum-particle-about-2 { width: 12px; height: 12px; left: 18%; top: 88%; animation-delay: 5s; }
+.quantum-particle-about-3 { width: 6px; height: 6px; left: 85%; top: 22%; animation-delay: 10s; }
+.quantum-particle-about-4 { width: 10px; height: 10px; left: 95%; top: 78%; animation-delay: 3s; }
+.quantum-particle-about-5 { width: 15px; height: 15px; left: 50%; top: 42%; animation-delay: 8s; }
+.quantum-particle-about-6 { width: 5px; height: 5px; left: 25%; top: 68%; animation-delay: 12s; }
+.quantum-particle-about-7 { width: 14px; height: 14px; left: 75%; top: 32%; animation-delay: 2s; }
+.quantum-particle-about-8 { width: 7px; height: 7px; left: 12%; top: 98%; animation-delay: 9s; }
+.quantum-particle-about-9 { width: 11px; height: 11px; left: 88%; top: 8%; animation-delay: 6s; }
+.quantum-particle-about-10 { width: 9px; height: 9px; left: 35%; top: 58%; animation-delay: 11s; }
+.quantum-particle-about-11 { width: 13px; height: 13px; left: 65%; top: 28%; animation-delay: 4s; }
+.quantum-particle-about-12 { width: 6px; height: 6px; left: 5%; top: 45%; animation-delay: 13s; }
+
+@keyframes quantumFloatAbout {
+    0% { 
+        transform: translateY(100vh) translateX(0) translateZ(0) rotate(0deg) scale(0.3);
+        opacity: 0;
+    }
+    8% { opacity: 1; transform: scale(1); }
+    92% { opacity: 1; transform: scale(1); }
+    100% { 
+        transform: translateY(-100px) translateX(250px) translateZ(150px) rotate(1440deg) scale(0.2);
+        opacity: 0;
+    }
 }
 
-/* Анимация при скролле */
-.animate-on-scroll {
+/* Hero-секция "О проекте" с ультра-эффектами */
+.hero-about-ultra {
+    position: relative;
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    padding: 3rem;
+}
+
+.hero-content-about-ultra {
+    text-align: center;
+    max-width: 1200px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(40px);
+    border-radius: var(--border-radius-ultra-about);
+    padding: 6rem;
+    border: 3px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 200px rgba(255, 0, 128, 0.6);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(2000px) rotateX(1deg) rotateY(1deg) rotateZ(0.5deg);
+    animation: heroEntranceAboutUltra 4s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+}
+
+@keyframes heroEntranceAboutUltra {
+    0% { 
+        opacity: 0;
+        transform: perspective(2000px) rotateX(90deg) rotateY(45deg) rotateZ(30deg) translateY(150px) scale(0.5);
+        filter: blur(30px);
+    }
+    100% { 
+        opacity: 1;
+        transform: perspective(2000px) rotateX(1deg) rotateY(1deg) rotateZ(0.5deg) translateY(0) scale(1);
+        filter: blur(0px);
+    }
+}
+
+.hero-content-about-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse, 
+        transparent 20%, 
+        rgba(255, 0, 128, 0.3) 40%, 
+        rgba(0, 255, 255, 0.3) 60%, 
+        transparent 80%);
+    animation: quantumSpotlightAbout 15s infinite alternate;
+    z-index: -1;
+}
+
+@keyframes quantumSpotlightAbout {
+    0% { 
+        transform: rotate(0deg) translate(50px, 50px) scale(1);
+        opacity: 0.4;
+    }
+    100% { 
+        transform: rotate(360deg) translate(-50px, -50px) scale(2);
+        opacity: 0.8;
+    }
+}
+
+/* Ультра-титульные стили с 5D-эффектами */
+.about-title-ultra {
+    font-size: 7rem;
+    font-weight: 900;
+    background: linear-gradient(45deg, 
+        #ffffff, 
+        #ff0080, 
+        #ff8c00, 
+        #ffff00, 
+        #00ff00, 
+        #00ffff, 
+        #0000ff, 
+        #8000ff, 
+        #ff00ff, 
+        #ffffff);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 70px rgba(255, 255, 255, 0.9);
+    letter-spacing: -6px;
+    margin-bottom: 3rem;
+    position: relative;
+    animation: textQuantumPulseAbout 5s ease-in-out infinite;
+}
+
+@keyframes textQuantumPulseAbout {
+    0%, 100% { 
+        background-position: 0% 50%;
+        text-shadow: 0 0 50px rgba(255, 255, 255, 0.8);
+        transform: scale(1);
+    }
+    12.5% { 
+        background-position: 25% 50%;
+        text-shadow: 0 0 100px rgba(255, 0, 128, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+    25% { 
+        background-position: 50% 50%;
+        text-shadow: 0 0 80px rgba(255, 140, 0, 1), 0 0 100px rgba(255, 255, 255, 0.9);
+        transform: scale(1);
+    }
+    37.5% { 
+        background-position: 75% 50%;
+        text-shadow: 0 0 100px rgba(255, 255, 0, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+    50% { 
+        background-position: 100% 50%;
+        text-shadow: 0 0 80px rgba(0, 255, 0, 1), 0 0 100px rgba(255, 255, 255, 0.9);
+        transform: scale(1);
+    }
+    62.5% { 
+        background-position: 75% 100%;
+        text-shadow: 0 0 100px rgba(0, 255, 255, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+    75% { 
+        background-position: 50% 100%;
+        text-shadow: 0 0 80px rgba(0, 0, 255, 1), 0 0 100px rgba(255, 255, 255, 0.9);
+        transform: scale(1);
+    }
+    87.5% { 
+        background-position: 25% 100%;
+        text-shadow: 0 0 100px rgba(128, 0, 255, 1), 0 0 120px rgba(255, 255, 255, 1);
+        transform: scale(1.03);
+    }
+}
+
+.about-subtitle-ultra {
+    font-size: 3.5rem;
+    color: rgba(255, 255, 255, 0.98);
+    font-weight: 300;
+    margin-bottom: 4rem;
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    animation: subtitleQuantumEntranceAbout 4.5s ease-out 1.5s forwards;
     opacity: 0;
-    transform: translateY(30px);
-    transition: all 0.6s ease;
+    transform: translateY(50px) rotateX(40deg) translateZ(100px);
 }
 
-.animate-on-scroll.visible {
+@keyframes subtitleQuantumEntranceAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) rotateX(0deg) translateZ(0);
+    }
+}
+
+.about-description-ultra {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 2.3;
+    margin-bottom: 5rem;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    z-index: 2;
+    animation: descriptionQuantumEntranceAbout 5s ease-out 2.2s forwards;
+    opacity: 0;
+    transform: translateY(50px) translateZ(150px);
+}
+
+@keyframes descriptionQuantumEntranceAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+/* Ультра-кнопки с 5D-эффектами */
+.about-buttons-ultra {
+    display: flex;
+    gap: 4rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 4rem;
+    position: relative;
+    z-index: 2;
+    animation: buttonsQuantumEntranceAbout 5.5s ease-out 2.8s forwards;
+    opacity: 0;
+    transform: translateY(60px) translateZ(200px);
+}
+
+@keyframes buttonsQuantumEntranceAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+.about-btn-ultra {
+    padding: 2.5rem 5rem;
+    font-size: 1.8rem;
+    font-weight: 800;
+    border: none;
+    border-radius: 70px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(25deg) rotateY(15deg) rotateZ(5deg);
+    transition: var(--transition-ultra-about);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    z-index: 2;
+    min-width: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.about-btn-ultra-primary {
+    background: linear-gradient(45deg, 
+        #ff0080, 
+        #ff8c00, 
+        #ffff00, 
+        #00ff00);
+    background-size: 300% 300%;
+    color: white;
+    animation: btnQuantumGlowAbout 4s ease-in-out infinite alternate, btnGradientShift 8s ease-in-out infinite;
+}
+
+@keyframes btnGradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.about-btn-ultra-secondary {
+    background: transparent;
+    border: 5px solid rgba(255, 255, 255, 0.8);
+    color: white;
+    backdrop-filter: blur(25px);
+}
+
+@keyframes btnQuantumGlowAbout {
+    0% { 
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+        transform: perspective(1000px) rotateX(25deg) rotateY(15deg) rotateZ(5deg) translateY(0);
+    }
+    100% { 
+        box-shadow: 0 50px 100px rgba(255, 0, 128, 0.9), 0 0 100px rgba(255, 0, 128, 0.7);
+        transform: perspective(1000px) rotateX(25deg) rotateY(15deg) rotateZ(5deg) translateY(-15px);
+    }
+}
+
+.about-btn-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.5), 
+        transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-ultra-about);
+    animation: btnShineAbout 3s infinite;
+}
+
+@keyframes btnShineAbout {
+    0% { transform: rotate(45deg) translate(-150%, -150%); }
+    100% { transform: rotate(45deg) translate(150%, 150%); }
+}
+
+.about-btn-ultra:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
+}
+
+.about-btn-ultra:hover {
+    transform: perspective(1000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(-20px) scale(1.15);
+    box-shadow: 0 60px 120px rgba(0, 0, 0, 0.7);
+}
+
+/* Ультра-секции с 5D-эффектами */
+.section-ultra-about {
+    padding: 10rem 3rem;
+    position: relative;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(25px);
+    margin: 8rem 0;
+    border-radius: var(--border-radius-ultra-about);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    animation: sectionQuantumFadeInAbout 2.5s ease-out forwards;
+    opacity: 0;
+    transform: translateY(80px) translateZ(200px);
+}
+
+.section-ultra-about:nth-child(1) { animation-delay: 3.2s; }
+.section-ultra-about:nth-child(2) { animation-delay: 3.6s; }
+.section-ultra-about:nth-child(3) { animation-delay: 4.0s; }
+.section-ultra-about:nth-child(4) { animation-delay: 4.4s; }
+
+@keyframes sectionQuantumFadeInAbout {
+    to {
+        opacity: 1;
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+.section-title-ultra-about {
+    text-align: center;
+    font-size: 5rem;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 5rem;
+    text-shadow: 0 0 70px rgba(255, 255, 255, 0.8);
+    position: relative;
+}
+
+.section-title-ultra-about::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 250px;
+    height: 8px;
+    background: var(--gradient-about-ultra);
+    border-radius: 5px;
+    animation: lineQuantumPulseAbout 5s ease-in-out infinite;
+}
+
+@keyframes lineQuantumPulseAbout {
+    0%, 100% { 
+        width: 250px;
+        box-shadow: 0 0 40px rgba(255, 255, 255, 0.7);
+        transform: translateX(-50%) scaleY(1);
+    }
+    50% { 
+        width: 350px;
+        box-shadow: 0 0 80px rgba(255, 0, 128, 1), 0 0 100px rgba(255, 255, 255, 1);
+        transform: translateX(-50%) scaleY(1.8);
+    }
+}
+
+/* Ультра-карточки с 5D-эффектами */
+.ultra-cards-about {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 5rem;
+    margin-top: 6rem;
+}
+
+.ultra-card-about {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(40px);
+    border-radius: 40px;
+    padding: 5rem;
+    text-align: center;
+    transition: var(--transition-ultra-about);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(2000px) rotateX(12deg) rotateY(8deg) rotateZ(3deg);
+    animation: cardQuantumEntranceAbout 3s ease-out forwards;
+    opacity: 0;
+    transform-origin: center;
+}
+
+.ultra-card-about:nth-child(1) { animation-delay: 4.8s; }
+.ultra-card-about:nth-child(2) { animation-delay: 5.2s; }
+.ultra-card-about:nth-child(3) { animation-delay: 5.6s; }
+
+@keyframes cardQuantumEntranceAbout {
+    0% {
+        opacity: 0;
+        transform: perspective(2000px) rotateX(90deg) rotateY(60deg) rotateZ(45deg) translateY(150px) scale(0.7);
+    }
+    100% {
+        opacity: 1;
+        transform: perspective(2000px) rotateX(12deg) rotateY(8deg) rotateZ(3deg) translateY(0) scale(1);
+    }
+}
+
+.ultra-card-about::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        transparent 30%, 
+        rgba(255, 255, 255, 0.25) 100%);
+    opacity: 0;
+    transition: var(--transition-ultra-about);
+}
+
+.ultra-card-about:hover::before {
     opacity: 1;
-    transform: translateY(0);
 }
 
-/* Плавная прокрутка */
-.smooth-scroll {
-    transition: all 0.3s ease;
+.ultra-card-about:hover {
+    transform: perspective(2000px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(-40px) scale(1.12);
+    box-shadow: 0 50px 100px rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.3);
 }
 
-.smooth-scroll:hover {
-    transform: translateY(-2px);
+.card-icon-ultra-about {
+    font-size: 6.5rem;
+    margin-bottom: 3rem;
+    color: white;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.9);
+    transition: var(--transition-ultra-about);
+    position: relative;
+    z-index: 2;
+    animation: iconFloatUltraAbout 8s ease-in-out infinite;
+}
+
+@keyframes iconFloatUltraAbout {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg) scale(1);
+    }
+    25% { 
+        transform: translateY(-20px) rotate(8deg) scale(1.15);
+    }
+    50% { 
+        transform: translateY(-12px) rotate(0deg) scale(1);
+    }
+    75% { 
+        transform: translateY(-16px) rotate(-8deg) scale(1.15);
+    }
+}
+
+.ultra-card-about:hover .card-icon-ultra-about {
+    transform: scale(1.8) rotate(30deg);
+    text-shadow: 0 0 70px rgba(255, 255, 255, 1);
+}
+
+.card-title-ultra-about {
+    font-size: 3rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.card-text-ultra-about {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1.5rem;
+    line-height: 2.1;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ультра-статистика с квантовыми эффектами */
+.stats-ultra-about {
+    display: flex;
+    justify-content: center;
+    gap: 6rem;
+    margin-top: 7rem;
+    flex-wrap: wrap;
+}
+
+.stat-ultra-item-about {
+    text-align: center;
+    padding: 4.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(30px);
+    border-radius: 35px;
+    border: 3px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+    transition: var(--transition-ultra-about);
+    min-width: 280px;
+    position: relative;
+    overflow: hidden;
+    animation: statUltraEntrance 2s ease-out forwards;
+    transform: translateY(60px) rotateX(35deg);
+    opacity: 0;
+}
+
+.stat-ultra-item-about:nth-child(1) { animation-delay: 6.0s; }
+.stat-ultra-item-about:nth-child(2) { animation-delay: 6.3s; }
+.stat-ultra-item-about:nth-child(3) { animation-delay: 6.6s; }
+.stat-ultra-item-about:nth-child(4) { animation-delay: 6.9s; }
+
+@keyframes statUltraEntrance {
+    to {
+        transform: translateY(0) rotateX(0deg);
+        opacity: 1;
+    }
+}
+
+.stat-ultra-item-about::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: var(--gradient-about-ultra);
+    animation: gradientSlideUltraAbout 6s linear infinite;
+}
+
+@keyframes gradientSlideUltraAbout {
+    0% { transform: translateX(-100%) scaleX(0.2); }
+    50% { transform: translateX(0) scaleX(1.8); }
+    100% { transform: translateX(100%) scaleX(0.2); }
+}
+
+.stat-ultra-item-about:hover {
+    transform: translateY(-30px) scale(1.15) rotateX(15deg);
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.45);
+}
+
+.stat-number-ultra-about {
+    font-size: 5.5rem;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+    position: relative;
+    z-index: 2;
+    animation: numberQuantumPulseAbout 5s ease-in-out infinite;
+}
+
+@keyframes numberQuantumPulseAbout {
+    0%, 100% { 
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
+        transform: scale(1);
+    }
+    50% { 
+        text-shadow: 0 0 70px rgba(255, 0, 128, 1), 0 0 90px rgba(255, 255, 255, 1);
+        transform: scale(1.08);
+    }
+}
+
+.stat-label-ultra-about {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.6rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ультра-команда */
+.team-ultra-about {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 4rem;
+    margin-top: 5rem;
+}
+
+.team-member-ultra-about {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(25px);
+    border-radius: 30px;
+    padding: 3.5rem;
+    text-align: center;
+    transition: var(--transition-ultra-about);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: teamMemberEntrance 2.2s ease-out forwards;
+    opacity: 0;
+    transform: translateY(40px) rotateX(25deg);
+}
+
+.team-member-ultra-about:nth-child(1) { animation-delay: 7.2s; }
+.team-member-ultra-about:nth-child(2) { animation-delay: 7.5s; }
+.team-member-ultra-about:nth-child(3) { animation-delay: 7.8s; }
+
+@keyframes teamMemberEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0) rotateX(0deg);
+    }
+}
+
+.team-member-ultra-about::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        transparent 40%, 
+        rgba(255, 255, 255, 0.15) 100%);
+    opacity: 0;
+    transition: var(--transition-ultra-about);
+}
+
+.team-member-ultra-about:hover::before {
+    opacity: 1;
+}
+
+.team-member-ultra-about:hover {
+    transform: translateY(-20px) scale(1.08);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.team-avatar-ultra-about {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin: 0 auto 2.5rem;
+    background: linear-gradient(45deg, #ff0080, #00ffff, #ffff00);
+    background-size: 200% 200%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    color: white;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+    border: 5px solid rgba(255, 255, 255, 0.6);
+    transition: var(--transition-ultra-about);
+    position: relative;
+    z-index: 2;
+    animation: avatarGradientShiftTeam 7s ease-in-out infinite;
+}
+
+@keyframes avatarGradientShiftTeam {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.team-member-ultra-about:hover .team-avatar-ultra-about {
+    transform: scale(1.2) rotate(15deg);
+    box-shadow: 0 30px 60px rgba(255, 0, 128, 0.6);
+}
+
+.team-name-ultra-about {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1.2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.team-role-ultra-about {
+    font-size: 1.4rem;
+    color: #ff0080;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.team-bio-ultra-about {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    line-height: 1.8;
+    position: relative;
+    z-index: 2;
 }
 
 /* Адаптивность */
 @media (max-width: 768px) {
-    .hero-section {
-        min-height: 50vh;
-        border-radius: 0 0 30px 30px;
+    .about-title-ultra {
+        font-size: 4rem;
     }
     
-    .display-2 {
-        font-size: 2.5rem;
+    .about-subtitle-ultra {
+        font-size: 2.2rem;
     }
     
-    .display-4 {
-        font-size: 2rem;
+    .about-description-ultra {
+        font-size: 1.4rem;
     }
     
-    .cta-buttons {
+    .about-buttons-ultra {
         flex-direction: column;
-        gap: 1rem;
+        align-items: center;
+        gap: 3rem;
     }
     
-    .btn-lg {
+    .about-btn-ultra {
         width: 100%;
-        margin: 0 !important;
+        max-width: 380px;
     }
     
-    .feature-badge {
-        display: block;
-        margin: 0.5rem auto;
-        text-align: center;
+    .section-title-ultra-about {
+        font-size: 3rem;
     }
     
-    .sphere-item {
-        margin: 0.25rem;
+    .ultra-cards-about {
+        grid-template-columns: 1fr;
+        gap: 3.5rem;
+    }
+    
+    .stats-ultra-about {
+        gap: 3rem;
+    }
+    
+    .stat-ultra-item-about {
+        min-width: 200px;
+        padding: 3rem;
+    }
+    
+    .stat-number-ultra-about {
+        font-size: 4rem;
+    }
+    
+    .team-ultra-about {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+    }
+    
+    .section-ultra-about {
+        padding: 6rem 2rem;
     }
 }
 
-/* Цветовые вариации */
-.bg-gradient-primary { background: var(--gradient-primary); }
-.bg-gradient-secondary { background: var(--gradient-secondary); }
-.bg-primary-subtle { background-color: rgba(102, 126, 234, 0.1) !important; }
-.bg-success-subtle { background-color: rgba(67, 233, 123, 0.1) !important; }
-.bg-info-subtle { background-color: rgba(79, 172, 254, 0.1) !important; }
-.bg-warning-subtle { background-color: rgba(250, 112, 154, 0.1) !important; }
-.bg-danger-subtle { background-color: rgba(255, 107, 107, 0.1) !important; }
-.bg-purple { background: var(--gradient-purple); }
-
-/* Улучшенные тени */
-.shadow-xl {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+/* Дополнительные эффекты */
+.ultra-glow {
+    animation: ultraGlowPulse 6s ease-in-out infinite alternate;
 }
 
-/* Стили для карточек */
-.card {
-    transition: all 0.3s ease;
-    border-radius: 15px;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
-}
-
-/* Кнопки */
-.btn {
-    border-radius: 50px;
-    font-weight: 500;
-    padding: 0.75rem 1.5rem;
-    transition: all 0.3s ease;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-/* Прогресс бары */
-.progress {
-    border-radius: 50px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    transition: width 1s ease;
-}
-
-/* Значки */
-.badge {
-    font-weight: 500;
-    padding: 0.5em 0.8em;
-    border-radius: 50px;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Анимация счетчиков достижений
-    const achievementCounters = document.querySelectorAll('.achievement-number');
-    
-    const animateCounter = (element, target) => {
-        let count = 0;
-        const increment = target / 100;
-        const timer = setInterval(() => {
-            count += increment;
-            if (count >= target) {
-                element.textContent = target;
-                clearInterval(timer);
-            } else {
-                element.textContent = Math.floor(count);
-            }
-        }, 20);
-    };
-    
-    // Intersection Observer для анимации при скролле
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                
-                // Анимация счетчиков при видимости
-                if (entry.target.classList.contains('achievement-item')) {
-                    const counter = entry.target.querySelector('.achievement-number');
-                    if (counter && counter.dataset.count) {
-                        const target = parseInt(counter.dataset.count);
-                        animateCounter(counter, target);
-                    }
-                }
-            }
-        });
-    }, { threshold: 0.1 });
-    
-    // Наблюдение за элементами с анимацией
-    document.querySelectorAll('.animate-on-scroll').forEach(el => {
-        observer.observe(el);
-    });
-    
-    // Плавная прокрутка для ссылок
-    document.querySelectorAll('.smooth-scroll').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
-    });
-    
-    // Анимация карточек при наведении
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
-    
-    // Обновление счетчика уведомлений
-    function updateNotificationCount() {
-        fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
-            .then(response => response.json())
-            .then(data => {
-                const counter = document.getElementById('notificationCount');
-                if (counter && data.unread_count > 0) {
-                    counter.textContent = data.unread_count;
-                    counter.classList.remove('d-none');
-                }
-            })
-            .catch(err => console.error('Ошибка загрузки счетчика уведомлений:', err));
+@keyframes ultraGlowPulse {
+    0% { 
+        filter: brightness(1) saturate(1) hue-rotate(0deg);
+        box-shadow: 0 0 40px rgba(255, 0, 128, 0.4);
     }
-    
-    // Обновляем счетчик каждые 30 секунд
-    setInterval(updateNotificationCount, 30000);
-    updateNotificationCount(); // Первый вызов
-    
-    // Анимация фона при движении мыши
-    const heroSection = document.querySelector('.hero-section');
-    if (heroSection) {
-        heroSection.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth - 0.5) * 20;
-            const y = (e.clientY / window.innerHeight - 0.5) * 20;
-            
-            heroSection.style.backgroundPosition = `${50 + x}% ${50 + y}%`;
-        });
+    100% { 
+        filter: brightness(1.6) saturate(2.2) hue-rotate(360deg);
+        box-shadow: 0 0 100px rgba(255, 0, 128, 0.8), 0 0 120px rgba(0, 255, 255, 0.6);
     }
-});
-</script>
-{% endblock %}
+}
+
+.quantum-float {
+    animation: quantumFloat3D 15s ease-in-out infinite;
+}
+
+@keyframes quantumFloat3D {
+    0%, 100% { 
+        transform: translateY(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    }
+    25% { 
+        transform: translateY(-35px) rotateX(20deg) rotateY(20deg) rotateZ(15deg);
+    }
+    50% { 
+        transform: translateY(-25px) rotateX(0deg) rotateY(40deg) rotateZ(30deg);
+    }
+    75% { 
+        transform: translateY(-30px) rotateX(-20deg) rotateY(20deg) rotateZ(15deg);
+    }
+}
+
+/* Интерактивные элементы */
+.interactive-element-ultra-about {
+    cursor: pointer;
+    transition: var(--transition-ultra-about);
+}
+
+.interactive-element-ultra-about:hover {
+    animation: hoverQuantumPopAbout 0.6s ease-out;
+}
+
+@keyframes hoverQuantumPopAbout {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.12); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для контента */
+.text-white-ultra-about {
+    color: white;
+}
+
+.text-gradient-ultra-about {
+    background: linear-gradient(45deg, 
+        #ffffff, 
+        #ff0080, 
+        #ff8c00, 
+        #ffff00, 
+        #00ff00, 
+        #00ffff, 
+        #0000ff, 
+        #8000ff, 
+        #ff00ff, 
+        #ffffff);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: textGradientShiftUltraAbout 10s ease-in-out infinite;
+}
+
+@keyframes textGradientShiftUltraAbout {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.bg-transparent-ultra-about {
+    background: transparent;
+}
+
+.border-ultra-about {
+    border: 3px solid rgba(255, 255, 255, 0.6);
+}
+
+.shadow-ultra-about-card {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}

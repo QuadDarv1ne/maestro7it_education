@@ -3,1083 +3,838 @@
 {% block title %}Мой профиль - Профориентационное тестирование{% endblock %}
 
 {% block content %}
-<div class="profile-container py-5">
-    <div class="container">
-        <!-- Заголовок профиля -->
-        <div class="row mb-5">
-            <div class="col-12">
-                <div class="profile-header card border-0 shadow-lg">
-                    <div class="card-body p-5">
-                        <div class="d-flex flex-column flex-md-row align-items-center">
-                            <div class="profile-avatar me-md-4 mb-4 mb-md-0">
-                                <div class="avatar-wrapper position-relative">
-                                    <div class="avatar-placeholder bg-gradient-primary d-flex align-items-center justify-content-center text-white">
-                                        <i class="fas fa-user fa-3x"></i>
-                                    </div>
-                                    <div class="avatar-status online"></div>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 text-center text-md-start">
-                                <h1 class="display-4 fw-bold mb-3 text-gradient">
-                                    <i class="fas fa-user-circle me-3"></i>
-                                    {{ current_user.username }}
-                                </h1>
-                                <p class="lead text-muted mb-4">
-                                    {% if current_user.is_admin %}
-                                        <span class="badge bg-danger-subtle text-danger me-2">
-                                            <i class="fas fa-crown me-1"></i>Администратор
-                                        </span>
-                                    {% endif %}
-                                    <span class="badge bg-primary-subtle text-primary">
-                                        <i class="fas fa-calendar me-1"></i>Участник с {{ current_user.created_at.strftime('%d.%m.%Y') }}
-                                    </span>
-                                </p>
-                                <div class="profile-stats d-flex flex-wrap justify-content-center justify-content-md-start gap-4">
-                                    <div class="stat-item text-center">
-                                        <div class="stat-number display-6 fw-bold text-primary">{{ tests_count or 0 }}</div>
-                                        <div class="stat-label text-muted">Тестов пройдено</div>
-                                    </div>
-                                    <div class="stat-item text-center">
-                                        <div class="stat-number display-6 fw-bold text-success">{{ recommendations_count or 0 }}</div>
-                                        <div class="stat-label text-muted">Рекомендаций</div>
-                                    </div>
-                                    <div class="stat-item text-center">
-                                        <div class="stat-number display-6 fw-bold text-info">{{ achievements_count or 0 }}</div>
-                                        <div class="stat-label text-muted">Достижений</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="profile-actions mt-4 mt-md-0">
-                                <a href="{{ url_for('auth.preferences') }}" class="btn btn-outline-primary btn-lg px-4">
-                                    <i class="fas fa-cog me-2"></i>Настройки
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Основной контент профиля -->
-        <div class="row">
-            <!-- Левая колонка - Основная информация -->
-            <div class="col-lg-8 mb-4">
-                <!-- Карточка последнего теста -->
-                {% if latest_test %}
-                <div class="card border-0 shadow-lg mb-4 latest-test-card">
-                    <div class="card-header bg-gradient-primary text-white py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h3 class="h4 mb-0">
-                                <i class="fas fa-clipboard-check me-2"></i>
-                                Последний пройденный тест
-                            </h3>
-                            <span class="badge bg-white text-primary">
-                                {{ latest_test.completed_at.strftime('%d.%m.%Y') }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <h5 class="text-primary mb-3">
-                                    <i class="fas fa-chart-pie me-2"></i>
-                                    Результаты теста
-                                </h5>
-                                <div class="test-results">
-                                    {% for result in latest_test.results[:3] %}
-                                    <div class="result-item mb-3 p-3 bg-light-subtle rounded-3">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <strong class="d-block">{{ result.type_name }}</strong>
-                                                <small class="text-muted">{{ result.description }}</small>
-                                            </div>
-                                            <div class="text-end">
-                                                <span class="score-badge badge bg-primary-subtle text-primary px-3 py-2">
-                                                    {{ "%.1f"|format(result.score * 100) }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="progress mt-2" style="height: 8px;">
-                                            <div class="progress-bar bg-primary" 
-                                                 role="progressbar" 
-                                                 style="width: {{ result.score * 100 }}%"></div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <h5 class="text-success mb-3">
-                                    <i class="fas fa-star me-2"></i>
-                                    Рекомендации
-                                </h5>
-                                <div class="recommendations">
-                                    {% for rec in latest_test.recommendations[:3] %}
-                                    <div class="rec-item mb-3 p-3 bg-success-subtle rounded-3">
-                                        <div class="d-flex">
-                                            <div class="rec-icon me-3">
-                                                <i class="fas fa-{{ rec.icon }} fa-lg text-success"></i>
-                                            </div>
-                                            <div>
-                                                <strong class="d-block">{{ rec.title }}</strong>
-                                                <small class="text-muted">{{ rec.description[:100] }}...</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                <div class="mt-4 text-center">
-                                    <a href="{{ url_for('test.results', test_id=latest_test.id) }}" 
-                                       class="btn btn-primary btn-lg px-4">
-                                        <i class="fas fa-external-link-alt me-2"></i>
-                                        Подробные результаты
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="card border-0 shadow-lg mb-4 empty-state">
-                    <div class="card-body p-5 text-center">
-                        <div class="mb-4">
-                            <i class="fas fa-clipboard-list fa-5x text-muted"></i>
-                        </div>
-                        <h3 class="mb-3">Вы еще не проходили тесты</h3>
-                        <p class="lead text-muted mb-4">
-                            Пройдите профессиональное тестирование, чтобы получить персональные рекомендации
-                        </p>
-                        <a href="{{ url_for('test.methodology') }}" 
-                           class="btn btn-primary btn-lg px-5 py-3 pulse-button">
-                            <i class="fas fa-play-circle me-2"></i>
-                            Пройти первый тест
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- История тестов -->
-                <div class="card border-0 shadow-lg">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h3 class="h4 mb-0">
-                                <i class="fas fa-history me-2"></i>
-                                История тестов
-                            </h3>
-                            <div class="d-flex gap-2">
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary btn-sm active" data-view="grid">
-                                        <i class="fas fa-th"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" data-view="list">
-                                        <i class="fas fa-list"></i>
-                                    </button>
-                                </div>
-                                <a href="{{ url_for('test.methodology') }}" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-plus me-1"></i>Новый тест
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body p-4">
-                        {% if tests_history %}
-                        <div class="tests-grid">
-                            {% for test in tests_history[:6] %}
-                            <div class="test-card animate-on-scroll">
-                                <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-body p-4">
-                                        <div class="d-flex justify-content-between align-items-start mb-3">
-                                            <div>
-                                                <h5 class="card-title mb-1">
-                                                    <i class="fas fa-{{ test.methodology.icon }} me-2 text-primary"></i>
-                                                    {{ test.methodology.name }}
-                                                </h5>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-calendar me-1"></i>
-                                                    {{ test.completed_at.strftime('%d.%m.%Y') }}
-                                                </small>
-                                            </div>
-                                            <span class="badge bg-{{ 'success' if test.status == 'completed' else 'warning' }}-subtle text-{{ 'success' if test.status == 'completed' else 'warning' }}">
-                                                {{ test.status_display }}
-                                            </span>
-                                        </div>
-                                        
-                                        {% if test.results %}
-                                        <div class="test-results-mini mb-3">
-                                            {% for result in test.results[:2] %}
-                                            <div class="result-mini mb-2">
-                                                <div class="d-flex justify-content-between small">
-                                                    <span>{{ result.type_name }}</span>
-                                                    <span class="fw-bold">{{ "%.0f"|format(result.score * 100) }}%</span>
-                                                </div>
-                                                <div class="progress" style="height: 4px;">
-                                                    <div class="progress-bar bg-primary" 
-                                                         style="width: {{ result.score * 100 }}%"></div>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                        {% endif %}
-                                        
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="test-duration text-muted small">
-                                                <i class="fas fa-clock me-1"></i>
-                                                {{ test.duration_display }}
-                                            </div>
-                                            <a href="{{ url_for('test.results', test_id=test.id) }}" 
-                                               class="btn btn-outline-primary btn-sm">
-                                                <i class="fas fa-external-link-alt me-1"></i>
-                                                Подробнее
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        
-                        {% if tests_history|length > 6 %}
-                        <div class="text-center mt-4">
-                            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fullHistoryModal">
-                                <i class="fas fa-history me-2"></i>
-                                Показать всю историю ({{ tests_history|length }} тестов)
-                            </button>
-                        </div>
-                        {% endif %}
-                        {% else %}
-                        <div class="empty-history text-center py-5">
-                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                            <h4 class="text-muted">История тестов пуста</h4>
-                            <p class="text-muted">Здесь будут отображаться все пройденные вами тесты</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Правая колонка - Дополнительная информация -->
-            <div class="col-lg-4">
-                <!-- Прогресс достижений -->
-                <div class="card border-0 shadow-lg mb-4">
-                    <div class="card-header bg-white py-3">
-                        <h4 class="h5 mb-0">
-                            <i class="fas fa-trophy me-2 text-warning"></i>
-                            Достижения
-                        </h4>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="achievements-progress text-center mb-4">
-                            <div class="progress-circle mx-auto mb-3" data-progress="{{ achievements_percentage|default(0) }}">
-                                <svg class="progress-ring" width="120" height="120">
-                                    <circle class="progress-ring-circle" 
-                                            stroke="#e9ecef" 
-                                            stroke-width="8" 
-                                            fill="transparent" 
-                                            r="52" 
-                                            cx="60" 
-                                            cy="60"/>
-                                    <circle class="progress-ring-progress" 
-                                            stroke="#ffc107" 
-                                            stroke-width="8" 
-                                            fill="transparent" 
-                                            r="52" 
-                                            cx="60" 
-                                            cy="60"
-                                            stroke-dasharray="326.56"
-                                            stroke-dashoffset="326.56"/>
-                                </svg>
-                                <div class="progress-text">
-                                    <span class="display-6 fw-bold text-warning">{{ achievements_count|default(0) }}</span>
-                                    <small class="d-block text-muted">из {{ total_achievements|default(10) }}</small>
-                                </div>
-                            </div>
-                            <p class="mb-0">Прогресс достижений</p>
-                        </div>
-                        
-                        {% if recent_achievements %}
-                        <div class="recent-achievements">
-                            <h6 class="text-muted mb-3">Недавние достижения:</h6>
-                            {% for achievement in recent_achievements[:3] %}
-                            <div class="achievement-item mb-3 p-3 bg-warning-subtle rounded-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="achievement-icon me-3">
-                                        <i class="fas fa-{{ achievement.icon }} fa-lg text-warning"></i>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <strong class="d-block">{{ achievement.name }}</strong>
-                                        <small class="text-muted">{{ achievement.description }}</small>
-                                    </div>
-                                    <small class="text-muted">{{ achievement.earned_date.strftime('%d.%m') }}</small>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Статистика активности -->
-                <div class="card border-0 shadow-lg mb-4">
-                    <div class="card-header bg-white py-3">
-                        <h4 class="h5 mb-0">
-                            <i class="fas fa-chart-bar me-2 text-info"></i>
-                            Активность
-                        </h4>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="activity-stats">
-                            <div class="stat-row mb-3">
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Дней подряд</span>
-                                    <span class="fw-bold">{{ streak_days|default(0) }}</span>
-                                </div>
-                                <div class="progress mt-1" style="height: 6px;">
-                                    <div class="progress-bar bg-info" 
-                                         style="width: {{ (streak_days|default(0) / 30 * 100)|min(100) }}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="stat-row mb-3">
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Активность за месяц</span>
-                                    <span class="fw-bold">{{ monthly_activity|default(0) }}%</span>
-                                </div>
-                                <div class="progress mt-1" style="height: 6px;">
-                                    <div class="progress-bar bg-success" 
-                                         style="width: {{ monthly_activity|default(0) }}%"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="stat-row mb-3">
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Средний балл</span>
-                                    <span class="fw-bold">{{ average_score|default(0)|round(1) }}</span>
-                                </div>
-                                <div class="progress mt-1" style="height: 6px;">
-                                    <div class="progress-bar bg-primary" 
-                                         style="width: {{ (average_score|default(0) * 100)|min(100) }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#activityModal">
-                                    <i class="fas fa-chart-line me-2"></i>
-                                    Подробная статистика
-                                </button>
-                                <a href="{{ url_for('progress.overview') }}" class="btn btn-outline-primary">
-                                    <i class="fas fa-chart-pie me-2"></i>
-                                    Прогресс обучения
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Быстрые действия -->
-                <div class="card border-0 shadow-lg">
-                    <div class="card-header bg-white py-3">
-                        <h4 class="h5 mb-0">
-                            <i class="fas fa-bolt me-2 text-primary"></i>
-                            Быстрые действия
-                        </h4>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="quick-actions d-grid gap-3">
-                            <a href="{{ url_for('test.methodology') }}" 
-                               class="btn btn-primary btn-lg">
-                                <i class="fas fa-play-circle me-2"></i>
-                                Пройти тест
-                            </a>
-                            <a href="{{ url_for('recommendations.detailed') }}" 
-                               class="btn btn-outline-success">
-                                <i class="fas fa-star me-2"></i>
-                                Мои рекомендации
-                            </a>
-                            <a href="{{ url_for('progress.compare') }}" 
-                               class="btn btn-outline-info">
-                                <i class="fas fa-balance-scale me-2"></i>
-                                Сравнить результаты
-                            </a>
-                            <a href="{{ url_for('portfolio.index') }}" 
-                               class="btn btn-outline-warning">
-                                <i class="fas fa-briefcase me-2"></i>
-                                Портфолио
-                            </a>
-                            <a href="{{ url_for('calendar.index') }}" 
-                               class="btn btn-outline-secondary">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                Календарь
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Модальное окно полной истории -->
-<div class="modal fade" id="fullHistoryModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-history me-2"></i>
-                    Полная история тестов
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Дата</th>
-                                <th>Методика</th>
-                                <th>Статус</th>
-                                <th>Результаты</th>
-                                <th>Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for test in tests_history %}
-                            <tr>
-                                <td>{{ test.completed_at.strftime('%d.%m.%Y %H:%M') }}</td>
-                                <td>
-                                    <i class="fas fa-{{ test.methodology.icon }} me-2"></i>
-                                    {{ test.methodology.name }}
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if test.status == 'completed' else 'warning' }}-subtle text-{{ 'success' if test.status == 'completed' else 'warning' }}">
-                                        {{ test.status_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if test.results %}
-                                        {% for result in test.results[:2] %}
-                                            <div class="small">
-                                                {{ result.type_name }}: {{ "%.0f"|format(result.score * 100) }}%
-                                            </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <span class="text-muted">Нет результатов</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('test.results', test_id=test.id) }}" 
-                                       class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-external-link-alt"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Модальное окно статистики активности -->
-<div class="modal fade" id="activityModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-chart-line me-2"></i>
-                    Детальная статистика активности
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6 class="text-muted">Общее количество тестов</h6>
-                                <div class="display-4 text-primary">{{ tests_count|default(0) }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6 class="text-muted">Средний балл</h6>
-                                <div class="display-4 text-success">{{ average_score|default(0)|round(2) }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6 class="text-muted">Дней активности</h6>
-                                <div class="display-4 text-info">{{ active_days|default(0) }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <h6 class="text-muted">Последняя активность</h6>
-                                <div class="display-4 text-warning">
-                                    {% if last_activity %}
-                                        {{ last_activity.strftime('%d.%m.%Y') }}
-                                    {% else %}
-                                        Нет данных
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-4">
-                    <h6 class="text-muted mb-3">График активности за последний месяц</h6>
-                    <div class="activity-chart-placeholder bg-light p-5 text-center rounded">
-                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">График активности будет доступен после интеграции с системой аналитики</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
-/* Профиль контейнер */
-.profile-container {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+:root {
+    --gradient-prof-ultra: conic-gradient(from 0deg at 50% 50%, 
+        #ff0080, #ff8c00, #ffff00, #00ff00, #00ffff, #0000ff, #8000ff, #ff0080);
+    --gradient-card-bg-ultra: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.18), 
+        rgba(255, 255, 255, 0.08));
+    --transition-ultra-fast: all 0.4s cubic-bezier(0.76, 0, 0.24, 1);
+    --transition-ultra-medium: all 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+    --shadow-card-ultra: 0 30px 60px rgba(0, 0, 0, 0.4);
+    --border-radius-ultra: 35px;
+    --glow-primary-ultra: 0 0 50px rgba(255, 0, 128, 0.8);
+    --glow-success-ultra: 0 0 50px rgba(0, 255, 127, 0.8);
+    --glow-warning-ultra: 0 0 50px rgba(255, 215, 0, 0.8);
+    --glow-info-ultra: 0 0 50px rgba(0, 191, 255, 0.8);
+}
+
+/* Ультра-профиль контейнер */
+.profile-ultra-container {
     min-height: 100vh;
-}
-
-/* Заголовок профиля */
-.profile-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 20px;
-    overflow: hidden;
+    background: linear-gradient(135deg, 
+        #000428, 
+        #004e92, 
+        #000428, 
+        #001510, 
+        #000428);
+    background-attachment: fixed;
+    padding: 3rem 0;
     position: relative;
+    overflow: hidden;
+    animation: bgQuantumShift 20s ease infinite;
 }
 
-.profile-header::before {
+@keyframes bgQuantumShift {
+    0%, 100% { 
+        transform: scale(1) rotate(0deg);
+        filter: hue-rotate(0deg);
+    }
+    50% { 
+        transform: scale(1.2) rotate(10deg);
+        filter: hue-rotate(180deg);
+    }
+}
+
+/* Квантовый фон */
+.profile-background-ultra {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(ellipse at 20% 80%, rgba(255, 0, 128, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(0, 255, 255, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 40% 40%, rgba(0, 255, 127, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 60% 70%, rgba(255, 215, 0, 0.15) 0%, transparent 60%);
+    animation: quantumBgPulse 18s ease infinite;
+    z-index: 0;
+}
+
+@keyframes quantumBgPulse {
+    0%, 100% { 
+        opacity: 0.3;
+        transform: scale(1) rotate(0deg);
+    }
+    50% { 
+        opacity: 0.7;
+        transform: scale(1.3) rotate(5deg);
+    }
+}
+
+/* Ультра-заголовок профиля */
+.profile-header-ultra {
+    background: var(--gradient-card-bg-ultra);
+    backdrop-filter: blur(35px);
+    border-radius: var(--border-radius-ultra);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: var(--shadow-card-ultra);
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    animation: profileCardEntrance 1.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+    transform: translateY(80px) rotateX(45deg);
+    opacity: 0;
+}
+
+@keyframes profileCardEntrance {
+    to {
+        transform: translateY(0) rotateX(0deg);
+        opacity: 1;
+    }
+}
+
+.profile-header-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: var(--gradient-prof-ultra);
+    animation: headerGradientSlide 5s linear infinite;
+}
+
+@keyframes headerGradientSlide {
+    0% { transform: translateX(-100%) scaleX(0.3); }
+    50% { transform: translateX(0) scaleX(1.5); }
+    100% { transform: translateX(100%) scaleX(0.3); }
+}
+
+/* 4D-аватар с ультра-эффектами */
+.avatar-container-ultra {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 3.5rem;
+    perspective: 2000px;
+    animation: avatarQuantumEntrance 2s ease-out 0.5s forwards;
+    opacity: 0;
+    transform: translateY(50px) scale(0.8);
+}
+
+@keyframes avatarQuantumEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.avatar-ultra {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #ff0080, #ff8c00, #ffff00);
+    background-size: 300% 300%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6rem;
+    color: white;
+    box-shadow: 0 35px 70px rgba(0, 0, 0, 0.4);
+    border: 6px solid rgba(255, 255, 255, 0.4);
+    transition: var(--transition-ultra-medium);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(2000px) rotateX(15deg) rotateY(10deg);
+    animation: avatarQuantumFloat 8s ease-in-out infinite, avatarGradientShift 6s ease-in-out infinite;
+}
+
+@keyframes avatarQuantumFloat {
+    0%, 100% { 
+        transform: perspective(2000px) rotateX(15deg) rotateY(10deg) translateY(0px);
+        box-shadow: 0 35px 70px rgba(0, 0, 0, 0.4);
+    }
+    50% { 
+        transform: perspective(2000px) rotateX(5deg) rotateY(5deg) translateY(-25px);
+        box-shadow: 0 50px 100px rgba(255, 0, 128, 0.6);
+    }
+}
+
+@keyframes avatarGradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.avatar-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(transparent, rgba(255, 255, 255, 0.5), transparent);
+    animation: avatarQuantumSpin 5s linear infinite;
+}
+
+@keyframes avatarQuantumSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.avatar-ultra:hover {
+    transform: perspective(2000px) rotateX(0deg) rotateY(0deg) translateY(-15px) scale(1.1);
+    box-shadow: 0 50px 100px rgba(255, 0, 128, 0.8);
+    animation: avatarQuantumHover 0.8s ease-out;
+}
+
+@keyframes avatarQuantumHover {
+    0% { transform: perspective(2000px) rotateX(0deg) rotateY(0deg) translateY(-15px) scale(1.1); }
+    30% { transform: perspective(2000px) rotateX(0deg) rotateY(0deg) translateY(-20px) scale(1.15); }
+    70% { transform: perspective(2000px) rotateX(0deg) rotateY(0deg) translateY(-18px) scale(1.12); }
+    100% { transform: perspective(2000px) rotateX(0deg) rotateY(0deg) translateY(-15px) scale(1.1); }
+}
+
+.avatar-status-ultra {
+    position: absolute;
+    bottom: 25px;
+    right: 25px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 5px solid rgba(255, 255, 255, 0.9);
+    background: #00ff7f;
+    box-shadow: 0 15px 30px rgba(0, 255, 127, 0.7);
+    animation: statusQuantumPulse 3s ease-in-out infinite;
+    z-index: 3;
+}
+
+@keyframes statusQuantumPulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 15px 30px rgba(0, 255, 127, 0.7);
+    }
+    50% { 
+        transform: scale(1.3);
+        box-shadow: 0 20px 40px rgba(0, 255, 127, 1), 0 0 30px rgba(0, 255, 127, 0.8);
+    }
+}
+
+/* Ультра-статистика профиля */
+.profile-stats-ultra {
+    display: flex;
+    justify-content: center;
+    gap: 3.5rem;
+    margin: 3.5rem 0;
+    flex-wrap: wrap;
+}
+
+.stat-item-ultra {
+    text-align: center;
+    padding: 2.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: var(--transition-ultra-medium);
+    min-width: 220px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+    animation: statItemEntrance 1.8s ease-out forwards;
+    transform: translateY(40px) rotateX(30deg);
+    opacity: 0;
+}
+
+.stat-item-ultra:nth-child(1) { animation-delay: 1s; }
+.stat-item-ultra:nth-child(2) { animation-delay: 1.2s; }
+.stat-item-ultra:nth-child(3) { animation-delay: 1.4s; }
+.stat-item-ultra:nth-child(4) { animation-delay: 1.6s; }
+
+@keyframes statItemEntrance {
+    to {
+        transform: translateY(0) rotateX(0deg);
+        opacity: 1;
+    }
+}
+
+.stat-item-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradient-prof-ultra);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.8s ease;
+}
+
+.stat-item-ultra:hover::before {
+    transform: scaleX(1);
+}
+
+.stat-item-ultra:hover {
+    transform: translateY(-15px) scale(1.1);
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+}
+
+.stat-number-ultra {
+    font-size: 4rem;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+    position: relative;
+    z-index: 2;
+    animation: numberQuantumPulse 4s ease-in-out infinite;
+}
+
+@keyframes numberQuantumPulse {
+    0%, 100% { 
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+        transform: scale(1);
+    }
+    50% { 
+        text-shadow: 0 0 50px rgba(255, 0, 128, 1), 0 0 70px rgba(255, 255, 255, 0.9);
+        transform: scale(1.05);
+    }
+}
+
+.stat-label-ultra {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.3rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ультра-достижения */
+.achievements-ultra {
+    background: var(--gradient-card-bg-ultra);
+    backdrop-filter: blur(35px);
+    border-radius: var(--border-radius-ultra);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: var(--shadow-card-ultra);
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    animation: achievementsEntrance 2s ease-out forwards;
+    transform: translateY(80px) rotateX(30deg);
+    opacity: 0;
+}
+
+@keyframes achievementsEntrance {
+    to {
+        transform: translateY(0) rotateX(0deg);
+        opacity: 1;
+    }
+}
+
+.achievements-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: var(--gradient-prof-ultra);
+}
+
+.achievements-title-ultra {
+    text-align: center;
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 3.5rem;
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+}
+
+.achievements-grid-ultra {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 3rem;
+}
+
+.achievement-card-ultra {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border-radius: 30px;
+    padding: 3rem;
+    text-align: center;
+    transition: var(--transition-ultra-medium);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+    animation: achievementCardEntrance 2.2s ease-out forwards;
+    opacity: 0;
+    transform: translateY(30px) rotateX(20deg);
+}
+
+.achievement-card-ultra:nth-child(1) { animation-delay: 2.2s; }
+.achievement-card-ultra:nth-child(2) { animation-delay: 2.4s; }
+.achievement-card-ultra:nth-child(3) { animation-delay: 2.6s; }
+
+@keyframes achievementCardEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0) rotateX(0deg);
+    }
+}
+
+.achievement-card-ultra::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' fill-opacity='0.05' d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'%3E%3C/path%3E%3C/svg%3E");
-    opacity: 0.1;
+    background: linear-gradient(135deg, 
+        transparent 40%, 
+        rgba(255, 255, 255, 0.2) 100%);
+    opacity: 0;
+    transition: var(--transition-ultra-fast);
 }
 
-/* Аватар профиля */
-.avatar-wrapper {
+.achievement-card-ultra:hover::before {
+    opacity: 1;
+}
+
+.achievement-card-ultra:hover {
+    transform: translateY(-20px) scale(1.05);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.achievement-card-ultra.unlocked {
+    border: 3px solid rgba(255, 215, 0, 0.7);
+    background: rgba(255, 215, 0, 0.15);
+    animation: unlockedGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes unlockedGlow {
+    0% { 
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+        border-color: rgba(255, 215, 0, 0.7);
+    }
+    100% { 
+        box-shadow: 0 25px 50px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.3);
+        border-color: rgba(255, 215, 0, 1);
+    }
+}
+
+.achievement-icon-ultra {
+    font-size: 4.5rem;
+    margin-bottom: 2rem;
+    transition: var(--transition-ultra-fast);
     position: relative;
+    z-index: 2;
 }
 
-.avatar-placeholder {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 4px solid white;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+.achievement-card-ultra.unlocked .achievement-icon-ultra {
+    color: #FFD700;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 1);
+    animation: iconQuantumGlow 3s ease-in-out infinite alternate;
 }
 
-.avatar-status {
+@keyframes iconQuantumGlow {
+    from { 
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        transform: scale(1);
+    }
+    to { 
+        text-shadow: 0 0 50px rgba(255, 215, 0, 1), 0 0 70px rgba(255, 215, 0, 0.8);
+        transform: scale(1.2);
+    }
+}
+
+.achievement-title-ultra {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1.2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.achievement-description-ultra {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    line-height: 1.8;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ультра-активность */
+.activity-ultra {
+    background: var(--gradient-card-bg-ultra);
+    backdrop-filter: blur(35px);
+    border-radius: var(--border-radius-ultra);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: var(--shadow-card-ultra);
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+    animation: activityEntrance 2.5s ease-out forwards;
+    transform: translateY(80px) rotateX(20deg);
+    opacity: 0;
+}
+
+@keyframes activityEntrance {
+    to {
+        transform: translateY(0) rotateX(0deg);
+        opacity: 1;
+    }
+}
+
+.activity-timeline-ultra {
+    position: relative;
+    padding-left: 4rem;
+}
+
+.activity-timeline-ultra::before {
+    content: '';
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    left: 30px;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(to bottom, #ff0080, #00ffff);
+    border-radius: 3px;
+    box-shadow: 0 0 20px rgba(255, 0, 128, 0.7);
+    animation: timelinePulse 4s ease-in-out infinite;
+}
+
+@keyframes timelinePulse {
+    0%, 100% { 
+        box-shadow: 0 0 10px rgba(255, 0, 128, 0.5);
+        transform: scaleX(1);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(255, 0, 128, 1), 0 0 40px rgba(0, 255, 255, 0.8);
+        transform: scaleX(1.2);
+    }
+}
+
+.activity-item-ultra {
+    position: relative;
+    margin-bottom: 3rem;
+    padding: 2.5rem;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    border-left: 5px solid #ff0080;
+    transition: var(--transition-ultra-fast);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    animation: activityItemEntrance 1s ease-out forwards;
+    opacity: 0;
+    transform: translateX(-30px);
+}
+
+.activity-item-ultra:nth-child(1) { animation-delay: 2.7s; }
+.activity-item-ultra:nth-child(2) { animation-delay: 2.9s; }
+.activity-item-ultra:nth-child(3) { animation-delay: 3.1s; }
+
+@keyframes activityItemEntrance {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.activity-item-ultra:hover {
+    transform: translateX(15px);
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+    border-left: 5px solid #00ffff;
+}
+
+.activity-item-ultra::before {
+    content: '';
+    position: absolute;
+    left: -40px;
+    top: 30px;
     width: 25px;
     height: 25px;
     border-radius: 50%;
-    border: 3px solid white;
-    background: #28a745;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    background: #ff0080;
+    border: 4px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 5px rgba(255, 0, 128, 0.6);
+    animation: activityPointPulse 3s ease-in-out infinite;
 }
 
-.avatar-status.online {
-    background: #28a745;
-    animation: pulse 2s infinite;
-}
-
-/* Статистика профиля */
-.profile-stats .stat-item {
-    min-width: 120px;
-}
-
-.stat-number {
-    font-weight: 700;
-    transition: all 0.3s ease;
-}
-
-.stat-item:hover .stat-number {
-    transform: scale(1.1);
-    color: #667eea !important;
-}
-
-/* Карточки тестов */
-.test-card {
-    transition: all 0.3s ease;
-}
-
-.test-card:hover {
-    transform: translateY(-5px);
-}
-
-.latest-test-card {
-    border-top: 5px solid #667eea;
-}
-
-.result-item {
-    transition: all 0.3s ease;
-}
-
-.result-item:hover {
-    background: rgba(102, 126, 234, 0.1) !important;
-    transform: translateX(5px);
-}
-
-.score-badge {
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-/* Достижения */
-.progress-circle {
-    position: relative;
-    width: 120px;
-    height: 120px;
-}
-
-.progress-ring-circle {
-    transition: stroke-dashoffset 0.5s ease;
-}
-
-.progress-ring-progress {
-    transition: stroke-dashoffset 1s ease;
-    transform: rotate(-90deg);
-    transform-origin: 50% 50%;
-}
-
-.progress-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-}
-
-.achievement-item {
-    transition: all 0.3s ease;
-}
-
-.achievement-item:hover {
-    transform: translateX(10px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-/* Сетка тестов */
-.tests-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-}
-
-/* Анимации */
-@keyframes pulse {
+@keyframes activityPointPulse {
     0%, 100% { 
-        transform: scale(1); 
-        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(255, 0, 128, 0.6);
     }
     50% { 
-        transform: scale(1.05); 
-        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+        transform: scale(1.3);
+        box-shadow: 0 0 0 8px rgba(255, 0, 128, 0.8), 0 0 20px rgba(255, 0, 128, 0.5);
     }
 }
 
-@keyframes fadeInUp {
-    from { 
-        opacity: 0; 
-        transform: translateY(30px); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
+.activity-date-ultra {
+    font-size: 1.1rem;
+    color: #ff0080;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
-.animate-on-scroll {
+.activity-title-ultra {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1.2rem;
+}
+
+.activity-description-ultra {
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.9;
+    font-size: 1.2rem;
+}
+
+/* Ультра-кнопки действий */
+.action-buttons-ultra {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    margin-top: 3.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-ultra {
+    padding: 1.5rem 3rem;
+    border-radius: 60px;
+    font-weight: 700;
+    font-size: 1.3rem;
+    transition: var(--transition-ultra-medium);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+    min-width: 250px;
+    justify-content: center;
+    animation: btnEntrance 1s ease-out forwards;
     opacity: 0;
     transform: translateY(30px);
-    transition: all 0.6s ease;
 }
 
-.animate-on-scroll.visible {
-    opacity: 1;
-    transform: translateY(0);
+.btn-ultra:nth-child(1) { animation-delay: 3.3s; }
+.btn-ultra:nth-child(2) { animation-delay: 3.5s; }
+
+@keyframes btnEntrance {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.pulse-button {
-    animation: pulse 2s infinite;
-    transition: all 0.3s ease;
+.btn-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.3), 
+        transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-ultra-fast);
 }
 
-.pulse-button:hover {
-    animation: none;
-    transform: scale(1.05);
+.btn-ultra:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
 }
 
-/* Пустые состояния */
-.empty-state {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+.btn-ultra-primary {
+    background: linear-gradient(45deg, #ff0080, #ff8c00, #ffff00);
+    color: white;
+    animation: btnQuantumGlowUltra 3s ease-in-out infinite alternate;
 }
 
-.empty-history {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 15px;
+@keyframes btnQuantumGlowUltra {
+    0% { 
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        transform: translateY(0);
+    }
+    100% { 
+        box-shadow: 0 25px 50px rgba(255, 0, 128, 0.7), 0 0 50px rgba(255, 0, 128, 0.5);
+        transform: translateY(-5px);
+    }
 }
 
-/* Градиентный текст */
-.text-gradient {
-    background: linear-gradient(45deg, #fff, #e0e0e0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+.btn-ultra-secondary {
+    background: transparent;
+    border: 3px solid rgba(255, 255, 255, 0.6);
+    color: white;
+    backdrop-filter: blur(15px);
 }
 
-/* Цветовые вариации */
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.bg-light-subtle {
-    background-color: rgba(248, 249, 250, 0.8) !important;
-}
-
-.bg-success-subtle {
-    background-color: rgba(25, 135, 84, 0.1) !important;
-}
-
-.bg-warning-subtle {
-    background-color: rgba(255, 193, 7, 0.1) !important;
-}
-
-.bg-info-subtle {
-    background-color: rgba(13, 202, 240, 0.1) !important;
-}
-
-.bg-primary-subtle {
-    background-color: rgba(102, 126, 234, 0.1) !important;
-}
-
-.bg-danger-subtle {
-    background-color: rgba(220, 53, 69, 0.1) !important;
+.btn-ultra:hover {
+    transform: translateY(-8px) scale(1.08);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
 }
 
 /* Адаптивность */
 @media (max-width: 768px) {
-    .profile-header .card-body {
-        padding: 2rem 1.5rem;
+    .profile-ultra-container {
+        padding: 1.5rem 0;
     }
     
-    .avatar-placeholder {
-        width: 80px;
-        height: 80px;
+    .profile-header-ultra {
+        padding: 2.5rem 2rem;
     }
     
-    .display-4 {
-        font-size: 2rem;
+    .avatar-container-ultra {
+        width: 220px;
+        height: 220px;
     }
     
-    .tests-grid {
+    .avatar-ultra {
+        font-size: 5rem;
+    }
+    
+    .profile-stats-ultra {
+        gap: 2rem;
+    }
+    
+    .stat-item-ultra {
+        min-width: 160px;
+        padding: 2rem;
+    }
+    
+    .stat-number-ultra {
+        font-size: 3rem;
+    }
+    
+    .achievements-grid-ultra {
         grid-template-columns: 1fr;
     }
     
-    .profile-stats {
+    .action-buttons-ultra {
         flex-direction: column;
-        gap: 1rem !important;
+        align-items: center;
     }
     
-    .stat-item {
+    .btn-ultra {
         width: 100%;
-        padding: 1rem;
-        background: rgba(255,255,255,0.1);
-        border-radius: 10px;
+        max-width: 320px;
     }
     
-    .quick-actions .btn {
-        width: 100%;
-        margin-bottom: 0.5rem;
+    .activity-timeline-ultra {
+        padding-left: 3rem;
     }
-}
-
-/* Улучшения для карточек */
-.card {
-    transition: all 0.3s ease;
-    border-radius: 15px;
-    overflow: hidden;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
-}
-
-.card-header {
-    border-bottom: none;
-    font-weight: 600;
-}
-
-/* Кнопки */
-.btn {
-    border-radius: 50px;
-    font-weight: 500;
-    padding: 0.75rem 1.5rem;
-    transition: all 0.3s ease;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.btn-lg {
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
-}
-
-/* Прогресс бары */
-.progress {
-    border-radius: 50px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    transition: width 1s ease;
-}
-
-/* Модальные окна */
-.modal-content {
-    border-radius: 20px;
-    border: none;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-}
-
-.modal-header {
-    border-bottom: 1px solid #e9ecef;
-    padding: 1.5rem;
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-/* Таблицы */
-.table th {
-    font-weight: 600;
-    color: #495057;
-    border-top: none;
-}
-
-.table-hover tbody tr:hover {
-    background-color: rgba(102, 126, 234, 0.05);
-}
-
-/* Уведомления */
-.alert {
-    border-radius: 15px;
-    border: none;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-}
-
-/* Значки */
-.badge {
-    font-weight: 500;
-    padding: 0.5em 0.8em;
-    border-radius: 50px;
-}
-
-/* Иконки */
-.fas, .far, .fab {
-    transition: all 0.3s ease;
-}
-
-.btn:hover .fas,
-.btn:hover .far,
-.btn:hover .fab {
-    transform: scale(1.1);
-}
-
-/* Стили для активности */
-.activity-stats .stat-row {
-    padding: 0.75rem;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-}
-
-.activity-stats .stat-row:hover {
-    background: rgba(102, 126, 234, 0.05);
-    transform: translateX(5px);
-}
-
-/* Анимация прогресса достижений */
-@keyframes progressAnimation {
-    from {
-        stroke-dashoffset: 326.56;
-    }
-    to {
-        stroke-dashoffset: 0;
+    
+    .activity-item-ultra::before {
+        left: -35px;
     }
 }
 
-.progress-ring-progress.animate {
-    animation: progressAnimation 2s ease-in-out;
+/* Дополнительные эффекты */
+.quantum-glow-effect {
+    animation: quantumGlowPulseUltra 4s ease-in-out infinite alternate;
 }
 
-/* Улучшенные тени */
-.shadow-lg {
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
-}
-
-.shadow-xl {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Плавные переходы */
-* {
-    transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-/* Улучшенная читаемость */
-body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    line-height: 1.6;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
-    letter-spacing: -0.5px;
-}
-
-p {
-    line-height: 1.8;
-    color: #495057;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Анимация при скролле
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, { threshold: 0.1 });
-    
-    document.querySelectorAll('.animate-on-scroll').forEach(el => {
-        observer.observe(el);
-    });
-    
-    // Анимация прогресса достижений
-    const progressCircles = document.querySelectorAll('.progress-circle');
-    progressCircles.forEach(circle => {
-        const progress = parseInt(circle.dataset.progress) || 0;
-        const progressRing = circle.querySelector('.progress-ring-progress');
-        const circumference = 2 * Math.PI * 52; // 2πr
-        const offset = circumference - (progress / 100) * circumference;
-        
-        progressRing.style.strokeDashoffset = offset;
-        progressRing.style.strokeDasharray = circumference;
-        
-        // Добавляем класс для анимации
-        setTimeout(() => {
-            progressRing.classList.add('animate');
-        }, 300);
-    });
-    
-    // Переключение вида истории тестов
-    const viewButtons = document.querySelectorAll('[data-view]');
-    const testsGrid = document.querySelector('.tests-grid');
-    
-    viewButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Убираем активный класс у всех кнопок
-            viewButtons.forEach(btn => btn.classList.remove('active'));
-            // Добавляем активный класс текущей кнопке
-            this.classList.add('active');
-            
-            const viewType = this.dataset.view;
-            
-            if (viewType === 'list') {
-                testsGrid.style.display = 'block';
-                testsGrid.classList.add('tests-list-view');
-            } else {
-                testsGrid.style.display = 'grid';
-                testsGrid.classList.remove('tests-list-view');
-            }
-        });
-    });
-    
-    // Анимация карточек при наведении
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
-    
-    // Обновление счетчика уведомлений
-    function updateNotificationCount() {
-        fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
-            .then(response => response.json())
-            .then(data => {
-                const counter = document.getElementById('notificationCount');
-                if (counter && data.unread_count > 0) {
-                    counter.textContent = data.unread_count;
-                    counter.classList.remove('d-none');
-                }
-            })
-            .catch(err => console.error('Ошибка загрузки счетчика уведомлений:', err));
+@keyframes quantumGlowPulseUltra {
+    0% { 
+        filter: brightness(1) saturate(1) hue-rotate(0deg);
+        box-shadow: 0 0 20px rgba(255, 0, 128, 0.3);
     }
-    
-    // Обновляем счетчик каждые 30 секунд
-    setInterval(updateNotificationCount, 30000);
-    updateNotificationCount(); // Первый вызов
-    
-    // Анимация статистики при загрузке
-    const statNumbers = document.querySelectorAll('.stat-number');
-    statNumbers.forEach((element, index) => {
-        setTimeout(() => {
-            element.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                element.style.transform = 'scale(1)';
-            }, 300);
-        }, index * 200);
-    });
-    
-    // Обработка модальных окон
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        modal.addEventListener('show.bs.modal', function() {
-            // Добавляем анимацию при открытии
-            this.querySelector('.modal-content').style.transform = 'scale(0.8)';
-            this.querySelector('.modal-content').style.opacity = '0';
-            
-            setTimeout(() => {
-                this.querySelector('.modal-content').style.transform = 'scale(1)';
-                this.querySelector('.modal-content').style.opacity = '1';
-            }, 50);
-        });
-    });
-});
-</script>
-{% endblock %}
+    100% { 
+        filter: brightness(1.4) saturate(1.8) hue-rotate(90deg);
+        box-shadow: 0 0 60px rgba(255, 0, 128, 0.6), 0 0 80px rgba(0, 255, 255, 0.4);
+    }
+}
+
+.hyper-float-effect {
+    animation: hyperFloatUltra 10s ease-in-out infinite;
+}
+
+@keyframes hyperFloatUltra {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg);
+    }
+    25% { 
+        transform: translateY(-20px) rotate(3deg);
+    }
+    50% { 
+        transform: translateY(-12px) rotate(0deg);
+    }
+    75% { 
+        transform: translateY(-16px) rotate(-3deg);
+    }
+}
+
+/* Интерактивные элементы */
+.interactive-element-ultra-prof {
+    cursor: pointer;
+    transition: var(--transition-ultra-fast);
+}
+
+.interactive-element-ultra-prof:hover {
+    animation: hoverQuantumPopUltra 0.4s ease-out;
+}
+
+@keyframes hoverQuantumPopUltra {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для контента */
+.text-white-ultra {
+    color: white;
+}
+
+.text-gradient-ultra-prof {
+    background: linear-gradient(45deg, 
+        #ffffff, 
+        #ff0080, 
+        #ffff00, 
+        #00ff00, 
+        #00ffff, 
+        #ffffff);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: textGradientShiftUltra 6s ease-in-out infinite;
+}
+
+@keyframes textGradientShiftUltra {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.bg-transparent-ultra {
+    background: transparent;
+}
+
+.border-ultra-prof {
+    border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.shadow-ultra-prof {
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+}
