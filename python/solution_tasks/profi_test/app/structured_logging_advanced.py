@@ -376,6 +376,36 @@ class AdvancedStructuredLogger:
         with self.lock:
             return list(self.alerts)[-limit:]
     
+    def get_recent_errors(self, minutes: int = 5) -> List[Dict[str, Any]]:
+        """Получение недавних ошибок"""
+        from datetime import datetime, timedelta
+        import re
+        
+        time_threshold = datetime.utcnow() - timedelta(minutes=minutes)
+        
+        with self.lock:
+            recent_errors = []
+            errors_list = list(self.log_queues['errors'])
+            
+            for log_entry in errors_list:
+                # Parse timestamp
+                try:
+                    if isinstance(log_entry, dict) and 'timestamp' in log_entry:
+                        timestamp_str = log_entry['timestamp']
+                        # Handle different timestamp formats
+                        if '.' in timestamp_str:
+                            timestamp = datetime.strptime(timestamp_str.split('.')[0], '%Y-%m-%dT%H:%M:%S')
+                        else:
+                            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S')
+                        
+                        if timestamp >= time_threshold:
+                            recent_errors.append(log_entry)
+                except ValueError:
+                    # If parsing fails, skip this entry
+                    continue
+            
+            return recent_errors
+    
     def reset_stats(self):
         """Сброс статистики"""
         with self.lock:

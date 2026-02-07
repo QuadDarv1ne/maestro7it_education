@@ -127,27 +127,68 @@ class PerformancePredictor:
             # Если есть исторические данные в приложении
             if hasattr(self.app, 'performance_monitor'):
                 # Получаем данные метрик
-                metrics_history = self.app.performance_monitor.get_metrics_history(
-                    start_time=start_time,
-                    end_time=end_time,
-                    interval_minutes=5
-                )
-                
-                for timestamp, metrics in metrics_history.items():
-                    data_point = {
-                        'timestamp': timestamp,
-                        'cpu_percent': metrics.get('cpu_percent', 0),
-                        'memory_percent': metrics.get('memory_percent', 0),
-                        'response_time': metrics.get('avg_response_time', 0),
-                        'request_rate': metrics.get('requests_per_second', 0),
-                        'error_rate': metrics.get('error_rate', 0),
-                        'active_users': metrics.get('active_users', 0),
-                        'database_connections': metrics.get('db_connections', 0),
-                        'hour_of_day': timestamp.hour,
-                        'day_of_week': timestamp.weekday(),
-                        'is_weekend': 1 if timestamp.weekday() >= 5 else 0
-                    }
-                    metrics_data.append(data_point)
+                try:
+                    # Try to get metrics history with the expected parameters
+                    metrics_history = self.app.performance_monitor.get_metrics_history(
+                        start_time=start_time,
+                        end_time=end_time,
+                        interval_minutes=5
+                    )
+                    
+                    for timestamp, metrics in metrics_history.items():
+                        data_point = {
+                            'timestamp': timestamp,
+                            'cpu_percent': metrics.get('cpu_percent', 0),
+                            'memory_percent': metrics.get('memory_percent', 0),
+                            'response_time': metrics.get('avg_response_time', 0),
+                            'request_rate': metrics.get('requests_per_second', 0),
+                            'error_rate': metrics.get('error_rate', 0),
+                            'active_users': metrics.get('active_users', 0),
+                            'database_connections': metrics.get('db_connections', 0),
+                            'hour_of_day': timestamp.hour,
+                            'day_of_week': timestamp.weekday(),
+                            'is_weekend': 1 if timestamp.weekday() >= 5 else 0
+                        }
+                        metrics_data.append(data_point)
+                except TypeError:
+                    # Fallback to the method signature we implemented
+                    metrics_history = self.app.performance_monitor.get_metrics_history(hours=24)
+                    
+                    # Convert the returned data to the expected format
+                    for metric_key, metric_values in metrics_history.items():
+                        for entry in metric_values:
+                            if 'timestamp' in entry and 'value' in entry:
+                                timestamp = datetime.fromisoformat(entry['timestamp'])
+                                if start_time <= timestamp <= end_time:
+                                    # Map the metric to the expected names
+                                    if 'cpu' in metric_key.lower():
+                                        metric_name = 'cpu_percent'
+                                    elif 'memory' in metric_key.lower():
+                                        metric_name = 'memory_percent'
+                                    elif 'response' in metric_key.lower():
+                                        metric_name = 'response_time'
+                                    elif 'request' in metric_key.lower():
+                                        metric_name = 'request_rate'
+                                    elif 'error' in metric_key.lower():
+                                        metric_name = 'error_rate'
+                                    else:
+                                        continue  # Skip unknown metrics
+                                        
+                                    data_point = {
+                                        'timestamp': timestamp,
+                                        metric_name: entry['value'],
+                                        'hour_of_day': timestamp.hour,
+                                        'day_of_week': timestamp.weekday(),
+                                        'is_weekend': 1 if timestamp.weekday() >= 5 else 0,
+                                        'cpu_percent': entry['value'] if 'cpu' in metric_key.lower() else 0,
+                                        'memory_percent': entry['value'] if 'memory' in metric_key.lower() else 0,
+                                        'response_time': entry['value'] if 'response' in metric_key.lower() else 0,
+                                        'request_rate': entry['value'] if 'request' in metric_key.lower() else 0,
+                                        'error_rate': entry['value'] if 'error' in metric_key.lower() else 0,
+                                        'active_users': 0,
+                                        'database_connections': 0
+                                    }
+                                    metrics_data.append(data_point)
             
             # Если нет исторических данных, используем текущие
             if not metrics_data:

@@ -69,6 +69,32 @@ class PerformanceMonitor:
                     }
             
             return stats
+    
+    def get_current_metrics(self):
+        """Get current metric values"""
+        with self.lock:
+            current = {}
+            for metric_key, values in self.metrics.items():
+                if values:
+                    current[metric_key] = values[-1]['value']
+            return current
+    
+    def get_metrics_history(self, hours=1):
+        """Get historical metrics for all tracked metrics"""
+        from datetime import datetime, timezone, timedelta
+        
+        with self.lock:
+            history = {}
+            cutoff_time = time.time() - (hours * 3600)  # Convert hours to seconds
+            
+            for metric_key, values in self.metrics.items():
+                recent_values = [
+                    entry for entry in values
+                    if entry['timestamp'] >= cutoff_time
+                ]
+                history[metric_key] = recent_values
+                
+            return history
 
 # Global performance monitor instance
 performance_monitor = PerformanceMonitor()
