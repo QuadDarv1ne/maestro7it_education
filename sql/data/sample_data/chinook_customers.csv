@@ -1,0 +1,11 @@
+customer_id,first_name,last_name,company,address,city,state,country,postal_code,phone,fax,email,support_rep_id
+1,Luís,Gonçalves,Embraer - Empresa Brasileira de Aeronáutica S.A.,Av. Brigadeiro Faria Lima 2170,São José dos Campos,SP,Brazil,12227-000,+55 (12) 3923-5555,+55 (12) 3923-5566,luisg@embraer.com.br,3
+2,Leonie,Köhler,,Theodor-Heuss-Straße 34,Stuttgart,,Germany,70174,+49 0711 2842222,,leonekohler@surfeu.de,5
+3,François,Tremblay,,1498 rue Bélanger,Montréal,QC,Canada,H2G 1A7,+1 (514) 721-4711,,ftremblay@gmail.com,3
+4,Bjørn,Hansen,,Ullevålsveien 14,Oslo,,Norway,0171,+47 22 44 22 22,,bjorn.hansen@yahoo.no,4
+5,František,Wichterlová,JetBrains s.r.o.,Klanova 9/506,Prague,,Czech Republic,14700,+420 2 4172 5555,+420 2 4172 5555,frantisekw@jetbrains.com,4
+6,Helena,Holý,,Rilská 3174/6,Prague,,Czech Republic,14300,+420 2 4177 0449,,hholy@gmail.com,5
+7,Astrid,Gruber,,Rotenturmstraße 4 1010 Innere Stadt,Vienna,,Austria,1010,+43 01 5134505,,astrid.gruber@apple.at,5
+8,Daan,Peeters,,Grétrystraat 63,Brussels,,Belgium,1000,+32 02 219 03 03,,daan_peeters@apple.be,4
+9,Kara,Nielsen,,Sønder Boulevard 51,Copenhagen,,Denmark,1720,+453 3331 9991,,kara.nielsen@jubii.dk,4
+10,Eduardo,Martins,,Rua Dr. Falcão Filho 155,São Paulo,SP,Brazil,01007-010,+55 (11) 3033-5446,,eduardo@woodstock.com.br,4

@@ -1,0 +1,43 @@
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sqlitedb
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Documentation output
+*.pdf
+*.docx
+
+# Backup files
+*.bak
+*.backup
