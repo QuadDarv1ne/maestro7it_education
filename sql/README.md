@@ -1,12 +1,125 @@
 # SQL
 
-**Example:**
+Комплексный учебный ресурс по SQL с реальными базами данных и практическими примерами для анализа данных и бизнес-аналитики.
 
-1. [Chinook](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/lerocha/chinook-database/master/ChinookDatabase/DataSources/Chinook_Sqlite.sqlite)
-2. [NorthWind](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/jpwhite3/northwind-SQLite3/master/dist/northwind.db)
-3. [cnf.db](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/ladieslearningcode/llc-sql/master/data/cnf.db)
-4. [BasketBall](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/wyattowalsh/sports-analytics/main/basketball/data/basketball.sqlite)
-5. [Sakila](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/ivanceras/sakila/master/sqlite-sakila-db/sakila.db)
+## 📚 Примеры баз данных
+
+### 1. [Chinook](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/lerocha/chinook-database/master/ChinookDatabase/DataSources/Chinook_Sqlite.sqlite)
+**База данных музыкального магазина**
+- Исполнители, альбомы, треки
+- Клиенты, счета
+- Анализ жанров
+- Отчеты по продажам
+
+📁 `src/chinook/` - SQL queries and examples
+📁 `data/sample_data/` - Sample CSV data
+
+### 2. [NorthWind](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/jpwhite3/northwind-SQLite3/master/dist/northwind.db)
+**База данных бизнеса/торговли**
+- Поставщики, продукты, категории
+- Клиенты, заказы
+- Управление запасами
+- Аналитика продаж
+
+📁 `src/northwind/` - SQL queries and examples
+📁 `data/sample_data/` - Sample CSV data
+
+### 3. [CNF](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/ladieslearningcode/llc-sql/master/data/cnf.db)
+**База данных Canadian National Railway**
+- Маршруты, станции, расписания
+- Транспортная логистика
+- Оптимизация маршрутов
+- Метрики производительности
+
+📁 `src/cnf/` - SQL queries and examples
+
+### 4. [BasketBall](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/wyattowalsh/sports-analytics/main/basketball/data/basketball.sqlite)
+**База данных спортивной аналитики**
+- Команды, игроки, игры
+- Статистика игроков
+- Производительность команд
+- Анализ сезона
+
+📁 `src/basketball/` - SQL queries and examples
+📁 `data/sample_data/` - Sample CSV data
+
+### 5. [Sakila](https://sqliteonline.com/#urldb=https://raw.githubusercontent.com/ivanceras/sakila/master/sqlite-sakila-db/sakila.db)
+**База данных DVD-проката**
+- Фильмы, актеры, категории
+- Клиенты, аренды
+- Отслеживание инвентаря
+- Анализ доходов
+
+📁 `src/sakila/` - SQL queries and examples
+
+## 📁 Структура проекта
+
+```
+sql/
+├── src/                    # SQL query files
+│   ├── chinook/           # Music store queries
+│   ├── northwind/         # Business queries
+│   ├── cnf/               # Railway queries
+│   ├── basketball/        # Sports queries
+│   └── sakila/            # DVD rental queries
+├── data/                  # Sample data
+│   └── sample_data/       # CSV files for practice
+├── docs/                  # Documentation
+├── basketball/            # Basketball resources
+├── img/                   # Images
+├── .gitignore            # Git ignore rules
+└── README.md             # This file
+```
+
+## 🚀 Начало работы
+
+1. **Choose a database** from the examples above
+2. **Open in SQLite Online** using the provided links
+3. **Explore the schema** using: `SELECT name FROM sqlite_master WHERE type = 'table';`
+4. **Run sample queries** from the `src/` directory
+5. **Practice with sample data** from `data/sample_data/`
+
+## 📖 Путь обучения
+
+### Уровень новичка
+- Базовые операторы SELECT
+- Фильтрация с WHERE
+- Сортировка с ORDER BY
+- Простые агрегации
+
+### Средний уровень
+- Операции JOIN
+- GROUP BY и HAVING
+- Подзапросы
+- Функции даты/времени
+
+### Продвинутый уровень
+- Оконные функции
+- CTE (Обобщенные табличные выражения)
+- Оптимизация производительности
+- Сложная бизнес-аналитика
+
+## 🛠️ Инструменты и ресурсы
+
+- [SQLite Online](https://sqliteonline.com/) - Web-based SQLite editor
+- [DB Browser for SQLite](https://sqlitebrowser.org/) - Desktop application
+- [SQLite Documentation](https://www.sqlite.org/docs.html)
+
+## 📊 Включенные образцы данных
+
+All databases include sample CSV data for offline practice:
+- Artists, Albums, Tracks (Chinook)
+- Products, Orders, Customers (NorthWind)
+- Teams, Players, Games (Basketball)
+- And more...
+
+## 🎯 Практические применения
+
+- **Бизнес-аналитика**: Анализ продаж, сегментация клиентов
+- **Анализ данных**: Выявление трендов, метрики производительности
+- **Спортивная аналитика**: Статистика игроков, производительность команд
+- **Логистика**: Оптимизация маршрутов, анализ расписаний
+- **Управление запасами**: Уровни запасов, точки повторного заказа
 
 ![dupley_maxim_igorevich](img/DupleyMI.jpg)
 
@@ -18,11 +131,27 @@
 
 📲 **Telegram №2:** [@dupley_maxim_1999](https://t.me/dupley_maxim_1999)
 
-📅 **Дата:** 14.03.2025
+## 📅 История версий
 
-▶️ **Версия 1.0**
+**Версия 2.0** - Февраль 2026
+- Добавлена структурированная организация проекта
+- Созданы реальные SQL-файлы запросов для каждой базы данных
+- Добавлены образцы CSV-данных для офлайн-практики
+- Улучшена документация и путь обучения
 
-```textline
-※ Предложения по сотрудничеству можете присылать на почту ※
-📧 maksimqwe42@mail.ru
-```
+**Версия 1.0** - Март 2025
+- Первоначальный выпуск со ссылками на базы данных
+
+## 📬 Contact
+
+💼 **Author:** Дуплей Максим Игоревич
+
+📲 **Telegram №1:** [@quadd4rv1n7](https://t.me/quadd4rv1n7)
+
+📲 **Telegram №2:** [@dupley_maxim_1999](https://t.me/dupley_maxim_1999)
+
+📧 **Email:** maksimqwe42@mail.ru
+
+---
+
+*Идеально подходит для новичков в SQL и профессионалов в области анализа данных!*

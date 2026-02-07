@@ -1,20 +1,20 @@
--- Chinook Database Queries
--- Music store database with artists, albums, tracks, customers, invoices
+-- Запросы к базе данных Chinook
+-- База данных музыкального магазина с исполнителями, альбомами, треками, клиентами, счетами
 
--- 1. Basic table exploration
+-- 1. Базовое исследование таблиц
 SELECT name AS table_name
 FROM sqlite_master 
 WHERE type = 'table';
 
--- 2. Get database schema for specific table
+-- 2. Получить схему базы данных для конкретной таблицы
 PRAGMA table_info(Album);
 
--- 3. Simple data exploration
+-- 3. Простое исследование данных
 SELECT * FROM Artist LIMIT 5;
 SELECT * FROM Album LIMIT 5;
 SELECT * FROM Track LIMIT 5;
 
--- 4. Find all albums by a specific artist (AC/DC example)
+-- 4. Найти все альбомы конкретного исполнителя (пример AC/DC)
 SELECT 
     a.Name AS Artist,
     al.Title AS Album
@@ -22,7 +22,7 @@ FROM Artist a
 JOIN Album al ON a.ArtistId = al.ArtistId
 WHERE a.Name = 'AC/DC';
 
--- 5. Find top 10 most expensive tracks
+-- 5. Найти 10 самых дорогих треков
 SELECT 
     t.Name AS Track,
     a.Title AS Album,
@@ -32,7 +32,7 @@ JOIN Album al ON t.AlbumId = al.AlbumId
 ORDER BY t.UnitPrice DESC
 LIMIT 10;
 
--- 6. Count tracks per genre
+-- 6. Подсчитать треки по жанрам
 SELECT 
     g.Name AS Genre,
     COUNT(t.TrackId) AS TrackCount
@@ -41,7 +41,7 @@ JOIN Track t ON g.GenreId = t.GenreId
 GROUP BY g.GenreId, g.Name
 ORDER BY TrackCount DESC;
 
--- 7. Find customers from specific country
+-- 7. Найти клиентов из конкретной страны
 SELECT 
     FirstName,
     LastName,
@@ -51,7 +51,7 @@ FROM Customer
 WHERE Country = 'USA'
 ORDER BY LastName;
 
--- 8. Total sales by country
+-- 8. Общие продажи по странам
 SELECT 
     c.Country,
     COUNT(i.InvoiceId) AS TotalInvoices,
@@ -61,7 +61,7 @@ JOIN Invoice i ON c.CustomerId = i.CustomerId
 GROUP BY c.Country
 ORDER BY TotalSales DESC;
 
--- 9. Best selling tracks
+-- 9. Самые продаваемые треки
 SELECT 
     t.Name AS Track,
     a.Title AS Album,
@@ -75,7 +75,7 @@ GROUP BY t.TrackId
 ORDER BY TotalSold DESC
 LIMIT 10;
 
--- 10. Customer purchase history
+-- 10. История покупок клиента
 SELECT 
     c.FirstName,
     c.LastName,

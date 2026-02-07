@@ -1,20 +1,20 @@
--- Sakila Database Queries
--- DVD rental store database with films, customers, rentals, payments
+-- Запросы к базе данных Sakila
+-- База данных DVD-проката с фильмами, клиентами, арендами, платежами
 
--- 1. Basic table exploration
+-- 1. Базовое исследование таблиц
 SELECT name AS table_name
 FROM sqlite_master 
 WHERE type = 'table';
 
--- 2. Get database schema
+-- 2. Получить схему базы данных
 PRAGMA table_info(film);
 
--- 3. Simple data exploration
+-- 3. Простое исследование данных
 SELECT * FROM film LIMIT 5;
 SELECT * FROM customer LIMIT 5;
 SELECT * FROM rental LIMIT 5;
 
--- 4. Find films by category
+-- 4. Найти фильмы по категории
 SELECT 
     f.title,
     c.name AS category,
@@ -27,7 +27,7 @@ WHERE c.name = 'Action'
 ORDER BY f.rental_rate DESC
 LIMIT 10;
 
--- 5. Most popular films by rental count
+-- 5. Самые популярные фильмы по количеству аренд
 SELECT 
     f.title,
     COUNT(r.rental_id) AS rental_count
@@ -38,7 +38,7 @@ GROUP BY f.film_id
 ORDER BY rental_count DESC
 LIMIT 10;
 
--- 6. Customer rental history
+-- 6. История аренд клиента
 SELECT 
     c.first_name,
     c.last_name,
@@ -52,7 +52,7 @@ JOIN film f ON i.film_id = f.film_id
 WHERE c.customer_id = 1
 ORDER BY r.rental_date DESC;
 
--- 7. Revenue by store
+-- 7. Доходы по магазинам
 SELECT 
     s.store_id,
     a.address,
@@ -69,7 +69,7 @@ JOIN payment p ON r.rental_id = p.rental_id
 GROUP BY s.store_id
 ORDER BY total_revenue DESC;
 
--- 8. Actor filmography
+-- 8. Фильмография актера
 SELECT 
     a.first_name,
     a.last_name,
@@ -81,7 +81,7 @@ JOIN film f ON fa.film_id = f.film_id
 WHERE a.first_name = 'PENELOPE' AND a.last_name = 'GUINESS'
 ORDER BY f.release_year;
 
--- 9. Overdue rentals
+-- 9. Просроченные аренды
 SELECT 
     c.first_name,
     c.last_name,
@@ -97,7 +97,7 @@ WHERE r.return_date IS NULL
   AND date('now') > date(r.rental_date, '+' || f.rental_duration || ' days')
 ORDER BY days_rented DESC;
 
--- 10. Monthly revenue report
+-- 10. Ежемесячный отчет о доходах
 SELECT 
     strftime('%Y-%m', p.payment_date) AS month,
     COUNT(p.payment_id) AS total_payments,

@@ -1,20 +1,20 @@
--- Northwind Database Queries
--- Classic business database with suppliers, products, customers, orders
+-- Запросы к базе данных Northwind
+-- Классическая бизнес-база данных с поставщиками, продуктами, клиентами, заказами
 
--- 1. Basic table exploration
+-- 1. Базовое исследование таблиц
 SELECT name AS table_name
 FROM sqlite_master 
 WHERE type = 'table';
 
--- 2. Get database schema
+-- 2. Получить схему базы данных
 PRAGMA table_info(Products);
 
--- 3. Simple data exploration
+-- 3. Простое исследование данных
 SELECT * FROM Categories LIMIT 5;
 SELECT * FROM Products LIMIT 5;
 SELECT * FROM Customers LIMIT 5;
 
--- 4. Find products in specific category
+-- 4. Найти продукты в конкретной категории
 SELECT 
     c.CategoryName,
     p.ProductName,
@@ -24,7 +24,7 @@ JOIN Products p ON c.CategoryID = p.CategoryID
 WHERE c.CategoryName = 'Beverages'
 ORDER BY p.UnitPrice DESC;
 
--- 5. Find suppliers from specific country
+-- 5. Найти поставщиков из конкретной страны
 SELECT 
     CompanyName,
     ContactName,
@@ -34,7 +34,7 @@ FROM Suppliers
 WHERE Country = 'UK'
 ORDER BY CompanyName;
 
--- 6. Top 10 most expensive products
+-- 6. 10 самых дорогих продуктов
 SELECT 
     ProductName,
     UnitPrice,
@@ -43,7 +43,7 @@ FROM Products
 ORDER BY UnitPrice DESC
 LIMIT 10;
 
--- 7. Products that need reordering (low stock)
+-- 7. Продукты, требующие повторного заказа (низкий запас)
 SELECT 
     ProductName,
     UnitsInStock,
@@ -52,7 +52,7 @@ FROM Products
 WHERE UnitsInStock <= ReorderLevel
 ORDER BY UnitsInStock;
 
--- 8. Total orders by customer
+-- 8. Общее количество заказов по клиентам
 SELECT 
     c.CompanyName,
     COUNT(o.OrderID) AS TotalOrders,
@@ -64,7 +64,7 @@ GROUP BY c.CustomerID
 ORDER BY TotalSpent DESC
 LIMIT 10;
 
--- 9. Sales by employee
+-- 9. Продажи по сотрудникам
 SELECT 
     e.FirstName || ' ' || e.LastName AS Employee,
     COUNT(o.OrderID) AS OrdersHandled,
@@ -75,7 +75,7 @@ JOIN "Order Details" od ON o.OrderID = od.OrderID
 GROUP BY e.EmployeeID
 ORDER BY TotalSales DESC;
 
--- 10. Monthly sales report
+-- 10. Ежемесячный отчет по продажам
 SELECT 
     strftime('%Y-%m', OrderDate) AS Month,
     COUNT(OrderID) AS TotalOrders,

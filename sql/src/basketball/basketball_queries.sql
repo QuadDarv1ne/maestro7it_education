@@ -1,20 +1,20 @@
--- Basketball Database Queries
--- Sports analytics database with teams, players, games, statistics
+-- Запросы к базе данных Basketball
+-- База данных спортивной аналитики с командами, игроками, играми, статистикой
 
--- 1. Basic table exploration
+-- 1. Базовое исследование таблиц
 SELECT name AS table_name
 FROM sqlite_master 
 WHERE type = 'table';
 
--- 2. Get database schema for Team table
+-- 2. Получить схему базы данных для таблицы Team
 PRAGMA table_info(Team);
 
--- 3. Simple data exploration
+-- 3. Простое исследование данных
 SELECT * FROM Team LIMIT 5;
 SELECT * FROM Player LIMIT 5;
 SELECT * FROM Game LIMIT 5;
 
--- 4. Find teams founded after 2000
+-- 4. Найти команды, основанные после 2000 года
 SELECT 
     full_name,
     abbreviation,
@@ -23,7 +23,7 @@ FROM Team
 WHERE year_founded > 2000
 ORDER BY year_founded;
 
--- 5. Teams by conference
+-- 5. Команды по конференциям
 SELECT 
     conference,
     COUNT(*) AS team_count
@@ -31,7 +31,7 @@ FROM Team
 GROUP BY conference
 ORDER BY team_count DESC;
 
--- 6. Players with specific position
+-- 6. Игроки с конкретной позицией
 SELECT 
     p.name,
     p.team_abbreviation,
@@ -42,7 +42,7 @@ FROM Player p
 WHERE p.position = 'PG'  -- Point Guard
 ORDER BY p.name;
 
--- 7. Player statistics for specific season
+-- 7. Статистика игроков за конкретный сезон
 SELECT 
     p.name,
     p.team_abbreviation,
@@ -56,7 +56,7 @@ WHERE ps.season = 2022
 ORDER BY ps.pts DESC
 LIMIT 10;
 
--- 8. Team win-loss record
+-- 8. Рекорд побед-поражений команды
 SELECT 
     t.full_name,
     SUM(CASE WHEN g.home_team_id = t.team_id AND g.home_team_score > g.visitor_team_score THEN 1
@@ -71,7 +71,7 @@ WHERE strftime('%Y', g.date_game) = '2022'
 GROUP BY t.team_id
 ORDER BY wins DESC;
 
--- 9. Top scorers by team
+-- 9. Лучшие бомбардиры по командам
 SELECT 
     t.full_name AS team,
     p.name AS player,
@@ -83,7 +83,7 @@ WHERE ps.season = 2022
 ORDER BY ps.pts DESC
 LIMIT 15;
 
--- 10. Game attendance statistics
+-- 10. Статистика посещаемости игр
 SELECT 
     AVG(attendance) AS avg_attendance,
     MAX(attendance) AS max_attendance,
