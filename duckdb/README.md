@@ -70,6 +70,7 @@
 - `exports/` - Директория для экспортированных файлов
 - `data/` - Директория для данных
 - `logs/` - Директория для файлов логов
+- `run_examples.bat` - Скрипт для удобного запуска различных компонентов проекта
 
 ## Руководство по синтаксису SQL в DuckDB
 
@@ -390,6 +391,11 @@ while True:
 5. To test DuckDB installation:
    ```
    python test_duckdb.py
+   ```
+
+6. To run the interactive examples script (Windows):
+   ```
+   run_examples.bat
    ```
 
 3. To run in debug mode:

@@ -268,7 +268,10 @@ class OzonAnalytics:
         
         logger.info(f"Экспорт DataFrame в CSV: {filepath}")
         try:
-            df.to_csv(filepath, index=False, **EXPORT_CONFIG['csv_format_options'])
+            # Объединить параметры, передаваемые в to_csv, избегая дублирования
+            csv_params = EXPORT_CONFIG['csv_format_options'].copy()
+            csv_params['index'] = False  # Убедиться, что index всегда False
+            df.to_csv(filepath, **csv_params)
             logger.info(f"Экспорт завершен: {filepath}")
             return filepath
         except Exception as e:
@@ -299,7 +302,10 @@ class OzonAnalytics:
         
         logger.info(f"Экспорт DataFrame в JSON: {filepath}")
         try:
-            df.to_json(filepath, **EXPORT_CONFIG['json_format_options'], force_ascii=False)
+            # Объединить параметры, передаваемые в to_json, избегая дублирования
+            json_params = EXPORT_CONFIG['json_format_options'].copy()
+            json_params['force_ascii'] = False  # Убедиться, что force_ascii всегда False
+            df.to_json(filepath, **json_params)
             logger.info(f"Экспорт завершен: {filepath}")
             return filepath
         except Exception as e:

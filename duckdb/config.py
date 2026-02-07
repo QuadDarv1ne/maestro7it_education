@@ -32,12 +32,10 @@ ANALYTICS_CONFIG = {
 # Настройки экспорта
 EXPORT_CONFIG = {
     'csv_format_options': {
-        'header': True,
-        'delimiter': ',',
-        'nullstr': ''
+        'index': False
     },
     'json_format_options': {
-        'array_as_json': True,
-        'records_orientation': 'rows'
+        'orient': 'records',
+        'force_ascii': False
     }
 }
