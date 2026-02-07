@@ -184,3 +184,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+# Additional temp files
+temp_*.txt
+temp_*
+TempFile*
+*.temp

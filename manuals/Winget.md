@@ -459,3 +459,4 @@ winget upgrade --all --silent
 | Chocolatey | Windows | Долгое время развития |
 | Scoop | Windows | Ориентирован на разработчиков |
 | Ninite | Windows | Простота установки |
+
