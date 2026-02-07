@@ -58,11 +58,18 @@
 
 ## Files
 
-- `ozon_db_setup.py` - Main script to create the database, insert sample data, and run analytics
-- `advanced_analytics.py` - Advanced analytical queries and data export functionality
-- `test_duckdb.py` - Simple test script to verify DuckDB installation
-- `duckdb_install_guide.txt` - Installation guide for DuckDB on Windows
-- `requirements.txt` - Python dependencies
+- `main.py` - Главная точка входа проекта с поддержкой различных режимов работы
+- `ozon_db_setup.py` - Скрипт для создания базы данных, вставки данных и аналитики
+- `analytics.py` - Расширенная аналитика с возможностью экспорта данных
+- `config.py` - Конфигурационный файл с настройками проекта
+- `utils.py` - Вспомогательные функции для логирования и форматирования
+- `setup_project.py` - Скрипт установки и настройки проекта
+- `test_duckdb.py` - Простой скрипт для проверки установки DuckDB
+- `duckdb_install_guide.txt` - Руководство по установке DuckDB на Windows
+- `requirements.txt` - Зависимости Python
+- `exports/` - Директория для экспортированных файлов
+- `data/` - Директория для данных
+- `logs/` - Директория для файлов логов
 
 ## Руководство по синтаксису SQL в DuckDB
 
@@ -346,12 +353,12 @@ while True:
 
 ### Installation
 
-1. Install DuckDB:
+1. Quick setup with setup script:
    ```
-   pip install duckdb
+   python setup_project.py
    ```
 
-2. Or install all dependencies from requirements.txt:
+2. Or install all dependencies manually:
    ```
    pip install -r requirements.txt
    ```
@@ -363,12 +370,24 @@ while True:
    python ozon_db_setup.py
    ```
 
-2. To run advanced analytics and data export:
+2. To run full project workflow (init + analytics + export):
    ```
-   python advanced_analytics.py
+   python main.py --full-analysis
    ```
 
-3. To test DuckDB installation:
+3. To run specific components:
+   ```
+   python main.py --init-db          # Initialize database
+   python main.py --run-analytics    # Run analytics
+   python main.py --export-data      # Export data
+   ```
+
+4. To run advanced analytics and data export:
+   ```
+   python analytics.py
+   ```
+
+5. To test DuckDB installation:
    ```
    python test_duckdb.py
    ```
