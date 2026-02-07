@@ -16,3 +16,32 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {number[]} nums
+ * @return {number}
+ */
+var rob = function(nums) {
+    const n = nums.length;
+    
+    // Базовые случаи
+    if (n === 0) return 0;
+    if (n === 1) return nums[0];
+    if (n === 2) return Math.max(nums[0], nums[1]);
+    
+    // Функция для линейного случая
+    function robRange(start, end) {
+        let prev2 = 0, prev1 = 0;
+        
+        for (let i = start; i <= end; i++) {
+            const current = Math.max(prev1, prev2 + nums[i]);
+            prev2 = prev1;
+            prev1 = current;
+        }
+        
+        return prev1;
+    }
+    
+    // Два сценария
+    return Math.max(robRange(0, n - 2),
+                    robRange(1, n - 1));
+};

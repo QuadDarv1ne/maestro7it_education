@@ -16,3 +16,32 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+public:
+    int rob(vector<int>& nums) {
+        int n = nums.size();
+        
+        // Базовые случаи
+        if (n == 0) return 0;
+        if (n == 1) return nums[0];
+        if (n == 2) return max(nums[0], nums[1]);
+        
+        // Два сценария для кругового расположения
+        return max(robRange(nums, 0, n - 2),  // Без последнего дома
+                   robRange(nums, 1, n - 1)); // Без первого дома
+    }
+    
+private:
+    // Решение для линейного случая (House Robber I)
+    int robRange(vector<int>& nums, int start, int end) {
+        int prev2 = 0, prev1 = 0;
+        
+        for (int i = start; i <= end; i++) {
+            int current = max(prev1, prev2 + nums[i]);
+            prev2 = prev1;
+            prev1 = current;
+        }
+        
+        return prev1;
+    }
+};
