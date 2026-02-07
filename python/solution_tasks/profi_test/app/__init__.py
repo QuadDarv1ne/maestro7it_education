@@ -80,9 +80,7 @@ def create_app(config=None):
     apply_startup_optimizations(app)
     
     # Инициализация оптимизатора памяти
-    from app.memory_optimizer import memory_optimizer, periodic_memory_cleanup
-    import atexit
-    atexit.register(periodic_memory_cleanup)  # Clean up on exit
+    from app.memory_optimizer import memory_optimizer
     
     # Инициализация бенчмаркинга производительности
     from app.performance_benchmark import register_benchmark_commands, add_benchmark_to_jinja
@@ -130,14 +128,6 @@ def create_app(config=None):
     from app.enhanced_ml_recommender import enhanced_ml_recommender_instance
     app.enhanced_ml_recommender = enhanced_ml_recommender_instance
     
-    # Инициализация расширенной аналитики
-    from app.advanced_analytics import analytics_engine
-    app.advanced_analytics = analytics_engine
-    
-    # Инициализация менеджера пользовательского опыта
-    from app.ux_api import ux_manager
-    app.ux_manager = ux_manager
-    
     # Инициализация визуализаций
     from app.visualizations import visualizer
     app.visualizer = visualizer
@@ -146,17 +136,9 @@ def create_app(config=None):
     from app.enhanced_reports import enhanced_reports
     app.enhanced_reports = enhanced_reports
     
-    # Инициализация расширенных уведомлений
-    from app.advanced_notifications import notification_manager
-    app.advanced_notifications = notification_manager
-    
     # Инициализация обработчика данных
     from app.data_processor import data_processor
     app.data_processor = data_processor
-    
-    # Инициализация расширенного менеджера кэша
-    from app.advanced_caching import cache_manager
-    app.cache_manager = cache_manager
     
     # Инициализация Redis кэша
     from app.redis_cache import redis_cache_manager
@@ -171,9 +153,6 @@ def create_app(config=None):
     from app.system_monitoring import system_monitor
     app.system_monitor = system_monitor
     
-    # Инициализация расширенных проверок состояния
-    from app.health_check import health_api
-    app.register_blueprint(health_api, url_prefix='/api')
     # Инициализация комплексной системы проверки состояния
     from app.health_check_comprehensive import init_health_check
     init_health_check(app)
@@ -183,24 +162,7 @@ def create_app(config=None):
     # Инициализация расширенного управления конфигурацией
     from app.config_management_advanced import init_config_management
     init_config_management(app)
-
-    # Инициализация расширенного структурированного логирования
-    from app.structured_logging_advanced import init_structured_logging
-    init_structured_logging(app)
-    # Инициализация расширенного тестирования API
-    from app.api_testing_advanced import init_api_testing
-    init_api_testing(app)
-    
-    # Инициализация продвинутой асинхронной обработки задач
-    from app.async_task_processor import async_task_processor, register_async_commands
-    async_task_processor.init_app(app)
-    register_async_commands(app)
-    
-    # Инициализация middleware сжатия запросов/ответов
-    from app.compression_middleware import CompressionMiddleware, register_compression_commands
-    compression_middleware = CompressionMiddleware(app)
-    register_compression_commands(app)
-    
+   
     # Инициализация продвинутого пула соединений с БД
     from app.database_pooling_advanced import advanced_connection_pool, register_pool_advanced_commands
     advanced_connection_pool.init_app(app)
@@ -289,10 +251,6 @@ def create_app(config=None):
     ux_manager.init_app(app)
     register_ux_commands(app)
 
-
-
-
-    
     # Инициализация middleware корреляции запросов
     from app.request_correlation import correlation_middleware
     app.correlation_middleware = correlation_middleware
@@ -330,9 +288,8 @@ def create_app(config=None):
     register_query_plan_commands(app)
     
     # Инициализация профилировщика производительности
-    from app.performance_profiler import performance_profiler, profiling_api
+    from app.performance_profiler import performance_profiler
     app.performance_profiler = performance_profiler
-    app.register_blueprint(profiling_api, url_prefix='/api/profiling')
     
     # Регистрация команд управления профилированием
     from app.performance_profiler import register_profiling_commands
@@ -359,10 +316,6 @@ def create_app(config=None):
     init_celery_app(app)  # Initialize Celery with the app
     define_tasks()  # Define all tasks after celery is initialized
     
-    # Инициализация продвинутого асинхронного процессора задач
-    from app.async_task_processor import async_task_processor
-    app.async_task_processor = async_task_processor
-    
     # Отложенная инициализация планировщика для ускорения запуска приложения
     if not (config and hasattr(config, 'TESTING') and config.TESTING):
         # Запуск планировщика в отдельном потоке для ускорения старта приложения
@@ -370,57 +323,10 @@ def create_app(config=None):
         scheduler_thread = threading.Thread(target=task_scheduler.start, daemon=True)
         scheduler_thread.start()  # Автозапуск планировщика только в продакшене в отдельном потоке
     
-    # Инициализация менеджера безопасности
-    from app.advanced_security import security_manager
-    app.security_manager = security_manager
-    
-    # Инициализация расширенного менеджера безопасности
-    from app.enhanced_security import enhanced_security
-    app.enhanced_security = enhanced_security
-    enhanced_security.init_app(app)
-    
-    # Регистрация команд управления безопасностью
-    from app.enhanced_security import register_security_commands
-    register_security_commands(app)
-    
     # Инициализация движка бизнес-аналитики
     from app.business_intelligence import bi_engine_v2
     app.bi_engine = bi_engine_v2
     app.bi_engine_v2 = bi_engine_v2  # Avoid duplicate assignment
-    
-    # Инициализация менеджера пользователей
-    from app.user_management import user_manager
-    app.user_manager = user_manager
-    
-    # Инициализация систем управления контентом
-    from app.content_management import content_moderation_engine, content_quality_analyzer, content_optimizer
-    app.content_moderation_engine = content_moderation_engine
-    app.content_quality_analyzer = content_quality_analyzer
-    app.content_optimizer = content_optimizer
-    
-    # Инициализация менеджера комментариев
-    from app.advanced_comments import comment_manager
-    app.comment_manager = comment_manager
-    
-    # Инициализация менеджера уведомлений - используем ту же переменную, чтобы избежать дублирования
-    # from app.advanced_notifications import notification_manager  # Уже импортирован выше
-    app.notification_manager = notification_manager
-    
-    # Инициализация менеджера рейтингов
-    from app.advanced_ratings import rating_manager
-    app.rating_manager = rating_manager
-    
-    # Инициализация движка ML рекомендаций
-    from app.ml_recommendations import recommendation_engine
-    app.recommendation_engine = recommendation_engine
-    
-    # Инициализация расширенного поискового движка
-    from app.advanced_search import search_engine
-    app.search_engine = search_engine
-    
-    # bi_engine_v2 уже инициализован выше, избегаем дублирования
-    
-
     
     # Register blueprints
     from app.routes import main
@@ -429,68 +335,15 @@ def create_app(config=None):
     from app.admin import admin
     from app.recommendations import recommendations_bp
     from app.progress import progress_bp
-    from app.mobile_api import mobile_api
-    from app.market_api import market_api
-    from app.feedback import feedback_bp
-    from app.calendar_integration import calendar_bp
-    from app.portfolio import portfolio_bp
-    from app.telegram_bot import telegram_bot
-    from app.monitoring import monitoring
-    from app.task_api import task_api
-    from app.advanced_api import advanced_api
-    from app.ux_api import ux_api
-    from app.reports_api import reports_api
-    from app.notifications_api import notifications_api
-    from app.data_api import data_api
-    from app.monitoring_api import monitoring_api
-    from app.scheduler_api import scheduler_api
-    from app.security_api import security_api
-    from app.user_api import user_api
-    from app.comments_api import comments_api
-    from app.ratings_api import ratings_api
-    from app.analytics_api import analytics_api
-    from app.notifications import notifications
-    app.register_blueprint(analytics_api, url_prefix='/api/analytics')
-    
-    # Добавляем новые модули рекомендаций и поиска
-    from app.recommendations_api import recommendations_api
-    app.register_blueprint(recommendations_api, url_prefix='/api/recommendations')
-    
-    from app.search_api import search_api
-    app.register_blueprint(search_api, url_prefix='/api/search')
-    
-    from app.bi_api import bi_api_v2
-    app.register_blueprint(bi_api_v2, url_prefix='/api/bi')
-    
-    from app.content_api import content_api_v2
-    app.register_blueprint(content_api_v2, url_prefix='/api/content')
-    # api_docs_bp is registered in init_api_docs function
-    
+
+    # api_docs_bp is registered in init_api_docs function    
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(test)
     app.register_blueprint(admin)
     app.register_blueprint(recommendations_bp)
     app.register_blueprint(progress_bp)
-    app.register_blueprint(mobile_api, url_prefix='/api')
-    app.register_blueprint(market_api, url_prefix='/api')
-    app.register_blueprint(feedback_bp, url_prefix='/api')
-    app.register_blueprint(calendar_bp, url_prefix='/api')
-    app.register_blueprint(portfolio_bp, url_prefix='/api')
-    app.register_blueprint(monitoring, url_prefix='/api/monitoring')
-    app.register_blueprint(task_api, url_prefix='/api')
-    app.register_blueprint(advanced_api, url_prefix='/api/advanced')
-    app.register_blueprint(ux_api, url_prefix='/api/ux')
-    app.register_blueprint(reports_api, url_prefix='/api/reports')
-    app.register_blueprint(data_api, url_prefix='/api/data')
-    app.register_blueprint(monitoring_api, url_prefix='/api/monitoring')
-    app.register_blueprint(scheduler_api, url_prefix='/api/scheduler')
-    app.register_blueprint(security_api, url_prefix='/api/security')
-    app.register_blueprint(user_api, url_prefix='/api/users')
-    app.register_blueprint(comments_api, url_prefix='/api/comments')
-    app.register_blueprint(notifications_api, url_prefix='/api/notifications')
-    app.register_blueprint(notifications)
-    app.register_blueprint(ratings_api, url_prefix='/api/ratings')
+
     # api_docs_bp is registered in init_api_docs function
 
     # Create database tables only in application context
