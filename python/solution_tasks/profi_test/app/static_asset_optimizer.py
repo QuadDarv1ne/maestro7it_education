@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Static file serving and asset delivery optimization
+Оптимизация обслуживания статических файлов и доставки ресурсов
 """
 import logging
 import os
@@ -16,7 +17,7 @@ from collections import defaultdict
 logger = logging.getLogger(__name__)
 
 class StaticAssetOptimizer:
-    """Optimize static file serving and asset delivery"""
+    """Оптимизирует обслуживание статических файлов и доставку ресурсов"""
     
     def __init__(self, app: Optional[Flask] = None):
         self.app = app
@@ -40,7 +41,7 @@ class StaticAssetOptimizer:
             self.init_app(app)
     
     def init_app(self, app: Flask):
-        """Initialize static asset optimizer with Flask app"""
+        """Инициализирует оптимизатор статических ресурсов с Flask приложением"""
         self.app = app
         
         # Update configuration
@@ -56,13 +57,13 @@ class StaticAssetOptimizer:
         logger.info(f"Static asset optimizer initialized for folder: {static_folder}")
     
     def _register_static_handler(self, app: Flask):
-        """Register optimized static file serving handler"""
+        """Регистрирует оптимизированный обработчик обслуживания статических файлов"""
         
         # Store original static handler
         original_send_static_file = app.send_static_file
         
         def optimized_send_static_file(filename: str) -> Response:
-            """Optimized static file serving with caching and compression"""
+            """Оптимизированное обслуживание статических файлов с кэшированием и сжатием"""
             try:
                 # Get file path
                 static_folder = self.optimization_config['static_folder']
@@ -154,7 +155,7 @@ class StaticAssetOptimizer:
         app.send_static_file = optimized_send_static_file
     
     def _generate_etag(self, file_path: str) -> str:
-        """Generate ETag for file based on content hash"""
+        """Генерирует ETag для файла на основе хэша содержимого"""
         try:
             # Use cached ETag if available
             cache_key = f"etag:{file_path}"
@@ -179,7 +180,7 @@ class StaticAssetOptimizer:
             return f"error-{hash(file_path)}"
     
     def _get_cached_file_content(self, file_path: str) -> Optional[bytes]:
-        """Get file content with caching"""
+        """Получает содержимое файла с кэшированием"""
         try:
             # Check cache first
             cache_key = f"content:{file_path}"
@@ -215,7 +216,7 @@ class StaticAssetOptimizer:
             return None
     
     def _get_compressed_content(self, content: bytes, file_path: str) -> Optional[bytes]:
-        """Get gzip-compressed content with caching"""
+        """Получает содержимое сжатое gzip с кэшированием"""
         try:
             # Check compression cache
             cache_key = f"compressed:{file_path}"
@@ -244,7 +245,7 @@ class StaticAssetOptimizer:
             return None
     
     def preload_critical_assets(self, asset_paths: list):
-        """Preload critical static assets into cache"""
+        """Предварительно загружает критические статические ресурсы в кэш"""
         def preload():
             start_time = time.time()
             loaded_count = 0
@@ -268,7 +269,7 @@ class StaticAssetOptimizer:
         return thread
     
     def get_asset_statistics(self) -> Dict[str, Any]:
-        """Get static asset serving statistics"""
+        """Получает статистику обслуживания статических ресурсов"""
         with self.cache_lock:
             return {
                 'files_served': self.stats['files_served'],
@@ -282,7 +283,7 @@ class StaticAssetOptimizer:
             }
     
     def clear_asset_cache(self):
-        """Clear all cached assets"""
+        """Очищает весь кэш ресурсов"""
         with self.cache_lock:
             # Keep ETags, clear content and compression caches
             self.asset_cache = {k: v for k, v in self.asset_cache.items() if k.startswith('etag:')}
@@ -291,7 +292,7 @@ class StaticAssetOptimizer:
         logger.info("Static asset cache cleared")
 
 class CDNManager:
-    """Content Delivery Network integration for static assets"""
+    """Интеграция Content Delivery Network для статических ресурсов"""
     
     def __init__(self, app: Optional[Flask] = None):
         self.app = app
@@ -305,7 +306,7 @@ class CDNManager:
             self.init_app(app)
     
     def init_app(self, app: Flask):
-        """Initialize CDN manager with Flask app"""
+        """Инициализирует менеджер CDN с Flask приложением"""
         self.app = app
         
         # Load CDN configuration from app config
@@ -319,7 +320,7 @@ class CDNManager:
             logger.info(f"CDN enabled with base URL: {self.cdn_config['base_url']}")
     
     def get_asset_url(self, asset_path: str) -> str:
-        """Get CDN URL for asset if available, otherwise local URL"""
+        """Получает URL ресурса CDN если доступен, иначе локальный URL"""
         if not self.cdn_config['enabled']:
             return f"/static/{asset_path}"
         
@@ -331,7 +332,7 @@ class CDNManager:
         return f"{self.cdn_config['base_url']}/{asset_path}"
     
     def add_asset_mapping(self, local_path: str, cdn_url: str):
-        """Add mapping for specific asset to CDN URL"""
+        """Добавляет отображение для конкретного ресурса в URL CDN"""
         self.cdn_config['asset_mapping'][local_path] = cdn_url
 
 # Global instances
@@ -340,14 +341,14 @@ cdn_manager = CDNManager()
 
 # Flask CLI commands
 def register_static_asset_commands(app):
-    """Register CLI commands for static asset optimization"""
+    """Регистрирует CLI команды для оптимизации статических ресурсов"""
     import click
     from flask.cli import with_appcontext
     
     @app.cli.command('asset-stats')
     @with_appcontext
     def show_asset_stats():
-        """Show static asset serving statistics"""
+        """Показывает статистику обслуживания статических ресурсов"""
         if hasattr(app, 'static_asset_optimizer'):
             stats = app.static_asset_optimizer.get_asset_statistics()
             click.echo("Static Asset Statistics:")
@@ -362,7 +363,7 @@ def register_static_asset_commands(app):
     @app.cli.command('asset-cache-clear')
     @with_appcontext
     def clear_asset_cache():
-        """Clear static asset cache"""
+        """Очищает кэш статических ресурсов"""
         if hasattr(app, 'static_asset_optimizer'):
             app.static_asset_optimizer.clear_asset_cache()
             click.echo("Static asset cache cleared")
@@ -373,7 +374,7 @@ def register_static_asset_commands(app):
     @click.argument('assets', nargs=-1)
     @with_appcontext
     def preload_assets(assets):
-        """Preload specified static assets into cache"""
+        """Предварительно загружает указанные статические ресурсы в кэш"""
         if hasattr(app, 'static_asset_optimizer') and assets:
             thread = app.static_asset_optimizer.preload_critical_assets(list(assets))
             click.echo(f"Preloading {len(assets)} assets in background")

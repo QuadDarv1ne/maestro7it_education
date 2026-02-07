@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Advanced database connection pooling with performance optimization
+Продвинутый пул соединений с базой данных с оптимизацией производительности
 """
 import logging
 from sqlalchemy import create_engine, event
@@ -16,7 +17,7 @@ import os
 logger = logging.getLogger(__name__)
 
 class AdvancedConnectionPool:
-    """Advanced database connection pool with performance monitoring and optimization"""
+    """Продвинутый пул соединений с базой данных с мониторингом и оптимизацией производительности"""
     
     def __init__(self, app=None):
         self.app = app
@@ -43,7 +44,7 @@ class AdvancedConnectionPool:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize advanced connection pool with Flask app"""
+        """Инициализирует продвинутый пул соединений с Flask приложением"""
         self.app = app
         
         # Get database configuration
@@ -64,7 +65,7 @@ class AdvancedConnectionPool:
         self._start_monitoring()
     
     def _create_advanced_engine(self, database_uri: str, engine_options: Dict[str, Any]):
-        """Create SQLAlchemy engine with advanced pooling configuration"""
+        """Создает SQLAlchemy engine с продвинутой конфигурацией пула"""
         
         # Base pool configuration
         pool_config = {
@@ -140,11 +141,11 @@ class AdvancedConnectionPool:
         return engine
     
     def _register_event_listeners(self):
-        """Register SQLAlchemy event listeners for performance monitoring"""
+        """Регистрирует SQLAlchemy event listeners для мониторинга производительности"""
         
         @event.listens_for(self.engine, "connect")
         def set_connection_pragmas(dbapi_connection, connection_record):
-            """Set database-specific optimizations on connection"""
+            """Устанавливает оптимизации базы данных при соединении"""
             try:
                 cursor = dbapi_connection.cursor()
                 
@@ -178,7 +179,7 @@ class AdvancedConnectionPool:
         
         @event.listens_for(self.engine, "checkout")
         def receive_checkout(dbapi_connection, connection_record, connection_proxy):
-            """Monitor connection checkout performance"""
+            """Мониторит производительность получения соединения"""
             start_time = time.time()
             connection_record.info['checkout_start_time'] = start_time
             
@@ -187,7 +188,7 @@ class AdvancedConnectionPool:
         
         @event.listens_for(self.engine, "checkin")
         def receive_checkin(dbapi_connection, connection_record):
-            """Monitor connection checkin and calculate checkout time"""
+            """Мониторит возврат соединения и рассчитывает время получения"""
             checkout_time = time.time() - connection_record.info.get('checkout_start_time', time.time())
             
             with self.pool_lock:
@@ -200,18 +201,18 @@ class AdvancedConnectionPool:
         
         @event.listens_for(self.engine, "close")
         def receive_close(dbapi_connection, connection_record):
-            """Monitor connection closure"""
+            """Мониторит закрытие соединения"""
             with self.pool_lock:
                 self.pool_stats['connections_closed'] += 1
         
         @event.listens_for(self.engine, "close_detached")
         def receive_close_detached(dbapi_connection):
-            """Monitor detached connection closure"""
+            """Мониторит закрытие отсоединенного соединения"""
             with self.pool_lock:
                 self.pool_stats['detached_connections_closed'] += 1
     
     def _start_monitoring(self):
-        """Start background performance monitoring"""
+        """Запускает фоновый мониторинг производительности"""
         if not self.is_monitoring:
             self.is_monitoring = True
             self.monitoring_thread = threading.Thread(target=self._monitor_pool_performance, daemon=True)
@@ -219,17 +220,17 @@ class AdvancedConnectionPool:
             logger.info("Connection pool performance monitoring started")
     
     def _monitor_pool_performance(self):
-        """Background thread for monitoring pool performance"""
+        """Фоновый поток для мониторинга производительности пула"""
         import time
         while self.is_monitoring:
             try:
                 # Collect pool statistics
                 pool = self.engine.pool
                 stats = {
-                    'pool_size': pool.size(),
-                    'checked_out_connections': pool.checkedout(),
+                    'pool_size': pool.size() if hasattr(pool, 'size') else 1,
+                    'checked_out_connections': pool.checkedout() if hasattr(pool, 'checkedout') else 0,
                     'overflow_connections': getattr(pool, 'overflow', 0),
-                    'checked_in_connections': pool.checkedin(),
+                    'checked_in_connections': pool.checkedin() if hasattr(pool, 'checkedin') else 1,
                 }
                 
                 # Log if pool is under pressure
@@ -249,7 +250,7 @@ class AdvancedConnectionPool:
     @contextmanager
     def get_connection(self, timeout: Optional[float] = None):
         """
-        Context manager for getting database connections with timeout
+        Context manager для получения соединения с базой данных с таймаутом
         
         Usage:
             with pool.get_connection(timeout=5.0) as conn:
@@ -274,12 +275,12 @@ class AdvancedConnectionPool:
     
     def execute_query(self, query, params=None, timeout: Optional[float] = None):
         """
-        Execute query with performance monitoring and timeout
+        Выполняет запрос с мониторингом производительности и таймаутом
         
         Args:
-            query: SQL query string or SQLAlchemy text object
-            params: Query parameters
-            timeout: Query execution timeout in seconds
+            query: SQL запрос строка или SQLAlchemy text объект
+            params: Параметры запроса
+            timeout: Таймаут выполнения запроса в секундах
         """
         start_time = time.time()
         
@@ -309,7 +310,7 @@ class AdvancedConnectionPool:
             raise
     
     def get_pool_statistics(self) -> Dict[str, Any]:
-        """Get comprehensive pool performance statistics"""
+        """Получает полную статистику производительности пула"""
         with self.pool_lock:
             stats = self.pool_stats.copy()
             
@@ -343,7 +344,7 @@ class AdvancedConnectionPool:
             return stats
     
     def resize_pool(self, new_size: int, new_overflow: int = None):
-        """Dynamically resize the connection pool"""
+        """Динамически изменяет размер пула соединений"""
         try:
             pool = self.engine.pool
             
@@ -361,7 +362,7 @@ class AdvancedConnectionPool:
             raise
     
     def cleanup_connections(self):
-        """Force cleanup of stale connections"""
+        """Принудительная очистка устаревших соединений"""
         try:
             pool = self.engine.pool
             pool.recreate()
@@ -374,14 +375,14 @@ advanced_connection_pool = AdvancedConnectionPool()
 
 # Flask CLI commands
 def register_pool_advanced_commands(app):
-    """Register CLI commands for advanced pool management"""
+    """Регистрирует CLI команды для управления продвинутым пулом"""
     import click
     from flask.cli import with_appcontext
     
     @app.cli.command('pool-stats-advanced')
     @with_appcontext
     def show_advanced_pool_stats():
-        """Show advanced connection pool statistics"""
+        """Показывает статистику продвинутого пула соединений"""
         if hasattr(app, 'connection_pool'):
             stats = app.connection_pool.get_pool_statistics()
             click.echo("Advanced Connection Pool Statistics:")
@@ -400,7 +401,7 @@ def register_pool_advanced_commands(app):
     @click.option('--overflow', default=None, type=int, help='New overflow size')
     @with_appcontext
     def resize_pool(size, overflow):
-        """Resize connection pool"""
+        """Изменяет размер пула соединений"""
         if hasattr(app, 'connection_pool'):
             try:
                 app.connection_pool.resize_pool(size, overflow)

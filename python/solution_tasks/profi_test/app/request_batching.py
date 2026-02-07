@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Request batching and bulk operations for improved performance
+Пакетная обработка запросов и массовые операции для улучшения производительности
 """
 import logging
 from flask import request, jsonify
@@ -13,7 +14,7 @@ import json
 logger = logging.getLogger(__name__)
 
 class RequestBatcher:
-    """Batch similar requests together for better performance"""
+    """Группирует похожие запросы вместе для лучшей производительности"""
     
     def __init__(self, app=None):
         self.app = app
@@ -33,20 +34,20 @@ class RequestBatcher:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize request batcher with Flask app"""
+        """Инициализирует группировщик запросов с Flask приложением"""
         self.app = app
         app.request_batcher = self
     
     def register_batch_endpoint(self, endpoint_name: str, batch_processor: Callable, 
                               batch_size: int = None, timeout: float = None):
         """
-        Register a batch processing endpoint
+        Регистрирует конечную точку пакетной обработки
         
         Args:
-            endpoint_name: Name of the endpoint
-            batch_processor: Function to process batched requests
-            batch_size: Maximum batch size
-            timeout: Maximum wait time for batch formation
+            endpoint_name: Название конечной точки
+            batch_processor: Функция для обработки пакетных запросов
+            batch_size: Максимальный размер пакета
+            timeout: Максимальное время ожидания формирования пакета
         """
         self.batch_callbacks[endpoint_name] = {
             'processor': batch_processor,
@@ -59,15 +60,15 @@ class RequestBatcher:
     def add_to_batch(self, endpoint_name: str, request_data: Dict[str, Any], 
                     callback: Callable = None) -> Any:
         """
-        Add request to batch processing queue
+        Добавляет запрос в очередь пакетной обработки
         
         Args:
-            endpoint_name: Name of the batch endpoint
-            request_data: Request data to process
-            callback: Optional callback for result
+            endpoint_name: Название конечной точки пакетной обработки
+            request_data: Данные запроса для обработки
+            callback: Необязательный обратный вызов для результата
         
         Returns:
-            Result of batch processing
+            Результат пакетной обработки
         """
         if endpoint_name not in self.batch_callbacks:
             raise ValueError(f"Batch endpoint '{endpoint_name}' not registered")
@@ -106,7 +107,7 @@ class RequestBatcher:
         return batch_item['result']
     
     def _start_batch_processor(self, endpoint_name: str):
-        """Start background thread for batch processing"""
+        """Запускает фоновый поток для пакетной обработки"""
         def process_batch():
             try:
                 self._process_batch_queue(endpoint_name)
@@ -118,7 +119,7 @@ class RequestBatcher:
         self.batch_threads[endpoint_name] = thread
     
     def _process_batch_queue(self, endpoint_name: str):
-        """Process requests in batch queue"""
+        """Обрабатывает запросы в очереди пакетной обработки"""
         config = self.batch_callbacks[endpoint_name]
         processor = config['processor']
         max_batch_size = config['batch_size']
@@ -164,7 +165,7 @@ class RequestBatcher:
                     break
     
     def _execute_batch(self, endpoint_name: str, batch_items: List[Dict], processor: Callable):
-        """Execute batch processing"""
+        """Выполняет пакетную обработку"""
         start_time = time.time()
         
         try:
@@ -198,7 +199,7 @@ class RequestBatcher:
             raise
 
 class BulkOperationManager:
-    """Manage bulk database operations for better performance"""
+    """Управляет массовыми операциями базы данных для лучшей производительности"""
     
     def __init__(self, app=None):
         self.app = app
@@ -209,17 +210,17 @@ class BulkOperationManager:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize bulk operation manager with Flask app"""
+        """Инициализирует менеджер массовых операций с Flask приложением"""
         self.app = app
         app.bulk_operation_manager = self
     
     def register_bulk_operation(self, operation_name: str, bulk_processor: Callable):
-        """Register a bulk operation processor"""
+        """Регистрирует процессор массовой операции"""
         self.bulk_operations[operation_name] = bulk_processor
         logger.info(f"Registered bulk operation: {operation_name}")
     
     def execute_bulk_operation(self, operation_name: str, data_list: List[Dict]) -> Dict[str, Any]:
-        """Execute bulk operation with performance optimization"""
+        """Выполняет массовую операцию с оптимизацией производительности"""
         if operation_name not in self.bulk_operations:
             raise ValueError(f"Bulk operation '{operation_name}' not registered")
         
@@ -256,7 +257,7 @@ class BulkOperationManager:
 
 def batch_request(batch_key: str = None, batch_size: int = 10):
     """
-    Decorator for creating batch request endpoints
+    Декоратор для создания конечных точек пакетных запросов
     
     Usage:
         @app.route('/api/batch/users', methods=['POST'])
@@ -322,7 +323,7 @@ def batch_request(batch_key: str = None, batch_size: int = 10):
     return decorator
 
 class DatabaseBatchInserter:
-    """Optimize bulk database insertions"""
+    """Оптимизирует массовую вставку в базу данных"""
     
     def __init__(self, model_class, batch_size: int = 100):
         self.model_class = model_class
@@ -331,7 +332,7 @@ class DatabaseBatchInserter:
         self.lock = threading.Lock()
         
     def add(self, **kwargs):
-        """Add item to batch"""
+        """Добавить элемент в пакет"""
         with self.lock:
             self.batch_buffer.append(kwargs)
             
@@ -339,7 +340,7 @@ class DatabaseBatchInserter:
                 self._flush_batch()
     
     def add_many(self, items: List[Dict]):
-        """Add multiple items to batch"""
+        """Добавить несколько элементов в пакет"""
         with self.lock:
             self.batch_buffer.extend(items)
             
@@ -347,13 +348,13 @@ class DatabaseBatchInserter:
                 self._flush_batch()
     
     def flush(self):
-        """Flush remaining items in buffer"""
+        """Очистить оставшиеся элементы в буфере"""
         with self.lock:
             if self.batch_buffer:
                 self._flush_batch()
     
     def _flush_batch(self):
-        """Flush current batch to database"""
+        """Очистить текущий пакет в базу данных"""
         if not self.batch_buffer:
             return
         
@@ -383,14 +384,14 @@ bulk_manager = BulkOperationManager()
 
 # Flask CLI commands
 def register_batching_commands(app):
-    """Register CLI commands for request batching"""
+    """Регистрирует CLI команды для пакетной обработки"""
     import click
     from flask.cli import with_appcontext
     
     @app.cli.command('batch-stats')
     @with_appcontext
     def show_batch_stats():
-        """Show request batching statistics"""
+        """Показывает статистику пакетной обработки"""
         if hasattr(app, 'request_batcher'):
             stats = app.request_batcher.stats
             click.echo("Request Batching Statistics:")
@@ -402,7 +403,7 @@ def register_batching_commands(app):
     @app.cli.command('bulk-stats')
     @with_appcontext
     def show_bulk_stats():
-        """Show bulk operation statistics"""
+        """Показывает статистику массовых операций"""
         if hasattr(app, 'bulk_operation_manager'):
             stats = app.bulk_operation_manager.stats
             click.echo("Bulk Operation Statistics:")

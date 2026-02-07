@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Advanced asynchronous task processing with Celery optimization
+Продвинутая асинхронная обработка задач с оптимизацией Celery
 """
 import logging
 from celery import Celery
@@ -14,7 +15,7 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 class AsyncTaskProcessor:
-    """Advanced async task processing with performance optimization"""
+    """Продвинутый процессор асинхронных задач с оптимизацией производительности"""
     
     def __init__(self, app=None):
         self.app = app
@@ -26,7 +27,7 @@ class AsyncTaskProcessor:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize Celery with Flask app"""
+        """Инициализирует Celery с Flask приложением"""
         self.app = app
         
         # Configure Celery
@@ -69,7 +70,7 @@ class AsyncTaskProcessor:
         self.setup_periodic_tasks()
     
     def register_tasks(self):
-        """Register all task classes with Celery"""
+        """Регистрирует все классы задач в Celery"""
         
         @self.celery.task(bind=True, name='app.tasks.high_priority.send_notification')
         def send_notification_task(self, user_id: int, message: str, notification_type: str = 'info'):
@@ -192,7 +193,7 @@ class AsyncTaskProcessor:
                 raise
     
     def setup_periodic_tasks(self):
-        """Setup periodic task scheduling"""
+        """Настройка расписания периодических задач"""
         self.celery.conf.beat_schedule = {
             'daily-data-cleanup': {
                 'task': 'app.tasks.background.data_cleanup',
@@ -256,7 +257,7 @@ class AsyncTaskProcessor:
                 raise
     
     def update_task_stats(self, task_name: str, execution_time: float, status: str, error: str = None):
-        """Update task execution statistics"""
+        """Обновляет статистику выполнения задач"""
         if task_name not in self.task_stats:
             self.task_stats[task_name] = {
                 'total_executions': 0,
@@ -284,7 +285,7 @@ class AsyncTaskProcessor:
         stats['max_execution_time'] = max(stats['max_execution_time'], execution_time)
     
     def get_task_statistics(self) -> Dict[str, Any]:
-        """Get comprehensive task execution statistics"""
+        """Получает статистику выполнения задач"""
         return {
             'task_stats': self.task_stats,
             'celery_config': dict(self.celery.conf),
@@ -292,7 +293,7 @@ class AsyncTaskProcessor:
         }
     
     def get_worker_info(self) -> Dict[str, Any]:
-        """Get information about Celery workers"""
+        """Получает информацию о воркерах Celery"""
         try:
             inspector = self.celery.control.inspect()
             return {

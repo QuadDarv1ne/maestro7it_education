@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Advanced query result caching with Redis for performance optimization
+Продвинутый кэш результатов запросов с Redis для оптимизации производительности
 """
 import logging
 import json
@@ -13,7 +14,7 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 class QueryResultCache:
-    """Advanced caching system for database query results with Redis"""
+    """Продвинутая система кэширования для результатов запросов базы данных с Redis"""
     
     def __init__(self, app=None, redis_client=None):
         self.app = app
@@ -33,7 +34,7 @@ class QueryResultCache:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize cache with Flask app"""
+        """Инициализирует кэш с Flask приложением"""
         self.app = app
         
         # Try to get Redis client from app
@@ -58,7 +59,7 @@ class QueryResultCache:
         app.query_result_cache = self
     
     def _generate_cache_key(self, query: str, params: Dict = None) -> str:
-        """Generate unique cache key for query and parameters"""
+        """Генерирует уникальный ключ кэша для запроса и параметров"""
         # Create hash of query and parameters
         key_data = {
             'query': query,
@@ -70,7 +71,7 @@ class QueryResultCache:
         return f"{self.cache_prefix}{key_hash}"
     
     def _serialize_result(self, result: Any) -> bytes:
-        """Serialize query result for storage"""
+        """Сериализует результат запроса для хранения"""
         try:
             # Handle different result types
             if isinstance(result, list):
@@ -89,7 +90,7 @@ class QueryResultCache:
             raise
     
     def _deserialize_result(self, data: bytes) -> Any:
-        """Deserialize stored query result"""
+        """Десериализует сохраненный результат запроса"""
         try:
             return pickle.loads(data)
         except Exception as e:
@@ -98,12 +99,12 @@ class QueryResultCache:
     
     def get(self, query: str, params: Dict = None, ttl: Optional[int] = None) -> Optional[Any]:
         """
-        Get cached query result
+        Получает результат кэшированного запроса
         
         Args:
-            query: SQL query string
-            params: Query parameters
-            ttl: Time to live override
+            query: SQL запрос строка
+            params: Параметры запроса
+            ttl: Время жизни переопределение
         """
         if not self.redis:
             return None
@@ -134,13 +135,13 @@ class QueryResultCache:
     
     def set(self, query: str, result: Any, params: Dict = None, ttl: Optional[int] = None) -> bool:
         """
-        Cache query result
+        Кэширует результат запроса
         
         Args:
-            query: SQL query string
-            result: Query result to cache
-            params: Query parameters
-            ttl: Time to live in seconds
+            query: SQL запрос строка
+            result: Результат запроса для кэширования
+            params: Параметры запроса
+            ttl: Время жизни в секундах
         """
         if not self.redis:
             return False
@@ -166,7 +167,7 @@ class QueryResultCache:
             return False
     
     def delete(self, query: str, params: Dict = None) -> bool:
-        """Delete cached query result"""
+        """Удаляет результат кэшированного запроса"""
         if not self.redis:
             return False
         
@@ -183,7 +184,7 @@ class QueryResultCache:
             return False
     
     def invalidate_pattern(self, pattern: str) -> int:
-        """Invalidate all cache entries matching pattern"""
+        """Аннулирует все записи кэша, соответствующие шаблону"""
         if not self.redis:
             return 0
         
@@ -205,7 +206,7 @@ class QueryResultCache:
             return 0
     
     def clear_all(self) -> int:
-        """Clear all query cache entries"""
+        """Очищает все записи кэша запросов"""
         if not self.redis:
             return 0
         
@@ -226,7 +227,7 @@ class QueryResultCache:
             return 0
     
     def get_cache_statistics(self) -> Dict[str, Any]:
-        """Get cache performance statistics"""
+        """Получает статистику производительности кэша"""
         if not self.redis:
             return {'error': 'Redis not available'}
         
@@ -276,12 +277,12 @@ class QueryResultCache:
 
 def cached_query(ttl: int = 300, key_prefix: str = '', invalidate_on: List[str] = None):
     """
-    Decorator for caching database query results
+    Декоратор для кэширования результатов запросов базы данных
     
     Args:
-        ttl: Time to live in seconds
-        key_prefix: Prefix for cache key
-        invalidate_on: List of patterns to invalidate when this query is executed
+        ttl: Время жизни в секундах
+        key_prefix: Префикс для ключа кэша
+        invalidate_on: Список шаблонов для аннулирования когда этот запрос выполняется
     """
     def decorator(func):
         @wraps(func)
@@ -323,7 +324,7 @@ def cached_query(ttl: int = 300, key_prefix: str = '', invalidate_on: List[str] 
     return decorator
 
 class CacheManager:
-    """High-level cache management interface"""
+    """Интерфейс высокого уровня для управления кэшем"""
     
     def __init__(self, app=None):
         self.app = app
@@ -333,13 +334,13 @@ class CacheManager:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize cache manager with Flask app"""
+        """Инициализирует менеджер кэша с Flask приложением"""
         self.app = app
         self.query_cache = QueryResultCache(app)
         app.cache_manager = self
     
     def cache_user_data(self, user_id: int, data: Any, key: str, ttl: int = 1800):
-        """Cache user-specific data"""
+        """Кэширует данные конкретного пользователя"""
         if not self.query_cache:
             return False
         
@@ -347,7 +348,7 @@ class CacheManager:
         return self.query_cache.set(cache_key, data, ttl=ttl)
     
     def get_user_data(self, user_id: int, key: str):
-        """Get cached user-specific data"""
+        """Получает кэшированные данные конкретного пользователя"""
         if not self.query_cache:
             return None
         
@@ -355,25 +356,25 @@ class CacheManager:
         return self.query_cache.get(cache_key)
     
     def cache_query_result(self, query: str, result: Any, params: Dict = None, ttl: int = 300):
-        """Cache database query result"""
+        """Кэширует результат запроса базы данных"""
         if not self.query_cache:
             return False
         return self.query_cache.set(query, result, params, ttl)
     
     def get_cached_query(self, query: str, params: Dict = None):
-        """Get cached query result"""
+        """Получает результат кэшированного запроса"""
         if not self.query_cache:
             return None
         return self.query_cache.get(query, params)
     
     def invalidate_user_cache(self, user_id: int):
-        """Invalidate all cache entries for a user"""
+        """Аннулирует все записи кэша для пользователя"""
         if not self.query_cache:
             return 0
         return self.query_cache.invalidate_pattern(f"user:{user_id}:")
     
     def get_cache_report(self) -> Dict[str, Any]:
-        """Get comprehensive cache performance report"""
+        """Получает комплексный отчет о производительности кэша"""
         if not self.query_cache:
             return {'error': 'Cache not initialized'}
         
@@ -387,14 +388,14 @@ cache_manager = CacheManager()
 
 # Flask CLI commands
 def register_cache_result_commands(app):
-    """Register CLI commands for query result caching"""
+    """Регистрирует CLI команды для кэширования результатов запросов"""
     import click
     from flask.cli import with_appcontext
     
     @app.cli.command('cache-stats')
     @with_appcontext
     def show_cache_stats():
-        """Show query result cache statistics"""
+        """Показывает статистику кэша результатов запросов"""
         if hasattr(app, 'cache_manager'):
             report = app.cache_manager.get_cache_report()
             click.echo("Query Result Cache Statistics:")
@@ -406,7 +407,7 @@ def register_cache_result_commands(app):
     @click.confirmation_option(prompt='Are you sure you want to clear all query cache?')
     @with_appcontext
     def clear_cache():
-        """Clear all query result cache"""
+        """Очищает весь кэш результатов запросов"""
         if hasattr(app, 'query_result_cache'):
             deleted = app.query_result_cache.clear_all()
             click.echo(f"Cleared {deleted} cache entries")

@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Enhanced performance monitoring dashboard with real-time metrics and visualization
+Расширенная панель мониторинга производительности с реальными метриками и визуализацией
 """
 import logging
 from flask import Blueprint, render_template, jsonify, request
@@ -18,7 +19,7 @@ performance_dashboard = Blueprint('performance_dashboard_enhanced', __name__,
                                 template_folder='templates')
 
 class EnhancedPerformanceMonitor:
-    """Enhanced performance monitoring with real-time metrics collection"""
+    """Расширенный мониторинг производительности с сбором метрик в реальном времени"""
     
     def __init__(self, app=None):
         self.app = app
@@ -40,7 +41,7 @@ class EnhancedPerformanceMonitor:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize performance monitor with Flask app"""
+        """Инициализирует мониторинг производительности с Flask приложением"""
         self.app = app
         app.performance_monitor_enhanced = self
         
@@ -51,7 +52,7 @@ class EnhancedPerformanceMonitor:
         self.start_monitoring()
     
     def start_monitoring(self):
-        """Start background performance monitoring"""
+        """Запускает фоновый мониторинг производительности"""
         if not self.is_monitoring:
             self.is_monitoring = True
             self.monitoring_thread = threading.Thread(target=self._monitor_system, daemon=True)
@@ -59,7 +60,7 @@ class EnhancedPerformanceMonitor:
             logger.info("Enhanced performance monitoring started")
     
     def _monitor_system(self):
-        """Background system monitoring loop"""
+        """Цикл фонового системного мониторинга"""
         while self.is_monitoring:
             try:
                 # Collect system metrics
@@ -83,7 +84,7 @@ class EnhancedPerformanceMonitor:
                 time.sleep(10)  # Wait longer on error
     
     def _collect_system_metrics(self) -> Dict[str, Any]:
-        """Collect comprehensive system metrics"""
+        """Собирает комплексные системные метрики"""
         metrics = {}
         
         try:
@@ -143,7 +144,7 @@ class EnhancedPerformanceMonitor:
         return metrics
     
     def _check_alerts(self, metrics: Dict[str, Any]):
-        """Check metrics against thresholds and generate alerts"""
+        """Проверяет метрики по пороговым значениям и генерирует оповещения"""
         timestamp = datetime.utcnow().isoformat()
         
         # CPU usage alert
@@ -159,7 +160,7 @@ class EnhancedPerformanceMonitor:
             self._add_alert('HIGH_PROCESS_MEMORY', f"Process memory {metrics['process_memory_mb']:.1f}MB is high", timestamp)
     
     def _add_alert(self, alert_type: str, message: str, timestamp: str):
-        """Add alert to alert queue"""
+        """Добавляет оповещение в очередь оповещений"""
         alert = {
             'type': alert_type,
             'message': message,
@@ -171,11 +172,11 @@ class EnhancedPerformanceMonitor:
         logger.warning(f"Performance Alert [{alert_type}]: {message}")
     
     def get_current_metrics(self) -> Dict[str, Any]:
-        """Get current system metrics"""
+        """Получает текущие системные метрики"""
         return self._collect_system_metrics()
     
     def get_metrics_history(self, metric_name: str, hours: int = 1) -> List[Dict[str, Any]]:
-        """Get historical metrics for a specific metric"""
+        """Получает исторические данные для конкретной метрики"""
         if metric_name not in self.metrics_history:
             return []
         
@@ -192,22 +193,22 @@ class EnhancedPerformanceMonitor:
         return history
     
     def get_all_metrics_history(self, hours: int = 1) -> Dict[str, List]:
-        """Get historical data for all metrics"""
+        """Получает исторические данные для всех метрик"""
         result = {}
         for metric_name in self.metrics_history.keys():
             result[metric_name] = self.get_metrics_history(metric_name, hours)
         return result
     
     def get_alerts(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """Get recent alerts"""
+        """Получает последние оповещения"""
         return list(self.alerts)[-limit:]
     
     def get_monitoring_stats(self) -> Dict[str, Any]:
-        """Get monitoring statistics"""
+        """Получает статистику мониторинга"""
         return dict(self.monitoring_stats)
     
     def get_performance_report(self) -> Dict[str, Any]:
-        """Generate comprehensive performance report"""
+        """Генерирует комплексный отчет о производительности"""
         current_metrics = self.get_current_metrics()
         alerts = self.get_alerts(20)
         stats = self.get_monitoring_stats()
@@ -233,12 +234,12 @@ performance_monitor = EnhancedPerformanceMonitor()
 
 @performance_dashboard.route('/')
 def dashboard():
-    """Performance dashboard main page"""
+    """Основная страница панели мониторинга производительности"""
     return render_template('performance/dashboard.html')
 
 @performance_dashboard.route('/api/metrics')
 def api_metrics():
-    """Get current metrics"""
+    """Получить текущие метрики"""
     try:
         metrics = performance_monitor.get_current_metrics()
         return jsonify({
@@ -252,7 +253,7 @@ def api_metrics():
 
 @performance_dashboard.route('/api/metrics/history')
 def api_metrics_history():
-    """Get metrics history"""
+    """Получить историю метрик"""
     try:
         metric_name = request.args.get('metric')
         hours = int(request.args.get('hours', 1))
@@ -273,7 +274,7 @@ def api_metrics_history():
 
 @performance_dashboard.route('/api/alerts')
 def api_alerts():
-    """Get recent alerts"""
+    """Получить последние оповещения"""
     try:
         limit = int(request.args.get('limit', 50))
         alerts = performance_monitor.get_alerts(limit)
@@ -288,7 +289,7 @@ def api_alerts():
 
 @performance_dashboard.route('/api/report')
 def api_performance_report():
-    """Get comprehensive performance report"""
+    """Получить комплексный отчет о производительности"""
     try:
         report = performance_monitor.get_performance_report()
         return jsonify({
@@ -301,7 +302,7 @@ def api_performance_report():
 
 @performance_dashboard.route('/api/stats')
 def api_monitoring_stats():
-    """Get monitoring statistics"""
+    """Получить статистику мониторинга"""
     try:
         stats = performance_monitor.get_monitoring_stats()
         return jsonify({
@@ -314,7 +315,7 @@ def api_monitoring_stats():
 
 # Template for performance dashboard
 def create_dashboard_template():
-    """Create the HTML template for the performance dashboard"""
+    """Создает HTML шаблон для панели мониторинга производительности"""
     template_content = """
 <!DOCTYPE html>
 <html>
@@ -503,21 +504,21 @@ def create_dashboard_template():
 
 # Flask CLI commands
 def register_performance_dashboard_commands(app):
-    """Register CLI commands for performance dashboard"""
+    """Регистрирует CLI команды для панели мониторинга производительности"""
     import click
     from flask.cli import with_appcontext
     
     @app.cli.command('perf-dashboard-init')
     @with_appcontext
     def init_dashboard():
-        """Initialize performance dashboard template"""
+        """Инициализирует шаблон панели мониторинга"""
         create_dashboard_template()
         click.echo("Performance dashboard template initialized")
     
     @app.cli.command('perf-report')
     @with_appcontext
     def show_performance_report():
-        """Show current performance report"""
+        """Показывает текущий отчет о производительности"""
         if hasattr(app, 'performance_monitor_enhanced'):
             report = app.performance_monitor_enhanced.get_performance_report()
             click.echo(json.dumps(report, indent=2, default=str))

@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Request/response compression middleware for improved performance
+Middleware сжатия запросов/ответов для улучшения производительности
 """
 import gzip
 import logging
@@ -12,7 +13,7 @@ from typing import Callable, Any
 logger = logging.getLogger(__name__)
 
 class CompressionMiddleware:
-    """Middleware for compressing HTTP requests and responses"""
+    """Middleware для сжатия HTTP запросов и ответов"""
     
     def __init__(self, app=None, compression_level=6):
         self.app = app
@@ -28,7 +29,7 @@ class CompressionMiddleware:
             self.init_app(app)
     
     def init_app(self, app):
-        """Initialize compression middleware with Flask app"""
+        """Инициализирует middleware сжатия с Flask приложением"""
         self.app = app
         
         # Register middleware
@@ -39,7 +40,7 @@ class CompressionMiddleware:
         app.compression_middleware = self
     
     def compress_request(self):
-        """Compress incoming request data if it's compressed"""
+        """Сжимает входящие данные запроса если они сжаты"""
         try:
             if request.content_encoding == 'gzip':
                 start_time = time.time()
@@ -62,7 +63,7 @@ class CompressionMiddleware:
             logger.warning(f"Error decompressing request: {e}")
     
     def compress_response(self, response: Response) -> Response:
-        """Compress outgoing response data if client supports it"""
+        """Сжимает исходящие данные ответа если клиент поддерживает это"""
         try:
             # Check if client accepts gzip compression
             if 'gzip' not in request.headers.get('Accept-Encoding', ''):
@@ -113,12 +114,12 @@ class CompressionMiddleware:
         return response
     
     def get_compression_stats(self) -> dict:
-        """Get compression statistics"""
+        """Получает статистику сжатия"""
         return self.compression_stats.copy()
 
 def compress_json_response(f: Callable) -> Callable:
     """
-    Decorator to enable compression for JSON responses
+    Декоратор для включения сжатия для JSON ответов
     
     Usage:
         @app.route('/api/data')
@@ -139,7 +140,7 @@ def compress_json_response(f: Callable) -> Callable:
     return decorated_function
 
 class BrotliCompressionMiddleware:
-    """Alternative middleware using Brotli compression (better compression ratio)"""
+    """Альтернативное middleware с использованием сжатия Brotli (лучшее соотношение сжатия)"""
     
     def __init__(self, app=None, quality=4):
         self.app = app
@@ -158,12 +159,12 @@ class BrotliCompressionMiddleware:
         except ImportError:
             self.brotli = None
             self.brotli_available = False
-            logger.warning("Brotli compression not available. Install 'brotli' package for better compression.")
+            logger.warning("Сжатие Brotli недоступно. Установите пакет 'brotli' для лучшего сжатия.")
     
     def init_app(self, app):
-        """Initialize Brotli compression middleware"""
+        """Инициализирует middleware сжатия Brotli"""
         if not self.brotli_available:
-            logger.warning("Skipping Brotli middleware initialization - brotli not installed")
+            logger.warning("Пропуск инициализации middleware Brotli - brotli не установлен")
             return
             
         self.app = app
@@ -172,7 +173,7 @@ class BrotliCompressionMiddleware:
         app.brotli_compression = self
     
     def handle_brotli_request(self):
-        """Handle brotli-compressed incoming requests"""
+        """Обрабатывает сжатые Brotli входящие запросы"""
         try:
             if request.content_encoding == 'br' and self.brotli_available:
                 compressed_data = request.get_data()
@@ -184,7 +185,7 @@ class BrotliCompressionMiddleware:
             logger.warning(f"Error decompressing Brotli request: {e}")
     
     def compress_brotli_response(self, response: Response) -> Response:
-        """Compress response using Brotli if client supports it"""
+        """Сжимает ответ с использованием Brotli если клиент поддерживает это"""
         try:
             if not self.brotli_available:
                 return response
@@ -241,14 +242,14 @@ class BrotliCompressionMiddleware:
 
 # Flask CLI commands for compression
 def register_compression_commands(app):
-    """Register CLI commands for compression monitoring"""
+    """Регистрирует CLI команды для мониторинга сжатия"""
     import click
     from flask.cli import with_appcontext
     
     @app.cli.command('compression-stats')
     @with_appcontext
     def show_compression_stats():
-        """Show compression statistics"""
+        """Показывает статистику сжатия"""
         if hasattr(app, 'compression_middleware'):
             stats = app.compression_middleware.get_compression_stats()
             click.echo("Gzip Compression Statistics:")
@@ -260,7 +261,7 @@ def register_compression_commands(app):
     @app.cli.command('enable-brotli')
     @with_appcontext
     def enable_brotli():
-        """Enable Brotli compression (requires brotli package)"""
+        """Включает сжатие Brotli (требуется пакет brotli)"""
         try:
             brotli_middleware = BrotliCompressionMiddleware()
             brotli_middleware.init_app(app)
