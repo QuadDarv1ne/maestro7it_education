@@ -54,42 +54,42 @@ goto menu
 :full_analysis
 echo.
 echo Запуск полного анализа...
-python main.py --full-analysis
+python src/main.py --full-analysis
 pause
 goto menu
 
 :init_db
 echo.
 echo Инициализация базы данных...
-python main.py --init-db
+python src/main.py --init-db
 pause
 goto menu
 
 :run_analytics
 echo.
 echo Запуск аналитики...
-python main.py --run-analytics
+python src/main.py --run-analytics
 pause
 goto menu
 
 :export_data
 echo.
 echo Экспорт данных...
-python main.py --export-data
+python src/main.py --export-data
 pause
 goto menu
 
 :advanced_analytics
 echo.
 echo Запуск расширенной аналитики...
-python analytics.py
+python src/analytics.py
 pause
 goto menu
 
 :test_duckdb
 echo.
 echo Тестирование установки DuckDB...
-python test_duckdb.py
+python src/test_duckdb.py
 pause
 goto menu
 
@@ -103,56 +103,56 @@ goto menu
 :data_validation
 echo.
 echo Проверка качества данных...
-python data_validator.py
+python src/data_validator.py
 pause
 goto menu
 
 :perf_monitor
 echo.
 echo Мониторинг производительности...
-python performance_monitor.py
+python src/performance_monitor.py
 pause
 goto menu
 
 :backup_manager
 echo.
 echo Резервное копирование...
-python backup_manager.py
+python src/backup_manager.py
 pause
 goto menu
 
 :demo_complete
 echo.
 echo Полная демонстрация проекта...
-python demo_complete.py
+python src/demo_complete.py
 pause
 goto menu
 
 :query_opt
 echo.
 echo Оптимизация запросов...
-python query_optimizer.py
+python src/query_optimizer.py
 pause
 goto menu
 
 :data_viz
 echo.
 echo Визуализация данных...
-python data_visualizer.py
+python src/data_visualizer.py
 pause
 goto menu
 
 :error_recov
 echo.
 echo Восстановление после ошибок...
-python error_recovery.py
+python src/error_recovery.py
 pause
 goto menu
 
 :db_migrate
 echo.
 echo Миграции базы данных...
-python db_migration.py
+python src/db_migration.py
 pause
 goto menu
 

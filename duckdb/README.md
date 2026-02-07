@@ -58,25 +58,25 @@
 
 ## Files
 
-- `main.py` - Главная точка входа проекта с поддержкой различных режимов работы
-- `ozon_db_setup.py` - Скрипт для создания базы данных, вставки данных и аналитики
-- `analytics.py` - Расширенная аналитика с возможностью экспорта данных
-- `config.py` - Конфигурационный файл с настройками проекта
-- `utils.py` - Вспомогательные функции для логирования и форматирования
-- `setup_project.py` - Скрипт установки и настройки проекта
-- `test_duckdb.py` - Простой скрипт для проверки установки DuckDB
+- `src/main.py` - Главная точка входа проекта с поддержкой различных режимов работы
+- `src/ozon_db_setup.py` - Скрипт для создания базы данных, вставки данных и аналитики
+- `src/analytics.py` - Расширенная аналитика с возможностью экспорта данных
+- `src/config.py` - Конфигурационный файл с настройками проекта
+- `src/utils.py` - Вспомогательные функции для логирования и форматирования
+- `src/setup_project.py` - Скрипт установки и настройки проекта
+- `src/test_duckdb.py` - Простой скрипт для проверки установки DuckDB
 - `duckdb_install_guide.txt` - Руководство по установке DuckDB на Windows
 - `requirements.txt` - Зависимости Python
 - `exports/` - Директория для экспортированных файлов
 - `data/` - Директория для данных
 - `logs/` - Директория для файлов логов
-- `backup_manager.py` - Модуль для резервного копирования и восстановления базы данных
-- `data_validator.py` - Модуль для проверки качества данных
-- `performance_monitor.py` - Модуль для мониторинга производительности запросов
-- `query_optimizer.py` - Модуль оптимизации SQL-запросов с анализом производительности
-- `data_visualizer.py` - Модуль визуализации данных с созданием графиков и диаграмм
-- `error_recovery.py` - Система восстановления после ошибок с точками восстановления
-- `db_migration.py` - Система управления миграциями базы данных
+- `src/backup_manager.py` - Модуль для резервного копирования и восстановления базы данных
+- `src/data_validator.py` - Модуль для проверки качества данных
+- `src/performance_monitor.py` - Модуль для мониторинга производительности запросов
+- `src/query_optimizer.py` - Модуль оптимизации SQL-запросов с анализом производительности
+- `src/data_visualizer.py` - Модуль визуализации данных с созданием графиков и диаграмм
+- `src/error_recovery.py` - Система восстановления после ошибок с точками восстановления
+- `src/db_migration.py` - Система управления миграциями базы данных
 - `run_examples.bat` - Скрипт для удобного запуска различных компонентов проекта
 
 ## Руководство по синтаксису SQL в DuckDB
@@ -390,29 +390,29 @@ while True:
 
 1. To run the main database setup:
    ```
-   python ozon_db_setup.py
+   python src/ozon_db_setup.py
    ```
 
 2. To run full project workflow (init + analytics + export):
    ```
-   python main.py --full-analysis
+   python src/main.py --full-analysis
    ```
 
 3. To run specific components:
    ```
-   python main.py --init-db          # Initialize database
-   python main.py --run-analytics    # Run analytics
-   python main.py --export-data      # Export data
+   python src/main.py --init-db          # Initialize database
+   python src/main.py --run-analytics    # Run analytics
+   python src/main.py --export-data      # Export data
    ```
 
 4. To run advanced analytics and data export:
    ```
-   python analytics.py
+   python src/analytics.py
    ```
 
 5. To test DuckDB installation:
    ```
-   python test_duckdb.py
+   python src/test_duckdb.py
    ```
 
 6. To run the interactive examples script (Windows):
@@ -437,22 +437,22 @@ while True:
 
 10. To run query optimization:
    ```
-   python query_optimizer.py
+   python src/query_optimizer.py
    ```
 
 11. To run data visualization:
    ```
-   python data_visualizer.py
+   python src/data_visualizer.py
    ```
 
 12. To run error recovery system:
    ```
-   python error_recovery.py
+   python src/error_recovery.py
    ```
 
 13. To run database migration system:
    ```
-   python db_migration.py
+   python src/db_migration.py
    ```
 
 3. To run in debug mode:
