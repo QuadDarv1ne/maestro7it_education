@@ -227,6 +227,21 @@ def create_app(config=None):
     from app.performance_dashboard_enhanced import performance_monitor, register_performance_dashboard_commands
     performance_monitor.init_app(app)
     register_performance_dashboard_commands(app)
+    
+    # Инициализация автоматического масштабирования
+    from app.auto_scaling import auto_scaler, register_auto_scaling_commands
+    auto_scaler.init_app(app)
+    register_auto_scaling_commands(app)
+    
+    # Инициализация продвинутого обнаружения аномалий
+    from app.anomaly_detection import AdvancedAnomalyDetector, register_anomaly_detection_commands
+    anomaly_detector = AdvancedAnomalyDetector(app)
+    register_anomaly_detection_commands(app)
+    
+    # Инициализация предиктивного анализа производительности
+    from app.performance_predictor import PerformancePredictor, register_prediction_commands
+    performance_predictor = PerformancePredictor(app)
+    register_prediction_commands(app)
 
 
 
