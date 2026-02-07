@@ -174,17 +174,24 @@ class AdvancedStructuredLogger:
     def log(self, level: LogLevel, message: str, module: str = "", function: str = "",
             metadata: Optional[Dict[str, Any]] = None, **kwargs):
         """Создание лог-записи"""
-        entry = LogEntry(
-            timestamp=datetime.utcnow().isoformat(),
-            level=level.value,
-            message=message,
-            module=module or getattr(self, '_current_module', ''),
-            function=function or getattr(self, '_current_function', ''),
-            thread_id=threading.current_thread().ident,
-            process_id=os.getpid(),
-            metadata=metadata or {},
-            **kwargs
-        )
+        # Определяем поля, которые принимает LogEntry
+        log_entry_fields = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'level': level.value,
+            'message': message,
+            'module': module or getattr(self, '_current_module', ''),
+            'function': function or getattr(self, '_current_function', ''),
+            'thread_id': threading.current_thread().ident,
+            'process_id': os.getpid(),
+            'metadata': metadata or {},
+        }
+        
+        # Добавляем только те поля из kwargs, которые определены в LogEntry
+        for key, value in kwargs.items():
+            if key in ['correlation_id', 'user_id', 'request_id', 'performance_data', 'trace_id']:
+                log_entry_fields[key] = value
+        
+        entry = LogEntry(**log_entry_fields)
         
         # Добавление в очередь
         queue_name = self._get_queue_name(level)
