@@ -1,0 +1,1079 @@
+{% extends "base.html" %}
+
+{% block title %}Мой профиль - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<!-- Обновление пользовательского профиля с модерными дизайнерскими решениями -->
+
+<style>
+:root {
+    --gradient-profile: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-gold: linear-gradient(135deg, #FFD700, #FFA500);
+    --transition-fast: all 0.3s ease;
+    --transition-medium: all 0.5s ease;
+    --transition-slow: all 0.8s ease;
+    --shadow-profile: 0 25px 50px -12px rgba(102, 126, 234, 0.25);
+    --border-radius-xl: 25px;
+    --border-radius-xxl: 35px;
+}
+
+/* Главный контейнер */
+.profile-modern-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 2rem 0;
+}
+
+/* Шапка профиля */
+.profile-header {
+    background: var(--gradient-profile);
+    border-radius: var(--border-radius-xxl);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-profile);
+}
+
+.profile-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+    z-index: 1;
+}
+
+.profile-header-content {
+    position: relative;
+    z-index: 2;
+    padding: 3rem;
+}
+
+/* Аватар с улучшенным дизайном */
+.profile-avatar-wrapper {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 1.5rem;
+}
+
+.profile-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #fff, #f8f9fa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: #667eea;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    border: 5px solid white;
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-avatar::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(transparent, rgba(255,255,255,0.3), transparent);
+    animation: rotate 3s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.profile-avatar:hover {
+    transform: scale(1.05) rotate(5deg);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+}
+
+.avatar-status {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 4px solid white;
+    background: #28a745;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    animation: pulse-status 2s infinite;
+}
+
+@keyframes pulse-status {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+/* Статистика профиля */
+.profile-stats-modern {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.stat-item-modern {
+    text-align: center;
+    padding: 1.5rem;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    transition: var(--transition-medium);
+    min-width: 150px;
+}
+
+.stat-item-modern:hover {
+    transform: translateY(-10px);
+    background: rgba(255,255,255,0.3);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.stat-number-modern {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.stat-label-modern {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* Достижения */
+.achievements-section {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.achievement-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.achievement-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    border-color: #667eea;
+}
+
+.achievement-card.locked {
+    opacity: 0.6;
+    filter: grayscale(1);
+}
+
+.achievement-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    transition: var(--transition-fast);
+}
+
+.achievement-card:hover .achievement-icon {
+    transform: scale(1.2) rotate(10deg);
+}
+
+.achievement-card.unlocked .achievement-icon {
+    color: #FFD700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    to { text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.6); }
+}
+
+.achievement-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.achievement-description {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.progress-circle {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    margin: 0 auto 2rem;
+}
+
+.progress-ring {
+    transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+    transition: stroke-dashoffset 1s ease-in-out;
+    stroke: #667eea;
+    stroke-width: 8;
+    fill: transparent;
+}
+
+.progress-ring-circle.background {
+    stroke: rgba(102, 126, 234, 0.2);
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #667eea;
+}
+
+/* Активность пользователя */
+.activity-section {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.activity-timeline {
+    position: relative;
+    padding-left: 3rem;
+}
+
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(to bottom, #667eea, #764ba2);
+    border-radius: 2px;
+}
+
+.activity-item {
+    position: relative;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 15px;
+    transition: var(--transition-medium);
+}
+
+.activity-item:hover {
+    transform: translateX(10px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.activity-item::before {
+    content: '';
+    position: absolute;
+    left: -38px;
+    top: 25px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    border: 4px solid white;
+    box-shadow: 0 0 0 4px #667eea;
+}
+
+.activity-date {
+    font-size: 0.9rem;
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.activity-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.activity-description {
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Графики активности */
+.charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.chart-card {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: var(--transition-medium);
+}
+
+.chart-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.chart-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.chart-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chart-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: none;
+    color: #667eea;
+    transition: var(--transition-fast);
+}
+
+.chart-btn:hover {
+    background: #667eea;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Секция с тестами */
+.tests-section {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.test-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.test-card-modern {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    transition: var(--transition-medium);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.test-card-modern:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    border-color: #667eea;
+}
+
+.test-card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-profile);
+}
+
+.test-methodology {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+.test-date {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.test-score {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.test-score-badge {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: var(--gradient-gold);
+    color: #333;
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+}
+
+/* Кнопки действий */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn-modern {
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: var(--transition-medium);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.btn-modern:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.btn-primary-modern {
+    background: var(--gradient-profile);
+    color: white;
+}
+
+.btn-outline-modern {
+    background: transparent;
+    border: 2px solid #667eea;
+    color: #667eea;
+}
+
+.btn-outline-modern:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .profile-header-content {
+        padding: 2rem 1.5rem;
+    }
+    
+    .profile-avatar-wrapper {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .profile-stats-modern {
+        gap: 1.5rem;
+    }
+    
+    .stat-item-modern {
+        min-width: 120px;
+        padding: 1rem;
+    }
+    
+    .stat-number-modern {
+        font-size: 2rem;
+    }
+    
+    .achievements-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .test-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-modern {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .activity-timeline {
+        padding-left: 2rem;
+    }
+    
+    .activity-item::before {
+        left: -28px;
+    }
+}
+
+/* Анимации */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-slide-in-left {
+    animation: slideInLeft 0.6s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 0.6s ease-out;
+}
+
+/* Эффекты для карточек */
+.card-hover-effect {
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.card-hover-effect::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.6s;
+}
+
+.card-hover-effect:hover::before {
+    left: 100%;
+}
+
+/* Прогресс-бары с улучшенным дизайном */
+.progress-modern {
+    height: 12px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(102, 126, 234, 0.1);
+    position: relative;
+}
+
+.progress-bar-modern {
+    height: 100%;
+    border-radius: 10px;
+    background: var(--gradient-profile);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar-modern::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Бейджи и метки */
+.badge-modern {
+    padding: 0.5rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: var(--transition-fast);
+}
+
+.badge-modern:hover {
+    transform: scale(1.05);
+}
+
+/* Градиентные разделители */
+.gradient-divider {
+    height: 4px;
+    background: var(--gradient-profile);
+    border-radius: 2px;
+    margin: 2rem 0;
+    opacity: 0.8;
+}
+
+/* Улучшенные иконки */
+.icon-modern {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--gradient-profile);
+    color: white;
+    font-size: 1.5rem;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    transition: var(--transition-medium);
+}
+
+.icon-modern:hover {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+}
+</style>
+
+<div class="profile-modern-container">
+    <div class="container">
+        <!-- Шапка профиля с современным дизайном -->
+        <div class="profile-header animate-fade-in-up">
+            <div class="profile-header-content">
+                <div class="text-center">
+                    <!-- Аватар с анимацией -->
+                    <div class="profile-avatar-wrapper">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="avatar-status online"></div>
+                    </div>
+                    
+                    <!-- Имя пользователя -->
+                    <h1 class="display-3 fw-bold text-white mb-3">
+                        {{ current_user.username }}
+                    </h1>
+                    
+                    <!-- Роли пользователя -->
+                    <div class="mb-4">
+                        {% if current_user.is_admin %}
+                        <span class="badge badge-modern bg-danger text-white me-2">
+                            <i class="fas fa-crown me-1"></i> Администратор
+                        </span>
+                        {% endif %}
+                        <span class="badge badge-modern bg-white text-primary">
+                            <i class="fas fa-calendar me-1"></i> 
+                            Участник с {{ current_user.created_at.strftime('%d.%m.%Y') }}
+                        </span>
+                    </div>
+                    
+                    <!-- Статистика профиля -->
+                    <div class="profile-stats-modern">
+                        <div class="stat-item-modern animate-slide-in-left">
+                            <div class="stat-number-modern">{{ tests_count or 0 }}</div>
+                            <div class="stat-label-modern">Тестов пройдено</div>
+                        </div>
+                        <div class="stat-item-modern">
+                            <div class="stat-number-modern">{{ recommendations_count or 0 }}</div>
+                            <div class="stat-label-modern">Рекомендаций</div>
+                        </div>
+                        <div class="stat-item-modern">
+                            <div class="stat-number-modern">{{ achievements_count or 0 }}</div>
+                            <div class="stat-label-modern">Достижений</div>
+                        </div>
+                        <div class="stat-item-modern animate-slide-in-right">
+                            <div class="stat-number-modern">{{ days_active or 0 }}</div>
+                            <div class="stat-label-modern">Дней активности</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Кнопки действий -->
+                    <div class="action-buttons">
+                        <a href="{{ url_for('auth.preferences') }}" class="btn-modern btn-outline-modern">
+                            <i class="fas fa-cog"></i> Настройки профиля
+                        </a>
+                        <a href="{{ url_for('test.methodology') }}" class="btn-modern btn-primary-modern">
+                            <i class="fas fa-plus-circle"></i> Пройти тест
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Достижения -->
+        <div class="achievements-section animate-fade-in-up">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-trophy me-3 text-warning"></i>
+                    Достижения
+                </h2>
+                <div class="progress-circle">
+                    <svg class="progress-ring" width="120" height="120">
+                        <circle class="progress-ring-circle background" 
+                                r="50" cx="60" cy="60"></circle>
+                        <circle class="progress-ring-circle" 
+                                r="50" cx="60" cy="60"
+                                stroke-dasharray="314.159"
+                                stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="progress-text">25%</div>
+                </div>
+            </div>
+            <div class="achievements-grid">
+                <!-- Примеры достижений -->
+                <div class="achievement-card unlocked card-hover-effect">
+                    <div class="achievement-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3 class="achievement-title">Первый шаг</h3>
+                    <p class="achievement-description">Пройдите первый тест</p>
+                </div>
+                <div class="achievement-card unlocked card-hover-effect">
+                    <div class="achievement-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="achievement-title">Аналитик</h3>
+                    <p class="achievement-description">Пройдите 3 теста</p>
+                </div>
+                <div class="achievement-card locked card-hover-effect">
+                    <div class="achievement-icon">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <h3 class="achievement-title">Эксперт</h3>
+                    <p class="achievement-description">Пройдите 10 тестов</p>
+                </div>
+                <div class="achievement-card locked card-hover-effect">
+                    <div class="achievement-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <h3 class="achievement-title">Мастер</h3>
+                    <p class="achievement-description">Достигните точности 90%+</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Активность пользователя -->
+        <div class="activity-section animate-fade-in-up">
+            <h2 class="mb-4">
+                <i class="fas fa-chart-bar me-3 text-info"></i>
+                Активность
+            </h2>
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="activity-timeline">
+                        <div class="activity-item">
+                            <div class="activity-date">Сегодня, 14:30</div>
+                            <h4 class="activity-title">Новый тест завершен</h4>
+                            <p class="activity-description">Вы успешно завершили тест "Методика Климова" с точностью 92%</p>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-date">Вчера, 10:15</div>
+                            <h4 class="activity-title">Регистрация в системе</h4>
+                            <p class="activity-description">Добро пожаловать в ПрофСтарт! Вы успешно зарегистрировались и активировали профиль</p>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-date">2 дня назад</div>
+                            <h4 class="activity-title">Первое знакомство</h4>
+                            <p class="activity-description">Посетили страницу о методиках и выбрали интересующие вас подходы</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card-hover-effect" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 2rem; color: white;">
+                        <h3 class="mb-4">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Уровень активности
+                        </h3>
+                        <div class="text-center">
+                            <div style="font-size: 3rem; font-weight: 800; margin: 1rem 0;">{{ activity_level or 'Новичок' }}</div>
+                            <div style="height: 12px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; margin: 1.5rem 0;">
+                                <div style="width: 45%; height: 100%; background: white; border-radius: 10px;"></div>
+                            </div>
+                            <p class="mb-0 opacity-75">Вы прошли 45% пути к высокому уровню</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Статистика и графики -->
+        <div class="charts-section">
+            <div class="chart-card animate-fade-in-up card-hover-effect">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>
+                        Динамика тестов
+                    </h3>
+                    <div class="chart-actions">
+                        <button class="chart-btn">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button class="chart-btn">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-center" style="height: 200px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 15px;">
+                    <i class="fas fa-chart-bar fa-3x text-primary opacity-50"></i>
+                </div>
+            </div>
+            <div class="chart-card animate-fade-in-up card-hover-effect">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="fas fa-percentage text-success me-2"></i>
+                        Точность результатов
+                    </h3>
+                    <div class="chart-actions">
+                        <button class="chart-btn">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 15px; padding: 1.5rem; margin-top: 1rem;">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-modern bg-success text-white me-3" style="font-size: 2rem;">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div style="flex-grow: 1">
+                            <div>Надежность результатов</div>
+                            <div class="progress-modern mt-2">
+                                <div class="progress-bar-modern" style="width: 96%"></div>
+                            </div>
+                            <div class="text-muted mt-1">96% точность</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- История тестов -->
+        <div class="tests-section animate-fade-in-up">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-history me-3 text-primary"></i>
+                    История тестов
+                </h2>
+                <div>
+                    <button class="btn btn-outline-primary me-2">
+                        <i class="fas fa-filter me-1"></i> Фильтр
+                    </button>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Новый тест
+                    </button>
+                </div>
+            </div>
+            
+            {% if tests_history %}
+            <div class="test-grid">
+                {% for test in tests_history[:6] %}
+                <div class="test-card-modern card-hover-effect">
+                    <div class="test-methodology">
+                        <i class="fas fa-{{ test.methodology.icon }} me-2"></i>
+                        {{ test.methodology.name }}
+                    </div>
+                    <div class="test-date">
+                        <i class="fas fa-calendar me-1"></i>
+                        {{ test.completed_at.strftime('%d.%m.%Y') }}
+                    </div>
+                    <div class="test-score">
+                        <span class="test-score-badge">{{ "%.0f"|format(test.accuracy * 100) }}%</span>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('test.results', test_id=test.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-external-link-alt me-1"></i> Подробнее
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-clipboard-list fa-5x text-muted opacity-50"></i>
+                </div>
+                <h3 class="mb-3">Вы еще не проходили тесты</h3>
+                <p class="lead text-muted mb-4">
+                    Пройдите профессиональное тестирование, чтобы получить персональные рекомендации
+                </p>
+                <a href="{{ url_for('test.methodology') }}" class="btn-modern btn-primary-modern">
+                    <i class="fas fa-play-circle me-2"></i> Пройти первый тест
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация SVG прогресс-круга
+    const progressCircle = document.querySelector('.progress-ring-circle');
+    if (progressCircle) {
+        const radius = 50;
+        const circumference = 2 * Math.PI * radius;
+        const progress = 25; // 25% достижений
+        
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference;
+        
+        const offset = circumference - (progress / 100) * circumference;
+        progressCircle.style.strokeDashoffset = offset;
+    }
+    
+    // Анимация счетчиков
+    const animateCounter = (element, target, duration = 2000) => {
+        let start = 0;
+        const increment = target / (duration / 16);
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(start);
+            }
+        }, 16);
+    };
+    
+    // Анимация статистики при скролле
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                
+                // Анимация чисел в статистике
+                const statNumbers = entry.target.querySelectorAll('.stat-number-modern');
+                statNumbers.forEach((num, index) => {
+                    setTimeout(() => {
+                        const target = parseInt(num.textContent);
+                        animateCounter(num, target, 1500);
+                    }, index * 200);
+                });
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    // Наблюдение за элементами с анимацией
+    document.querySelectorAll('.animate-fade-in-up, .animate-slide-in-left, .animate-slide-in-right').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Интерактивность карточек достижений
+    const achievementCards = document.querySelectorAll('.achievement-card');
+    achievementCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            if (this.classList.contains('unlocked')) {
+                this.style.transform = 'translateY(-15px) scale(1.05)';
+            }
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Анимация прогресс-баров
+    const progressBars = document.querySelectorAll('.progress-bar-modern');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 500);
+    });
+    
+    // Обновление счетчика уведомлений
+    function updateNotificationCount() {
+        fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                const counter = document.getElementById('notificationCount');
+                if (counter && data.unread_count > 0) {
+                    counter.textContent = data.unread_count;
+                    counter.classList.remove('d-none');
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки счетчика уведомлений:', err));
+    }
+    
+    // Обновляем счетчик каждые 30 секунд
+    setInterval(updateNotificationCount, 30000);
+    updateNotificationCount();
+    
+    // Анимация при наведении на кнопки
+    const modernButtons = document.querySelectorAll('.btn-modern');
+    modernButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+});
+</script>
+{% endblock %}

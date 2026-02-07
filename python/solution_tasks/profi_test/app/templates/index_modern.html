@@ -1,0 +1,1451 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<!-- Hero секция с современным дизайном -->
+<div class="hero-section position-relative overflow-hidden">
+    <div class="hero-gradient"></div>
+    <div class="container py-5 position-relative">
+        <div class="row justify-content-center align-items-center min-vh-80">
+            <div class="col-lg-8 text-center">
+                <div class="animate-fade-in">
+                    <h1 class="display-1 fw-bold text-white mb-4 hero-title">
+                        <span class="d-block">Найди профессию</span>
+                        <span class="d-block gradient-text animate-pulse">своей мечты</span>
+                    </h1>
+                    <p class="lead text-white-50 mb-4 fs-2 hero-subtitle">
+                        Узнай за 10 минут, какая профессия тебе подходит
+                    </p>
+                    <p class="text-white-70 mb-5 hero-description">
+                        Научно обоснованные методики • Персональные рекомендации • Бесплатно
+                    </p>
+                    <div class="mt-4 hero-buttons">
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('test.methodology') }}" class="btn btn-light btn-xl px-6 py-4 me-4 shadow-xl hero-btn-primary animate-bounce">
+                            <i class="fas fa-play-circle me-3"></i> Пройти тест сейчас
+                        </a>
+                        <a href="{{ url_for('main.profile') }}" class="btn btn-outline-light btn-xl px-6 py-4 hero-btn-secondary">
+                            <i class="fas fa-user me-3"></i> Мой профиль
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-xl px-6 py-4 me-4 shadow-xl hero-btn-primary pulse-button animate-bounce">
+                            <i class="fas fa-rocket me-3"></i> Узнать свою профессию
+                        </a>
+                        <a href="#how-it-works" class="btn btn-outline-light btn-xl px-6 py-4 hero-btn-secondary smooth-scroll">
+                            <i class="fas fa-info-circle me-3"></i> Как это работает
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Живая статистика с анимацией -->
+                    <div class="mt-6 p-5 bg-white bg-opacity-15 rounded-4 d-inline-block hero-stats animate-float">
+                        <div class="d-flex align-items-center text-white">
+                            <div class="stats-icon me-4">
+                                <i class="fas fa-users fa-3x"></i>
+                            </div>
+                            <div>
+                                <div class="stat-number display-5 fw-bold mb-1" data-count="2156">0</div>
+                                <div class="stat-label">человек прошли тест сегодня</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Анимированные элементы фона -->
+    <div class="hero-animations">
+        <div class="floating-element element-1 animate-float-slow"></div>
+        <div class="floating-element element-2 animate-float-medium"></div>
+        <div class="floating-element element-3 animate-float-fast"></div>
+        <div class="floating-element element-4 animate-pulse-slow"></div>
+    </div>
+    
+    <!-- Плавающие частицы -->
+    <div class="particles-container">
+        <div class="particle particle-1"></div>
+        <div class="particle particle-2"></div>
+        <div class="particle particle-3"></div>
+        <div class="particle particle-4"></div>
+        <div class="particle particle-5"></div>
+    </div>
+</div>
+
+<!-- Секция статистики с анимацией -->
+<div class="stats-section py-6 bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3 col-6 mb-5">
+                <div class="stat-item animate-on-scroll hover-lift">
+                    <div class="stat-icon-wrapper mb-4">
+                        <div class="stat-icon bg-primary text-white rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-clipboard-check fa-2x"></i>
+                        </div>
+                    </div>
+                    <h3 class="display-3 text-primary fw-bold mb-2 stat-counter" data-target="3200">0</h3>
+                    <p class="text-muted fs-5 mb-0">Пройденных тестов</p>
+                    <div class="stat-progress mt-3">
+                        <div class="progress-bar bg-primary" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-5">
+                <div class="stat-item animate-on-scroll hover-lift">
+                    <div class="stat-icon-wrapper mb-4">
+                        <div class="stat-icon bg-success text-white rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-bullseye fa-2x"></i>
+                        </div>
+                    </div>
+                    <h3 class="display-3 text-success fw-bold mb-2">96%</h3>
+                    <p class="text-muted fs-5 mb-0">Точность результатов</p>
+                    <div class="stat-progress mt-3">
+                        <div class="progress-bar bg-success" style="width: 96%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-5">
+                <div class="stat-item animate-on-scroll hover-lift">
+                    <div class="stat-icon-wrapper mb-4">
+                        <div class="stat-icon bg-info text-white rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                    <h3 class="display-3 text-info fw-bold mb-2">10</h3>
+                    <p class="text-muted fs-5 mb-0">Минут на тест</p>
+                    <div class="stat-progress mt-3">
+                        <div class="progress-bar bg-info" style="width: 85%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-5">
+                <div class="stat-item animate-on-scroll hover-lift">
+                    <div class="stat-icon-wrapper mb-4">
+                        <div class="stat-icon bg-warning text-white rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-gift fa-2x"></i>
+                        </div>
+                    </div>
+                    <h3 class="display-3 text-warning fw-bold mb-2">100%</h3>
+                    <p class="text-muted fs-5 mb-0">Бесплатно</p>
+                    <div class="stat-progress mt-3">
+                        <div class="progress-bar bg-warning" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция "Как это работает" с современным дизайном -->
+<div class="container py-6" id="how-it-works">
+    <div class="row mb-6">
+        <div class="col-12 text-center">
+            <span class="badge bg-gradient-primary text-white px-4 py-2 mb-3 animate-pulse">Как это работает</span>
+            <h2 class="display-3 fw-bold mb-4 text-gradient">Четыре простых шага к твоей профессии</h2>
+            <p class="lead text-muted fs-4">Профессиональная ориентация никогда не была такой простой</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3 mb-5">
+            <div class="card border-0 shadow-lg h-100 step-card animate-on-scroll hover-lift">
+                <div class="card-body text-center p-5">
+                    <div class="step-number mb-4">1</div>
+                    <div class="step-icon mb-4">
+                        <div class="icon-bg bg-primary bg-opacity-10 rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-user-plus fa-3x text-primary"></i>
+                        </div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Регистрация</h4>
+                    <p class="text-muted">Создайте аккаунт за 30 секунд и начните путь к профессиональной ориентации</p>
+                    <div class="step-progress mt-4">
+                        <div class="progress-bar bg-primary" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-5">
+            <div class="card border-0 shadow-lg h-100 step-card animate-on-scroll hover-lift">
+                <div class="card-body text-center p-5">
+                    <div class="step-number mb-4">2</div>
+                    <div class="step-icon mb-4">
+                        <div class="icon-bg bg-success bg-opacity-10 rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-clipboard-list fa-3x text-success"></i>
+                        </div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Тестирование</h4>
+                    <p class="text-muted">Ответьте на 20 продуманных вопросов, которые раскроют ваши склонности</p>
+                    <div class="step-progress mt-4">
+                        <div class="progress-bar bg-success" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-5">
+            <div class="card border-0 shadow-lg h-100 step-card animate-on-scroll hover-lift">
+                <div class="card-body text-center p-5">
+                    <div class="step-number mb-4">3</div>
+                    <div class="step-icon mb-4">
+                        <div class="icon-bg bg-info bg-opacity-10 rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-chart-pie fa-3x text-info"></i>
+                        </div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Результаты</h4>
+                    <p class="text-muted">Получите детальный анализ ваших профессиональных склонностей</p>
+                    <div class="step-progress mt-4">
+                        <div class="progress-bar bg-info" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-5">
+            <div class="card border-0 shadow-lg h-100 step-card animate-on-scroll hover-lift">
+                <div class="card-body text-center p-5">
+                    <div class="step-number mb-4">4</div>
+                    <div class="step-icon mb-4">
+                        <div class="icon-bg bg-warning bg-opacity-10 rounded-circle p-4 d-inline-block">
+                            <i class="fas fa-graduation-cap fa-3x text-warning"></i>
+                        </div>
+                    </div>
+                    <h4 class="fw-bold mb-3">Рекомендации</h4>
+                    <p class="text-muted">Выберите свой профессиональный путь с уверенностью</p>
+                    <div class="step-progress mt-4">
+                        <div class="progress-bar bg-warning" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция преимуществ с современным дизайном -->
+<div class="features-section py-6 bg-gradient-primary">
+    <div class="container">
+        <div class="row mb-6">
+            <div class="col-12 text-center">
+                <span class="badge bg-white text-primary px-4 py-2 mb-3">Почему выбирают нас</span>
+                <h2 class="display-3 fw-bold mb-4 text-white">Профессиональный подход к выбору профессии</h2>
+                <p class="lead text-white-70 fs-4">Мы используем передовые технологии и научные методики</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-5">
+                <div class="card h-100 border-0 shadow-xl feature-card animate-on-scroll hover-lift">
+                    <div class="card-body text-center p-5">
+                        <div class="feature-icon-large mb-4">
+                            <div class="icon-wrapper bg-white rounded-circle p-4 d-inline-block shadow-lg">
+                                <i class="fas fa-brain fa-3x text-primary"></i>
+                            </div>
+                        </div>
+                        <h3 class="h3 fw-bold mb-4 text-white">Научные методики</h3>
+                        <p class="text-white-80 mb-4">
+                            Используем проверенные психологические методики Климова и Холланда для точного определения профессиональных склонностей
+                        </p>
+                        <div class="feature-badges">
+                            <span class="badge bg-success-subtle text-success me-2">Проверено</span>
+                            <span class="badge bg-warning-subtle text-warning">Точно 96%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-5">
+                <div class="card h-100 border-0 shadow-xl feature-card animate-on-scroll hover-lift">
+                    <div class="card-body text-center p-5">
+                        <div class="feature-icon-large mb-4">
+                            <div class="icon-wrapper bg-white rounded-circle p-4 d-inline-block shadow-lg">
+                                <i class="fas fa-chart-line fa-3x text-success"></i>
+                            </div>
+                        </div>
+                        <h3 class="h3 fw-bold mb-4 text-white">Персональные рекомендации</h3>
+                        <p class="text-white-80 mb-4">
+                            Получите индивидуальные рекомендации по выбору профессии, вуза и образовательной траектории
+                        </p>
+                        <div class="feature-badges">
+                            <span class="badge bg-info-subtle text-info me-2">Персонально</span>
+                            <span class="badge bg-primary-subtle text-primary">Детально</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-5">
+                <div class="card h-100 border-0 shadow-xl feature-card animate-on-scroll hover-lift">
+                    <div class="card-body text-center p-5">
+                        <div class="feature-icon-large mb-4">
+                            <div class="icon-wrapper bg-white rounded-circle p-4 d-inline-block shadow-lg">
+                                <i class="fas fa-shield-alt fa-3x text-info"></i>
+                            </div>
+                        </div>
+                        <h3 class="h3 fw-bold mb-4 text-white">Конфиденциальность</h3>
+                        <p class="text-white-80 mb-4">
+                            Все данные надежно защищены и используются исключительно для профессиональной ориентации
+                        </p>
+                        <div class="feature-badges">
+                            <span class="badge bg-danger-subtle text-danger me-2">Безопасно</span>
+                            <span class="badge bg-secondary-subtle text-secondary">Конфиденциально</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция с интерактивным примером -->
+<div class="interactive-section py-6 bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card border-0 shadow-2xl interactive-card">
+                    <div class="card-body p-6">
+                        <div class="text-center mb-6">
+                            <span class="badge bg-gradient-primary text-white px-4 py-2 mb-4">Интерактивный пример</span>
+                            <h2 class="display-4 fw-bold mb-5">Что вам интереснее?</h2>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <button class="btn btn-outline-primary btn-xl w-100 text-start p-5 option-btn animate-hover" data-option="1">
+                                    <div class="d-flex align-items-center">
+                                        <div class="option-icon me-4">
+                                            <i class="fas fa-users fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-2">Работать с людьми</h4>
+                                            <p class="mb-0 text-muted">обучать, помогать, консультировать</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <button class="btn btn-outline-primary btn-xl w-100 text-start p-5 option-btn animate-hover" data-option="2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="option-icon me-4">
+                                            <i class="fas fa-cogs fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-2">Работать с техникой</h4>
+                                            <p class="mb-0 text-muted">разбираться, чинить, создавать</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <button class="btn btn-outline-primary btn-xl w-100 text-start p-5 option-btn animate-hover" data-option="3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="option-icon me-4">
+                                            <i class="fas fa-paint-brush fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-2">Работать с искусством</h4>
+                                            <p class="mb-0 text-muted">творить, проектировать, создавать красоту</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <button class="btn btn-outline-primary btn-xl w-100 text-start p-5 option-btn animate-hover" data-option="4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="option-icon me-4">
+                                            <i class="fas fa-calculator fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="mb-2">Работать с информацией</h4>
+                                            <p class="mb-0 text-muted">анализировать, обрабатывать, структурировать</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="result-area d-none mt-5 p-5 bg-success bg-opacity-10 rounded-4 text-center">
+                            <i class="fas fa-check-circle fa-3x text-success mb-4"></i>
+                            <h3 class="mb-3">Отличный выбор!</h3>
+                            <p class="fs-5">Это лишь один из примеров вопросов теста. Каждый вариант раскрывает разные аспекты вашей профессиональной ориентации.</p>
+                        </div>
+                        <div class="text-center mt-5">
+                            <small class="text-muted"><i class="fas fa-lightbulb me-2"></i>Это лишь один из 20 вопросов теста</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция методик -->
+<div class="methodology-section py-6">
+    <div class="container">
+        <div class="row mb-6">
+            <div class="col-12 text-center">
+                <span class="badge bg-gradient-secondary text-white px-4 py-2 mb-3">Используемые методики</span>
+                <h2 class="display-3 fw-bold mb-4">Проверенные временем инструменты профориентации</h2>
+                <p class="lead text-muted fs-4">Научно обоснованные подходы к определению профессиональных склонностей</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-5">
+                <div class="card border-0 shadow-xl h-100 method-card ready-method animate-on-scroll hover-lift">
+                    <div class="card-body p-5">
+                        <div class="d-flex align-items-start mb-4">
+                            <div class="method-badge bg-success rounded-circle me-4 flex-shrink-0">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 class="text-success mb-3">Методика Климова</h3>
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge bg-success-subtle text-success">Готово к использованию</span>
+                                    <span class="badge bg-primary-subtle text-primary">20 вопросов</span>
+                                    <span class="badge bg-warning-subtle text-warning">Высокая точность</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="lead mb-4">
+                            Дифференциально-диагностический опросник для выявления склонности к одной из пяти типовых сфер труда.
+                        </p>
+                        <div class="method-spheres">
+                            <div class="d-flex flex-wrap gap-3">
+                                <span class="sphere-item"><i class="fas fa-seedling text-success me-2"></i>Человек-Природа</span>
+                                <span class="sphere-item"><i class="fas fa-wrench text-primary me-2"></i>Человек-Техника</span>
+                                <span class="sphere-item"><i class="fas fa-users text-info me-2"></i>Человек-Человек</span>
+                                <span class="sphere-item"><i class="fas fa-calculator text-warning me-2"></i>Человек-Знак</span>
+                                <span class="sphere-item"><i class="fas fa-palette text-danger me-2"></i>Человек-Художественный образ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-5">
+                <div class="card border-0 shadow h-100 method-card development-method animate-on-scroll opacity-75">
+                    <div class="card-body p-5">
+                        <div class="d-flex align-items-start mb-4">
+                            <div class="method-badge bg-secondary rounded-circle me-4 flex-shrink-0">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 class="text-secondary mb-3">Методика Холланда</h3>
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge bg-secondary-subtle text-secondary">В разработке</span>
+                                    <span class="badge bg-info-subtle text-info">120 вопросов</span>
+                                    <span class="badge bg-warning-subtle text-warning">6 профессиональных типов</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="lead mb-4">
+                            Опросник профессиональных предпочтений, соотносящий тип личности с профессиональной средой.
+                        </p>
+                        <div class="method-spheres">
+                            <div class="d-flex flex-wrap gap-3">
+                                <span class="sphere-item opacity-50"><i class="fas fa-circle text-secondary me-2"></i>Реалистический</span>
+                                <span class="sphere-item opacity-50"><i class="fas fa-circle text-secondary me-2"></i>Исследовательский</span>
+                                <span class="sphere-item opacity-50"><i class="fas fa-circle text-secondary me-2"></i>Артистический</span>
+                                <span class="sphere-item opacity-50"><i class="fas fa-circle text-secondary me-2"></i>Социальный</span>
+                                <span class="sphere-item opacity-50"><i class="fas fa-circle text-secondary me-2"></i>Предпринимательский</span>
+                                <span class="sphere-item opacity-50"><i class="fas fa-circle text-secondary me-2"></i>Конвенциональный</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция отзывов -->
+<div class="testimonials-section py-6 bg-gradient-to-br from-purple-50 to-pink-100">
+    <div class="container">
+        <div class="row mb-6">
+            <div class="col-12 text-center">
+                <span class="badge bg-gradient-purple text-white px-4 py-2 mb-3">Отзывы пользователей</span>
+                <h2 class="display-3 fw-bold mb-4">Что говорят наши пользователи</h2>
+                <p class="lead text-muted fs-4">Истории успеха и благодарности</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-5">
+                <div class="card border-0 shadow-lg h-100 testimonial-card animate-on-scroll hover-lift">
+                    <div class="card-body p-5">
+                        <div class="mb-4">
+                            <div class="rating">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="lead mb-4">"Тест помог мне определиться с выбором вуза! Я узнала, что мне подходит работа с людьми, и выбрала педагогический университет."</p>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-placeholder bg-primary me-3"></div>
+                            <div>
+                                <strong class="d-block">Алина, 11 класс</strong>
+                                <small class="text-muted">г. Алматы</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-5">
+                <div class="card border-0 shadow-lg h-100 testimonial-card animate-on-scroll hover-lift">
+                    <div class="card-body p-5">
+                        <div class="mb-4">
+                            <div class="rating">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="lead mb-4">"Всегда думал, что хочу быть программистом, но тест показал склонность к технике. Теперь учусь на инженера и очень доволен!"</p>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-placeholder bg-success me-3"></div>
+                            <div>
+                                <strong class="d-block">Даниил, 10 класс</strong>
+                                <small class="text-muted">г. Астана</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-5">
+                <div class="card border-0 shadow-lg h-100 testimonial-card animate-on-scroll hover-lift">
+                    <div class="card-body p-5">
+                        <div class="mb-4">
+                            <div class="rating">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="lead mb-4">"Простой и понятный тест. За 10 минут получила подробный анализ и список подходящих профессий. Рекомендую всем!"</p>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-placeholder bg-info me-3"></div>
+                            <div>
+                                <strong class="d-block">Айгерим, 9 класс</strong>
+                                <small class="text-muted">г. Шымкент</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция FAQ -->
+<div class="faq-section py-6 bg-dark">
+    <div class="container">
+        <div class="row mb-6">
+            <div class="col-12 text-center">
+                <span class="badge bg-gradient-warning text-dark px-4 py-2 mb-3">Частые вопросы</span>
+                <h2 class="display-3 fw-bold mb-4 text-white">Ответы на популярные вопросы</h2>
+                <p class="lead text-white-70 fs-4">Все, что вы хотели знать о профориентационном тестировании</p>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="accordion accordion-flush" id="faqAccordion">
+                    <div class="accordion-item bg-white rounded-3 shadow-sm mb-4">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button fw-bold fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                <i class="fas fa-clock me-3 text-primary"></i>
+                                Сколько времени занимает тестирование?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p class="fs-5">Тестирование занимает всего 10-15 минут. Вам нужно ответить на 20 вопросов, выбирая наиболее подходящий вариант.</p>
+                                <div class="progress mt-3" style="height: 12px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 75%"></div>
+                                </div>
+                                <small class="text-muted">Среднее время прохождения: 12 минут</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item bg-white rounded-3 shadow-sm mb-4">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                <i class="fas fa-gift me-3 text-success"></i>
+                                Это действительно бесплатно?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p class="fs-5">Да, тестирование полностью бесплатно. Вы получите детальные результаты и рекомендации без каких-либо платежей.</p>
+                                <div class="d-flex gap-2 mt-3">
+                                    <span class="badge bg-success-subtle text-success">Бесплатно</span>
+                                    <span class="badge bg-info-subtle text-info">Без регистрации</span>
+                                    <span class="badge bg-warning-subtle text-warning">Без SMS</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item bg-white rounded-3 shadow-sm mb-4">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                <i class="fas fa-bullseye me-3 text-info"></i>
+                                Насколько точны результаты?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p class="fs-5">Мы используем проверенные научные методики с точностью более 95%. Однако результаты - это рекомендации, финальное решение всегда за вами.</p>
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <small>Точность методики Климова</small>
+                                        <small>96%</small>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 96%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Финальная CTA секция -->
+<div class="cta-section py-6">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-2xl cta-card position-relative overflow-hidden">
+                    <div class="cta-gradient"></div>
+                    <div class="card-body p-6 text-center position-relative">
+                        <div class="mb-6">
+                            <div class="cta-icon mb-5">
+                                <i class="fas fa-rocket fa-5x text-white animate-bounce"></i>
+                            </div>
+                            <h2 class="display-2 fw-bold text-white mb-5">Готов определить свою профессиональную стихию?</h2>
+                            <p class="lead text-white-80 mb-6 fs-3">
+                                Пройди профессиональное тестирование и получи персональные рекомендации
+                            </p>
+                        </div>
+                        <div class="cta-buttons mb-5">
+                            {% if not current_user.is_authenticated %}
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-xl px-6 py-4 me-4 shadow-xl pulse-button animate-bounce">
+                                <i class="fas fa-rocket me-3"></i> Начать прямо сейчас
+                            </a>
+                            <a href="#how-it-works" class="btn btn-outline-light btn-xl px-6 py-4 smooth-scroll">
+                                <i class="fas fa-info-circle me-3"></i> Узнать больше
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('test.methodology') }}" class="btn btn-light btn-xl px-6 py-4 me-4 shadow-xl pulse-button animate-bounce">
+                                <i class="fas fa-play-circle me-3"></i> Пройти тест
+                            </a>
+                            <a href="{{ url_for('main.profile') }}" class="btn btn-outline-light btn-xl px-6 py-4">
+                                <i class="fas fa-user me-3"></i> Мой профиль
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="cta-features">
+                            <p class="text-white-70 mb-0 fs-4">
+                                <span class="feature-badge me-4"><i class="fas fa-lock me-2"></i>Конфиденциально</span>
+                                <span class="feature-badge me-4"><i class="fas fa-clock me-2"></i>10 минут</span>
+                                <span class="feature-badge me-4"><i class="fas fa-gift me-2"></i>Бесплатно</span>
+                                <span class="feature-badge"><i class="fas fa-bullseye me-2"></i>96% точность</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Современные CSS переменные */
+:root {
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-purple: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+    --gradient-warning: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+    --transition-fast: all 0.3s ease;
+    --transition-medium: all 0.5s ease;
+    --transition-slow: all 0.8s ease;
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-2xl: 0 50px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Hero секция */
+.hero-section {
+    background: var(--gradient-primary);
+    min-height: 80vh;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+}
+
+.min-vh-80 {
+    min-height: 80vh;
+}
+
+/* Текстовые улучшения */
+.hero-title {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    letter-spacing: -1px;
+}
+
+.gradient-text {
+    background: linear-gradient(45deg, #fff, #e0e0e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        transform: scale(1); 
+        box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+    }
+    50% { 
+        transform: scale(1.05); 
+        box-shadow: 0 0 0 20px rgba(255,255,255,0);
+    }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 1s ease-out;
+}
+
+.animate-pulse {
+    animation: pulse 2s infinite;
+}
+
+.animate-bounce {
+    animation: bounce 1.5s infinite;
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Анимированные элементы фона */
+.hero-animations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.floating-element {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+}
+
+.element-1 {
+    width: 100px;
+    height: 100px;
+    top: 15%;
+    left: 10%;
+    animation: float 6s ease-in-out infinite;
+}
+
+.element-2 {
+    width: 150px;
+    height: 150px;
+    top: 60%;
+    right: 15%;
+    animation: float 8s ease-in-out infinite 1s;
+}
+
+.element-3 {
+    width: 80px;
+    height: 80px;
+    bottom: 20%;
+    left: 20%;
+    animation: float 7s ease-in-out infinite 2s;
+}
+
+.element-4 {
+    width: 60px;
+    height: 60px;
+    top: 30%;
+    right: 25%;
+    animation: pulse 4s ease-in-out infinite;
+}
+
+/* Плавающие частицы */
+.particles-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 50%;
+    animation: float 15s linear infinite;
+}
+
+.particle-1 { top: 20%; left: 10%; animation-duration: 12s; }
+.particle-2 { top: 40%; right: 15%; animation-duration: 18s; animation-delay: 2s; }
+.particle-3 { bottom: 30%; left: 25%; animation-duration: 15s; animation-delay: 4s; }
+.particle-4 { top: 70%; right: 30%; animation-duration: 20s; animation-delay: 1s; }
+.particle-5 { bottom: 15%; right: 20%; animation-duration: 14s; animation-delay: 3s; }
+
+/* Статистика */
+.stats-section {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.stat-item {
+    transition: var(--transition-medium);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.stat-item:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-xl);
+}
+
+.stat-icon {
+    transition: var(--transition-fast);
+}
+
+.stat-item:hover .stat-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.stat-progress {
+    height: 6px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 2s ease-in-out;
+}
+
+/* Шаги */
+.step-card {
+    transition: var(--transition-medium);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.step-card:hover {
+    transform: translateY(-15px);
+    box-shadow: var(--shadow-2xl);
+}
+
+.step-number {
+    width: 70px;
+    height: 70px;
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    margin: 0 auto;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    transition: var(--transition-fast);
+}
+
+.step-card:hover .step-number {
+    transform: scale(1.1);
+    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.6);
+}
+
+.step-progress {
+    height: 4px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.step-card:hover .step-progress {
+    width: 100%;
+}
+
+/* Преимущества */
+.features-section {
+    background: var(--gradient-primary);
+}
+
+.feature-card {
+    transition: var(--transition-medium);
+    border-radius: 25px;
+    overflow: hidden;
+}
+
+.feature-card:hover {
+    transform: translateY(-20px) scale(1.02);
+    box-shadow: var(--shadow-2xl);
+}
+
+.icon-wrapper {
+    transition: var(--transition-fast);
+}
+
+.feature-card:hover .icon-wrapper {
+    transform: scale(1.15) rotate(10deg);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+/* Интерактивные элементы */
+.option-btn {
+    transition: var(--transition-fast);
+    border-width: 3px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 15px;
+}
+
+.option-btn:hover {
+    transform: translateX(15px);
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+    box-shadow: var(--shadow-lg);
+}
+
+.option-btn.selected {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.4);
+}
+
+.option-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.6s;
+}
+
+.option-btn:hover::before {
+    left: 100%;
+}
+
+/* Методики */
+.method-card {
+    transition: var(--transition-medium);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.method-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-xl);
+}
+
+.method-badge {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 28px;
+    font-weight: bold;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-radius: 50%;
+}
+
+.sphere-item {
+    padding: 0.75rem 1.25rem;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 50px;
+    transition: var(--transition-fast);
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+}
+
+.sphere-item:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* Отзывы */
+.testimonial-card {
+    transition: var(--transition-medium);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.testimonial-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-xl);
+}
+
+.avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* CTA карточка */
+.cta-card {
+    background: var(--gradient-primary);
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+}
+
+.cta-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 70%, rgba(255,255,255,0.1) 0%, transparent 60%),
+                radial-gradient(circle at 70% 30%, rgba(255,255,255,0.1) 0%, transparent 60%);
+}
+
+.cta-icon {
+    animation: float 4s ease-in-out infinite;
+}
+
+.feature-badge {
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    background: rgba(255,255,255,0.2);
+    transition: var(--transition-fast);
+    margin: 0 1rem 1rem 1rem;
+    display: inline-block;
+}
+
+.feature-badge:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+/* Анимация при скролле */
+.animate-on-scroll {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: var(--transition-medium);
+}
+
+.animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hover эффекты */
+.hover-lift {
+    transition: var(--transition-medium);
+}
+
+.hover-lift:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-xl);
+}
+
+.animate-hover {
+    transition: var(--transition-fast);
+}
+
+.animate-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 70vh;
+    }
+    
+    .display-1 {
+        font-size: 3rem;
+    }
+    
+    .display-3 {
+        font-size: 2.5rem;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .hero-buttons {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .hero-btn-primary,
+    .hero-btn-secondary {
+        width: 100%;
+        margin: 0 !important;
+    }
+    
+    .btn-xl {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .feature-badge {
+        display: block;
+        margin: 0.5rem auto;
+        text-align: center;
+    }
+    
+    .sphere-item {
+        margin: 0.25rem;
+        font-size: 0.9rem;
+    }
+    
+    .cta-buttons {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+}
+
+/* Цветовые вариации */
+.bg-gradient-primary { background: var(--gradient-primary); }
+.bg-gradient-secondary { background: var(--gradient-secondary); }
+.bg-gradient-purple { background: var(--gradient-purple); }
+.bg-gradient-warning { background: var(--gradient-warning); }
+
+.bg-primary-subtle { background-color: rgba(102, 126, 234, 0.1) !important; }
+.bg-success-subtle { background-color: rgba(67, 233, 123, 0.1) !important; }
+.bg-info-subtle { background-color: rgba(79, 172, 254, 0.1) !important; }
+.bg-warning-subtle { background-color: rgba(250, 112, 154, 0.1) !important; }
+.bg-danger-subtle { background-color: rgba(255, 107, 107, 0.1) !important; }
+.bg-secondary-subtle { background-color: rgba(108, 117, 125, 0.1) !important; }
+
+.text-primary-subtle { color: rgba(102, 126, 234, 0.8) !important; }
+.text-success-subtle { color: rgba(67, 233, 123, 0.8) !important; }
+.text-info-subtle { color: rgba(79, 172, 254, 0.8) !important; }
+.text-warning-subtle { color: rgba(250, 112, 154, 0.8) !important; }
+.text-danger-subtle { color: rgba(255, 107, 107, 0.8) !important; }
+.text-secondary-subtle { color: rgba(108, 117, 125, 0.8) !important; }
+
+.text-white-70 { color: rgba(255,255,255,0.7); }
+.text-white-80 { color: rgba(255,255,255,0.8); }
+
+/* Улучшенные тени */
+.shadow-2xl {
+    box-shadow: var(--shadow-2xl) !important;
+}
+
+/* Кнопки */
+.btn-xl {
+    padding: 1.25rem 2.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    border-radius: 50px;
+    transition: var(--transition-fast);
+}
+
+.btn-xl:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-xl);
+}
+
+/* Значки */
+.badge {
+    font-weight: 600;
+    padding: 0.75em 1.2em;
+    border-radius: 50px;
+    font-size: 0.9rem;
+}
+
+/* Прогресс бары */
+.progress {
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+/* Карточки */
+.card {
+    transition: var(--transition-medium);
+    border-radius: 20px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-xl);
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+/* Аккордеон */
+.accordion-button:not(.collapsed) {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: none;
+}
+
+.accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+/* Плавная прокрутка */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Улучшение читаемости */
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.7;
+    letter-spacing: 0.2px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+p {
+    line-height: 1.8;
+    color: #495057;
+}
+
+/* Стили для интерактивности */
+.smooth-scroll {
+    transition: var(--transition-fast);
+}
+
+.smooth-scroll:hover {
+    transform: translateY(-3px);
+}
+
+.pulse-button {
+    animation: pulse 2s infinite;
+    transition: var(--transition-fast);
+}
+
+.pulse-button:hover {
+    animation: none;
+    transform: scale(1.05);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация счетчиков статистики
+    const statCounters = document.querySelectorAll('.stat-counter');
+    const statNumbers = document.querySelectorAll('.stat-number');
+    const progressBars = document.querySelectorAll('.progress-bar');
+    
+    const animateCounter = (element, target) => {
+        let count = 0;
+        const increment = target / 100;
+        const timer = setInterval(() => {
+            count += increment;
+            if (count >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(count);
+            }
+        }, 20);
+    };
+    
+    // Intersection Observer для анимации при скролле
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                
+                // Анимация счетчиков при видимости
+                if (entry.target.classList.contains('stat-item')) {
+                    const counter = entry.target.querySelector('.stat-counter');
+                    if (counter) {
+                        const target = parseInt(counter.dataset.target || counter.textContent);
+                        animateCounter(counter, target);
+                    }
+                    
+                    // Анимация прогресс баров
+                    const progressBar = entry.target.querySelector('.progress-bar');
+                    if (progressBar) {
+                        const width = progressBar.style.width;
+                        progressBar.style.width = '0%';
+                        setTimeout(() => {
+                            progressBar.style.width = width;
+                        }, 300);
+                    }
+                }
+                
+                // Анимация шагов
+                if (entry.target.classList.contains('step-card')) {
+                    const progressBar = entry.target.querySelector('.step-progress .progress-bar');
+                    if (progressBar) {
+                        setTimeout(() => {
+                            progressBar.style.width = '100%';
+                        }, 500);
+                    }
+                }
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    // Наблюдение за элементами с анимацией
+    document.querySelectorAll('.animate-on-scroll').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Анимация живой статистики
+    const heroStat = document.querySelector('.stat-number');
+    if (heroStat) {
+        const target = parseInt(heroStat.dataset.count || 0);
+        animateCounter(heroStat, target);
+    }
+    
+    // Интерактивность кнопок выбора
+    const optionButtons = document.querySelectorAll('.option-btn');
+    optionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Убираем выделение у всех кнопок
+            optionButtons.forEach(btn => btn.classList.remove('selected'));
+            
+            // Добавляем выделение текущей кнопке
+            this.classList.add('selected');
+            
+            // Показываем результат
+            const resultArea = document.querySelector('.result-area');
+            if (resultArea) {
+                resultArea.classList.remove('d-none');
+                resultArea.classList.add('animate-fade-in');
+            }
+        });
+    });
+    
+    // Плавная прокрутка для ссылок
+    document.querySelectorAll('.smooth-scroll').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Анимация карточек при наведении
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-10px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Обновление счетчика уведомлений
+    function updateNotificationCount() {
+        fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                const counter = document.getElementById('notificationCount');
+                if (counter && data.unread_count > 0) {
+                    counter.textContent = data.unread_count;
+                    counter.classList.remove('d-none');
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки счетчика уведомлений:', err));
+    }
+    
+    // Обновляем счетчик каждые 30 секунд
+    setInterval(updateNotificationCount, 30000);
+    updateNotificationCount(); // Первый вызов
+    
+    // Анимация фона при движении мыши
+    const heroSection = document.querySelector('.hero-section');
+    if (heroSection) {
+        heroSection.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 40;
+            const y = (e.clientY / window.innerHeight - 0.5) * 40;
+            
+            heroSection.style.backgroundPosition = `${50 + x}% ${50 + y}%`;
+        });
+    }
+    
+    // Добавляем анимацию прогресса для всех баров
+    progressBars.forEach(bar => {
+        if (bar.style.width !== '0%') {
+            const originalWidth = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = originalWidth;
+            }, 1000);
+        }
+    });
+});
+</script>
+{% endblock %}

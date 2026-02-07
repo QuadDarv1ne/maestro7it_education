@@ -24,6 +24,9 @@
         :root {
             --gradient-start: #667eea;
             --gradient-end:   #764ba2;
+            --transition-fast: all 0.3s ease;
+            --transition-medium: all 0.5s ease;
+            --transition-slow: all 0.8s ease;
         }
 
         body {
@@ -70,6 +73,54 @@
 
         #theme-toggle:hover {
             transform: scale(1.15);
+        }
+        
+        /* Общие стили для современных страниц */
+        .text-gradient {
+            background: linear-gradient(45deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+        }
+        
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: var(--transition-medium);
+        }
+        
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .hover-lift {
+            transition: var(--transition-medium);
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-10px);
+        }
+        
+        .pulse-button {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .smooth-scroll {
+            transition: var(--transition-fast);
+        }
+        
+        .smooth-scroll:hover {
+            transform: translateY(-3px);
         }
     </style>
 </head>

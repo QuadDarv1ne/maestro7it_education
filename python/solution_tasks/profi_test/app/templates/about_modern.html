@@ -1,0 +1,1116 @@
+{% extends "base.html" %}
+
+{% block title %}О проекте - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<style>
+:root {
+    --gradient-about: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-team: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --transition-fast: all 0.3s ease;
+    --transition-medium: all 0.5s ease;
+    --transition-slow: all 0.8s ease;
+    --shadow-about: 0 25px 50px -12px rgba(102, 126, 234, 0.25);
+    --border-radius-xl: 25px;
+    --border-radius-xxl: 35px;
+}
+
+/* Главный контейнер */
+.about-modern-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 2rem 0;
+}
+
+/* Hero секция */
+.hero-section-modern {
+    background: var(--gradient-about);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 3rem;
+    border-radius: var(--border-radius-xxl);
+    box-shadow: var(--shadow-about);
+}
+
+.hero-gradient-modern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 4rem 2rem;
+}
+
+.hero-title-modern {
+    font-size: 4rem;
+    font-weight: 800;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    letter-spacing: -2px;
+}
+
+.gradient-text-modern {
+    background: linear-gradient(45deg, #fff, #e0e0e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-subtitle-modern {
+    font-size: 1.8rem;
+    font-weight: 500;
+    margin: 1.5rem 0;
+    opacity: 0.9;
+}
+
+.hero-description-modern {
+    font-size: 1.3rem;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    line-height: 1.8;
+}
+
+/* Анимированные элементы фона */
+.hero-animations-modern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.floating-shape {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    animation: float-modern 8s ease-in-out infinite;
+}
+
+.shape-1 {
+    width: 120px;
+    height: 120px;
+    top: 15%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.shape-2 {
+    width: 80px;
+    height: 80px;
+    top: 60%;
+    right: 15%;
+    animation-delay: 2s;
+}
+
+.shape-3 {
+    width: 150px;
+    height: 150px;
+    bottom: 20%;
+    left: 20%;
+    animation-delay: 4s;
+}
+
+@keyframes float-modern {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(180deg); }
+}
+
+/* Секция миссии */
+.mission-section {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 3rem;
+    margin-bottom: 3rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.mission-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-about);
+}
+
+.mission-card-modern {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    transition: var(--transition-medium);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.mission-card-modern:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    border-color: #667eea;
+}
+
+.mission-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    transition: var(--transition-fast);
+}
+
+.mission-card-modern:hover .mission-icon {
+    transform: scale(1.2) rotate(10deg);
+}
+
+.mission-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.mission-text {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #666;
+}
+
+/* Ценности */
+.values-section {
+    background: var(--gradient-about);
+    border-radius: var(--border-radius-xl);
+    padding: 3rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.values-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 70%, rgba(255,255,255,0.1) 0%, transparent 60%);
+    z-index: 0;
+}
+
+.values-content {
+    position: relative;
+    z-index: 1;
+}
+
+.value-card-modern {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    border: 1px solid rgba(255,255,255,0.2);
+    height: 100%;
+}
+
+.value-card-modern:hover {
+    transform: translateY(-15px);
+    background: rgba(255,255,255,0.25);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.value-icon-modern {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    margin: 0 auto 1.5rem;
+    background: white;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    transition: var(--transition-fast);
+}
+
+.value-card-modern:hover .value-icon-modern {
+    transform: scale(1.15) rotate(15deg);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+}
+
+.value-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: white;
+}
+
+.value-description {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+/* Команда */
+.team-section {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 3rem;
+    margin-bottom: 3rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.team-member {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.team-member:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    border-color: #f093fb;
+}
+
+.team-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin: 0 auto 1.5rem;
+    background: var(--gradient-team);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: white;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.team-member:hover .team-avatar {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.team-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.team-role {
+    font-size: 1.1rem;
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.team-bio {
+    color: #666;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* Достижения */
+.achievements-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--border-radius-xl);
+    padding: 3rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+    color: white;
+}
+
+.achievements-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 70% 30%, rgba(255,255,255,0.1) 0%, transparent 60%);
+    z-index: 0;
+}
+
+.achievements-content {
+    position: relative;
+    z-index: 1;
+}
+
+.achievement-counter {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.counter-item {
+    display: inline-block;
+    margin: 0 2rem;
+    text-align: center;
+}
+
+.counter-number {
+    font-size: 4rem;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.counter-label {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Технологии */
+.technologies-section {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 3rem;
+    margin-bottom: 3rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.tech-item {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    border: 2px solid transparent;
+}
+
+.tech-item:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+    border-color: #667eea;
+}
+
+.tech-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #667eea;
+    transition: var(--transition-fast);
+}
+
+.tech-item:hover .tech-icon {
+    transform: scale(1.2) rotate(10deg);
+    color: #764ba2;
+}
+
+.tech-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+}
+
+/* Контакты */
+.contact-section {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: var(--border-radius-xl);
+    padding: 3rem;
+    color: white;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.contact-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.contact-content {
+    position: relative;
+    z-index: 1;
+}
+
+.contact-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.contact-text {
+    font-size: 1.3rem;
+    max-width: 700px;
+    margin: 0 auto 2rem;
+    line-height: 1.8;
+    opacity: 0.9;
+}
+
+.contact-buttons {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.btn-contact {
+    padding: 1.2rem 2.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1.2rem;
+    transition: var(--transition-medium);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+
+.btn-contact:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.btn-contact-primary {
+    background: white;
+    color: #f093fb;
+}
+
+.btn-contact-secondary {
+    background: transparent;
+    border: 2px solid white;
+    color: white;
+}
+
+.btn-contact-secondary:hover {
+    background: white;
+    color: #f093fb;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .hero-title-modern {
+        font-size: 2.5rem;
+    }
+    
+    .hero-subtitle-modern {
+        font-size: 1.3rem;
+    }
+    
+    .hero-description-modern {
+        font-size: 1.1rem;
+    }
+    
+    .mission-section,
+    .values-section,
+    .team-section,
+    .achievements-section,
+    .technologies-section,
+    .contact-section {
+        padding: 2rem 1.5rem;
+    }
+    
+    .counter-item {
+        margin: 0 1rem;
+    }
+    
+    .counter-number {
+        font-size: 2.5rem;
+    }
+    
+    .contact-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-contact {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .tech-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .team-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Анимации */
+@keyframes fadeInUpModern {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeftModern {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRightModern {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-fade-in-up-modern {
+    animation: fadeInUpModern 0.8s ease-out;
+}
+
+.animate-slide-in-left-modern {
+    animation: slideInLeftModern 0.6s ease-out;
+}
+
+.animate-slide-in-right-modern {
+    animation: slideInRightModern 0.6s ease-out;
+}
+
+/* Интерактивные эффекты */
+.interactive-card {
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.interactive-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.6s;
+}
+
+.interactive-card:hover::before {
+    left: 100%;
+}
+
+/* Градиентные разделители */
+.gradient-divider-modern {
+    height: 6px;
+    background: var(--gradient-about);
+    border-radius: 3px;
+    margin: 2.5rem 0;
+    opacity: 0.8;
+}
+
+/* Улучшенные иконки */
+.icon-modern-large {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--gradient-about);
+    color: white;
+    font-size: 2.5rem;
+    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+    transition: var(--transition-medium);
+}
+
+.icon-modern-large:hover {
+    transform: scale(1.15) rotate(15deg);
+    box-shadow: 0 20px 45px rgba(102, 126, 234, 0.5);
+}
+
+/* Счетчики достижений */
+.counter-modern {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: #667eea;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    margin-bottom: 0.5rem;
+}
+
+.counter-label-modern {
+    font-size: 1.2rem;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Карточки с тенями */
+.shadow-card-modern {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: var(--transition-medium);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.shadow-card-modern:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+</style>
+
+<div class="about-modern-container">
+    <div class="container">
+        <!-- Hero секция -->
+        <div class="hero-section-modern animate-fade-in-up-modern">
+            <div class="hero-gradient-modern"></div>
+            <div class="hero-animations-modern">
+                <div class="floating-shape shape-1"></div>
+                <div class="floating-shape shape-2"></div>
+                <div class="floating-shape shape-3"></div>
+            </div>
+            <div class="hero-content text-center">
+                <h1 class="hero-title-modern text-white mb-4">
+                    <span class="d-block">Мой</span>
+                    <span class="d-block gradient-text-modern">ПрофСтарт</span>
+                </h1>
+                <p class="hero-subtitle-modern text-white">
+                    Профессиональная ориентация школьников будущего
+                </p>
+                <p class="hero-description-modern text-white-70">
+                    Научно обоснованная платформа для выбора профессии с использованием 
+                    проверенных психологических методик
+                </p>
+                <div class="mt-4">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-xl px-5 py-3 me-3 shadow-lg pulse-button">
+                        <i class="fas fa-rocket me-2"></i> Начать путь
+                    </a>
+                    <a href="#mission" class="btn btn-outline-light btn-xl px-5 py-3 smooth-scroll">
+                        <i class="fas fa-info-circle me-2"></i> Узнать больше
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Миссия и видение -->
+        <div class="mission-section animate-fade-in-up-modern" id="mission">
+            <div class="text-center mb-5">
+                <span class="badge bg-gradient-primary text-white px-4 py-2 mb-3">Наша миссия</span>
+                <h2 class="display-4 fw-bold text-gradient mb-4">Помочь каждому найти свой путь</h2>
+                <p class="lead text-muted fs-4">
+                    Мы верим, что правильный выбор профессии - ключ к успеху и счастью в жизни
+                </p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="mission-card-modern interactive-card">
+                        <div class="mission-icon bg-primary text-white">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <h3 class="mission-title">Наша миссия</h3>
+                        <p class="mission-text">
+                            Помочь школьникам и абитуриентам сделать осознанный выбор профессии 
+                            через научно обоснованные методики профориентации, доступные каждому.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mission-card-modern interactive-card">
+                        <div class="mission-icon bg-success text-white">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h3 class="mission-title">Наше видение</h3>
+                        <p class="mission-text">
+                            Стать ведущей платформой профориентации в Казахстане и странах СНГ, 
+                            где каждый молодой человек найдет свой профессиональный путь.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Наши ценности -->
+        <div class="values-section animate-fade-in-up-modern">
+            <div class="values-content">
+                <div class="text-center mb-5">
+                    <h2 class="display-4 fw-bold text-white mb-3">Наши ценности</h2>
+                    <p class="lead text-white-70 fs-4">Основные принципы нашей работы</p>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="value-card-modern interactive-card">
+                            <div class="value-icon-modern">
+                                <i class="fas fa-flask text-primary"></i>
+                            </div>
+                            <h3 class="value-title">Научный подход</h3>
+                            <p class="value-description">
+                                Используем только проверенные научные методики и психологические 
+                                инструменты, основанные на многолетних исследованиях
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-modern interactive-card">
+                            <div class="value-icon-modern">
+                                <i class="fas fa-user-shield text-success"></i>
+                            </div>
+                            <h3 class="value-title">Конфиденциальность</h3>
+                            <p class="value-description">
+                                Строго соблюдаем конфиденциальность всех данных пользователей и 
+                                не передаем информацию третьим лицам
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-modern interactive-card">
+                            <div class="value-icon-modern">
+                                <i class="fas fa-hands-helping text-info"></i>
+                            </div>
+                            <h3 class="value-title">Доступность</h3>
+                            <p class="value-description">
+                                Делаем профессиональную ориентацию доступной для всех, 
+                                независимо от финансового положения
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-modern interactive-card">
+                            <div class="value-icon-modern">
+                                <i class="fas fa-lightbulb text-warning"></i>
+                            </div>
+                            <h3 class="value-title">Инновации</h3>
+                            <p class="value-description">
+                                Постоянно развиваемся и внедряем новые технологии для 
+                                улучшения качества наших услуг
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-modern interactive-card">
+                            <div class="value-icon-modern">
+                                <i class="fas fa-heart text-danger"></i>
+                            </div>
+                            <h3 class="value-title">Эмпатия</h3>
+                            <p class="value-description">
+                                Понимаем важность выбора профессии и подходим к каждому 
+                                пользователю с теплотой и вниманием
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-modern interactive-card">
+                            <div class="value-icon-modern">
+                                <i class="fas fa-graduation-cap text-purple"></i>
+                            </div>
+                            <h3 class="value-title">Образование</h3>
+                            <p class="value-description">
+                                Не просто помогаем выбрать профессию, но и educate пользователей 
+                                о мире профессий и возможностях
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Команда -->
+        <div class="team-section animate-fade-in-up-modern">
+            <div class="text-center mb-5">
+                <span class="badge bg-gradient-team text-white px-4 py-2 mb-3">Наша команда</span>
+                <h2 class="display-4 fw-bold text-gradient mb-4">Профессионалы своего дела</h2>
+                <p class="lead text-muted fs-4">Люди, стоящие за успехом ПрофСтарта</p>
+            </div>
+            
+            <div class="team-grid">
+                <div class="team-member interactive-card">
+                    <div class="team-avatar">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h3 class="team-name">Александр Петров</h3>
+                    <div class="team-role">Основатель и CEO</div>
+                    <p class="team-bio">
+                        Психолог с 10-летним стажем, специализирующийся на профориентации. 
+                        Создал ПрофСтарт для помощи молодежи в выборе профессии.
+                    </p>
+                </div>
+                <div class="team-member interactive-card">
+                    <div class="team-avatar">
+                        <i class="fas fa-laptop-code"></i>
+                    </div>
+                    <h3 class="team-name">Мария Иванова</h3>
+                    <div class="team-role">Технический директор</div>
+                    <p class="team-bio">
+                        Опытный разработчик с фокусом на образовательные технологии. 
+                        Отвечает за техническую реализацию платформы.
+                    </p>
+                </div>
+                <div class="team-member interactive-card">
+                    <div class="team-avatar">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="team-name">Дмитрий Сидоров</h3>
+                    <div class="team-role">Директор по анализу данных</div>
+                    <p class="team-bio">
+                        Эксперт в области анализа данных и машинного обучения. 
+                        Развивает алгоритмы персонализации рекомендаций.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Достижения -->
+        <div class="achievements-section animate-fade-in-up-modern">
+            <div class="achievements-content">
+                <div class="text-center mb-5">
+                    <h2 class="display-4 fw-bold mb-4">Наши достижения</h2>
+                    <p class="lead fs-4 opacity-90">Результаты нашей работы говорят сами за себя</p>
+                </div>
+                
+                <div class="achievement-counter">
+                    <div class="counter-item animate-slide-in-left-modern">
+                        <span class="counter-number" data-count="5000">0</span>
+                        <span class="counter-label">Пользователей</span>
+                    </div>
+                    <div class="counter-item animate-slide-in-left-modern">
+                        <span class="counter-number" data-count="12500">0</span>
+                        <span class="counter-label">Пройденных тестов</span>
+                    </div>
+                    <div class="counter-item animate-slide-in-right-modern">
+                        <span class="counter-number" data-count="96">0</span>
+                        <span class="counter-label">Точность, %</span>
+                    </div>
+                    <div class="counter-item animate-slide-in-right-modern">
+                        <span class="counter-number" data-count="24">0</span>
+                        <span class="counter-label">Часов поддержки</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Технологии -->
+        <div class="technologies-section animate-fade-in-up-modern">
+            <div class="text-center mb-5">
+                <span class="badge bg-gradient-primary text-white px-4 py-2 mb-3">Технологии</span>
+                <h2 class="display-4 fw-bold text-gradient mb-4">Современные решения</h2>
+                <p class="lead text-muted fs-4">Используем передовые технологии для лучшего результата</p>
+            </div>
+            
+            <div class="tech-grid">
+                <div class="tech-item interactive-card">
+                    <div class="tech-icon">
+                        <i class="fab fa-python"></i>
+                    </div>
+                    <div class="tech-name">Python</div>
+                </div>
+                <div class="tech-item interactive-card">
+                    <div class="tech-icon">
+                        <i class="fab fa-js"></i>
+                    </div>
+                    <div class="tech-name">JavaScript</div>
+                </div>
+                <div class="tech-item interactive-card">
+                    <div class="tech-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="tech-name">SQLite</div>
+                </div>
+                <div class="tech-item interactive-card">
+                    <div class="tech-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="tech-name">AI/ML</div>
+                </div>
+                <div class="tech-item interactive-card">
+                    <div class="tech-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="tech-name">Mobile</div>
+                </div>
+                <div class="tech-item interactive-card">
+                    <div class="tech-icon">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <div class="tech-name">Cloud</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Контакты -->
+        <div class="contact-section animate-fade-in-up-modern">
+            <div class="contact-content">
+                <h2 class="contact-title">Готовы начать свой путь?</h2>
+                <p class="contact-text">
+                    Присоединяйтесь к тысячам пользователей, которые уже нашли свою профессию 
+                    с помощью ПрофСтарта. Регистрация занимает всего пару минут!
+                </p>
+                <div class="contact-buttons">
+                    <a href="{{ url_for('auth.register') }}" class="btn-contact btn-contact-primary">
+                        <i class="fas fa-user-plus"></i> Зарегистрироваться
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn-contact btn-contact-secondary">
+                        <i class="fas fa-sign-in-alt"></i> Войти в систему
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация счетчиков достижений
+    const animateCounter = (element, target, duration = 3000) => {
+        let start = 0;
+        const increment = target / (duration / 16);
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(start);
+            }
+        }, 16);
+    };
+    
+    // Intersection Observer для анимации при скролле
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                
+                // Анимация счетчиков достижений
+                if (entry.target.classList.contains('achievements-section')) {
+                    const counters = entry.target.querySelectorAll('.counter-number');
+                    counters.forEach((counter, index) => {
+                        setTimeout(() => {
+                            const target = parseInt(counter.dataset.count);
+                            animateCounter(counter, target, 2500);
+                        }, index * 300);
+                    });
+                }
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    // Наблюдение за элементами с анимацией
+    document.querySelectorAll('.animate-fade-in-up-modern, .animate-slide-in-left-modern, .animate-slide-in-right-modern').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Интерактивность карточек
+    const interactiveCards = document.querySelectorAll('.interactive-card');
+    interactiveCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-10px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Анимация при наведении на кнопки
+    const contactButtons = document.querySelectorAll('.btn-contact');
+    contactButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Плавная прокрутка для ссылок
+    document.querySelectorAll('.smooth-scroll').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Анимация фона при движении мыши в hero секции
+    const heroSection = document.querySelector('.hero-section-modern');
+    if (heroSection) {
+        heroSection.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 30;
+            const y = (e.clientY / window.innerHeight - 0.5) * 30;
+            
+            const shapes = heroSection.querySelectorAll('.floating-shape');
+            shapes.forEach((shape, index) => {
+                const delay = index * 0.5;
+                shape.style.transform = `translate(${x * (0.5 + delay)}px, ${y * (0.5 + delay)}px)`;
+            });
+        });
+    }
+    
+    // Обновление счетчика уведомлений
+    function updateNotificationCount() {
+        fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                const counter = document.getElementById('notificationCount');
+                if (counter && data.unread_count > 0) {
+                    counter.textContent = data.unread_count;
+                    counter.classList.remove('d-none');
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки счетчика уведомлений:', err));
+    }
+    
+    // Обновляем счетчик каждые 30 секунд
+    setInterval(updateNotificationCount, 30000);
+    updateNotificationCount();
+});
+</script>
+{% endblock %}
