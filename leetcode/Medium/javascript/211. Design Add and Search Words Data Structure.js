@@ -13,12 +13,12 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
-// class TrieNode {
-//     constructor() {
-//         this.children = new Map();  // Используем Map для детей
-//         this.isEnd = false;
-//     }
-// }
+class TrieNode {
+    constructor() {
+        this.children = new Map();  // Используем Map для детей
+        this.isEnd = false;
+    }
+}
 
 class WordDictionary {
     constructor() {

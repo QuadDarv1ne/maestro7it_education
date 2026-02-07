@@ -13,11 +13,11 @@ GitHub: https://github.com/QuadDarv1ne/
 7. ВК группа: https://vk.com/science_geeks
 """
 
-# class TrieNode:
-#     """Узел префиксного дерева"""
-#     def __init__(self):
-#         self.children = {}  # Словарь для хранения детей
-#         self.is_end = False  # Флаг конца слова
+class TrieNode:
+    """Узел префиксного дерева"""
+    def __init__(self):
+        self.children = {}  # Словарь для хранения детей
+        self.is_end = False  # Флаг конца слова
 
 class WordDictionary:
     """
@@ -35,7 +35,7 @@ class WordDictionary:
     def __init__(self):
         self.root = TrieNode()
     
-    def addWord(self, word: str) -> None:
+    def addWord(self, word):
         """Добавляет слово в структуру"""
         node = self.root
         for char in word:
@@ -44,7 +44,7 @@ class WordDictionary:
             node = node.children[char]
         node.is_end = True
     
-    def search(self, word: str) -> bool:
+    def search(self, word):
         """Ищет слово, '.' соответствует любому символу"""
         def dfs(node, index):
             # Базовый случай: дошли до конца слова

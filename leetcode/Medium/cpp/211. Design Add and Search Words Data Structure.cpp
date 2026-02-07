@@ -13,18 +13,18 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
-// class TrieNode {
-// public:
-//     TrieNode* children[26];
-//     bool isEnd;
+class TrieNode {
+public:
+    TrieNode* children[26];
+    bool isEnd;
     
-//     TrieNode() {
-//         for (int i = 0; i < 26; i++) {
-//             children[i] = nullptr;
-//         }
-//         isEnd = false;
-//     }
-// };
+    TrieNode() {
+        for (int i = 0; i < 26; i++) {
+            children[i] = nullptr;
+        }
+        isEnd = false;
+    }
+};
 
 class WordDictionary {
 private:
@@ -75,5 +75,21 @@ public:
     
     bool search(string word) {
         return searchInNode(word, 0, root);
+    }
+    
+    // Деструктор для очистки памяти (опционально)
+    ~WordDictionary() {
+        clear(root);
+    }
+    
+private:
+    void clear(TrieNode* node) {
+        if (!node) return;
+        for (int i = 0; i < 26; i++) {
+            if (node->children[i]) {
+                clear(node->children[i]);
+            }
+        }
+        delete node;
     }
 };

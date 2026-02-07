@@ -13,15 +13,15 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
-// class TrieNode {
-//     TrieNode[] children;
-//     boolean isEnd;
+class TrieNode {
+    TrieNode[] children;
+    boolean isEnd;
     
-//     public TrieNode() {
-//         children = new TrieNode[26];
-//         isEnd = false;
-//     }
-// }
+    public TrieNode() {
+        children = new TrieNode[26];
+        isEnd = false;
+    }
+}
 
 class WordDictionary {
     private TrieNode root;
