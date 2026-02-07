@@ -70,6 +70,9 @@
 - `exports/` - Директория для экспортированных файлов
 - `data/` - Директория для данных
 - `logs/` - Директория для файлов логов
+- `backup_manager.py` - Модуль для резервного копирования и восстановления базы данных
+- `data_validator.py` - Модуль для проверки качества данных
+- `performance_monitor.py` - Модуль для мониторинга производительности запросов
 - `run_examples.bat` - Скрипт для удобного запуска различных компонентов проекта
 
 ## Руководство по синтаксису SQL в DuckDB
@@ -193,6 +196,16 @@ FROM daily_sales;
 - Comprehensive analytical queries
 - Sample dataset with 15 realistic product entries
 - Support for product characteristics stored as JSON
+- Advanced configuration management with centralized settings
+- Comprehensive data validation utilities
+- Performance monitoring and benchmarking tools
+- Database backup and recovery mechanisms
+- Multi-module architecture with separation of concerns
+- Extensive logging and diagnostics
+- Cross-platform compatibility
+- Automated setup and deployment scripts
+- Rich export capabilities with multiple formats
+- Interactive batch script for easy access to all features
 
 ## DuckDB с Python - Полное руководство
 
@@ -398,6 +411,21 @@ while True:
    run_examples.bat
    ```
 
+7. To run data validation checks:
+   ```
+   python data_validator.py
+   ```
+
+8. To run performance monitoring:
+   ```
+   python performance_monitor.py
+   ```
+
+9. To run backup management:
+   ```
+   python backup_manager.py
+   ```
+
 3. To run in debug mode:
    ```
    DEBUG_MODE=True python ozon_db_setup.py
@@ -494,3 +522,15 @@ DuckDB универсален и может использоваться в ра
 4. Корреляция цены и рейтинга
 5. Анализ товаров с высоким количеством отзывов
 6. Экспорт данных в форматы `CSV` и `JSON`
+
+## Дополнительные модули проекта
+
+**Проект также включает следующие специализированные модули:**
+
+1. **`config.py`** - Централизованное управление конфигурацией проекта, включая настройки базы данных, параметры экспорта и аналитические настройки
+2. **`utils.py`** - Вспомогательные функции для логирования, форматирования валюты, расчета скидок и других служебных операций
+3. **`analytics.py`** - Расширенный модуль аналитики с поддержкой экспорта данных и комплексных отчетов
+4. **`data_validator.py`** - Инструмент для проверки качества данных, выявления пропущенных значений, выбросов и логических несоответствий
+5. **`performance_monitor.py`** - Система мониторинга производительности запросов, с измерением времени выполнения и использования ресурсов
+6. **`backup_manager.py`** - Механизмы резервного копирования и восстановления базы данных
+7. **`demo_complete.py`** - Комплексная демонстрация всех возможностей проекта в одном скрипте

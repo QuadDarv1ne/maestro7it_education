@@ -18,10 +18,14 @@ echo 4. Только экспорт данных
 echo 5. Запуск расширенной аналитики
 echo 6. Тестирование установки DuckDB
 echo 7. Просмотр содержимого базы данных
+echo 8. Проверка качества данных
+echo 9. Мониторинг производительности
+echo 10. Резервное копирование
+echo 11. Полная демонстрация проекта
 echo 0. Выход
 echo.
 
-set /p choice="Введите номер (0-7): "
+set /p choice="Введите номер (0-11): "
 
 if "%choice%"=="1" goto full_analysis
 if "%choice%"=="2" goto init_db
@@ -30,6 +34,10 @@ if "%choice%"=="4" goto export_data
 if "%choice%"=="5" goto advanced_analytics
 if "%choice%"=="6" goto test_duckdb
 if "%choice%"=="7" goto view_db
+if "%choice%"=="8" goto data_validation
+if "%choice%"=="9" goto perf_monitor
+if "%choice%"=="10" goto backup_manager
+if "%choice%"=="11" goto demo_complete
 if "%choice%"=="0" goto exit_script
 
 echo Неверный выбор. Пожалуйста, введите число от 0 до 7.
@@ -81,6 +89,34 @@ goto menu
 echo.
 echo Просмотр содержимого базы данных...
 python -c "import duckdb; con = duckdb.connect('ozon_products.duckdb'); print('Таблицы в базе:'); print(con.execute('SHOW TABLES;').fetchdf()); print('Количество товаров:'); print(con.execute('SELECT COUNT(*) as count FROM ozon_products;').fetchdf()); con.close()"
+pause
+goto menu
+
+:data_validation
+echo.
+echo Проверка качества данных...
+python data_validator.py
+pause
+goto menu
+
+:perf_monitor
+echo.
+echo Мониторинг производительности...
+python performance_monitor.py
+pause
+goto menu
+
+:backup_manager
+echo.
+echo Резервное копирование...
+python backup_manager.py
+pause
+goto menu
+
+:demo_complete
+echo.
+echo Полная демонстрация проекта...
+python demo_complete.py
 pause
 goto menu
 

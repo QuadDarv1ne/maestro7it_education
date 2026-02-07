@@ -1,0 +1,61 @@
+Отчет о производительности - 2026-02-07 19:44:22
+============================================================
+
+⚡ СВОДКА ПО ПРОИЗВОДИТЕЛЬНОСТИ
+==================================================
+Всего измерений: 4
+
+⏱️  ВРЕМЯ ВЫПОЛНЕНИЯ:
+  • Среднее время: 0.0294с
+  • Минимальное время: 0.0283с
+  • Максимальное время: 0.0310с
+  • Общее время: 0.1174с
+
+💾 ИСПОЛЬЗОВАНИЕ ПАМЯТИ:
+  • Среднее изменение: 1.73MB
+  • Максимальное изменение: 2.57MB
+
+🐢 ТОП-3 МЕДЛЕННЫХ ОПЕРАЦИЙ:
+  • Запрос: 0.0310с - SELECT * FROM ozon_products ORDER BY price DESC LI...
+  • Запрос: 0.0297с - SELECT brand, AVG(price) as avg_price FROM ozon_pr...
+  • Запрос: 0.0284с - SELECT COUNT(*) FROM ozon_products;...
+
+
+ДЕТАЛЬНЫЕ РЕЗУЛЬТАТЫ:
+------------------------------
+Время: 2026-02-07 19:44:22
+  query: SELECT COUNT(*) FROM ozon_products;
+  execution_time: 0.0284
+  query_time: 0.0015
+  cpu_used: 4.100000000000001
+  memory_delta_mb: 5.44
+  process_memory_delta_mb: 2.57
+  result_count: 1
+
+Время: 2026-02-07 19:44:22
+  query: SELECT * FROM ozon_products ORDER BY price DESC LIMIT 10;
+  execution_time: 0.031
+  query_time: 0.0054
+  cpu_used: 27.3
+  memory_delta_mb: 9.2
+  process_memory_delta_mb: 1.78
+  result_count: 10
+
+Время: 2026-02-07 19:44:22
+  query: SELECT brand, AVG(price) as avg_price FROM ozon_products GROUP BY brand;
+  execution_time: 0.0297
+  query_time: 0.0043
+  cpu_used: 12.5
+  memory_delta_mb: -2.28
+  process_memory_delta_mb: 1.28
+  result_count: 14
+
+Время: 2026-02-07 19:44:22
+  query: SELECT * FROM ozon_products WHERE rating > 4.5 LIMIT 20;
+  execution_time: 0.0283
+  query_time: 0.002
+  cpu_used: 25.0
+  memory_delta_mb: 43.43
+  process_memory_delta_mb: 1.27
+  result_count: 10
+
