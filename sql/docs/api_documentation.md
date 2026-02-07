@@ -1,14 +1,14 @@
-# API Documentation for SQL Learning Platform
+# Документация API для SQL Обучающей Платформы
 
-## Overview
-The SQL Learning Platform provides programmatic access to educational SQL resources, database management, and learning analytics.
+## Обзор
+SQL Обучающая Платформа предоставляет программный доступ к образовательным SQL-ресурсам, управлению базами данных и аналитике обучения.
 
-## Base URL
+## Базовый URL
 ```
 https://api.sql-learning-platform.com/v1
 ```
 
-## Authentication
+## Аутентификация
 ```bash
 # API Key authentication
 curl -H "Authorization: Bearer YOUR_API_KEY" \
@@ -16,11 +16,11 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
      https://api.sql-learning-platform.com/v1/databases
 ```
 
-## Endpoints
+## Конечные точки
 
-### Database Management
+### Управление базами данных
 
-#### List Available Databases
+#### Список доступных баз данных
 ```http
 GET /databases
 ```
@@ -49,7 +49,7 @@ GET /databases
 }
 ```
 
-#### Download Database
+#### Скачать базу данных
 ```http
 POST /databases/{database_id}/download
 ```
@@ -71,9 +71,9 @@ POST /databases/{database_id}/download
 }
 ```
 
-### Query Execution
+### Выполнение запросов
 
-#### Execute SQL Query
+#### Выполнить SQL-запрос
 ```http
 POST /query/execute
 ```
@@ -102,7 +102,7 @@ POST /query/execute
 }
 ```
 
-#### Query Validation
+#### Валидация запроса
 ```http
 POST /query/validate
 ```
@@ -119,9 +119,9 @@ POST /query/validate
 }
 ```
 
-### Learning Analytics
+### Аналитика обучения
 
-#### Track Learning Progress
+#### Отслеживание прогресса обучения
 ```http
 POST /learning/progress
 ```
@@ -147,7 +147,7 @@ POST /learning/progress
 }
 ```
 
-#### Get Learning Recommendations
+#### Получить рекомендации по обучению
 ```http
 GET /learning/recommendations?user_id=user123&level=beginner
 ```
@@ -172,9 +172,9 @@ GET /learning/recommendations?user_id=user123&level=beginner
 }
 ```
 
-### Exercise Management
+### Управление упражнениями
 
-#### Get Exercise
+#### Получить упражнение
 ```http
 GET /exercises/{exercise_id}
 ```
@@ -197,7 +197,7 @@ GET /exercises/{exercise_id}
 }
 ```
 
-#### Submit Exercise Solution
+#### Отправить решение упражнения
 ```http
 POST /exercises/{exercise_id}/submit
 ```
@@ -223,7 +223,7 @@ POST /exercises/{exercise_id}/submit
 
 ## WebSocket API
 
-### Real-time Query Execution
+### Выполнение запросов в реальном времени
 ```javascript
 const ws = new WebSocket('wss://api.sql-learning-platform.com/v1/ws');
 
@@ -241,16 +241,16 @@ ws.onmessage = function(event) {
 };
 ```
 
-## Rate Limits
+## Лимиты запросов
 
 - **Anonymous users**: 100 requests/hour
 - **Authenticated users**: 1000 requests/hour
 - **Query execution**: 50 queries/hour
 - **Database downloads**: 10 downloads/day
 
-## Error Handling
+## Обработка ошибок
 
-### Common Error Responses
+### Распространенные ошибки
 
 ```json
 {
@@ -273,7 +273,7 @@ ws.onmessage = function(event) {
 }
 ```
 
-## SDK Examples
+## Примеры SDK
 
 ### Python SDK
 ```python
@@ -315,9 +315,9 @@ await client.trackProgress({
 });
 ```
 
-## Webhooks
+## Вебхуки
 
-### Progress Updates
+### Обновления прогресса
 ```http
 POST https://your-endpoint.com/sql-progress
 ```
@@ -333,8 +333,8 @@ POST https://your-endpoint.com/sql-progress
 }
 ```
 
-## Support and Documentation
+## Поддержка и документация
 
-- **API Documentation**: https://docs.sql-learning-platform.com
+- **Документация API**: https://docs.sql-learning-platform.com
 - **Support**: support@sql-learning-platform.com
 - **Status Page**: status.sql-learning-platform.com

@@ -1,4 +1,4 @@
-# SQL Learning Environment - Docker Setup
+# SQL Обучающая среда - Настройка Docker
 
 ## Быстрый старт
 

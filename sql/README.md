@@ -80,7 +80,21 @@ sql/
 │   ├── chinook_solutions.sql
 │   ├── northwind_solutions.sql
 │   └── basketball_solutions.sql
+├── docker/                # Docker environment
+│   ├── Dockerfile         # Container configuration
+│   ├── docker-compose.yml # Multi-container setup
+│   └── README.md          # Docker usage guide
+├── .github/               # CI/CD configuration
+│   └── workflows/         # GitHub Actions
+│       └── ci-cd.yml      # Automated testing
+├── mobile/                # Мобильное приложение
+│   ├── App.js             # Main React Native app
+│   ├── app.json           # Expo configuration
+│   ├── package.json       # Dependencies
+│   └── README.md          # Mobile app guide
 ├── docs/                  # Documentation
+│   ├── api_documentation.md      # API reference
+│   └── development_guidelines.md # Coding standards
 ├── basketball/            # Basketball resources
 ├── img/                   # Images
 ├── .gitignore            # Git ignore rules
@@ -91,8 +105,26 @@ sql/
 
 ## 🚀 Начало работы
 
-### Быстрый старт:
+### 🐳 Docker-окружение (Рекомендуется)
+```bash
+# Запуск всего стека
+cd docker
+docker-compose up -d
 
+# Доступ к сервисам:
+# Jupyter Notebook: http://localhost:8888
+# SQLite Web: http://localhost:8080
+# Основной контейнер: docker exec -it sql-learning-environment bash
+```
+
+### 📱 Мобильное приложение
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+### 💻 Традиционный подход
 1. **Загрузите базы данных**:
    ```bash
    python scripts/download_databases.py
@@ -110,15 +142,6 @@ sql/
 4. **Практикуйтесь с тестовыми данными**:
    - `data/test_data/test_dataset.sql`
    - `data/test_data/testing_framework.md`
-
-### Альтернативные способы:
-
-- **Используйте онлайн SQLite** с предоставленными ссылками
-- **Запустите SQL-тестер** для проверки запросов:
-  ```bash
-  python scripts/sql_tester.py
-  ```
-- **Изучите шаблоны проектов** в папке `templates/`
 
 ## 📖 Путь обучения
 

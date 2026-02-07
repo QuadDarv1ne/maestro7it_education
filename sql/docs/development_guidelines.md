@@ -1,62 +1,62 @@
-# SQL Learning Repository - Development Guidelines
+# SQL Обучающий репозиторий - Руководство по разработке
 
-## Code Quality Standards
+## Стандарты качества кода
 
-### Python Code
+### Python код
 - Follow PEP 8 style guide
 - Use type hints where possible
 - Write docstrings for all functions
 - Maintain 80%+ test coverage
 
-### SQL Code
+### SQL код
 - Use consistent indentation (4 spaces)
 - Write descriptive comments in Russian
 - Follow standard SQL naming conventions
 - Include example outputs in comments
 
-### Data Files
+### Файлы данных
 - CSV files must have headers
 - Use UTF-8 encoding
 - Keep files under 10MB
 - Validate data integrity
 
-## Testing Requirements
+## Требования к тестированию
 
-### Unit Tests
+### Модульное тестирование
 - Every new feature must have tests
 - Test edge cases and error conditions
 - Use pytest for Python testing
 - SQL queries must be validated against test data
 
-### Integration Tests
+### Интеграционное тестирование
 - Test complete workflows
 - Verify data pipeline integrity
 - Check cross-platform compatibility
 - Validate Docker deployments
 
-## Documentation Standards
+## Стандарты документации
 
-### Inline Documentation
+### Встроенная документация
 - All public functions must have docstrings
 - Complex queries need line-by-line comments
 - Include usage examples
 - Document expected inputs/outputs
 
-### User Documentation
+### Пользовательская документация
 - Keep README.md up to date
 - Include setup instructions
 - Provide troubleshooting guides
 - Add usage examples
 
-## Branching Strategy
+## Стратегия ветвления
 
-### Main Branches
+### Основные ветки
 - `main` - Production ready code
 - `develop` - Development branch
 - `feature/*` - Feature branches
 - `hotfix/*` - Bug fixes
 
-### Pull Request Process
+### Процесс Pull Request
 1. Create feature branch from `develop`
 2. Implement changes with tests
 3. Update documentation
@@ -66,56 +66,56 @@
 
 ## CI/CD Pipeline
 
-### Automated Checks
+### Автоматические проверки
 - Syntax validation
 - Unit tests
 - Integration tests
 - Docker build validation
 - Security scanning
 
-### Deployment
+### Деплой
 - Automatic deployment on `main` branch
 - Manual approval for production
 - Rollback capability
 - Monitoring integration
 
-## Performance Requirements
+## Требования к производительности
 
-### Query Performance
+### Производительность запросов
 - Queries should execute in < 5 seconds
 - Use indexes appropriately
 - Avoid SELECT * in production
 - Optimize JOIN operations
 
-### System Performance
+### Системная производительность
 - Docker containers should start in < 30 seconds
 - Memory usage < 500MB
 - CPU usage < 50%
 - Network I/O optimized
 
-## Security Standards
+## Стандарты безопасности
 
-### Data Security
+### Безопасность данных
 - No real personal data in samples
 - Sanitize test data
 - Secure database connections
 - Regular security updates
 
-### Code Security
+### Безопасность кода
 - Dependency vulnerability scanning
 - Static code analysis
 - Input validation
 - Error handling without information disclosure
 
-## Version Control
+## Контроль версий
 
-### Commit Messages
+### Сообщения коммитов
 - Use conventional commits
 - Reference issues when applicable
 - Keep messages descriptive
 - Include impact assessment
 
-### Release Process
+### Процесс релиза
 1. Update version numbers
 2. Update changelog
 3. Create release branch
@@ -123,35 +123,35 @@
 5. Create GitHub release
 6. Update documentation
 
-## Monitoring and Maintenance
+## Мониторинг и обслуживание
 
-### Health Checks
+### Проверки состояния
 - Regular automated testing
 - Performance monitoring
 - Usage analytics
 - Error tracking
 
-### Maintenance Tasks
+### Задачи обслуживания
 - Weekly dependency updates
 - Monthly security audits
 - Quarterly performance reviews
 - Annual architecture assessment
 
-## Contribution Guidelines
+## Руководство по внесению вклада
 
-### Getting Started
+### Начало работы
 1. Fork the repository
 2. Create feature branch
 3. Make changes with tests
 4. Submit pull request
 
-### Code Review Process
+### Процесс код-ревью
 - At least one reviewer required
 - Address all feedback
 - Pass all CI checks
 - Merge only after approval
 
-### Community Standards
+### Стандарты сообщества
 - Be respectful and professional
 - Help other contributors
 - Follow established patterns
