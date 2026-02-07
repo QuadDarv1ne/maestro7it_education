@@ -16,3 +16,36 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+    public String shortestPalindrome(String s) {
+        // Алгоритм КМП
+        String rev = new StringBuilder(s).reverse().toString();
+        String combined = s + "#" + rev;
+        
+        // Вычисляем префикс-функцию
+        int n = combined.length();
+        int[] pi = new int[n];
+        
+        for (int i = 1; i < n; i++) {
+            int j = pi[i - 1];
+            
+            while (j > 0 && combined.charAt(i) != combined.charAt(j)) {
+                j = pi[j - 1];
+            }
+            
+            if (combined.charAt(i) == combined.charAt(j)) {
+                j++;
+            }
+            
+            pi[i] = j;
+        }
+        
+        // Длина самого длинного палиндромного префикса
+        int longest = pi[n - 1];
+        
+        // Часть для добавления в начало
+        String toAdd = rev.substring(0, s.length() - longest);
+        
+        return toAdd + s;
+    }
+}

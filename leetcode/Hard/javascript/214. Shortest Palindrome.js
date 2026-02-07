@@ -16,3 +16,38 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {string} s
+ * @return {string}
+ */
+var shortestPalindrome = function(s) {
+    // Алгоритм КМП
+    const rev = s.split('').reverse().join('');
+    const combined = s + '#' + rev;
+    
+    // Вычисляем префикс-функцию
+    const n = combined.length;
+    const pi = new Array(n).fill(0);
+    
+    for (let i = 1; i < n; i++) {
+        let j = pi[i - 1];
+        
+        while (j > 0 && combined[i] !== combined[j]) {
+            j = pi[j - 1];
+        }
+        
+        if (combined[i] === combined[j]) {
+            j++;
+        }
+        
+        pi[i] = j;
+    }
+    
+    // Длина самого длинного палиндромного префикса
+    const longest = pi[n - 1];
+    
+    // Часть для добавления в начало
+    const toAdd = rev.substring(0, s.length - longest);
+    
+    return toAdd + s;
+};

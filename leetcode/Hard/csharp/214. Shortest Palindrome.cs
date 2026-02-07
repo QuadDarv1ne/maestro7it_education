@@ -16,3 +16,59 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+public class Solution {
+    public string ShortestPalindrome(string s) {
+        // Алгоритм КМП (Knuth-Morris-Pratt)
+        // Находим самый длинный палиндромный префикс строки
+        
+        if (string.IsNullOrEmpty(s)) {
+            return s;
+        }
+        
+        // Создаем обратную строку
+        string reversed = ReverseString(s);
+        
+        // Создаем комбинированную строку: s + "#" + reversed
+        string combined = s + "#" + reversed;
+        
+        // Вычисляем префикс-функцию для комбинированной строки
+        int[] pi = ComputePrefixFunction(combined);
+        
+        // Длина самого длинного палиндромного префикса
+        int longestPalindromePrefix = pi[pi.Length - 1];
+        
+        // Часть, которую нужно добавить в начало
+        string toAdd = reversed.Substring(0, s.Length - longestPalindromePrefix);
+        
+        return toAdd + s;
+    }
+    
+    private string ReverseString(string s) {
+        char[] charArray = s.ToCharArray();
+        Array.Reverse(charArray);
+        return new string(charArray);
+    }
+    
+    private int[] ComputePrefixFunction(string s) {
+        int n = s.Length;
+        int[] pi = new int[n];
+        
+        for (int i = 1; i < n; i++) {
+            int j = pi[i - 1];
+            
+            // Пока есть несовпадение, отступаем назад
+            while (j > 0 && s[i] != s[j]) {
+                j = pi[j - 1];
+            }
+            
+            // Если символы совпадают, увеличиваем j
+            if (s[i] == s[j]) {
+                j++;
+            }
+            
+            pi[i] = j;
+        }
+        
+        return pi;
+    }
+}

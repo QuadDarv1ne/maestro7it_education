@@ -16,3 +16,40 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+public:
+    string shortestPalindrome(string s) {
+        // Используем алгоритм КМП
+        string rev_s = s;
+        reverse(rev_s.begin(), rev_s.end());
+        
+        // Создаем комбинированную строку
+        string combined = s + "#" + rev_s;
+        
+        // Вычисляем префикс-функцию
+        int n = combined.length();
+        vector<int> pi(n, 0);
+        
+        for (int i = 1; i < n; i++) {
+            int j = pi[i - 1];
+            
+            while (j > 0 && combined[i] != combined[j]) {
+                j = pi[j - 1];
+            }
+            
+            if (combined[i] == combined[j]) {
+                j++;
+            }
+            
+            pi[i] = j;
+        }
+        
+        // Длина самого длинного палиндромного префикса
+        int longest = pi[n - 1];
+        
+        // Часть для добавления в начало
+        string to_add = rev_s.substr(0, s.length() - longest);
+        
+        return to_add + s;
+    }
+};

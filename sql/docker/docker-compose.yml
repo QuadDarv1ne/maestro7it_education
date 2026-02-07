@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  sql-learning:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: sql-learning-environment
+    volumes:
+      - ../data:/app/data
+      - ../src:/app/src
+      - ../notebooks:/app/notebooks
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    stdin_open: true
+    tty: true
+    command: bash
+
+  sqlite-web:
+    image: coleifer/sqlite-web
+    container_name: sqlite-web-interface
+    volumes:
+      - ../data/databases:/data
+    ports:
+      - "8080:8080"
+    environment:
+      - SQLITE_DATABASE=chinook.db
+    depends_on:
+      - sql-learning
+
+  jupyter:
+    image: jupyter/minimal-notebook
+    container_name: sql-jupyter-notebook
+    volumes:
+      - ../notebooks:/home/jovyan/notebooks
+      - ../data:/home/jovyan/data
+      - ../src:/home/jovyan/src
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: start-notebook.sh --NotebookApp.token=''
