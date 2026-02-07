@@ -1,0 +1,1609 @@
+{% extends "base.html" %}
+
+{% block title %}О проекте - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<style>
+:root {
+    --gradient-about: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-team: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-stats: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --gradient-values: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    --gradient-tech: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --transition-fast: all 0.3s ease;
+    --transition-medium: all 0.5s ease;
+    --transition-slow: all 0.8s ease;
+    --shadow-about: 0 30px 60px -15px rgba(102, 126, 234, 0.3);
+    --border-radius-xl: 25px;
+    --border-radius-xxl: 40px;
+    --glow-primary: 0 0 25px rgba(102, 126, 234, 0.6);
+    --glow-success: 0 0 25px rgba(76, 175, 80, 0.6);
+    --glow-warning: 0 0 25px rgba(255, 193, 7, 0.6);
+    --glow-info: 0 0 25px rgba(23, 162, 184, 0.6);
+    --glow-danger: 0 0 25px rgba(220, 53, 69, 0.6);
+}
+
+/* Главный контейнер */
+.about-ultra-modern-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 2.5rem 0;
+}
+
+/* Hero секция */
+.hero-section-ultra {
+    background: var(--gradient-about);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 4rem;
+    border-radius: var(--border-radius-xxl);
+    box-shadow: var(--shadow-about);
+    animation: heroScaleIn 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes heroScaleIn {
+    0% { 
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.hero-gradient-ultra {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.2) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.15) 0%, transparent 50%);
+}
+
+.hero-content-ultra {
+    position: relative;
+    z-index: 2;
+    padding: 5rem 2.5rem;
+}
+
+.hero-title-ultra {
+    font-size: 5rem;
+    font-weight: 800;
+    text-shadow: 5px 5px 10px rgba(0,0,0,0.3);
+    letter-spacing: -3px;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-title-ultra::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    background: var(--gradient-stats);
+    border-radius: 4px;
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: titleLine 1.5s ease-out 0.5s forwards;
+}
+
+@keyframes titleLine {
+    to {
+        transform: scaleX(1);
+    }
+}
+
+.gradient-text-ultra {
+    background: linear-gradient(45deg, #fff, #e0e0e0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-subtitle-ultra {
+    font-size: 2.2rem;
+    font-weight: 500;
+    margin: 2rem 0;
+    opacity: 0.95;
+    animation: fadeInDelay 1s ease-out 0.8s forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInDelay {
+    to {
+        opacity: 1;
+    }
+}
+
+.hero-description-ultra {
+    font-size: 1.5rem;
+    max-width: 900px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.9;
+    animation: fadeInDelay 1s ease-out 1s forwards;
+    opacity: 0;
+}
+
+/* Анимированные элементы фона */
+.hero-animations-ultra {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.floating-shape-ultra {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    animation: float-ultra 10s ease-in-out infinite;
+    box-shadow: inset 0 0 20px rgba(255,255,255,0.2);
+}
+
+.shape-1-ultra {
+    width: 150px;
+    height: 150px;
+    top: 15%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.shape-2-ultra {
+    width: 100px;
+    height: 100px;
+    top: 60%;
+    right: 15%;
+    animation-delay: 2s;
+}
+
+.shape-3-ultra {
+    width: 180px;
+    height: 180px;
+    bottom: 20%;
+    left: 20%;
+    animation-delay: 4s;
+}
+
+.shape-4-ultra {
+    width: 80px;
+    height: 80px;
+    top: 30%;
+    right: 25%;
+    animation-delay: 1s;
+}
+
+@keyframes float-ultra {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg); 
+        opacity: 0.7;
+    }
+    50% { 
+        transform: translateY(-40px) rotate(180deg); 
+        opacity: 1;
+    }
+}
+
+/* Секция миссии */
+.mission-section-ultra {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    box-shadow: 0 20px 45px rgba(0,0,0,0.12);
+    position: relative;
+    overflow: hidden;
+    animation: slideInUp 1s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.mission-section-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: var(--gradient-about);
+}
+
+.mission-card-ultra {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 25px;
+    padding: 3.5rem;
+    transition: var(--transition-medium);
+    border: 3px solid transparent;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.mission-card-ultra::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: var(--gradient-about);
+    z-index: -1;
+    border-radius: 28px;
+    opacity: 0;
+    transition: var(--transition-fast);
+}
+
+.mission-card-ultra:hover::before {
+    opacity: 1;
+}
+
+.mission-card-ultra:hover {
+    transform: translateY(-20px) scale(1.03);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.18);
+    border-color: #667eea;
+    animation: cardElevate 0.8s ease-out;
+}
+
+@keyframes cardElevate {
+    0% { transform: translateY(-20px) scale(1.03); }
+    50% { transform: translateY(-25px) scale(1.05); }
+    100% { transform: translateY(-20px) scale(1.03); }
+}
+
+.mission-icon-ultra {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    margin-bottom: 2.5rem;
+    transition: var(--transition-fast);
+    background: white;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    position: relative;
+    z-index: 2;
+}
+
+.mission-card-ultra:hover .mission-icon-ultra {
+    transform: scale(1.2) rotate(20deg);
+    box-shadow: 0 25px 50px rgba(102, 126, 234, 0.3);
+    animation: iconRotate 1s ease-out;
+}
+
+@keyframes iconRotate {
+    0% { transform: scale(1.2) rotate(0deg); }
+    100% { transform: scale(1.2) rotate(20deg); }
+}
+
+.mission-title-ultra {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    color: #333;
+    position: relative;
+    z-index: 2;
+}
+
+.mission-text-ultra {
+    font-size: 1.3rem;
+    line-height: 1.9;
+    color: #666;
+    position: relative;
+    z-index: 2;
+}
+
+/* Ценности */
+.values-section-ultra {
+    background: var(--gradient-values);
+    border-radius: var(--border-radius-xl);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    position: relative;
+    overflow: hidden;
+    animation: scaleIn 1.1s ease-out 0.2s both;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.values-section-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 70%, rgba(255,255,255,0.15) 0%, transparent 60%);
+    z-index: 0;
+}
+
+.values-content-ultra {
+    position: relative;
+    z-index: 1;
+}
+
+.value-card-ultra {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    padding: 3rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    border: 2px solid rgba(255,255,255,0.3);
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.value-card-ultra::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: var(--gradient-values);
+    z-index: -1;
+    border-radius: 27px;
+    opacity: 0;
+    transition: var(--transition-fast);
+}
+
+.value-card-ultra:hover::before {
+    opacity: 1;
+}
+
+.value-card-ultra:hover {
+    transform: translateY(-20px) scale(1.05);
+    background: rgba(255,255,255, 0.3);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    border-color: rgba(255,255,255,0.5);
+    animation: valueFloat 0.9s ease-out;
+}
+
+@keyframes valueFloat {
+    0% { transform: translateY(-20px) scale(1.05); }
+    50% { transform: translateY(-25px) scale(1.08); }
+    100% { transform: translateY(-20px) scale(1.05); }
+}
+
+.value-icon-ultra {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    margin: 0 auto 2rem;
+    background: white;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    transition: var(--transition-fast);
+    position: relative;
+    z-index: 2;
+}
+
+.value-card-ultra:hover .value-icon-ultra {
+    transform: scale(1.25) rotate(25deg);
+    box-shadow: 0 25px 55px rgba(0,0,0,0.3);
+    animation: valueIconRotate 1.2s ease-out;
+}
+
+@keyframes valueIconRotate {
+    0% { transform: scale(1.25) rotate(0deg); }
+    100% { transform: scale(1.25) rotate(25deg); }
+}
+
+.value-title-ultra {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    color: white;
+    position: relative;
+    z-index: 2;
+}
+
+.value-description-ultra {
+    color: rgba(255,255,255, 0.95);
+    font-size: 1.2rem;
+    line-height: 1.8;
+    position: relative;
+    z-index: 2;
+}
+
+/* Команда */
+.team-section-ultra {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    box-shadow: 0 20px 45px rgba(0,0,0,0.12);
+    animation: fadeInUp 1.2s ease-out 0.4s both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(60px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.team-grid-ultra {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 3rem;
+    margin-top: 3rem;
+}
+
+.team-member-ultra {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 25px;
+    padding: 3rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    border: 3px solid transparent;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.team-member-ultra::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: var(--gradient-team);
+    z-index: -1;
+    border-radius: 28px;
+    opacity: 0;
+    transition: var(--transition-fast);
+}
+
+.team-member-ultra:hover::before {
+    opacity: 1;
+}
+
+.team-member-ultra:hover {
+    transform: translateY(-20px) scale(1.04);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.18);
+    border-color: #f093fb;
+    animation: teamFloat 1s ease-out;
+}
+
+@keyframes teamFloat {
+    0% { transform: translateY(-20px) scale(1.04); }
+    50% { transform: translateY(-25px) scale(1.06); }
+    100% { transform: translateY(-20px) scale(1.04); }
+}
+
+.team-avatar-ultra {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin: 0 auto 2.5rem;
+    background: var(--gradient-team);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: white;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    border: 5px solid white;
+}
+
+.team-member-ultra:hover .team-avatar-ultra {
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+    animation: avatarSpin 1.5s ease-out;
+}
+
+@keyframes avatarSpin {
+    0% { transform: scale(1.1) rotate(0deg); }
+    100% { transform: scale(1.1) rotate(15deg); }
+}
+
+.team-name-ultra {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 0.8rem;
+    color: #333;
+}
+
+.team-role-ultra {
+    font-size: 1.3rem;
+    color: #f093fb;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+
+.team-bio-ultra {
+    color: #666;
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+/* Достижения */
+.achievements-section-ultra {
+    background: var(--gradient-stats);
+    border-radius: var(--border-radius-xl);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    position: relative;
+    overflow: hidden;
+    color: white;
+    animation: slideInRight 1.3s ease-out 0.6s both;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.achievements-section-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 70% 30%, rgba(255,255,255,0.15) 0%, transparent 60%);
+    z-index: 0;
+}
+
+.achievements-content-ultra {
+    position: relative;
+    z-index: 1;
+}
+
+.achievement-counter-ultra {
+    text-align: center;
+    margin: 3rem 0;
+}
+
+.counter-item-ultra {
+    display: inline-block;
+    margin: 0 3rem;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+.counter-number-ultra {
+    font-size: 5rem;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 1rem;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.counter-label-ultra {
+    font-size: 1.4rem;
+    opacity: 0.95;
+    font-weight: 600;
+    position: relative;
+}
+
+/* Технологии */
+.technologies-section-ultra {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 4rem;
+    margin-bottom: 4rem;
+    box-shadow: 0 20px 45px rgba(0,0,0,0.12);
+    animation: slideInLeft 1.3s ease-out 0.8s both;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.tech-grid-ultra {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2.5rem;
+    margin-top: 3rem;
+}
+
+.tech-item-ultra {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    border: 3px solid transparent;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.tech-item-ultra::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: var(--gradient-tech);
+    z-index: -1;
+    border-radius: 23px;
+    opacity: 0;
+    transition: var(--transition-fast);
+}
+
+.tech-item-ultra:hover::before {
+    opacity: 1;
+}
+
+.tech-item-ultra:hover {
+    transform: translateY(-15px) scale(1.03);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.18);
+    border-color: #fa709a;
+    animation: techFloat 0.8s ease-out;
+}
+
+@keyframes techFloat {
+    0% { transform: translateY(-15px) scale(1.03); }
+    50% { transform: translateY(-20px) scale(1.05); }
+    100% { transform: translateY(-15px) scale(1.03); }
+}
+
+.tech-icon-ultra {
+    font-size: 4rem;
+    margin-bottom: 1.8rem;
+    color: #fa709a;
+    transition: var(--transition-fast);
+    position: relative;
+    z-index: 2;
+}
+
+.tech-item-ultra:hover .tech-icon-ultra {
+    transform: scale(1.3) rotate(20deg);
+    color: #fee140;
+    text-shadow: 0 0 20px rgba(254, 225, 64, 0.5);
+    animation: techIconRotate 1s ease-out;
+}
+
+@keyframes techIconRotate {
+    0% { transform: scale(1.3) rotate(0deg); }
+    100% { transform: scale(1.3) rotate(20deg); }
+}
+
+.tech-name-ultra {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #333;
+    position: relative;
+    z-index: 2;
+}
+
+/* Контакты */
+.contact-section-ultra {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: var(--border-radius-xl);
+    padding: 4rem;
+    color: white;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    animation: pulseGlow 2s infinite 1s;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { 
+        box-shadow: 0 25px 50px rgba(245, 87, 108, 0.3);
+    }
+    50% { 
+        box-shadow: 0 30px 60px rgba(245, 87, 108, 0.5);
+    }
+}
+
+.contact-section-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.15) 0%, transparent 50%);
+    z-index: 0;
+}
+
+.contact-content-ultra {
+    position: relative;
+    z-index: 1;
+}
+
+.contact-title-ultra {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 2rem;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.contact-text-ultra {
+    font-size: 1.6rem;
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    line-height: 1.9;
+    opacity: 0.95;
+    position: relative;
+}
+
+.contact-buttons-ultra {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 3rem;
+    position: relative;
+}
+
+.btn-contact-ultra {
+    padding: 1.5rem 3rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1.3rem;
+    transition: var(--transition-medium);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+    z-index: 2;
+}
+
+.btn-contact-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-fast);
+}
+
+.btn-contact-ultra:hover::before {
+    transform: rotate(45deg) translate(30%, 30%);
+}
+
+.btn-contact-ultra:hover {
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+    animation: contactBtnFloat 0.5s ease-out;
+}
+
+@keyframes contactBtnFloat {
+    0% { transform: translateY(-10px) scale(1.05); }
+    50% { transform: translateY(-15px) scale(1.08); }
+    100% { transform: translateY(-10px) scale(1.05); }
+}
+
+.btn-contact-primary-ultra {
+    background: white;
+    color: #f093fb;
+}
+
+.btn-contact-secondary-ultra {
+    background: transparent;
+    border: 3px solid white;
+    color: white;
+}
+
+.btn-contact-secondary-ultra:hover {
+    background: white;
+    color: #f093fb;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .hero-title-ultra {
+        font-size: 3rem;
+    }
+    
+    .hero-subtitle-ultra {
+        font-size: 1.6rem;
+    }
+    
+    .hero-description-ultra {
+        font-size: 1.2rem;
+    }
+    
+    .mission-section-ultra,
+    .values-section-ultra,
+    .team-section-ultra,
+    .achievements-section-ultra,
+    .technologies-section-ultra,
+    .contact-section-ultra {
+        padding: 2.5rem 1.8rem;
+    }
+    
+    .counter-item-ultra {
+        margin: 0 1.5rem;
+    }
+    
+    .counter-number-ultra {
+        font-size: 3rem;
+    }
+    
+    .contact-buttons-ultra {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-contact-ultra {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .tech-grid-ultra {
+        grid-template-columns: 1fr;
+    }
+    
+    .team-grid-ultra {
+        grid-template-columns: 1fr;
+    }
+    
+    .floating-shape-ultra {
+        display: none;
+    }
+}
+
+/* Анимации */
+@keyframes fadeInUpUltra {
+    from {
+        opacity: 0;
+        transform: translateY(60px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeftUltra {
+    from {
+        opacity: 0;
+        transform: translateX(-60px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRightUltra {
+    from {
+        opacity: 0;
+        transform: translateX(60px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-fade-in-up-ultra {
+    animation: fadeInUpUltra 0.9s ease-out;
+}
+
+.animate-slide-in-left-ultra {
+    animation: slideInLeftUltra 0.7s ease-out;
+}
+
+.animate-slide-in-right-ultra {
+    animation: slideInRightUltra 0.7s ease-out;
+}
+
+/* Интерактивные эффекты */
+.interactive-card-ultra {
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.interactive-card-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 1s;
+}
+
+.interactive-card-ultra:hover::before {
+    left: 100%;
+}
+
+/* Градиентные разделители */
+.gradient-divider-ultra {
+    height: 8px;
+    background: var(--gradient-about);
+    border-radius: 4px;
+    margin: 4rem 0;
+    opacity: 0.85;
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Улучшенные иконки */
+.icon-ultra-large {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--gradient-about);
+    color: white;
+    font-size: 3rem;
+    box-shadow: 0 20px 45px rgba(102, 126, 234, 0.5);
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.icon-ultra-large::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-fast);
+}
+
+.icon-ultra-large:hover::before {
+    transform: rotate(45deg) translate(20%, 20%);
+}
+
+.icon-ultra-large:hover {
+    transform: scale(1.2) rotate(20deg);
+    box-shadow: 0 25px 55px rgba(102, 126, 234, 0.6);
+    animation: iconLargeFloat 0.8s ease-out;
+}
+
+@keyframes iconLargeFloat {
+    0% { transform: scale(1.2) rotate(20deg); }
+    50% { transform: scale(1.25) rotate(25deg); }
+    100% { transform: scale(1.2) rotate(20deg); }
+}
+
+/* Счетчики достижений */
+.counter-ultra {
+    font-size: 4.5rem;
+    font-weight: 800;
+    color: #667eea;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.counter-label-ultra {
+    font-size: 1.4rem;
+    color: #666;
+    font-weight: 700;
+}
+
+/* Карточки с тенями */
+.shadow-card-ultra {
+    box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+    transition: var(--transition-medium);
+    border-radius: 25px;
+    overflow: hidden;
+}
+
+.shadow-card-ultra:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.18);
+}
+
+/* Специальные эффекты */
+.glow-primary-ultra {
+    box-shadow: var(--glow-primary);
+}
+
+.glow-success-ultra {
+    box-shadow: var(--glow-success);
+}
+
+.glow-warning-ultra {
+    box-shadow: var(--glow-warning);
+}
+
+.glow-info-ultra {
+    box-shadow: var(--glow-info);
+}
+
+.glow-danger-ultra {
+    box-shadow: var(--glow-danger);
+}
+
+/* Параллакс-эффекты */
+.parallax-element-ultra {
+    transition: transform 0.1s ease-out;
+}
+
+/* Анимации при загрузке */
+.loading-animation-ultra {
+    animation: ultraPulseLoad 2.5s infinite;
+}
+
+@keyframes ultraPulseLoad {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.85; 
+        transform: scale(1.02);
+    }
+}
+
+/* Типографика */
+.display-ultra-large {
+    font-weight: 800;
+    letter-spacing: -2.5px;
+    text-shadow: 5px 5px 10px rgba(0,0,0,0.2);
+}
+
+.text-gradient-ultra {
+    background: var(--gradient-about);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+</style>
+
+<div class="about-ultra-modern-container">
+    <div class="container">
+        <!-- Hero секция -->
+        <div class="hero-section-ultra">
+            <div class="hero-gradient-ultra"></div>
+            <div class="hero-animations-ultra">
+                <div class="floating-shape-ultra shape-1-ultra"></div>
+                <div class="floating-shape-ultra shape-2-ultra"></div>
+                <div class="floating-shape-ultra shape-3-ultra"></div>
+                <div class="floating-shape-ultra shape-4-ultra"></div>
+            </div>
+            <div class="hero-content-ultra text-center">
+                <h1 class="hero-title-ultra text-white mb-4 display-ultra-large">
+                    <span class="d-block">Мой</span>
+                    <span class="d-block gradient-text-ultra">ПрофСтарт</span>
+                </h1>
+                <p class="hero-subtitle-ultra text-white">
+                    Профессиональная ориентация школьников будущего
+                </p>
+                <p class="hero-description-ultra text-white-80">
+                    Научно обоснованная платформа для выбора профессии с использованием 
+                    проверенных психологических методик и современных технологий
+                </p>
+                <div class="mt-5">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-xxl px-6 py-4 me-4 shadow-xl pulse-button loading-animation-ultra">
+                        <i class="fas fa-rocket me-3"></i> Начать путь
+                    </a>
+                    <a href="#mission" class="btn btn-outline-light btn-xxl px-6 py-4 smooth-scroll loading-animation-ultra">
+                        <i class="fas fa-info-circle me-3"></i> Узнать больше
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Миссия и видение -->
+        <div class="mission-section-ultra" id="mission">
+            <div class="text-center mb-6">
+                <span class="badge bg-gradient-primary text-white px-5 py-3 mb-4 fs-5">Наша миссия</span>
+                <h2 class="display-3 fw-bold text-gradient mb-5 display-ultra-large">Помочь каждому найти свой путь</h2>
+                <p class="lead text-muted fs-3">
+                    Мы верим, что правильный выбор профессии - ключ к успеху и счастью в жизни
+                </p>
+            </div>
+            
+            <div class="row g-5">
+                <div class="col-md-6">
+                    <div class="mission-card-ultra interactive-card-ultra loading-animation-ultra">
+                        <div class="mission-icon-ultra bg-primary text-white">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <h3 class="mission-title-ultra">Наша миссия</h3>
+                        <p class="mission-text-ultra">
+                            Помочь школьникам и абитуриентам сделать осознанный выбор профессии 
+                            через научно обоснованные методики профориентации, доступные каждому.
+                            Мы стремимся создать инструмент, который поможет раскрыть потенциал каждого человека.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mission-card-ultra interactive-card-ultra loading-animation-ultra">
+                        <div class="mission-icon-ultra bg-success text-white">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h3 class="mission-title-ultra">Наше видение</h3>
+                        <p class="mission-text-ultra">
+                            Стать ведущей платформой профориентации в Казахстане и странах СНГ, 
+                            где каждый молодой человек найдет свой профессиональный путь. 
+                            Мы стремимся к созданию инклюзивной системы, доступной для всех.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Наши ценности -->
+        <div class="values-section-ultra">
+            <div class="values-content-ultra">
+                <div class="text-center mb-6">
+                    <h2 class="display-3 fw-bold text-white mb-4 display-ultra-large">Наши ценности</h2>
+                    <p class="lead text-white-80 fs-3">Основные принципы нашей работы</p>
+                </div>
+                
+                <div class="row g-5">
+                    <div class="col-md-4">
+                        <div class="value-card-ultra interactive-card-ultra">
+                            <div class="value-icon-ultra">
+                                <i class="fas fa-flask text-primary"></i>
+                            </div>
+                            <h3 class="value-title-ultra">Научный подход</h3>
+                            <p class="value-description-ultra">
+                                Используем только проверенные научные методики и психологические 
+                                инструменты, основанные на многолетних исследованиях и клинической практике
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-ultra interactive-card-ultra">
+                            <div class="value-icon-ultra">
+                                <i class="fas fa-user-shield text-success"></i>
+                            </div>
+                            <h3 class="value-title-ultra">Конфиденциальность</h3>
+                            <p class="value-description-ultra">
+                                Строго соблюдаем конфиденциальность всех данных пользователей и 
+                                не передаем информацию третьим лицам. Безопасность - наш приоритет
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-ultra interactive-card-ultra">
+                            <div class="value-icon-ultra">
+                                <i class="fas fa-hands-helping text-info"></i>
+                            </div>
+                            <h3 class="value-title-ultra">Доступность</h3>
+                            <p class="value-description-ultra">
+                                Делаем профессиональную ориентацию доступной для всех, 
+                                независимо от финансового положения или географического расположения
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-ultra interactive-card-ultra">
+                            <div class="value-icon-ultra">
+                                <i class="fas fa-lightbulb text-warning"></i>
+                            </div>
+                            <h3 class="value-title-ultra">Инновации</h3>
+                            <p class="value-description-ultra">
+                                Постоянно развиваемся и внедряем новые технологии для 
+                                улучшения качества наших услуг и пользовательского опыта
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-ultra interactive-card-ultra">
+                            <div class="value-icon-ultra">
+                                <i class="fas fa-heart text-danger"></i>
+                            </div>
+                            <h3 class="value-title-ultra">Эмпатия</h3>
+                            <p class="value-description-ultra">
+                                Понимаем важность выбора профессии и подходим к каждому 
+                                пользователю с теплотой, вниманием и профессионализмом
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="value-card-ultra interactive-card-ultra">
+                            <div class="value-icon-ultra">
+                                <i class="fas fa-graduation-cap text-purple"></i>
+                            </div>
+                            <h3 class="value-title-ultra">Образование</h3>
+                            <p class="value-description-ultra">
+                                Не просто помогаем выбрать профессию, но и просвещаем пользователей 
+                                о мире профессий, возможностях и перспективах развития
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Команда -->
+        <div class="team-section-ultra">
+            <div class="text-center mb-6">
+                <span class="badge bg-gradient-team text-white px-5 py-3 mb-4 fs-5">Наша команда</span>
+                <h2 class="display-3 fw-bold text-gradient mb-5 display-ultra-large">Профессионалы своего дела</h2>
+                <p class="lead text-muted fs-3">Люди, стоящие за успехом ПрофСтарта</p>
+            </div>
+            
+            <div class="team-grid-ultra">
+                <div class="team-member-ultra interactive-card-ultra">
+                    <div class="team-avatar-ultra">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h3 class="team-name-ultra">Александр Петров</h3>
+                    <div class="team-role-ultra">Основатель и CEO</div>
+                    <p class="team-bio-ultra">
+                        Психолог с 12-летним стажем, специализирующийся на профориентации. 
+                        Создал ПрофСтарт для помощи молодежи в выборе профессии на основе 
+                        научных методик и современных технологий.
+                    </p>
+                </div>
+                <div class="team-member-ultra interactive-card-ultra">
+                    <div class="team-avatar-ultra">
+                        <i class="fas fa-laptop-code"></i>
+                    </div>
+                    <h3 class="team-name-ultra">Мария Иванова</h3>
+                    <div class="team-role-ultra">Технический директор</div>
+                    <p class="team-bio-ultra">
+                        Опытный разработчик с фокусом на образовательные технологии. 
+                        Отвечает за техническую реализацию платформы, обеспечение 
+                        безопасности и масштабируемости системы.
+                    </p>
+                </div>
+                <div class="team-member-ultra interactive-card-ultra">
+                    <div class="team-avatar-ultra">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="team-name-ultra">Дмитрий Сидоров</h3>
+                    <div class="team-role-ultra">Директор по анализу данных</div>
+                    <p class="team-bio-ultra">
+                        Эксперт в области анализа данных и машинного обучения. 
+                        Развивает алгоритмы персонализации рекомендаций и 
+                        улучшает точность предсказаний системы.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Достижения -->
+        <div class="achievements-section-ultra">
+            <div class="achievements-content-ultra">
+                <div class="text-center mb-6">
+                    <h2 class="display-3 fw-bold mb-5 display-ultra-large">Наши достижения</h2>
+                    <p class="lead fs-3 opacity-95">Результаты нашей работы говорят сами за себя</p>
+                </div>
+                
+                <div class="achievement-counter-ultra">
+                    <div class="counter-item-ultra animate-slide-in-left-ultra">
+                        <span class="counter-number-ultra" data-count="7500">0</span>
+                        <span class="counter-label-ultra">Пользователей</span>
+                    </div>
+                    <div class="counter-item-ultra animate-slide-in-left-ultra">
+                        <span class="counter-number-ultra" data-count="25000">0</span>
+                        <span class="counter-label-ultra">Пройденных тестов</span>
+                    </div>
+                    <div class="counter-item-ultra animate-slide-in-right-ultra">
+                        <span class="counter-number-ultra" data-count="97">0</span>
+                        <span class="counter-label-ultra">Точность, %</span>
+                    </div>
+                    <div class="counter-item-ultra animate-slide-in-right-ultra">
+                        <span class="counter-number-ultra" data-count="24/7">0</span>
+                        <span class="counter-label-ultra">Поддержка</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Технологии -->
+        <div class="technologies-section-ultra">
+            <div class="text-center mb-6">
+                <span class="badge bg-gradient-tech text-white px-5 py-3 mb-4 fs-5">Технологии</span>
+                <h2 class="display-3 fw-bold text-gradient mb-5 display-ultra-large">Современные решения</h2>
+                <p class="lead text-muted fs-3">Используем передовые технологии для лучшего результата</p>
+            </div>
+            
+            <div class="tech-grid-ultra">
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fab fa-python"></i>
+                    </div>
+                    <div class="tech-name-ultra">Python</div>
+                </div>
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fab fa-js"></i>
+                    </div>
+                    <div class="tech-name-ultra">JavaScript</div>
+                </div>
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="tech-name-ultra">PostgreSQL</div>
+                </div>
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="tech-name-ultra">AI/ML</div>
+                </div>
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="tech-name-ultra">Mobile</div>
+                </div>
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <div class="tech-name-ultra">Cloud</div>
+                </div>
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="tech-name-ultra">Security</div>
+                </div>
+                <div class="tech-item-ultra interactive-card-ultra">
+                    <div class="tech-icon-ultra">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="tech-name-ultra">Analytics</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Контакты -->
+        <div class="contact-section-ultra">
+            <div class="contact-content-ultra">
+                <h2 class="contact-title-ultra">Готовы начать свой путь?</h2>
+                <p class="contact-text-ultra">
+                    Присоединяйтесь к тысячам пользователей, которые уже нашли свою профессию 
+                    с помощью ПрофСтарта. Регистрация занимает всего пару минут, 
+                    а результаты могут изменить всю жизнь к лучшему!
+                </p>
+                <div class="contact-buttons-ultra">
+                    <a href="{{ url_for('auth.register') }}" class="btn-contact-ultra btn-contact-primary-ultra">
+                        <i class="fas fa-user-plus"></i> Зарегистрироваться
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn-contact-ultra btn-contact-secondary-ultra">
+                        <i class="fas fa-sign-in-alt"></i> Войти в систему
+                    </a>
+                    <a href="{{ url_for('main.index') }}" class="btn-contact-ultra btn-contact-secondary-ultra">
+                        <i class="fas fa-home"></i> На главную
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация счетчиков достижений
+    const animateCounter = (element, target, duration = 4000) => {
+        let start = 0;
+        const increment = target / (duration / 16);
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(start);
+            }
+        }, 16);
+    };
+    
+    // Intersection Observer для анимации при скролле
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                
+                // Анимация счетчиков достижений
+                if (entry.target.classList.contains('achievements-section-ultra')) {
+                    const counters = entry.target.querySelectorAll('.counter-number-ultra');
+                    counters.forEach((counter, index) => {
+                        setTimeout(() => {
+                            const target = parseInt(counter.dataset.count || counter.textContent);
+                            animateCounter(counter, target, 3000);
+                        }, index * 400);
+                    });
+                }
+                
+                // Анимация карточек
+                if (entry.target.classList.contains('interactive-card-ultra')) {
+                    entry.target.style.animation = 'fadeInUpUltra 0.8s ease-out';
+                }
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    // Наблюдение за элементами с анимацией
+    document.querySelectorAll('.interactive-card-ultra, .achievements-section-ultra').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Интерактивность карточек
+    const interactiveCards = document.querySelectorAll('.interactive-card-ultra');
+    interactiveCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-20px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Анимация при наведении на кнопки
+    const contactButtons = document.querySelectorAll('.btn-contact-ultra');
+    contactButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-12px)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Плавная прокрутка для ссылок
+    document.querySelectorAll('.smooth-scroll').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Анимация фона при движении мыши в hero секции
+    const heroSection = document.querySelector('.hero-section-ultra');
+    if (heroSection) {
+        heroSection.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 40;
+            const y = (e.clientY / window.innerHeight - 0.5) * 40;
+            
+            const shapes = heroSection.querySelectorAll('.floating-shape-ultra');
+            shapes.forEach((shape, index) => {
+                const delay = index * 0.7;
+                shape.style.transform = `translate(${x * (0.5 + delay)}px, ${y * (0.5 + delay)}px)`;
+            });
+        });
+    }
+    
+    // Обновление счетчика уведомлений
+    function updateNotificationCount() {
+        fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                const counter = document.getElementById('notificationCount');
+                if (counter && data.unread_count > 0) {
+                    counter.textContent = data.unread_count;
+                    counter.classList.remove('d-none');
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки счетчика уведомлений:', err));
+    }
+    
+    // Обновляем счетчик каждые 30 секунд
+    setInterval(updateNotificationCount, 30000);
+    updateNotificationCount();
+    
+    // Анимация заголовка
+    const title = document.querySelector('.hero-title-ultra');
+    if (title) {
+        title.addEventListener('mouseover', function() {
+            this.style.animation = 'heroScaleIn 0.6s ease-out';
+            setTimeout(() => {
+                this.style.animation = '';
+            }, 600);
+        });
+    }
+    
+    // Анимация элементов при загрузке
+    const elements = document.querySelectorAll('.loading-animation-ultra');
+    elements.forEach((el, index) => {
+        setTimeout(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, index * 150);
+    });
+    
+    // Добавляем параллакс-эффект для фона
+    document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 15;
+        const y = (e.clientY / window.innerHeight - 0.5) * 15;
+        
+        const container = document.querySelector('.about-ultra-modern-container');
+        if (container) {
+            container.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        }
+    });
+    
+    // Анимация для иконок технологий
+    const techIcons = document.querySelectorAll('.tech-icon-ultra');
+    techIcons.forEach((icon, index) => {
+        setTimeout(() => {
+            icon.style.animation = 'techIconRotate 1s ease-out';
+            setTimeout(() => {
+                icon.style.animation = '';
+            }, 1000);
+        }, index * 200);
+    });
+    
+    // Анимация для команды
+    const teamMembers = document.querySelectorAll('.team-member-ultra');
+    teamMembers.forEach((member, index) => {
+        member.addEventListener('mouseenter', function() {
+            this.style.zIndex = '10';
+        });
+        
+        member.addEventListener('mouseleave', function() {
+            this.style.zIndex = '1';
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1486 @@
+{% extends "base.html" %}
+
+{% block title %}Мой профиль - Профориентационное тестирование{% endblock %}
+
+{% block content %}
+<!-- Обновление пользовательского профиля с ультрасовременными дизайнерскими решениями -->
+
+<style>
+:root {
+    --gradient-profile: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-gold: linear-gradient(135deg, #FFD700, #FFA500);
+    --gradient-teal: linear-gradient(135deg, #64B5F6, #2196F3);
+    --gradient-purple: linear-gradient(135deg, #BA68C8, #9C27B0);
+    --gradient-green: linear-gradient(135deg, #81C784, #4CAF50);
+    --transition-fast: all 0.3s ease;
+    --transition-medium: all 0.5s ease;
+    --transition-slow: all 0.8s ease;
+    --shadow-profile: 0 25px 50px -12px rgba(102, 126, 234, 0.25);
+    --border-radius-xl: 25px;
+    --border-radius-xxl: 35px;
+    --glow-primary: 0 0 20px rgba(102, 126, 234, 0.5);
+    --glow-success: 0 0 20px rgba(76, 175, 80, 0.5);
+    --glow-warning: 0 0 20px rgba(255, 193, 7, 0.5);
+    --glow-info: 0 0 20px rgba(23, 162, 184, 0.5);
+}
+
+/* Главный контейнер */
+.profile-ultra-modern-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 2rem 0;
+}
+
+/* Шапка профиля */
+.profile-header-ultra {
+    background: var(--gradient-profile);
+    border-radius: var(--border-radius-xxl);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-profile);
+    animation: heroFadeIn 1s ease-out;
+}
+
+.profile-header-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+    z-index: 1;
+}
+
+.profile-header-content-ultra {
+    position: relative;
+    z-index: 2;
+    padding: 3rem;
+}
+
+/* Анимация для героя */
+@keyframes heroFadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(-30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Аватар с ультра-дизайном */
+.profile-avatar-wrapper-ultra {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 1.5rem;
+    perspective: 1000px;
+}
+
+.profile-avatar-ultra {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #fff, #f8f9fa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: #667eea;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    border: 5px solid white;
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+}
+
+.profile-avatar-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(transparent, rgba(255,255,255,0.3), transparent);
+    animation: ultraRotate 3s linear infinite;
+}
+
+@keyframes ultraRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.profile-avatar-ultra:hover {
+    transform: scale(1.05) rotateY(15deg) rotateX(10deg);
+    box-shadow: 0 35px 70px rgba(0,0,0,0.3);
+    animation: avatarGlow 2s infinite alternate;
+}
+
+@keyframes avatarGlow {
+    from { box-shadow: 0 35px 70px rgba(0,0,0,0.3); }
+    to { box-shadow: 0 35px 70px rgba(102, 126, 234, 0.5); }
+}
+
+.avatar-status-ultra {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: 4px solid white;
+    background: #28a745;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: ultraPulse 2s infinite;
+}
+
+@keyframes ultraPulse {
+    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    50% { transform: scale(1.2); opacity: 0.7; box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+}
+
+/* Статистика профиля */
+.profile-stats-ultra {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.stat-item-ultra {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(255,255,255,0.2);
+    border-radius: 25px;
+    backdrop-filter: blur(15px);
+    transition: var(--transition-medium);
+    min-width: 160px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-item-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-fast);
+}
+
+.stat-item-ultra:hover::before {
+    transform: rotate(45deg) translate(20%, 20%);
+}
+
+.stat-item-ultra:hover {
+    transform: translateY(-15px) scale(1.05);
+    background: rgba(255,255,255,0.3);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    animation: statHover 0.6s ease-out;
+}
+
+@keyframes statHover {
+    0% { transform: translateY(-15px) scale(1.05); }
+    50% { transform: translateY(-10px) scale(1.08); }
+    100% { transform: translateY(-15px) scale(1.05); }
+}
+
+.stat-number-ultra {
+    font-size: 3rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.5rem;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    position: relative;
+    z-index: 2;
+}
+
+.stat-label-ultra {
+    color: rgba(255,255,255, 0.9);
+    font-size: 1.2rem;
+    font-weight: 500;
+    position: relative;
+    z-index: 2;
+}
+
+/* Достижения */
+.achievements-section-ultra {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.achievements-section-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-profile);
+}
+
+.achievements-grid-ultra {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.achievement-card-ultra {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 25px;
+    padding: 2.5rem;
+    text-align: center;
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    border: 3px solid transparent;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.achievement-card-ultra::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: var(--gradient-profile);
+    z-index: -1;
+    border-radius: 27px;
+    opacity: 0;
+    transition: var(--transition-fast);
+}
+
+.achievement-card-ultra:hover::before {
+    opacity: 1;
+}
+
+.achievement-card-ultra:hover {
+    transform: translateY(-15px) scale(1.05);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    border-color: #667eea;
+    animation: cardFloat 0.8s ease-out;
+}
+
+@keyframes cardFloat {
+    0% { transform: translateY(-15px) scale(1.05); }
+    50% { transform: translateY(-20px) scale(1.08); }
+    100% { transform: translateY(-15px) scale(1.05); }
+}
+
+.achievement-card-ultra.locked {
+    opacity: 0.6;
+    filter: grayscale(1);
+}
+
+.achievement-icon-ultra {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    transition: var(--transition-fast);
+    position: relative;
+    z-index: 2;
+}
+
+.achievement-card-ultra:hover .achievement-icon-ultra {
+    transform: scale(1.3) rotate(15deg);
+    animation: iconSpin 1s ease-out;
+}
+
+@keyframes iconSpin {
+    0% { transform: scale(1.3) rotate(0deg); }
+    100% { transform: scale(1.3) rotate(15deg); }
+}
+
+.achievement-card-ultra.unlocked .achievement-icon-ultra {
+    color: #FFD700;
+    text-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+    animation: ultraGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes ultraGlow {
+    from { 
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); 
+        transform: scale(1.3) rotate(15deg);
+    }
+    to { 
+        text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 40px rgba(255, 215, 0, 0.8); 
+        transform: scale(1.4) rotate(20deg);
+    }
+}
+
+.achievement-title-ultra {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #333;
+    position: relative;
+    z-index: 2;
+}
+
+.achievement-description-ultra {
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.6;
+    position: relative;
+    z-index: 2;
+}
+
+.progress-circle-ultra {
+    width: 140px;
+    height: 140px;
+    position: relative;
+    margin: 0 auto 2rem;
+}
+
+.progress-ring-ultra {
+    transform: rotate(-90deg);
+}
+
+.progress-ring-circle-ultra {
+    transition: stroke-dashoffset 1.5s ease-in-out;
+    stroke: #667eea;
+    stroke-width: 10;
+    fill: transparent;
+}
+
+.progress-ring-circle-ultra.background {
+    stroke: rgba(102, 126, 234, 0.2);
+}
+
+.progress-text-ultra {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #667eea;
+}
+
+/* Активность пользователя */
+.activity-section-ultra {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.activity-section-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-teal);
+}
+
+.activity-timeline-ultra {
+    position: relative;
+    padding-left: 3rem;
+}
+
+.activity-timeline-ultra::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(to bottom, #64B5F6, #2196F3);
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+}
+
+.activity-item-ultra {
+    position: relative;
+    margin-bottom: 2.5rem;
+    padding: 2rem;
+    background: #f8f9fa;
+    border-radius: 20px;
+    transition: var(--transition-medium);
+    border-left: 5px solid #64B5F6;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.activity-item-ultra:hover {
+    transform: translateX(15px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    border-left: 5px solid #2196F3;
+    animation: activitySlide 0.5s ease-out;
+}
+
+@keyframes activitySlide {
+    0% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(15px); opacity: 1; }
+}
+
+.activity-item-ultra::before {
+    content: '';
+    position: absolute;
+    left: -42px;
+    top: 25px;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #64B5F6;
+    border: 5px solid white;
+    box-shadow: 0 0 0 4px #64B5F6;
+    z-index: 2;
+}
+
+.activity-date-ultra {
+    font-size: 1rem;
+    color: #64B5F6;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.activity-title-ultra {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    color: #333;
+}
+
+.activity-description-ultra {
+    color: #666;
+    line-height: 1.7;
+    font-size: 1.1rem;
+}
+
+/* Графики активности */
+.charts-section-ultra {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.chart-card-ultra {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.chart-card-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-purple);
+}
+
+.chart-card-ultra:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    animation: chartFloat 0.6s ease-out;
+}
+
+@keyframes chartFloat {
+    0% { transform: translateY(-10px) scale(1.02); }
+    50% { transform: translateY(-15px) scale(1.05); }
+    100% { transform: translateY(-10px) scale(1.02); }
+}
+
+.chart-header-ultra {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.8rem;
+}
+
+.chart-title-ultra {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.chart-actions-ultra {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.chart-btn-ultra {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: none;
+    color: #667eea;
+    transition: var(--transition-fast);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.chart-btn-ultra:hover {
+    background: #667eea;
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+/* Секция с тестами */
+.tests-section-ultra {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    padding: 2.5rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.tests-section-ultra::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--gradient-green);
+}
+
+.test-grid-ultra {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.test-card-ultra {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 25px;
+    padding: 2.5rem;
+    transition: var(--transition-medium);
+    border: 3px solid transparent;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.test-card-ultra::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: var(--gradient-green);
+    z-index: -1;
+    border-radius: 27px;
+    opacity: 0;
+    transition: var(--transition-fast);
+}
+
+.test-card-ultra:hover::before {
+    opacity: 1;
+}
+
+.test-card-ultra:hover {
+    transform: translateY(-15px) scale(1.03);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    border-color: #4CAF50;
+    animation: testCardFloat 0.7s ease-out;
+}
+
+@keyframes testCardFloat {
+    0% { transform: translateY(-15px) scale(1.03); }
+    50% { transform: translateY(-20px) scale(1.06); }
+    100% { transform: translateY(-15px) scale(1.03); }
+}
+
+.test-card-ultra::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: var(--gradient-green);
+}
+
+.test-methodology-ultra {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #4CAF50;
+    margin-bottom: 0.8rem;
+}
+
+.test-date-ultra {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.test-score-ultra {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 1.2rem;
+    text-align: center;
+}
+
+.test-score-badge-ultra {
+    display: inline-block;
+    padding: 0.7rem 2rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1.3rem;
+    background: var(--gradient-gold);
+    color: #333;
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Кнопки действий */
+.action-buttons-ultra {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-top: 2.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-ultra {
+    padding: 1.2rem 2.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1.2rem;
+    transition: var(--transition-medium);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-fast);
+}
+
+.btn-ultra:hover::before {
+    transform: rotate(45deg) translate(30%, 30%);
+}
+
+.btn-ultra:hover {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 20px 45px rgba(0,0,0,0.25);
+    animation: btnFloat 0.4s ease-out;
+}
+
+@keyframes btnFloat {
+    0% { transform: translateY(-8px) scale(1.05); }
+    50% { transform: translateY(-12px) scale(1.08); }
+    100% { transform: translateY(-8px) scale(1.05); }
+}
+
+.btn-primary-ultra {
+    background: var(--gradient-profile);
+    color: white;
+}
+
+.btn-outline-ultra {
+    background: transparent;
+    border: 3px solid #667eea;
+    color: #667eea;
+}
+
+.btn-outline-ultra:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .profile-header-content-ultra {
+        padding: 2rem 1.5rem;
+    }
+    
+    .profile-avatar-wrapper-ultra {
+        width: 160px;
+        height: 160px;
+    }
+    
+    .profile-stats-ultra {
+        gap: 1.8rem;
+    }
+    
+    .stat-item-ultra {
+        min-width: 130px;
+        padding: 1.5rem;
+    }
+    
+    .stat-number-ultra {
+        font-size: 2.5rem;
+    }
+    
+    .achievements-grid-ultra {
+        grid-template-columns: 1fr;
+    }
+    
+    .test-grid-ultra {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons-ultra {
+        flex-direction: column;
+    }
+    
+    .btn-ultra {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .activity-timeline-ultra {
+        padding-left: 2rem;
+    }
+    
+    .activity-item-ultra::before {
+        left: -32px;
+    }
+    
+    .chart-card-ultra {
+        padding: 1.8rem;
+    }
+}
+
+/* Улучшенные анимации */
+@keyframes fadeInUltra {
+    from {
+        opacity: 0;
+        transform: translateY(50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.animate-fade-in-ultra {
+    animation: fadeInUltra 0.8s ease-out;
+}
+
+@keyframes slideInLeftUltra {
+    from {
+        opacity: 0;
+        transform: translateX(-50px) rotate(-5deg);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) rotate(0);
+    }
+}
+
+.animate-slide-in-left-ultra {
+    animation: slideInLeftUltra 0.6s ease-out;
+}
+
+@keyframes slideInRightUltra {
+    from {
+        opacity: 0;
+        transform: translateX(50px) rotate(5deg);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) rotate(0);
+    }
+}
+
+.animate-slide-in-right-ultra {
+    animation: slideInRightUltra 0.6s ease-out;
+}
+
+/* Прогресс-бары с ультра-дизайном */
+.progress-ultra {
+    height: 15px;
+    border-radius: 15px;
+    overflow: hidden;
+    background: rgba(102, 126, 234, 0.15);
+    position: relative;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.progress-bar-ultra {
+    height: 100%;
+    border-radius: 15px;
+    background: var(--gradient-profile);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+}
+
+.progress-bar-ultra::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: ultraShimmer 3s infinite;
+}
+
+@keyframes ultraShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+}
+
+/* Бейджи и метки */
+.badge-ultra {
+    padding: 0.6rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: var(--transition-fast);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.badge-ultra:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+/* Градиентные разделители */
+.gradient-divider-ultra {
+    height: 6px;
+    background: var(--gradient-profile);
+    border-radius: 3px;
+    margin: 3rem 0;
+    opacity: 0.8;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+/* Улучшенные иконки */
+.icon-ultra {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--gradient-profile);
+    color: white;
+    font-size: 2rem;
+    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.icon-ultra::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: rotate(45deg);
+    transition: var(--transition-fast);
+}
+
+.icon-ultra:hover::before {
+    transform: rotate(45deg) translate(20%, 20%);
+}
+
+.icon-ultra:hover {
+    transform: scale(1.15) rotate(15deg);
+    box-shadow: 0 20px 45px rgba(102, 126, 234, 0.5);
+    animation: iconFloat 0.6s ease-out;
+}
+
+@keyframes iconFloat {
+    0% { transform: scale(1.15) rotate(15deg); }
+    50% { transform: scale(1.2) rotate(20deg); }
+    100% { transform: scale(1.15) rotate(15deg); }
+}
+
+/* Интерактивные элементы */
+.interactive-element {
+    transition: var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.interactive-element::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.8s;
+}
+
+.interactive-element:hover::before {
+    left: 100%;
+}
+
+/* Специальные эффекты */
+.glow-primary {
+    box-shadow: var(--glow-primary);
+}
+
+.glow-success {
+    box-shadow: var(--glow-success);
+}
+
+.glow-warning {
+    box-shadow: var(--glow-warning);
+}
+
+.glow-info {
+    box-shadow: var(--glow-info);
+}
+
+/* Параллакс-эффекты */
+.parallax-element {
+    transition: transform 0.1s ease-out;
+}
+
+/* Анимации при загрузке */
+.loading-animation {
+    animation: loadingPulse 2s infinite;
+}
+
+@keyframes loadingPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Типографика */
+.display-ultra {
+    font-weight: 800;
+    letter-spacing: -2px;
+    text-shadow: 4px 4px 8px rgba(0,0,0,0.2);
+}
+
+.text-gradient-ultra {
+    background: var(--gradient-profile);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+</style>
+
+<div class="profile-ultra-modern-container">
+    <div class="container">
+        <!-- Шапка профиля с ультра-дизайном -->
+        <div class="profile-header-ultra animate-fade-in-ultra">
+            <div class="profile-header-content-ultra">
+                <div class="text-center">
+                    <!-- Аватар с 3D-анимацией -->
+                    <div class="profile-avatar-wrapper-ultra">
+                        <div class="profile-avatar-ultra interactive-element">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="avatar-status-ultra"></div>
+                    </div>
+                    
+                    <!-- Имя пользователя -->
+                    <h1 class="display-2 fw-bold text-white mb-4 display-ultra">
+                        {{ current_user.username }}
+                    </h1>
+                    
+                    <!-- Роли пользователя -->
+                    <div class="mb-4">
+                        {% if current_user.is_admin %}
+                        <span class="badge-ultra bg-danger text-white me-3 glow-primary">
+                            <i class="fas fa-crown me-2"></i> Администратор
+                        </span>
+                        {% endif %}
+                        <span class="badge-ultra bg-white text-primary glow-info">
+                            <i class="fas fa-calendar me-2"></i> 
+                            Участник с {{ current_user.created_at.strftime('%d.%m.%Y') }}
+                        </span>
+                    </div>
+                    
+                    <!-- Статистика профиля -->
+                    <div class="profile-stats-ultra">
+                        <div class="stat-item-ultra animate-slide-in-left-ultra loading-animation">
+                            <div class="stat-number-ultra">{{ tests_count or 0 }}</div>
+                            <div class="stat-label-ultra">Тестов пройдено</div>
+                        </div>
+                        <div class="stat-item-ultra loading-animation">
+                            <div class="stat-number-ultra">{{ recommendations_count or 0 }}</div>
+                            <div class="stat-label-ultra">Рекомендаций</div>
+                        </div>
+                        <div class="stat-item-ultra loading-animation">
+                            <div class="stat-number-ultra">{{ achievements_count or 0 }}</div>
+                            <div class="stat-label-ultra">Достижений</div>
+                        </div>
+                        <div class="stat-item-ultra animate-slide-in-right-ultra loading-animation">
+                            <div class="stat-number-ultra">{{ days_active or 0 }}</div>
+                            <div class="stat-label-ultra">Дней активности</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Кнопки действий -->
+                    <div class="action-buttons-ultra">
+                        <a href="{{ url_for('auth.preferences') }}" class="btn-ultra btn-outline-ultra interactive-element">
+                            <i class="fas fa-cog"></i> Настройки профиля
+                        </a>
+                        <a href="{{ url_for('test.methodology') }}" class="btn-ultra btn-primary-ultra interactive-element">
+                            <i class="fas fa-plus-circle"></i> Пройти тест
+                        </a>
+                        <a href="{{ url_for('main.index') }}" class="btn-ultra btn-outline-ultra interactive-element">
+                            <i class="fas fa-home"></i> На главную
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Достижения -->
+        <div class="achievements-section-ultra animate-fade-in-ultra">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h2 class="mb-0 display-ultra">
+                    <i class="fas fa-trophy me-3 text-warning glow-warning"></i>
+                    Достижения
+                </h2>
+                <div class="progress-circle-ultra">
+                    <svg class="progress-ring-ultra" width="140" height="140">
+                        <circle class="progress-ring-circle-ultra background" 
+                                r="60" cx="70" cy="70"></circle>
+                        <circle class="progress-ring-circle-ultra" 
+                                r="60" cx="70" cy="70"
+                                stroke-dasharray="377"
+                                stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="progress-text-ultra">28%</div>
+                </div>
+            </div>
+            <div class="achievements-grid-ultra">
+                <!-- Примеры достижений -->
+                <div class="achievement-card-ultra unlocked interactive-element">
+                    <div class="achievement-icon-ultra">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3 class="achievement-title-ultra">Первый шаг</h3>
+                    <p class="achievement-description-ultra">Пройдите первый тест</p>
+                </div>
+                <div class="achievement-card-ultra unlocked interactive-element">
+                    <div class="achievement-icon-ultra">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="achievement-title-ultra">Аналитик</h3>
+                    <p class="achievement-description-ultra">Пройдите 3 теста</p>
+                </div>
+                <div class="achievement-card-ultra locked interactive-element">
+                    <div class="achievement-icon-ultra">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <h3 class="achievement-title-ultra">Эксперт</h3>
+                    <p class="achievement-description-ultra">Пройдите 10 тестов</p>
+                </div>
+                <div class="achievement-card-ultra locked interactive-element">
+                    <div class="achievement-icon-ultra">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <h3 class="achievement-title-ultra">Мастер</h3>
+                    <p class="achievement-description-ultra">Достигните точности 90%+</p>
+                </div>
+                <div class="achievement-card-ultra unlocked interactive-element">
+                    <div class="achievement-icon-ultra">
+                        <i class="fas fa-medal"></i>
+                    </div>
+                    <h3 class="achievement-title-ultra">Исследователь</h3>
+                    <p class="achievement-description-ultra">Изучите 5 профессий</p>
+                </div>
+                <div class="achievement-card-ultra locked interactive-element">
+                    <div class="achievement-icon-ultra">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h3 class="achievement-title-ultra">Профессионал</h3>
+                    <p class="achievement-description-ultra">Получите 20 рекомендаций</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Активность пользователя -->
+        <div class="activity-section-ultra animate-fade-in-ultra">
+            <h2 class="mb-4 display-ultra">
+                <i class="fas fa-chart-bar me-3 text-info glow-info"></i>
+                Активность
+            </h2>
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="activity-timeline-ultra">
+                        <div class="activity-item-ultra interactive-element">
+                            <div class="activity-date-ultra">
+                                <i class="fas fa-calendar-check text-success"></i>
+                                Сегодня, 14:30
+                            </div>
+                            <h4 class="activity-title-ultra">Новый тест завершен</h4>
+                            <p class="activity-description-ultra">Вы успешно завершили тест "Методика Климова" с точностью 92%</p>
+                        </div>
+                        <div class="activity-item-ultra interactive-element">
+                            <div class="activity-date-ultra">
+                                <i class="fas fa-user-plus text-primary"></i>
+                                Вчера, 10:15
+                            </div>
+                            <h4 class="activity-title-ultra">Регистрация в системе</h4>
+                            <p class="activity-description-ultra">Добро пожаловать в ПрофСтарт! Вы успешно зарегистрировались и активировали профиль</p>
+                        </div>
+                        <div class="activity-item-ultra interactive-element">
+                            <div class="activity-date-ultra">
+                                <i class="fas fa-book text-warning"></i>
+                                2 дня назад
+                            </div>
+                            <h4 class="activity-title-ultra">Первое знакомство</h4>
+                            <p class="activity-description-ultra">Посетили страницу о методиках и выбрали интересующие вас подходы</p>
+                        </div>
+                        <div class="activity-item-ultra interactive-element">
+                            <div class="activity-date-ultra">
+                                <i class="fas fa-trophy text-success"></i>
+                                3 дня назад
+                            </div>
+                            <h4 class="activity-title-ultra">Первое достижение</h4>
+                            <p class="activity-description-ultra">Получено достижение "Первый шаг" за прохождение первого теста</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card interactive-element" style="background: linear-gradient(135deg, #64B5F6 0%, #2196F3 100%); border-radius: 25px; padding: 2.5rem; color: white; box-shadow: 0 20px 40px rgba(33, 150, 243, 0.3);">
+                        <h3 class="mb-4 display-ultra">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Уровень активности
+                        </h3>
+                        <div class="text-center">
+                            <div style="font-size: 3.5rem; font-weight: 800; margin: 1.5rem 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">Продвинутый</div>
+                            <div style="height: 15px; background: rgba(255,255,255,0.3); border-radius: 15px; overflow: hidden; margin: 2rem 0; box-shadow: inset 0 2px 8px rgba(0,0,0,0.2);">
+                                <div style="width: 65%; height: 100%; background: white; border-radius: 15px; box-shadow: 0 2px 10px rgba(255,255,255, 0.5);"></div>
+                            </div>
+                            <p class="mb-0 opacity-90">Вы прошли 65% пути к следующему уровню</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Статистика и графики -->
+        <div class="charts-section-ultra">
+            <div class="chart-card-ultra animate-fade-in-ultra interactive-element">
+                <div class="chart-header-ultra">
+                    <h3 class="chart-title-ultra display-ultra">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>
+                        Динамика тестов
+                    </h3>
+                    <div class="chart-actions-ultra">
+                        <button class="chart-btn-ultra">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button class="chart-btn-ultra">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-center" style="height: 250px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);">
+                    <i class="fas fa-chart-bar fa-4x text-primary opacity-60"></i>
+                </div>
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Янв</span>
+                        <span>Фев</span>
+                        <span>Мар</span>
+                        <span>Апр</span>
+                        <span>Май</span>
+                    </div>
+                    <div class="progress-ultra">
+                        <div class="progress-bar-ultra" style="width: 75%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card-ultra animate-fade-in-ultra interactive-element">
+                <div class="chart-header-ultra">
+                    <h3 class="chart-title-ultra display-ultra">
+                        <i class="fas fa-percentage text-success me-2"></i>
+                        Точность результатов
+                    </h3>
+                    <div class="chart-actions-ultra">
+                        <button class="chart-btn-ultra">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 20px; padding: 2rem; margin-top: 1.5rem; box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-ultra bg-success text-white me-4" style="font-size: 2.5rem;">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div style="flex-grow: 1">
+                            <div>Надежность результатов</div>
+                            <div class="progress-ultra mt-3">
+                                <div class="progress-bar-ultra" style="width: 96%"></div>
+                            </div>
+                            <div class="text-muted mt-2" style="font-size: 1.2rem;">96% точность</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- История тестов -->
+        <div class="tests-section-ultra animate-fade-in-ultra">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0 display-ultra">
+                    <i class="fas fa-history me-3 text-success glow-success"></i>
+                    История тестов
+                </h2>
+                <div>
+                    <button class="btn btn-outline-primary me-3">
+                        <i class="fas fa-filter me-1"></i> Фильтр
+                    </button>
+                    <button class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i> Новый тест
+                    </button>
+                </div>
+            </div>
+            
+            {% if tests_history %}
+            <div class="test-grid-ultra">
+                {% for test in tests_history[:6] %}
+                <div class="test-card-ultra interactive-element">
+                    <div class="test-methodology-ultra">
+                        <i class="fas fa-{{ test.methodology.icon }} me-2"></i>
+                        {{ test.methodology.name }}
+                    </div>
+                    <div class="test-date-ultra">
+                        <i class="fas fa-calendar me-1"></i>
+                        {{ test.completed_at.strftime('%d.%m.%Y') }}
+                    </div>
+                    <div class="test-score">
+                        <span class="test-score-badge-ultra">{{ "%.0f"|format(test.accuracy * 100) }}%</span>
+                    </div>
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('test.results', test_id=test.id) }}" class="btn btn-sm btn-outline-success me-2">
+                            <i class="fas fa-chart-line me-1"></i> Результаты
+                        </a>
+                        <a href="{{ url_for('test.methodology') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-redo me-1"></i> Повторить
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-clipboard-list fa-6x text-muted opacity-50"></i>
+                </div>
+                <h3 class="mb-4 display-ultra">Вы еще не проходили тесты</h3>
+                <p class="lead text-muted mb-5" style="font-size: 1.3rem;">
+                    Пройдите профессиональное тестирование, чтобы получить персональные рекомендации
+                </p>
+                <a href="{{ url_for('test.methodology') }}" class="btn-ultra btn-primary-ultra interactive-element">
+                    <i class="fas fa-play-circle me-2"></i> Пройти первый тест
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация SVG прогресс-круга
+    const progressCircle = document.querySelector('.progress-ring-circle-ultra');
+    if (progressCircle) {
+        const radius = 60;
+        const circumference = 2 * Math.PI * radius;
+        const progress = 28; // 28% достижений
+        
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference;
+        
+        const offset = circumference - (progress / 100) * circumference;
+        setTimeout(() => {
+            progressCircle.style.strokeDashoffset = offset;
+        }, 500);
+    }
+    
+    // Анимация счетчиков
+    const animateCounter = (element, target, duration = 2500) => {
+        let start = 0;
+        const increment = target / (duration / 16);
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(start);
+            }
+        }, 16);
+    };
+    
+    // Анимация статистики при скролле
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                
+                // Анимация чисел в статистике
+                const statNumbers = entry.target.querySelectorAll('.stat-number-ultra');
+                statNumbers.forEach((num, index) => {
+                    setTimeout(() => {
+                        const target = parseInt(num.textContent);
+                        animateCounter(num, target, 1800);
+                    }, index * 300);
+                });
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    // Наблюдение за элементами с анимацией
+    document.querySelectorAll('.animate-fade-in-ultra, .animate-slide-in-left-ultra, .animate-slide-in-right-ultra').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Интерактивность карточек достижений
+    const achievementCards = document.querySelectorAll('.achievement-card-ultra');
+    achievementCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            if (this.classList.contains('unlocked')) {
+                this.style.transform = 'translateY(-20px) scale(1.08)';
+                this.style.boxShadow = '0 30px 60px rgba(0,0,0,0.25)';
+            }
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+            this.style.boxShadow = '';
+        });
+    });
+    
+    // Анимация прогресс-баров
+    const progressBars = document.querySelectorAll('.progress-bar-ultra');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 600);
+    });
+    
+    // Обновление счетчика уведомлений
+    function updateNotificationCount() {
+        fetch('/api/notifications/unread-count', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                const counter = document.getElementById('notificationCount');
+                if (counter && data.unread_count > 0) {
+                    counter.textContent = data.unread_count;
+                    counter.classList.remove('d-none');
+                }
+            })
+            .catch(err => console.error('Ошибка загрузки счетчика уведомлений:', err));
+    }
+    
+    // Обновляем счетчик каждые 30 секунд
+    setInterval(updateNotificationCount, 30000);
+    updateNotificationCount();
+    
+    // Анимация при наведении на кнопки
+    const ultraButtons = document.querySelectorAll('.btn-ultra');
+    ultraButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-10px) scale(1.05)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    });
+    
+    // Анимация элементов при загрузке
+    const elements = document.querySelectorAll('.interactive-element');
+    elements.forEach((el, index) => {
+        setTimeout(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Параллакс-эффект для фона
+    document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 10;
+        const y = (e.clientY / window.innerHeight - 0.5) * 10;
+        
+        const container = document.querySelector('.profile-ultra-modern-container');
+        if (container) {
+            container.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+        }
+    });
+    
+    // Анимация для карточек активности
+    const activityItems = document.querySelectorAll('.activity-item-ultra');
+    activityItems.forEach((item, index) => {
+        item.addEventListener('mouseenter', function() {
+            this.style.borderLeftColor = '#2196F3';
+            this.style.transform = 'translateX(20px)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.borderLeftColor = '#64B5F6';
+            this.style.transform = '';
+        });
+    });
+    
+    // Добавляем плавающую анимацию для значков
+    const icons = document.querySelectorAll('.icon-ultra');
+    icons.forEach(icon => {
+        setInterval(() => {
+            icon.style.transform = 'scale(1.1) rotate(15deg)';
+            setTimeout(() => {
+                icon.style.transform = 'scale(1) rotate(0deg)';
+            }, 300);
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}
