@@ -63,9 +63,10 @@ sql/
 │   ├── sample_data/       # CSV files for practice
 │   ├── databases/         # Downloaded SQLite databases
 │   └── test_data/         # Test datasets and frameworks
+├── tests/                 # Automated SQL tests
 ├── scripts/               # Automation scripts
 │   ├── download_databases.py  # Database downloader
-│   └── sql_tester.py      # SQL query tester
+│   └── sql_tester.py      # SQL query tester and validator
 ├── notebooks/             # Jupyter notebooks
 │   ├── chinook_interactive.ipynb
 │   └── northwind_interactive.ipynb
@@ -99,6 +100,25 @@ sql/
 ├── CONTRIBUTING.md       # Contribution guidelines
 └── README.md             # This file
 ```
+
+## 🧪 Тестирование SQL-запросов
+
+Проект включает автоматическую систему тестирования для проверки корректности SQL-запросов:
+
+```bash
+# Интерактивное тестирование
+python scripts/sql_tester.py
+
+# Автоматический запуск тестов
+python scripts/sql_tester.py  # Выберите опцию 2-4 для автоматических тестов
+```
+
+### Структура тестов
+- `tests/chinook_tests.sql` - Тесты для музыкальной базы данных
+- `tests/northwind_tests.sql` - Тесты для бизнес-базы данных
+- `tests/basketball_tests.sql` - Тесты для спортивной аналитики
+
+Каждый тест включает ожидаемое количество результатов для автоматической проверки.
 
 ## 🚀 Начало работы
 
