@@ -1,0 +1,373 @@
+/*
+Продвинутые DAX формулы для сложной аналитики
+*/
+
+-- 1. Когортный анализ
+Customer Cohort = 
+VAR FirstPurchaseDate = 
+    CALCULATE(
+        MIN(Orders[OrderDate]),
+        ALLEXCEPT(Customers, Customers[CustomerID])
+    )
+RETURN
+FORMAT(FirstPurchaseDate, "YYYY-MM")
+
+Retention Rate by Cohort = 
+DIVIDE(
+    DISTINCTCOUNT(Orders[CustomerID]),
+    CALCULATE(
+        DISTINCTCOUNT(Orders[CustomerID]),
+        FILTER(
+            ALL(Calendar),
+            Calendar[Date] = 
+                CALCULATE(
+                    MIN(Orders[OrderDate]),
+                    ALLEXCEPT(Customers, Customers[CustomerID])
+                )
+        )
+    )
+)
+
+Cohort Analysis Matrix = 
+SUMMARIZE(
+    Orders,
+    Customers[CustomerCohort],
+    Calendar[MonthYear],
+    "New Customers", 
+        CALCULATE(
+            DISTINCTCOUNT(Orders[CustomerID]),
+            FILTER(
+                Orders,
+                Orders[OrderDate] = 
+                    CALCULATE(
+                        MIN(Orders[OrderDate]),
+                        ALLEXCEPT(Customers, Customers[CustomerID])
+                    )
+            )
+        ),
+    "Active Customers", DISTINCTCOUNT(Orders[CustomerID]),
+    "Retention Rate", [Retention Rate by Cohort]
+)
+
+
+-- 2. ABC анализ
+Product ABC Category = 
+VAR ProductSales = 
+    CALCULATE(
+        SUM(Sales[Amount]),
+        ALLEXCEPT(Products, Products[ProductID])
+    )
+VAR TotalSales = SUMX(ALL(Products), [Product Sales])
+VAR CumulativeSales = 
+    SUMX(
+        FILTER(
+            ALL(Products),
+            [Product Sales] >= ProductSales
+        ),
+        [Product Sales]
+    )
+VAR Percentage = DIVIDE(CumulativeSales, TotalSales)
+RETURN
+SWITCH(
+    TRUE(),
+    Percentage <= 0.8, "A",
+    Percentage <= 0.95, "B",
+    "C"
+)
+
+ABC Analysis Summary = 
+SUMMARIZE(
+    Products,
+    Products[Category],
+    "Total Sales", SUM(Sales[Amount]),
+    "Product Count", COUNTROWS(Products),
+    "ABC Category", [Product ABC Category]
+)
+
+
+-- 3. Анализ сезонности
+Seasonal Index = 
+VAR MonthlyAverage = 
+    AVERAGEX(
+        VALUES(Calendar[Month]),
+        CALCULATE(SUM(Sales[Amount]))
+    )
+VAR CurrentMonthSales = SUM(Sales[Amount])
+RETURN
+DIVIDE(CurrentMonthSales, MonthlyAverage)
+
+Seasonal Trend = 
+CALCULATE(
+    AVERAGE(Sales[Amount]),
+    DATESINPERIOD(
+        Calendar[Date],
+        LASTDATE(Calendar[Date]),
+        -24,
+        MONTH
+    )
+)
+
+Year-over-Year Seasonal Comparison = 
+DIVIDE(
+    SUM(Sales[Amount]),
+    CALCULATE(
+        SUM(Sales[Amount]),
+        DATEADD(Calendar[Date], -1, YEAR),
+        ALLEXCEPT(Calendar, Calendar[Month])
+    )
+)
+
+
+-- 4. Финансовые метрики
+EBITDA = 
+SUM(IncomeStatement[Revenue]) - 
+SUM(IncomeStatement[Operating Expenses])
+
+ROI = 
+DIVIDE(
+    SUM(Investments[Returns]) - SUM(Investments[Cost]),
+    SUM(Investments[Cost])
+)
+
+NPV (Net Present Value) = 
+SUMX(
+    CashFlows,
+    DIVIDE(
+        CashFlows[Amount],
+        POWER(1 + 0.1, CashFlows[Year])
+    )
+)
+
+Payback Period = 
+VAR CumulativeCashFlow = 
+    CALCULATE(
+        SUM(CashFlows[Amount]),
+        FILTER(
+            ALL(CashFlows[Year]),
+            CashFlows[Year] <= MAX(CashFlows[Year])
+        )
+    )
+VAR InitialInvestment = 
+    CALCULATE(
+        SUM(CashFlows[Amount]),
+        CashFlows[Year] = MIN(CashFlows[Year])
+    )
+RETURN
+IF(
+    CumulativeCashFlow >= ABS(InitialInvestment),
+    MAX(CashFlows[Year]),
+    BLANK()
+)
+
+
+-- 5. Прогнозирование и моделирование
+Sales Forecast Linear Trend = 
+VAR KnownY = VALUES(Sales[Amount])
+VAR KnownX = VALUES(Calendar[DateAsInteger])
+VAR CountItems = COUNTROWS(VALUES(Calendar[DateAsInteger]))
+VAR Sum_X = SUMX(VALUES(Calendar[DateAsInteger]), [DateAsInteger])
+VAR Sum_X2 = SUMX(VALUES(Calendar[DateAsInteger]), [DateAsInteger] ^ 2)
+VAR Sum_Y = SUMX(Sales, [Amount])
+VAR Sum_XY = SUMX(Sales, [Amount] * RELATED(Calendar[DateAsInteger]))
+VAR Slope = 
+    DIVIDE(
+        CountItems * Sum_XY - Sum_X * Sum_Y,
+        CountItems * Sum_X2 - Sum_X ^ 2
+    )
+VAR Intercept = 
+    DIVIDE(
+        Sum_Y - Slope * Sum_X,
+        CountItems
+    )
+RETURN
+Intercept + Slope * MAX(Calendar[DateAsInteger])
+
+Moving Average Forecast = 
+CALCULATE(
+    AVERAGE(Sales[Amount]),
+    DATESINPERIOD(
+        Calendar[Date],
+        LASTDATE(Calendar[Date]),
+        -3,
+        MONTH
+    )
+) * COUNTROWS(VALUES(Calendar[Month]))
+
+Exponential Smoothing = 
+EXP(
+    AVERAGE(
+        LN(
+            CALCULATE(
+                SUM(Sales[Amount]),
+                DATESINPERIOD(
+                    Calendar[Date],
+                    LASTDATE(Calendar[Date]),
+                    -12,
+                    MONTH
+                )
+            )
+        )
+    )
+)
+
+
+-- 6. Анализ отклонений
+Budget Variance = 
+SUM(Actuals[Amount]) - SUM(Budget[Amount])
+
+Variance Percentage = 
+DIVIDE(
+    [Budget Variance],
+    SUM(Budget[Amount])
+)
+
+Variance Analysis = 
+SUMMARIZE(
+    GL,
+    Accounts[Account],
+    Accounts[Category],
+    "Actual", SUM(Actuals[Amount]),
+    "Budget", SUM(Budget[Amount]),
+    "Variance", [Budget Variance],
+    "Variance %", [Variance Percentage]
+)
+
+KPI Status = 
+SWITCH(
+    TRUE(),
+    [Variance Percentage] > 0.1, "Превышение",
+    [Variance Percentage] < -0.1, "Недовыполнение",
+    "В пределах нормы"
+)
+
+
+-- 7. Маркетинговая аналитика
+Customer Acquisition Cost = 
+DIVIDE(
+    SUM(Marketing[Cost]),
+    DISTINCTCOUNT(Orders[CustomerID])
+)
+
+Customer Lifetime Value = 
+VAR CustomerRevenue = 
+    CALCULATE(
+        SUM(Orders[Amount]),
+        ALLEXCEPT(Customers, Customers[CustomerID])
+    )
+VAR CustomerPeriod = 
+    CALCULATE(
+        DISTINCTCOUNT(Calendar[Year]),
+        ALLEXCEPT(Customers, Customers[CustomerID])
+    )
+RETURN
+DIVIDE(CustomerRevenue, CustomerPeriod)
+
+Conversion Rate = 
+DIVIDE(
+    COUNTROWS(Orders),
+    COUNTROWS(Visits)
+)
+
+Cart Abandonment Rate = 
+DIVIDE(
+    COUNTROWS(Carts) - COUNTROWS(Orders),
+    COUNTROWS(Carts)
+)
+
+
+-- 8. Операционная аналитика
+Capacity Utilization = 
+DIVIDE(
+    SUM(Production[ActualOutput]),
+    SUM(Production[Capacity])
+)
+
+Quality Rate = 
+DIVIDE(
+    COUNTROWS(FILTER(Production, Production[Defects] = 0)),
+    COUNTROWS(Production)
+)
+
+On-time Delivery = 
+DIVIDE(
+    COUNTROWS(FILTER(Deliveries, Deliveries[Status] = "On Time")),
+    COUNTROWS(Deliveries)
+)
+
+Inventory Turnover = 
+DIVIDE(
+    SUM(Sales[Amount]),
+    AVERAGE(Inventory[Value])
+)
+
+
+-- 9. Динамическая сегментация
+Dynamic Customer Segments = 
+VAR CustomerSales = 
+    CALCULATE(
+        SUM(Orders[Amount]),
+        ALLEXCEPT(Customers, Customers[CustomerID])
+    )
+VAR CustomerFrequency = 
+    CALCULATE(
+        COUNTROWS(Orders),
+        ALLEXCEPT(Customers, Customers[CustomerID])
+    )
+VAR AvgOrderValue = DIVIDE(CustomerSales, CustomerFrequency)
+RETURN
+SWITCH(
+    TRUE(),
+    CustomerSales > 50000 && CustomerFrequency > 20, "VIP",
+    CustomerSales > 20000 && AvgOrderValue > 2000, "Премиум",
+    CustomerFrequency > 10, "Лояльный",
+    CustomerSales > 5000, "Стандарт",
+    "Новый"
+)
+
+RFM Analysis = 
+VAR Recency = 
+    DATEDIFF(
+        MAX(Orders[OrderDate]),
+        TODAY(),
+        DAY
+    )
+VAR Frequency = COUNTROWS(Orders)
+VAR Monetary = SUM(Orders[Amount])
+RETURN
+Recency & "-" & Frequency & "-" & Monetary
+
+
+-- 10. Сложные иерархические расчеты
+Organizational KPI Rollup = 
+VAR Level1KPI = 
+    CALCULATE(
+        AVERAGE(Employees[PerformanceScore]),
+        Employees[Level] = 1
+    )
+VAR Level2KPI = 
+    CALCULATE(
+        AVERAGE(Employees[PerformanceScore]),
+        Employees[Level] = 2
+    )
+VAR Level3KPI = 
+    CALCULATE(
+        AVERAGE(Employees[PerformanceScore]),
+        Employees[Level] = 3
+    )
+RETURN
+Level1KPI * 0.5 + Level2KPI * 0.3 + Level3KPI * 0.2
+
+Weighted Score = 
+SUMX(
+    Categories,
+    Categories[Weight] * RELATED(MeasureTable[Score])
+)
+
+Dynamic Ranking = 
+RANKX(
+    ALL(Products[Category]),
+    [Total Sales],
+    ,
+    DESC,
+    DENSE
+)

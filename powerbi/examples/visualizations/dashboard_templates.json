@@ -1,0 +1,332 @@
+{
+  "visualizations": [
+    {
+      "name": "Sales Dashboard",
+      "type": "Dashboard",
+      "description": "Комплексный дашборд анализа продаж",
+      "elements": [
+        {
+          "id": "sales_kpi",
+          "type": "KPI",
+          "title": "Ключевые показатели продаж",
+          "metrics": [
+            {
+              "name": "Общий объем продаж",
+              "measure": "Total Sales",
+              "format": "#,0.00 ₽",
+              "target": 1000000,
+              "trend": "up"
+            },
+            {
+              "name": "Количество заказов",
+              "measure": "Orders Count",
+              "format": "#,0",
+              "target": 5000,
+              "trend": "neutral"
+            },
+            {
+              "name": "Средний чек",
+              "measure": "Average Order Value",
+              "format": "#,0.00 ₽",
+              "target": 2000,
+              "trend": "up"
+            },
+            {
+              "name": "Рост продаж YoY",
+              "measure": "Sales Growth",
+              "format": "0.00%",
+              "target": 0.15,
+              "trend": "up"
+            }
+          ]
+        },
+        {
+          "id": "sales_trend",
+          "type": "Line Chart",
+          "title": "Динамика продаж по месяцам",
+          "x_axis": "Calendar[MonthYear]",
+          "y_axis": "Sales[Amount]",
+          "aggregation": "SUM",
+          "color_by": "Products[Category]"
+        },
+        {
+          "id": "top_products",
+          "type": "Bar Chart",
+          "title": "Топ-10 продуктов по продажам",
+          "category": "Products[ProductName]",
+          "value": "Sales[Amount]",
+          "sort": "descending",
+          "limit": 10
+        },
+        {
+          "id": "regional_analysis",
+          "type": "Map",
+          "title": "Географическое распределение продаж",
+          "location": "Customers[City]",
+          "latitude": "Customers[Latitude]",
+          "longitude": "Customers[Longitude]",
+          "size": "Sales[Amount]",
+          "color": "Sales[Amount]"
+        },
+        {
+          "id": "category_breakdown",
+          "type": "Donut Chart",
+          "title": "Структура продаж по категориям",
+          "category": "Products[Category]",
+          "value": "Sales[Amount]"
+        }
+      ],
+      "filters": [
+        {
+          "type": "Date Range",
+          "field": "Calendar[Date]",
+          "default": "Last 12 Months"
+        },
+        {
+          "type": "Slicer",
+          "field": "Regions[RegionName]",
+          "multi_select": true
+        },
+        {
+          "type": "Slicer",
+          "field": "Products[Category]",
+          "multi_select": true
+        }
+      ]
+    },
+    {
+      "name": "Financial Report",
+      "type": "Report",
+      "description": "Финансовый отчет с анализом прибыли и убытков",
+      "pages": [
+        {
+          "name": "P&L Analysis",
+          "visuals": [
+            {
+              "id": "revenue_waterfall",
+              "type": "Waterfall Chart",
+              "title": "Анализ выручки",
+              "steps": [
+                {"name": "Выручка", "value": "Revenue"},
+                {"name": "Себестоимость", "value": "COGS", "negative": true},
+                {"name": "Валовая прибыль", "value": "Gross Profit"},
+                {"name": "Операционные расходы", "value": "Operating Expenses", "negative": true},
+                {"name": "Операционная прибыль", "value": "Operating Profit"},
+                {"name": "Налоги", "value": "Taxes", "negative": true},
+                {"name": "Чистая прибыль", "value": "Net Profit"}
+              ]
+            },
+            {
+              "id": "expense_breakdown",
+              "type": "Treemap",
+              "title": "Структура расходов",
+              "category": "Expenses[Category]",
+              "subcategory": "Expenses[Subcategory]",
+              "value": "Expenses[Amount]"
+            },
+            {
+              "id": "profitability_trend",
+              "type": "Area Chart",
+              "title": "Динамика рентабельности",
+              "x_axis": "Calendar[MonthYear]",
+              "y_axis": "Profitability Metrics",
+              "series": [
+                "Gross Margin %",
+                "Operating Margin %",
+                "Net Margin %"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Budget vs Actual",
+          "visuals": [
+            {
+              "id": "budget_comparison",
+              "type": "Column Chart",
+              "title": "План vs Факт",
+              "category": "Accounts[AccountName]",
+              "series": ["Budget Amount", "Actual Amount"],
+              "show_variance": true
+            },
+            {
+              "id": "variance_heatmap",
+              "type": "Matrix",
+              "title": "Тепловая карта отклонений",
+              "rows": "Departments[DepartmentName]",
+              "columns": "Calendar[Month]",
+              "values": "Variance %",
+              "color_scale": {
+                "negative": "red",
+                "neutral": "yellow", 
+                "positive": "green"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customer Analytics",
+      "type": "Dashboard",
+      "description": "Аналитика клиентов и сегментация",
+      "elements": [
+        {
+          "id": "customer_metrics",
+          "type": "Multi-row Card",
+          "title": "Ключевые метрики клиентов",
+          "indicators": [
+            {
+              "name": "Всего клиентов",
+              "measure": "Total Customers",
+              "format": "#,0"
+            },
+            {
+              "name": "Новые клиенты",
+              "measure": "New Customers",
+              "format": "#,0"
+            },
+            {
+              "name": "Удержание клиентов",
+              "measure": "Retention Rate",
+              "format": "0.00%"
+            },
+            {
+              "name": "Средний LTV",
+              "measure": "Average LTV",
+              "format": "#,0.00 ₽"
+            }
+          ]
+        },
+        {
+          "id": "customer_cohort",
+          "type": "Matrix",
+          "title": "Когортный анализ клиентов",
+          "rows": "Customers[Cohort]",
+          "columns": "Calendar[Month]",
+          "values": "Retention Rate"
+        },
+        {
+          "id": "rfm_analysis",
+          "type": "Scatter Chart",
+          "title": "RFM сегментация",
+          "x_axis": "Recency Score",
+          "y_axis": "Frequency Score",
+          "size": "Monetary Value",
+          "color": "RFM Segment"
+        },
+        {
+          "id": "customer_geography",
+          "type": "Filled Map",
+          "title": "Географическое распределение клиентов",
+          "location": "Customers[Region]",
+          "latitude": "Customers[Latitude]",
+          "longitude": "Customers[Longitude]",
+          "size": "Customer Count",
+          "color": "Average Order Value"
+        }
+      ]
+    },
+    {
+      "name": "Inventory Management",
+      "type": "Report",
+      "description": "Аналитика запасов и логистики",
+      "pages": [
+        {
+          "name": "Stock Overview",
+          "visuals": [
+            {
+              "id": "inventory_kpi",
+              "type": "Card",
+              "title": "Ключевые показатели запасов",
+              "measures": [
+                "Total Inventory Value",
+                "Stockout Items Count",
+                "Overstock Items Count",
+                "Inventory Turnover"
+              ]
+            },
+            {
+              "id": "stock_status",
+              "type": "Gauge",
+              "title": "Уровень запасов",
+              "value": "Current Stock Level",
+              "target": "Target Stock Level",
+              "min": 0,
+              "max": 100
+            },
+            {
+              "id": "inventory_aging",
+              "type": "Stacked Column Chart",
+              "title": "Возраст запасов",
+              "category": "Products[ProductName]",
+              "series": "Inventory Age Categories",
+              "values": "Quantity"
+            }
+          ]
+        },
+        {
+          "name": "Supply Chain",
+          "visuals": [
+            {
+              "id": "supplier_performance",
+              "type": "Multi-row Card",
+              "title": "Эффективность поставщиков",
+              "indicators": [
+                "On-time Delivery %",
+                "Quality Score",
+                "Average Lead Time",
+                "Supplier Count"
+              ]
+            },
+            {
+              "id": "logistics_map",
+              "type": "Map",
+              "title": "Логистическая сеть",
+              "routes": "Shipments[Route]",
+              "origin": "Warehouses[Location]",
+              "destination": "Customers[Location]",
+              "size": "Shipment Value"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "color_schemes": [
+    {
+      "name": "Corporate Blue",
+      "colors": [
+        "#1f3a5f",
+        "#2d5a87", 
+        "#3d7aaf",
+        "#4d9ad7",
+        "#5dbaff"
+      ]
+    },
+    {
+      "name": "Business Green",
+      "colors": [
+        "#2e7d32",
+        "#388e3c",
+        "#43a047",
+        "#4caf50",
+        "#66bb6a"
+      ]
+    }
+  ],
+  "themes": [
+    {
+      "name": "Professional Dark",
+      "background": "#2b2b2b",
+      "text": "#ffffff",
+      "accent": "#4d9ad7"
+    },
+    {
+      "name": "Clean Light",
+      "background": "#ffffff",
+      "text": "#333333", 
+      "accent": "#1f3a5f"
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+{
+  "templates": [
+    {
+      "name": "Monthly Sales Report",
+      "type": "Report Template",
+      "description": "Ежемесячный отчет по продажам с ключевыми метриками",
+      "pages": [
+        {
+          "name": "Executive Summary",
+          "layout": "single_column",
+          "elements": [
+            {
+              "type": "KPI Cards",
+              "position": "top",
+              "metrics": [
+                {
+                  "name": "Total Revenue",
+                  "measure": "SUM(Sales[Amount])",
+                  "format": "#,0.00 ₽",
+                  "comparison": "previous_period"
+                },
+                {
+                  "name": "Order Count", 
+                  "measure": "COUNTROWS(Orders)",
+                  "format": "#,0",
+                  "comparison": "previous_period"
+                },
+                {
+                  "name": "Average Order Value",
+                  "measure": "DIVIDE(SUM(Sales[Amount]), COUNTROWS(Orders))",
+                  "format": "#,0.00 ₽",
+                  "comparison": "previous_period"
+                },
+                {
+                  "name": "Customer Count",
+                  "measure": "DISTINCTCOUNT(Orders[CustomerID])",
+                  "format": "#,0",
+                  "comparison": "previous_period"
+                }
+              ]
+            },
+            {
+              "type": "Line Chart",
+              "position": "main",
+              "title": "Sales Trend Analysis",
+              "x_axis": "Calendar[MonthYear]",
+              "y_axis": "Sales[Amount]",
+              "aggregation": "SUM",
+              "color_by": "Products[Category]",
+              "show_trend_line": true
+            },
+            {
+              "type": "Donut Chart",
+              "position": "sidebar",
+              "title": "Sales by Category",
+              "category": "Products[Category]",
+              "value": "Sales[Amount]",
+              "show_legend": true
+            }
+          ]
+        },
+        {
+          "name": "Detailed Analysis",
+          "layout": "two_column",
+          "elements": [
+            {
+              "type": "Table",
+              "position": "left",
+              "title": "Top Performing Products",
+              "columns": [
+                "Products[ProductName]",
+                "Products[Category]",
+                "SUM(Sales[Amount])",
+                "COUNTROWS(Orders)"
+              ],
+              "sort_by": "SUM(Sales[Amount])",
+              "sort_order": "DESC",
+              "limit": 20
+            },
+            {
+              "type": "Map",
+              "position": "right",
+              "title": "Regional Sales Performance",
+              "location": "Customers[Region]",
+              "size": "Sales[Amount]",
+              "color": "Sales[Amount]",
+              "show_data_labels": true
+            }
+          ]
+        }
+      ],
+      "required_measures": [
+        "Total Sales",
+        "Orders Count",
+        "Average Order Value",
+        "Customer Count",
+        "Sales Growth"
+      ],
+      "required_tables": [
+        "Sales",
+        "Orders", 
+        "Products",
+        "Customers",
+        "Calendar"
+      ]
+    },
+    {
+      "name": "Financial Dashboard",
+      "type": "Dashboard Template",
+      "description": "Финансовый дашборд для CFO",
+      "pages": [
+        {
+          "name": "P&L Overview",
+          "elements": [
+            {
+              "type": "Waterfall Chart",
+              "title": "Profit & Loss Statement",
+              "steps": [
+                {"name": "Revenue", "value": "SUM(Income[Revenue])"},
+                {"name": "COGS", "value": "SUM(Expenses[COGS])", "negative": true},
+                {"name": "Gross Profit", "value": "[Gross Profit]"},
+                {"name": "Operating Expenses", "value": "SUM(Expenses[Operating])", "negative": true},
+                {"name": "EBITDA", "value": "[EBITDA]"},
+                {"name": "Taxes", "value": "SUM(Expenses[Taxes])", "negative": true},
+                {"name": "Net Profit", "value": "[Net Profit]"}
+              ]
+            },
+            {
+              "type": "KPI Tiles",
+              "metrics": [
+                {
+                  "name": "Gross Margin %",
+                  "measure": "DIVIDE([Gross Profit], SUM(Income[Revenue]))",
+                  "format": "0.00%",
+                  "target": 0.40
+                },
+                {
+                  "name": "Operating Margin %", 
+                  "measure": "DIVIDE([EBITDA], SUM(Income[Revenue]))",
+                  "format": "0.00%",
+                  "target": 0.20
+                },
+                {
+                  "name": "Net Margin %",
+                  "measure": "DIVIDE([Net Profit], SUM(Income[Revenue]))",
+                  "format": "0.00%",
+                  "target": 0.10
+                },
+                {
+                  "name": "ROI",
+                  "measure": "[ROI]",
+                  "format": "0.00%",
+                  "target": 0.15
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "required_measures": [
+        "Gross Profit",
+        "EBITDA",
+        "Net Profit", 
+        "ROI"
+      ]
+    },
+    {
+      "name": "HR Analytics",
+      "type": "Report Template",
+      "description": "Аналитика человеческих ресурсов",
+      "pages": [
+        {
+          "name": "Employee Overview",
+          "elements": [
+            {
+              "type": "Multi-row Card",
+              "metrics": [
+                {
+                  "name": "Total Employees",
+                  "measure": "COUNTROWS(Employees)",
+                  "format": "#,0"
+                },
+                {
+                  "name": "New Hires",
+                  "measure": "COUNTROWS(FILTER(Employees, Employees[StartDate] >= DATE(YEAR(TODAY()), MONTH(TODAY())-3, 1)))",
+                  "format": "#,0"
+                },
+                {
+                  "name": "Turnover Rate",
+                  "measure": "DIVIDE(COUNTROWS(FILTER(Employees, Employees[EndDate] <> BLANK())), COUNTROWS(Employees))",
+                  "format": "0.00%"
+                },
+                {
+                  "name": "Average Tenure",
+                  "measure": "AVERAGE(Employees[TenureYears])",
+                  "format": "0.0 years"
+                }
+              ]
+            },
+            {
+              "type": "Organization Chart",
+              "data": "Employees[OrgStructure]",
+              "size_by": "Employees[TeamSize]",
+              "color_by": "Employees[Department]"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "data_model": {
+    "tables": [
+      {
+        "name": "Calendar",
+        "columns": [
+          {"name": "Date", "type": "date"},
+          {"name": "Year", "type": "int"},
+          {"name": "Month", "type": "int"},
+          {"name": "MonthName", "type": "string"},
+          {"name": "Quarter", "type": "string"},
+          {"name": "DayOfWeek", "type": "int"}
+        ]
+      },
+      {
+        "name": "Sales",
+        "columns": [
+          {"name": "SaleID", "type": "int"},
+          {"name": "Date", "type": "date"},
+          {"name": "ProductID", "type": "int"},
+          {"name": "CustomerID", "type": "int"},
+          {"name": "Amount", "type": "decimal"},
+          {"name": "Quantity", "type": "int"}
+        ]
+      },
+      {
+        "name": "Products", 
+        "columns": [
+          {"name": "ProductID", "type": "int"},
+          {"name": "ProductName", "type": "string"},
+          {"name": "Category", "type": "string"},
+          {"name": "Price", "type": "decimal"},
+          {"name": "Cost", "type": "decimal"}
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "from_table": "Sales",
+        "from_column": "Date",
+        "to_table": "Calendar",
+        "to_column": "Date"
+      },
+      {
+        "from_table": "Sales", 
+        "from_column": "ProductID",
+        "to_table": "Products",
+        "to_column": "ProductID"
+      }
+    ]
+  }
+}

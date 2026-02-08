@@ -1,0 +1,258 @@
+/*
+Базовые DAX формулы для Power BI
+*/
+
+-- 1. Агрегатные функции
+Total Sales = SUM(Sales[Amount])
+
+Average Price = AVERAGE(Products[Price])
+
+Count of Orders = COUNT(Orders[OrderID])
+
+Distinct Customers = DISTINCTCOUNT(Orders[CustomerID])
+
+Max Order Amount = MAX(Orders[Amount])
+
+Min Order Amount = MIN(Orders[Amount])
+
+Standard Deviation = STDEV.S(Orders[Amount])
+
+Variance = VAR.S(Orders[Amount])
+
+
+-- 2. Фильтрация данных
+Sales from Moscow = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    Customers[City] = "Москва"
+)
+
+High Value Orders = 
+CALCULATE(
+    COUNTROWS(Orders),
+    Orders[Amount] > 1000
+)
+
+Year to Date Sales = 
+TOTALYTD(
+    SUM(Sales[Amount]),
+    Calendar[Date]
+)
+
+Quarter to Date Sales = 
+TOTALQTD(
+    SUM(Sales[Amount]),
+    Calendar[Date]
+)
+
+Month to Date Sales = 
+TOTALMTD(
+    SUM(Sales[Amount]),
+    Calendar[Date]
+)
+
+
+-- 3. Логические функции
+Sales Status = 
+IF(
+    SUM(Sales[Amount]) > 10000,
+    "Высокий",
+    IF(SUM(Sales[Amount]) > 5000, "Средний", "Низкий")
+)
+
+Is Active Customer = 
+IF(
+    ISINSCOPE(Customers[CustomerID]),
+    "Да",
+    "Нет"
+)
+
+Customer Category = 
+SWITCH(
+    TRUE(),
+    SUM(Orders[Amount]) > 50000, "Премиум",
+    SUM(Orders[Amount]) > 20000, "Золотой",
+    SUM(Orders[Amount]) > 5000, "Серебряный",
+    "Бронзовый"
+)
+
+
+-- 4. Функции времени
+Current Year Sales = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    YEAR(Calendar[Date]) = YEAR(TODAY())
+)
+
+Previous Year Sales = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    DATEADD(Calendar[Date], -1, YEAR)
+)
+
+Sales Growth = 
+DIVIDE(
+    SUM(Sales[Amount]) - 
+    CALCULATE(SUM(Sales[Amount]), SAMEPERIODLASTYEAR(Calendar[Date])),
+    CALCULATE(SUM(Sales[Amount]), SAMEPERIODLASTYEAR(Calendar[Date]))
+)
+
+Working Days = 
+CALCULATE(
+    COUNTROWS(Calendar),
+    Calendar[IsWeekend] = "Нет"
+)
+
+
+-- 5. Функции работы с таблицами
+Top 10 Products = 
+TOPN(
+    10,
+    Products,
+    [Total Sales],
+    DESC
+)
+
+Filtered Orders = 
+FILTER(
+    Orders,
+    Orders[Amount] > 1000 &&
+    Orders[Status] = "Completed"
+)
+
+Summarized Data = 
+SUMMARIZE(
+    Sales,
+    Products[Category],
+    Products[ProductName],
+    "Total Sales", SUM(Sales[Amount]),
+    "Order Count", COUNT(Sales[OrderID]),
+    "Average Price", AVERAGE(Products[Price])
+)
+
+
+-- 6. Переменные в DAX
+Sales Analysis = 
+VAR CurrentSales = SUM(Sales[Amount])
+VAR PreviousSales = 
+    CALCULATE(
+        SUM(Sales[Amount]),
+        DATEADD(Calendar[Date], -1, YEAR)
+    )
+VAR GrowthRate = 
+    DIVIDE(CurrentSales - PreviousSales, PreviousSales)
+RETURN
+    GrowthRate
+
+Customer Metrics = 
+VAR TotalCustomers = DISTINCTCOUNT(Orders[CustomerID])
+VAR ActiveCustomers = 
+    CALCULATE(
+        DISTINCTCOUNT(Orders[CustomerID]),
+        Orders[OrderDate] >= DATE(YEAR(TODAY()), MONTH(TODAY())-3, 1)
+    )
+VAR RetentionRate = DIVIDE(ActiveCustomers, TotalCustomers)
+RETURN
+    RetentionRate
+
+
+-- 7. Вычисляемые столбцы
+Full Name = 
+Customers[FirstName] & " " & Customers[LastName]
+
+Age Group = 
+SWITCH(
+    TRUE(),
+    Customers[Age] < 18, "Молодежь",
+    Customers[Age] < 35, "Молодые взрослые",
+    Customers[Age] < 50, "Взрослые",
+    "Пожилые"
+)
+
+Order Value Category = 
+IF(
+    Orders[Amount] > 10000,
+    "Крупный заказ",
+    IF(Orders[Amount] > 5000, "Средний заказ", "Мелкий заказ")
+)
+
+
+-- 8. Вычисляемые таблицы
+Calendar Table = 
+CALENDAR(
+    DATE(2020, 1, 1),
+    DATE(2025, 12, 31)
+)
+
+Product Categories = 
+VALUES(Products[Category])
+
+Customer Summary = 
+SUMMARIZE(
+    Orders,
+    Customers[CustomerID],
+    Customers[CustomerName],
+    "Total Orders", COUNT(Orders[OrderID]),
+    "Total Amount", SUM(Orders[Amount]),
+    "Last Order Date", MAX(Orders[OrderDate])
+)
+
+
+-- 9. Меры с параметрами
+Sales by Period = 
+VAR PeriodStart = DATE(2024, 1, 1)
+VAR PeriodEnd = DATE(2024, 12, 31)
+RETURN
+CALCULATE(
+    SUM(Sales[Amount]),
+    Calendar[Date] >= PeriodStart &&
+    Calendar[Date] <= PeriodEnd
+)
+
+Dynamic Target = 
+VAR CurrentMonth = MONTH(TODAY())
+VAR BaseTarget = 100000
+RETURN
+BaseTarget * (1 + (CurrentMonth * 0.05))
+
+
+-- 10. Сложные вычисления
+Customer Lifetime Value = 
+AVERAGEX(
+    Customers,
+    CALCULATE(
+        SUM(Orders[Amount]),
+        ALLEXCEPT(Customers, Customers[CustomerID])
+    )
+)
+
+Moving Average 30 Days = 
+CALCULATE(
+    AVERAGE(Sales[Amount]),
+    DATESINPERIOD(
+        Calendar[Date],
+        LASTDATE(Calendar[Date]),
+        -30,
+        DAY
+    )
+)
+
+Cumulative Sales = 
+CALCULATE(
+    SUM(Sales[Amount]),
+    FILTER(
+        ALL(Calendar),
+        Calendar[Date] <= MAX(Calendar[Date])
+    )
+)
+
+Sales Forecast = 
+CALCULATE(
+    AVERAGE(Sales[Amount]),
+    DATESINPERIOD(
+        Calendar[Date],
+        LASTDATE(Calendar[Date]),
+        -3,
+        MONTH
+    )
+) * 12
