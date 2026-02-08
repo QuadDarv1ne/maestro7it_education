@@ -1,5 +1,6 @@
 # Dockerfile для SQL Learning Environment
 # Создает контейнер с SQLite, Python и всеми необходимыми инструментами
+# Поддерживает все учебные базы данных и инструменты тестирования
 
 FROM python:3.9-slim
 
@@ -13,18 +14,26 @@ RUN apt-get update && apt-get install -y \
 # Создание рабочей директории
 WORKDIR /app
 
-# Копирование requirements (если есть)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Установка Python зависимостей
+RUN pip install --no-cache-dir \
+    requests \
+    pandas \
+    jupyter \
+    pytest
 
 # Копирование проекта
-COPY . .
+# Копирование только необходимых файлов
+COPY scripts/ ./scripts/
+COPY src/ ./src/
+COPY tests/ ./tests/
+COPY solutions/ ./solutions/
+COPY data/sample_data/ ./data/sample_data/
 
-# Создание точек монтирования для данных
-RUN mkdir -p /data/databases /data/output
+# Создание структуры директорий
+RUN mkdir -p /app/data/databases /app/data/output /app/tests
 
-# Экспозиция порта для веб-интерфейса (если будет)
-EXPOSE 8000
+# Экспозиция портов
+EXPOSE 8000 8888
 
-# Команда по умолчанию
-CMD ["python", "scripts/download_databases.py"]
+# Команда по умолчанию - интерактивная оболочка
+CMD ["bash"]

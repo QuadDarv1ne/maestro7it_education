@@ -9,18 +9,23 @@ services:
     volumes:
       - ../data:/app/data
       - ../src:/app/src
+      - ../tests:/app/tests
+      - ../solutions:/app/solutions
       - ../notebooks:/app/notebooks
     ports:
       - "8000:8000"
     environment:
       - PYTHONPATH=/app
+      - SQLITE_DATABASE=chinook.db
     stdin_open: true
     tty: true
     command: bash
+    networks:
+      - sql-network
 
-  sqlite-web:
+  sqlite-web-chinook:
     image: coleifer/sqlite-web
-    container_name: sqlite-web-interface
+    container_name: sqlite-web-chinook
     volumes:
       - ../data/databases:/data
     ports:
@@ -29,6 +34,36 @@ services:
       - SQLITE_DATABASE=chinook.db
     depends_on:
       - sql-learning
+    networks:
+      - sql-network
+    
+  sqlite-web-northwind:
+    image: coleifer/sqlite-web
+    container_name: sqlite-web-northwind
+    volumes:
+      - ../data/databases:/data
+    ports:
+      - "8081:8080"
+    environment:
+      - SQLITE_DATABASE=northwind.db
+    depends_on:
+      - sql-learning
+    networks:
+      - sql-network
+    
+  sqlite-web-basketball:
+    image: coleifer/sqlite-web
+    container_name: sqlite-web-basketball
+    volumes:
+      - ../data/databases:/data
+    ports:
+      - "8082:8080"
+    environment:
+      - SQLITE_DATABASE=basketball.db
+    depends_on:
+      - sql-learning
+    networks:
+      - sql-network
 
   jupyter:
     image: jupyter/minimal-notebook
@@ -37,8 +72,18 @@ services:
       - ../notebooks:/home/jovyan/notebooks
       - ../data:/home/jovyan/data
       - ../src:/home/jovyan/src
+      - ../tests:/home/jovyan/tests
+      - ../solutions:/home/jovyan/solutions
     ports:
       - "8888:8888"
     environment:
       - JUPYTER_ENABLE_LAB=yes
-    command: start-notebook.sh --NotebookApp.token=''
+
+    networks:
+      - sql-network
+    depends_on:
+      - sql-learning
+
+networks:
+  sql-network:
+    driver: bridge
