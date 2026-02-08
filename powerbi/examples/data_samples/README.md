@@ -1,60 +1,66 @@
-# Power BI Project Structure
+# Структура проекта Power BI
 
-## Sample Data Files
+## Файлы с образцами данных
 
-This folder contains sample datasets for Power BI practice.
+Эта папка содержит наборы данных для практики в `Power BI`
 
-### Sales Data
+### Данные о продажах
+
 - `sales_2023.xlsx` - Продажи за 2023 год
 - `sales_2024.xlsx` - Продажи за 2024 год
 - `customers.xlsx` - База клиентов
 - `products.xlsx` - Каталог продуктов
 
-### Financial Data
+### Финансовые данные
+
 - `pnl_2023.xlsx` - Отчет о прибылях и убытках
 - `budget_2024.xlsx` - Бюджет на 2024 год
 - `cash_flow.xlsx` - Движение денежных средств
 
-### HR Data
+### Данные HR
+
 - `employees.xlsx` - База сотрудников
 - `attendance.xlsx` - Данные о посещаемости
 - `performance.xlsx` - Оценка эффективности
 
-## Usage Instructions
+## Инструкции по использованию
 
-1. Загрузите данные в Power BI Desktop
-2. Используйте Power Query для очистки данных
+1. Загрузите данные в `Power BI Desktop`
+2. Используйте `Power Query` для очистки данных
 3. Создайте модель данных с правильными связями
-4. Примените DAX формулы из примеров
+4. Примените `DAX` формулы из примеров
 5. Постройте визуализации по шаблонам
 
-## Data Dictionary
+## Словарь данных
 
-### Sales Table
-| Column | Type | Description |
-|--------|------|-------------|
-| OrderID | Integer | Уникальный номер заказа |
-| OrderDate | Date | Дата заказа |
-| CustomerID | Integer | ID клиента |
-| ProductID | Integer | ID продукта |
-| Quantity | Integer | Количество |
-| UnitPrice | Decimal | Цена за единицу |
-| Amount | Decimal | Общая сумма |
+### Таблица продаж
 
-### Customers Table
-| Column | Type | Description |
-|--------|------|-------------|
-| CustomerID | Integer | Уникальный ID клиента |
-| CustomerName | String | Имя клиента |
-| City | String | Город |
-| Region | String | Регион |
-| CustomerType | String | Тип клиента |
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| OrderID | Целое число | Уникальный номер заказа |
+| OrderDate | Дата | Дата заказа |
+| CustomerID | Целое число | ID клиента |
+| ProductID | Целое число | ID продукта |
+| Quantity | Целое число | Количество |
+| UnitPrice | Десятичное | Цена за единицу |
+| Amount | Десятичное | Общая сумма |
 
-### Products Table
-| Column | Type | Description |
-|--------|------|-------------|
-| ProductID | Integer | Уникальный ID продукта |
-| ProductName | String | Название продукта |
-| Category | String | Категория |
-| Price | Decimal | Цена |
-| Cost | Decimal | Себестоимость |
+### Таблица клиентов
+
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| CustomerID | Целое число | Уникальный ID клиента |
+| CustomerName | Строка | Имя клиента |
+| City | Строка | Город |
+| Region | Строка | Регион |
+| CustomerType | Строка | Тип клиента |
+
+### Таблица продуктов
+
+| Колонка | Тип | Описание |
+|---------|-----|----------|
+| ProductID | Целое число | Уникальный ID продукта |
+| ProductName | Строка | Название продукта |
+| Category | Строка | Категория |
+| Price | Десятичное | Цена |
+| Cost | Десятичное | Себестоимость |
