@@ -1,0 +1,54 @@
+/**
+ * Автор: Дуплей Максим Игоревич - AGLA
+ * ORCID: https://orcid.org/0009-0007-7605-539X
+ * GitHub: https://github.com/QuadDarv1ne/
+ * 
+ * Полезные ссылки:
+ * 1. Telegram ❃ Хижина программиста Æ: https://t.me/hut_programmer_07
+ * 2. Telegram №1 @quadd4rv1n7
+ * 3. Telegram №2 @dupley_maxim_1999
+ * 4. Rutube канал: https://rutube.ru/channel/4218729/
+ * 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
+ * 6. YouTube канал: https://www.youtube.com/@it-coders
+ * 7. ВК группа: https://vk.com/science_geeks
+ */
+
+/**
+ * Вычисляет общую площадь, покрываемую двумя прямоугольниками.
+ * 
+ * Алгоритм:
+ * 1. Вычисляет площади каждого прямоугольника.
+ * 2. Находит площадь пересечения прямоугольников (если оно есть).
+ * 3. Возвращает сумму площадей минус площадь пересечения.
+ * 
+ * Формула:
+ * Общая площадь = Площадь1 + Площадь2 - ПлощадьПересечения
+ * 
+ * Сложность:
+ * Время: O(1)
+ * Пространство: O(1)
+ * 
+ * @param {number} ax1, ay1, ax2, ay2 Координаты первого прямоугольника
+ * @param {number} bx1, by1, bx2, by2 Координаты второго прямоугольника
+ * @return {number} Общая площадь, покрываемая двумя прямоугольниками
+ * 
+ * @example
+ * // Вход: ax1=-3, ay1=0, ax2=3, ay2=4, bx1=0, by1=-1, bx2=9, by2=2
+ * // Площадь1 = 24, Площадь2 = 27, Пересечение = 6
+ * // Выход: 24 + 27 - 6 = 45
+ */
+var computeArea = function(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) {
+    // Вычисляем площади каждого прямоугольника
+    const areaA = (ax2 - ax1) * (ay2 - ay1);
+    const areaB = (bx2 - bx1) * (by2 - by1);
+    
+    // Находим координаты пересечения
+    const overlapWidth = Math.max(0, Math.min(ax2, bx2) - Math.max(ax1, bx1));
+    const overlapHeight = Math.max(0, Math.min(ay2, by2) - Math.max(ay1, by1));
+    
+    // Вычисляем площадь пересечения
+    const overlapArea = overlapWidth * overlapHeight;
+    
+    // Общая площадь
+    return areaA + areaB - overlapArea;
+};
