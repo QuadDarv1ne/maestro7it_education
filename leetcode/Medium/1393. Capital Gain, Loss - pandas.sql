@@ -1,6 +1,6 @@
 import pandas as pd
 
-def capital_gain_loss(stocks: pd.DataFrame) -> pd.DataFrame:
+def capital_gainloss(stocks: pd.DataFrame) -> pd.DataFrame:
     """
     Возвращает DataFrame с капитальной прибылью/убытком для каждой акции.
     
