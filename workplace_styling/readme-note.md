@@ -583,6 +583,8 @@ fortune | cowsay | lolcat
 - **ddos-protection-enhanced.h/ddos-protection-enhanced.c** — улучшенная система защиты от DDoS-атак с ограничением скорости
 - **protocol-manager.h/protocol-manager.c** — расширяемый менеджер протоколов для поддержки различных протоколов (MTProto, Shadowsocks, SOCKS5, HTTP Connect)
 - **load-balancer.h/load-balancer.c** — система балансировки нагрузки для распределения запросов между несколькими серверами
+- **config_manager.h/config_manager.c** — централизованная система управления конфигурацией для всех компонентов
+- **mtproxy-enhanced.h** — главный заголовочный файл, объединяющий все улучшенные компоненты
 
 ### Scoop4kariiin
 

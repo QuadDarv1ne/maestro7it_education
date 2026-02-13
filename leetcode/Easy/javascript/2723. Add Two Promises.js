@@ -13,3 +13,13 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {Promise<number>} promise1 - Первый промис, который резолвится в число.
+ * @param {Promise<number>} promise2 - Второй промис, который резолвится в число.
+ * @return {Promise<number>} - Промис, который резолвится в сумму двух чисел.
+ */
+var addTwoPromises = async function(promise1, promise2) {
+    const value1 = await promise1;
+    const value2 = await promise2;
+    return value1 + value2;
+};
