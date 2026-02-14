@@ -9,7 +9,7 @@ from math import pi, sin, cos
 import sys
 import os
 import random
-from panda3d.core import globalClock
+# globalClock is available as self.taskMgr.globalClock in ShowBase
 
 # Настройка заголовка окна через конфигурацию (до создания окна)
 loadPrcFileData("", "window-title Танцующая панда 3D")
@@ -369,7 +369,7 @@ class DancingPanda3D(ShowBase):
     
     def animate_confetti(self, task):
         """Анимирует падающее конфетти"""
-        dt = globalClock.getDt()  # получаем deltaTime
+        dt = self.taskMgr.globalClock.getDt()  # получаем deltaTime
         for confetto_data in self.confetti:
             confetto = confetto_data['node']
             velocity = confetto_data['velocity']
@@ -601,11 +601,11 @@ class DancingPanda3D(ShowBase):
         return Task.cont
     
     def __init__(self):
-        # Настройка производительности
-        self.setup_performance_optimization()
-        
         # Инициализация движка
         ShowBase.__init__(self)
+        
+        # Настройка производительности
+        self.setup_performance_optimization()
         
         # Настройка режимов камеры
         self.camera_modes = ["orbit", "follow", "fixed"]
