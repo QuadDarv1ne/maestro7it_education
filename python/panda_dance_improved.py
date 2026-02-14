@@ -736,8 +736,9 @@ class DancingPanda3D(ShowBase):
         
         for i in range(bar_count):
             # Создаём бар (столбец) для визуализации
-            bar = self.loader.loadModel("models/cube")  # если доступна модель куба
-            if not bar:
+            try:
+                bar = self.loader.loadModel("models/cube")  # если доступна модель куба
+            except:
                 # Создаём простой куб вручную
                 from panda3d.core import CardMaker
                 cm = CardMaker(f"bar_{i}")
