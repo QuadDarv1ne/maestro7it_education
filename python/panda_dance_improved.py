@@ -20,8 +20,7 @@ class DancingPanda3D(ShowBase):
         ShowBase.__init__(self)
         
         # Альтернативный способ установки заголовка (если loadPrcFileData не сработал)
-        if hasattr(self, 'win') and self.win:
-            self.win.setTitle("Танцующая панда 3D")
+        # Window title is set via loadPrcFileData at the beginning of the script
         
         # Добавляем освещение
         self.setup_lighting()
@@ -75,18 +74,19 @@ class DancingPanda3D(ShowBase):
     def setup_environment(self):
         """Создаёт улучшенное окружение (земля, небо, декорации)"""
         # Земля (текстурированная плоскость)
-        self.ground = self.loader.loadModel("models/plane")  # может не быть
-        if self.ground:
-            self.ground.reparentTo(self.render)
-            self.ground.setScale(100, 100, 1)
-            self.ground.setColor(0.2, 0.8, 0.2, 1)
-            # Попробуем добавить текстуру травы, если доступна
-            try:
-                grass_tex = self.loader.loadTexture("textures/grass.jpg")
-                self.ground.setTexture(grass_tex, 1)
-            except:
-                self.ground.setColor(0.2, 0.8, 0.2, 1)  # зелёный цвет по умолчанию
-        else:
+        try:
+            self.ground = self.loader.loadModel("models/plane")  # может не быть
+            if self.ground:
+                self.ground.reparentTo(self.render)
+                self.ground.setScale(100, 100, 1)
+                self.ground.setColor(0.2, 0.8, 0.2, 1)
+                # Попробуем добавить текстуру травы, если доступна
+                try:
+                    grass_tex = self.loader.loadTexture("textures/grass.jpg")
+                    self.ground.setTexture(grass_tex, 1)
+                except:
+                    self.ground.setColor(0.2, 0.8, 0.2, 1)  # зелёный цвет по умолчанию
+        except:
             # Создаём плоскость вручную
             from panda3d.core import CardMaker
             cm = CardMaker("ground")
@@ -169,19 +169,14 @@ class DancingPanda3D(ShowBase):
         
         # Функция для создания части тела
         def create_part(model_name, color, pos, scale):
-            part = self.loader.loadModel(model_name)
-            if not part:
-                # Если модель не найдена, создаём сферу
-                from panda3d.core import Sphere
-                sphere = Sphere(0, 0, 0, 1)
-                part = panda.attachNewNode("sphere")
-                # В реальности нужно создать узел с геометрией, но для простоты используем загрузку
-                part = self.loader.loadModel("models/sphere")  # может не быть
-                if not part:
-                    # Создаём карточку (квадрат) как заглушку
-                    cm = CardMaker("card")
-                    cm.setFrame(-1, 1, -1, 1)
-                    part = NodePath(cm.generate())
+            try:
+                part = self.loader.loadModel(model_name)
+            except:
+                # Создаём карточку (квадрат) как заглушку
+                from panda3d.core import CardMaker
+                cm = CardMaker("card")
+                cm.setFrame(-1, 1, -1, 1)
+                part = NodePath(cm.generate())
             part.setColor(*color)
             part.setPos(*pos)
             part.setScale(*scale)
@@ -254,23 +249,21 @@ class DancingPanda3D(ShowBase):
                 tree = self.create_simple_tree(pos[0], pos[1], pos[2])
     
     def create_simple_tree(self, x, y, z):
-        """Создаёт простое дерево из цилиндра и конуса"""
-        from panda3d.core import Cylinder, GeomVertexFormat, GeomVertexData
+        """Создаёт простое дерево из доступных примитивов"""
+        from panda3d.core import CardMaker
         
-        # Ствол дерева
-        trunk = self.loader.loadModel("models/cylinder")
-        if not trunk:
-            trunk = NodePath("trunk")
-            trunk.reparentTo(self.render)
+        # Ствол дерева (цилиндр как карта)
+        trunk_cm = CardMaker("trunk_card")
+        trunk_cm.setFrame(-0.25, 0.25, -1, 1)  # более тонкий прямоугольник
+        trunk = self.render.attachNewNode(trunk_cm.generate())
         trunk.setPos(x, y, z)
         trunk.setScale(0.5, 0.5, 2)
         trunk.setColor(0.5, 0.3, 0.1, 1)  # коричневый
         
-        # Крона дерева
-        foliage = self.loader.loadModel("models/cone")
-        if not foliage:
-            foliage = NodePath("foliage")
-            foliage.reparentTo(self.render)
+        # Крона дерева (конус как карта)
+        foliage_cm = CardMaker("foliage_card")
+        foliage_cm.setFrame(-1, 1, -1.5, 1.5)  # более широкий прямоугольник
+        foliage = self.render.attachNewNode(foliage_cm.generate())
         foliage.setPos(x, y, z + 2)
         foliage.setScale(2, 2, 3)
         foliage.setColor(0.1, 0.6, 0.2, 1)  # зелёный
@@ -474,8 +467,9 @@ class DancingPanda3D(ShowBase):
     
     def create_part(self, model_name, color, pos, scale, parent):
         """Создаёт часть тела для панды"""
-        part = self.loader.loadModel(model_name)
-        if not part:
+        try:
+            part = self.loader.loadModel(model_name)
+        except:
             # Создаём карточку (квадрат) как заглушку
             from panda3d.core import CardMaker
             cm = CardMaker("card")
@@ -613,8 +607,7 @@ class DancingPanda3D(ShowBase):
         self.accept("c", self.switch_camera_mode)
         
         # Альтернативный способ установки заголовка (если loadPrcFileData не сработал)
-        if hasattr(self, 'win') and self.win:
-            self.win.setTitle("Танцующая панда 3D")
+        # Window title is set via loadPrcFileData at the beginning of the script
         
         # Добавляем освещение
         self.setup_lighting()
@@ -695,13 +688,10 @@ class DancingPanda3D(ShowBase):
         from panda3d.core import AntialiasAttrib
         self.render.setAntialias(AntialiasAttrib.MMultisample)
         
-        # Оптимизация рендеринга
-        from panda3d.core import RenderState, StateSavedResult
-        
         # Установка параметров производительности
         try:
             # Уменьшение качества теней для лучшей производительности
-            self.render.setShaderAuto(enableTrueAlpha=True)
+            self.render.setShaderAuto(True)
             
             # Оптимизация освещения
             from panda3d.core import LightRampAttrib
@@ -715,7 +705,7 @@ class DancingPanda3D(ShowBase):
             print(f"Ошибка при оптимизации производительности: {e}")
         
         # Установка ограничения FPS для стабильности
-        self.globalClock.setMaxDt(1.0/60.0)  # Ограничение до 60 FPS
+        self.taskMgr.globalClock.setMaxDt(1.0/60.0)  # Ограничение до 60 FPS
     
     def load_music(self):
         """Пытается загрузить музыку из файла и настраивает синхронизацию"""
