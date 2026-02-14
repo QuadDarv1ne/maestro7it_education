@@ -692,6 +692,7 @@ class DancingPanda3D(ShowBase):
     def setup_performance_optimization(self):
         """Настройка оптимизации производительности"""
         # Установка уровня детализации
+        from panda3d.core import AntialiasAttrib
         self.render.setAntialias(AntialiasAttrib.MMultisample)
         
         # Оптимизация рендеринга
