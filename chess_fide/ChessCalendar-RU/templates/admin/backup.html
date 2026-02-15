@@ -1,0 +1,320 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Бэкапы - Админ панель - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="bi bi-hdd"></i> Система бэкапов</h4>
+                        <div>
+                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light">
+                                <i class="bi bi-arrow-left"></i> Назад к панели
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <!-- Create Backup Section -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-cloud-download"></i> Создать бэкап</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('admin.create_backup') }}" id="createBackupForm">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label for="backupName" class="form-label">Название бэкапа (опционально)</label>
+                                            <input type="text" class="form-control" id="backupName" name="backup_name" 
+                                                   placeholder="Оставьте пустым для автоматического названия">
+                                            <div class="form-text">Если оставить пустым, будет использовано текущее время</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100" id="createBackupBtn">
+                                            <i class="bi bi-save"></i> Создать бэкап
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Existing Backups Section -->
+                    <div class="card">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-list"></i> Существующие бэкапы</h5>
+                            <span class="badge bg-light text-dark">{{ backups|length }} шт.</span>
+                        </div>
+                        <div class="card-body">
+                            {% if backups %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Название</th>
+                                                <th>Дата создания</th>
+                                                <th>Размер</th>
+                                                <th>Файлы</th>
+                                                <th>Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for backup in backups %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ backup.name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ backup.path }}</small>
+                                                </td>
+                                                <td>{{ backup.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+                                                <td>{{ "%.2f"|format(backup.size / 1024 / 1024) }} MB</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-info view-files-btn" 
+                                                            data-backup-path="{{ backup.path }}">
+                                                        <i class="bi bi-folder"></i> Файлы
+                                                    </button>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{{ url_for('admin.download_backup', backup_name=backup.name) }}" 
+                                                           class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-download"></i> Скачать
+                                                        </a>
+                                                        <button class="btn btn-sm btn-outline-warning restore-btn" 
+                                                                data-backup-name="{{ backup.name }}"
+                                                                data-backup-path="{{ backup.path }}">
+                                                            <i class="bi bi-arrow-counterclockwise"></i> Восстановить
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger delete-btn" 
+                                                                data-backup-name="{{ backup.name }}">
+                                                            <i class="bi bi-trash"></i> Удалить
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="bi bi-hdd-stack display-1 text-muted"></i>
+                                    <h4 class="text-muted">Нет бэкапов</h4>
+                                    <p class="text-muted">Создайте первый бэкап используя форму выше</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Files Modal -->
+<div class="modal fade" id="viewFilesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Файлы бэкапа</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="filesList">
+                    <!-- Files will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Restore Modal -->
+<div class="modal fade" id="confirmRestoreModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">Подтверждение восстановления</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Внимание!</strong> Операция восстановления заменит текущую базу данных.
+                    Убедитесь, что у вас есть резервная копия текущих данных.
+                </div>
+                <p>Вы действительно хотите восстановить из бэкапа: <strong id="restoreBackupName"></strong>?</p>
+                <p class="text-muted">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="confirmRestoreBtn">Восстановить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Подтверждение удаления</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы действительно хотите удалить бэкап: <strong id="deleteBackupName"></strong>?</p>
+                <p class="text-muted">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables to store selected backup info
+let selectedBackupPath = '';
+let selectedBackupName = '';
+
+// View files button handler
+document.querySelectorAll('.view-files-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const backupPath = this.getAttribute('data-backup-path');
+        
+        fetch(`/admin/backup/validate/${encodeURIComponent(backupPath)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    let fileListHtml = '<ul class="list-group">';
+                    data.files.forEach(file => {
+                        fileListHtml += `<li class="list-group-item"><i class="bi bi-file-earmark"></i> ${file}</li>`;
+                    });
+                    fileListHtml += '</ul>';
+                    
+                    document.getElementById('filesList').innerHTML = fileListHtml;
+                    const modal = new bootstrap.Modal(document.getElementById('viewFilesModal'));
+                    modal.show();
+                } else {
+                    alert('Ошибка при проверке бэкапа: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error validating backup:', error);
+                alert('Ошибка при проверке бэкапа');
+            });
+    });
+});
+
+// Restore button handler
+document.querySelectorAll('.restore-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        selectedBackupName = this.getAttribute('data-backup-name');
+        selectedBackupPath = this.getAttribute('data-backup-path');
+        
+        document.getElementById('restoreBackupName').textContent = selectedBackupName;
+        
+        const modal = new bootstrap.Modal(document.getElementById('confirmRestoreModal'));
+        modal.show();
+    });
+});
+
+// Delete button handler
+document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        selectedBackupName = this.getAttribute('data-backup-name');
+        
+        document.getElementById('deleteBackupName').textContent = selectedBackupName;
+        
+        const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+        modal.show();
+    });
+});
+
+// Confirm restore button
+document.getElementById('confirmRestoreBtn').addEventListener('click', function() {
+    fetch(`/admin/backup/restore/${encodeURIComponent(selectedBackupName)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Бэкап успешно восстановлен! Приложение будет перезагружено.');
+            // Refresh the page to show updated backups list
+            location.reload();
+        } else {
+            alert('Ошибка при восстановлении: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error restoring backup:', error);
+        alert('Ошибка при восстановлении бэкапа');
+    });
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('confirmRestoreModal')).hide();
+});
+
+// Confirm delete button
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    fetch(`/admin/backup/delete/${encodeURIComponent(selectedBackupName)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Бэкап успешно удален!');
+            // Refresh the page to show updated backups list
+            location.reload();
+        } else {
+            alert('Ошибка при удалении: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting backup:', error);
+        alert('Ошибка при удалении бэкапа');
+    });
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+});
+
+// Loading state for create backup button
+document.getElementById('createBackupBtn').addEventListener('click', function() {
+    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Создание...';
+    this.disabled = true;
+    
+    // Reset after form submission
+    setTimeout(() => {
+        this.innerHTML = '<i class="bi bi-save"></i> Создать бэкап';
+        this.disabled = false;
+    }, 2000);
+});
+</script>
+{% endblock %}

@@ -1,314 +1,222 @@
+import sqlite3
 import os
 import shutil
-import sqlite3
+import zipfile
 import json
 from datetime import datetime
 from pathlib import Path
-import logging
-import zipfile
-from typing import Optional
+from typing import Dict, List, Optional
 
 
-class DatabaseBackupManager:
-    """Класс для управления резервным копированием базы данных"""
+class BackupRestoreService:
+    """Service for database backup and restore operations"""
     
     def __init__(self, db_path: str, backup_dir: str = "backups"):
         self.db_path = db_path
         self.backup_dir = Path(backup_dir)
-        self.logger = logging.getLogger(__name__)
-        
-        # Создаем директорию для бэкапов если не существует
         self.backup_dir.mkdir(exist_ok=True)
     
     def create_backup(self, backup_name: Optional[str] = None) -> str:
-        """
-        Создать резервную копию базы данных
-        
-        Args:
-            backup_name: Имя бэкапа (если не указано, генерируется автоматически)
-            
-        Returns:
-            Путь к созданному бэкапу
-        """
-        try:
-            if not backup_name:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_name = f"chess_calendar_backup_{timestamp}.db"
-            
-            backup_path = self.backup_dir / backup_name
-            
-            # Создаем резервную копию
-            shutil.copy2(self.db_path, backup_path)
-            
-            self.logger.info(f"Бэкап базы данных создан: {backup_path}")
-            return str(backup_path)
-        
-        except Exception as e:
-            self.logger.error(f"Ошибка при создании бэкапа: {e}")
-            raise
-    
-    def create_compressed_backup(self, backup_name: Optional[str] = None) -> str:
-        """
-        Создать сжатую резервную копию базы данных
-        
-        Args:
-            backup_name: Имя бэкапа (если не указано, генерируется автоматически)
-            
-        Returns:
-            Путь к созданному сжатому бэкапу
-        """
-        try:
-            if not backup_name:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_name = f"chess_calendar_backup_{timestamp}.zip"
-            
-            backup_path = self.backup_dir / backup_name
-            
-            # Создаем ZIP архив с бэкапом
-            with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(self.db_path, os.path.basename(self.db_path))
-            
-            self.logger.info(f"Сжатый бэкап базы данных создан: {backup_path}")
-            return str(backup_path)
-        
-        except Exception as e:
-            self.logger.error(f"Ошибка при создании сжатого бэкапа: {e}")
-            raise
-    
-    def restore_backup(self, backup_path: str) -> bool:
-        """
-        Восстановить базу данных из бэкапа
-        
-        Args:
-            backup_path: Путь к файлу бэкапа
-            
-        Returns:
-            Успешность восстановления
-        """
-        try:
-            backup_file = Path(backup_path)
-            
-            if not backup_file.exists():
-                self.logger.error(f"Файл бэкапа не найден: {backup_path}")
-                return False
-            
-            # Если это ZIP файл, распаковываем его
-            if backup_file.suffix.lower() == '.zip':
-                with zipfile.ZipFile(backup_file, 'r') as zipf:
-                    # Извлекаем файл базы данных
-                    for member in zipf.namelist():
-                        if member.endswith('.db'):
-                            zipf.extract(member, self.backup_dir)
-                            extracted_db = self.backup_dir / member
-                            # Копируем извлеченную базу в нужное место
-                            shutil.copy2(extracted_db, self.db_path)
-                            # Удаляем временный файл
-                            extracted_db.unlink()
-                            break
-            else:
-                # Просто копируем файл базы данных
-                shutil.copy2(backup_file, self.db_path)
-            
-            self.logger.info(f"База данных восстановлена из: {backup_path}")
-            return True
-        
-        except Exception as e:
-            self.logger.error(f"Ошибка при восстановлении бэкапа: {e}")
-            return False
-    
-    def list_backups(self) -> list:
-        """
-        Получить список доступных бэкапов
-        
-        Returns:
-            Список файлов бэкапов
-        """
-        try:
-            backups = []
-            for file in self.backup_dir.glob("*"):
-                if file.is_file() and (file.suffix.lower() == '.db' or file.suffix.lower() == '.zip'):
-                    backups.append({
-                        'name': file.name,
-                        'size': file.stat().st_size,
-                        'modified': datetime.fromtimestamp(file.stat().st_mtime),
-                        'path': str(file)
-                    })
-            
-            # Сортируем по времени модификации (новые первыми)
-            backups.sort(key=lambda x: x['modified'], reverse=True)
-            return backups
-        
-        except Exception as e:
-            self.logger.error(f"Ошибка при получении списка бэкапов: {e}")
-            return []
-    
-    def cleanup_old_backups(self, keep_count: int = 5) -> int:
-        """
-        Удалить старые бэкапы, оставив только последние n
-        
-        Args:
-            keep_count: Количество бэкапов для сохранения
-            
-        Returns:
-            Количество удаленных бэкапов
-        """
-        try:
-            backups = self.list_backups()
-            
-            if len(backups) <= keep_count:
-                return 0
-            
-            backups_to_delete = backups[keep_count:]
-            deleted_count = 0
-            
-            for backup in backups_to_delete:
-                try:
-                    Path(backup['path']).unlink()
-                    deleted_count += 1
-                    self.logger.info(f"Удален старый бэкап: {backup['name']}")
-                except Exception as e:
-                    self.logger.error(f"Ошибка при удалении бэкапа {backup['name']}: {e}")
-            
-            return deleted_count
-        
-        except Exception as e:
-            self.logger.error(f"Ошибка при очистке старых бэкапов: {e}")
-            return 0
-
-
-class DataExportManager:
-    """Класс для экспорта данных в различные форматы"""
-    
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self.logger = logging.getLogger(__name__)
-    
-    def export_tournaments_to_json(self, output_path: str) -> bool:
-        """
-        Экспортировать турниры в JSON формат
-        
-        Args:
-            output_path: Путь для сохранения JSON файла
-            
-        Returns:
-            Успешность экспорта
-        """
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Получаем все турниры
-            cursor.execute("""
-                SELECT id, name, start_date, end_date, location, 
-                       category, status, fide_id, source_url, 
-                       created_at, updated_at
-                FROM tournament
-                ORDER BY start_date
-            """)
-            
-            columns = [description[0] for description in cursor.description]
-            rows = cursor.fetchall()
-            
-            # Преобразуем в список словарей
-            tournaments = []
-            for row in rows:
-                tournament = {}
-                for i, column in enumerate(columns):
-                    tournament[column] = row[i]
-                tournaments.append(tournament)
-            
-            # Сохраняем в JSON
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(tournaments, f, ensure_ascii=False, indent=2, default=str)
-            
-            conn.close()
-            self.logger.info(f"Турниры экспортированы в JSON: {output_path}")
-            return True
-        
-        except Exception as e:
-            self.logger.error(f"Ошибка при экспорте турниров в JSON: {e}")
-            return False
-    
-    def export_tournaments_to_csv(self, output_path: str) -> bool:
-        """
-        Экспортировать турниры в CSV формат
-        
-        Args:
-            output_path: Путь для сохранения CSV файла
-            
-        Returns:
-            Успешность экспорта
-        """
-        try:
-            import csv
-            
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Получаем все турниры
-            cursor.execute("""
-                SELECT id, name, start_date, end_date, location, 
-                       category, status, fide_id, source_url, 
-                       created_at, updated_at
-                FROM tournament
-                ORDER BY start_date
-            """)
-            
-            columns = [description[0] for description in cursor.description]
-            rows = cursor.fetchall()
-            
-            # Сохраняем в CSV
-            with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow(columns)  # Заголовки
-                writer.writerows(rows)    # Данные
-            
-            conn.close()
-            self.logger.info(f"Турниры экспортированы в CSV: {output_path}")
-            return True
-        
-        except Exception as e:
-            self.logger.error(f"Ошибка при экспорте турниров в CSV: {e}")
-            return False
-
-
-# Глобальный экземпляр менеджера бэкапов
-backup_manager = DatabaseBackupManager("chess_calendar.db")
-
-
-def schedule_regular_backups():
-    """Настроить регулярное создание бэкапов"""
-    import schedule
-    import time
-    import threading
-    
-    def backup_job():
-        try:
+        """Create a backup of the database"""
+        if not backup_name:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_name = f"auto_backup_{timestamp}.zip"
-            backup_manager.create_compressed_backup(backup_name)
+            backup_name = f"backup_{timestamp}.zip"
+        
+        backup_path = self.backup_dir / backup_name
+        
+        # Create a temporary copy of the database
+        temp_db_path = self.backup_dir / "temp_backup.db"
+        
+        # Connect to the database and create a backup
+        conn = sqlite3.connect(self.db_path)
+        backup_conn = sqlite3.connect(temp_db_path)
+        
+        try:
+            # Copy the entire database
+            conn.backup(backup_conn)
             
-            # Оставляем только последние 7 бэкапов
-            backup_manager.cleanup_old_backups(keep_count=7)
+            # Also export the schema as JSON for additional safety
+            schema_data = self._export_schema(conn)
             
+            # Close connections
+            conn.close()
+            backup_conn.close()
+            
+            # Create a zip archive containing the DB and schema
+            with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                zipf.write(temp_db_path, "database.db")
+                
+                # Save schema to JSON file inside the zip
+                schema_json = json.dumps(schema_data, indent=2, default=str)
+                schema_path = self.backup_dir / "schema.json"
+                with open(schema_path, 'w', encoding='utf-8') as f:
+                    f.write(schema_json)
+                zipf.write(schema_path, "schema.json")
+                
+                # Add metadata
+                metadata = {
+                    "created_at": datetime.now().isoformat(),
+                    "db_size": os.path.getsize(temp_db_path),
+                    "tables": list(schema_data.keys())
+                }
+                metadata_json = json.dumps(metadata, indent=2)
+                metadata_path = self.backup_dir / "metadata.json"
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    f.write(metadata_json)
+                zipf.write(metadata_path, "metadata.json")
+            
+            # Clean up temporary files
+            temp_db_path.unlink(missing_ok=True)
+            schema_path.unlink(missing_ok=True)
+            metadata_path.unlink(missing_ok=True)
+            
+            return str(backup_path)
+        
         except Exception as e:
-            logging.error(f"Ошибка при автоматическом создании бэкапа: {e}")
+            # Clean up on error
+            conn.close()
+            backup_conn.close()
+            temp_db_path.unlink(missing_ok=True)
+            if backup_path.exists():
+                backup_path.unlink()
+            raise e
     
-    # Создаем бэкап каждый день в 02:00
-    schedule.every().day.at("02:00").do(backup_job)
+    def restore_from_backup(self, backup_path: str) -> bool:
+        """Restore database from a backup file"""
+        backup_path = Path(backup_path)
+        
+        if not backup_path.exists():
+            raise FileNotFoundError(f"Backup file not found: {backup_path}")
+        
+        # Extract the backup
+        extract_dir = self.backup_dir / "temp_restore"
+        extract_dir.mkdir(exist_ok=True)
+        
+        try:
+            with zipfile.ZipFile(backup_path, 'r') as zipf:
+                zipf.extractall(extract_dir)
+            
+            # Get the database file from the extracted content
+            db_file = extract_dir / "database.db"
+            if not db_file.exists():
+                raise FileNotFoundError("Database file not found in backup")
+            
+            # Backup current database before restoring
+            if os.path.exists(self.db_path):
+                backup_current = f"{self.db_path}.backup_before_restore_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                shutil.copy2(self.db_path, backup_current)
+            
+            # Replace the current database with the restored one
+            shutil.move(str(db_file), self.db_path)
+            
+            # Clean up extraction directory
+            shutil.rmtree(extract_dir)
+            
+            return True
+        
+        except Exception as e:
+            # Clean up extraction directory on error
+            if extract_dir.exists():
+                shutil.rmtree(extract_dir)
+            raise e
     
-    def run_scheduler():
-        while True:
-            schedule.run_pending()
-            time.sleep(60)  # Проверяем каждую минуту
+    def list_backups(self) -> List[Dict[str, any]]:
+        """List all available backups"""
+        backups = []
+        
+        for file_path in self.backup_dir.glob("*.zip"):
+            stat = file_path.stat()
+            backup_info = {
+                "name": file_path.name,
+                "size": stat.st_size,
+                "created_at": datetime.fromtimestamp(stat.st_mtime),
+                "path": str(file_path)
+            }
+            backups.append(backup_info)
+        
+        # Sort by creation time (newest first)
+        backups.sort(key=lambda x: x["created_at"], reverse=True)
+        return backups
     
-    # Запускаем планировщик в отдельном потоке
-    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
-
-
-# Инициализация автоматических бэкапов
-try:
-    schedule_regular_backups()
-except Exception as e:
-    logging.error(f"Ошибка при инициализации автоматических бэкапов: {e}")
+    def delete_backup(self, backup_name: str) -> bool:
+        """Delete a specific backup file"""
+        backup_path = self.backup_dir / backup_name
+        
+        if backup_path.exists():
+            backup_path.unlink()
+            return True
+        return False
+    
+    def _export_schema(self, conn: sqlite3.Connection) -> Dict[str, List[Dict]]:
+        """Export database schema information"""
+        schema = {}
+        
+        # Get all table names
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        
+        for table_row in tables:
+            table_name = table_row[0]
+            
+            # Skip SQLite internal tables
+            if table_name.startswith('sqlite_'):
+                continue
+            
+            # Get table info
+            table_info = cursor.execute(f"PRAGMA table_info('{table_name}')").fetchall()
+            columns = []
+            
+            for col_info in table_info:
+                column = {
+                    "cid": col_info[0],
+                    "name": col_info[1],
+                    "type": col_info[2],
+                    "notnull": bool(col_info[3]),
+                    "default_value": col_info[4],
+                    "pk": bool(col_info[5])
+                }
+                columns.append(column)
+            
+            schema[table_name] = columns
+        
+        return schema
+    
+    def validate_backup(self, backup_path: str) -> Dict[str, any]:
+        """Validate a backup file"""
+        backup_path = Path(backup_path)
+        
+        if not backup_path.exists():
+            return {"valid": False, "error": "Backup file not found"}
+        
+        try:
+            with zipfile.ZipFile(backup_path, 'r') as zipf:
+                # Check if required files exist in the backup
+                file_list = zipf.namelist()
+                
+                if "database.db" not in file_list:
+                    return {"valid": False, "error": "Database file missing in backup"}
+                
+                if "metadata.json" not in file_list:
+                    return {"valid": False, "error": "Metadata file missing in backup"}
+                
+                # Try to read the metadata
+                metadata_content = zipf.read("metadata.json").decode('utf-8')
+                metadata = json.loads(metadata_content)
+                
+                return {
+                    "valid": True,
+                    "metadata": metadata,
+                    "files": file_list
+                }
+        
+        except zipfile.BadZipFile:
+            return {"valid": False, "error": "Invalid zip file"}
+        except json.JSONDecodeError:
+            return {"valid": False, "error": "Invalid metadata in backup"}
+        except Exception as e:
+            return {"valid": False, "error": str(e)}
+    
+    def get_backup_size(self, backup_path: str) -> int:
+        """Get the size of a backup file"""
+        return os.path.getsize(backup_path)
