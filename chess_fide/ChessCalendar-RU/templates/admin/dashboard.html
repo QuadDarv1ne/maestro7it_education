@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-панель - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>Админ-панель</h1>
+        
+        <!-- Статистика -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <h5 class="card-title">Турниры</h5>
+                        <p class="card-text display-4">{{ total_tournaments }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <h5 class="card-title">Подписчики</h5>
+                        <p class="card-text display-4">{{ notification_stats.total_subscribers }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body">
+                        <h5 class="card-title">Кэш</h5>
+                        <p class="card-text">{{ cache_stats.type }}</p>
+                        <small>{{ cache_stats.keys }} ключей</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-{{ 'success' if health_status == 'healthy' else 'warning' if health_status == 'degraded' else 'danger' }}">
+                    <div class="card-body">
+                        <h5 class="card-title">Состояние</h5>
+                        <p class="card-text">{{ health_status|title }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Быстрые действия -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Быстрые действия</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('admin.add_tournament') }}" class="btn btn-primary">
+                                Добавить турнир
+                            </a>
+                            <a href="{{ url_for('admin.tournaments') }}" class="btn btn-outline-primary">
+                                Управление турнирами
+                            </a>
+                            <a href="{{ url_for('admin.notifications') }}" class="btn btn-outline-success">
+                                Уведомления
+                            </a>
+                            <a href="{{ url_for('admin.cache_management') }}" class="btn btn-outline-info">
+                                Кэш
+                            </a>
+                            <a href="{{ url_for('admin.health_check') }}" class="btn btn-outline-warning">
+                                Состояние системы
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Последние турниры -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Последние турниры</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_tournaments %}
+                            <div class="list-group">
+                                {% for tournament in recent_tournaments %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">{{ tournament.name }}</h6>
+                                        <small>{{ tournament.start_date.strftime('%d.%m.%Y') }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ tournament.location }}</p>
+                                    <small class="badge bg-secondary">{{ tournament.category }}</small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Нет турниров</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Состояние системы</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            {% for name, details in health_details.items() %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ name|title }}
+                                <span class="badge bg-{{ 'success' if details.status == 'healthy' else 'danger' if details.status == 'error' else 'warning' }}">
+                                    {{ details.status|title }}
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -18,6 +18,11 @@ def create_app(config_name='default'):
     
     # Регистрация blueprint'ов
     from app.views.main import main_bp
+    from app.views.admin import admin_bp
+    from app.views.api_docs import api_docs_bp
+    
     app.register_blueprint(main_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(api_docs_bp)
     
     return app
