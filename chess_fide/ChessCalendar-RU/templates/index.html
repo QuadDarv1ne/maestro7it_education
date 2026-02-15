@@ -73,11 +73,55 @@
             <small class="text-muted"><span id="tournaments-count">{{ tournaments|length }}</span> из 100+ турниров загружено</small>
         </div>
         
+        <!-- Поиск -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form id="searchForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="searchQuery" class="form-label">Поиск турниров</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="searchQuery" name="q" 
+                                   placeholder="Введите название турнира или город..." 
+                                   value="{{ request.args.get('q', '') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="searchCategory" class="form-label">Категория</label>
+                        <select class="form-select" id="searchCategory" name="category">
+                            <option value="">Все категории</option>
+                            <option value="FIDE" {% if request.args.get('category') == 'FIDE' %}selected{% endif %}>FIDE</option>
+                            <option value="National" {% if request.args.get('category') == 'National' %}selected{% endif %}>National</option>
+                            <option value="Youth" {% if request.args.get('category') == 'Youth' %}selected{% endif %}>Youth</option>
+                            <option value="Seniors" {% if request.args.get('category') == 'Seniors' %}selected{% endif %}>Seniors</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="searchStatus" class="form-label">Статус</label>
+                        <select class="form-select" id="searchStatus" name="status">
+                            <option value="">Все статусы</option>
+                            <option value="Scheduled" {% if request.args.get('status') == 'Scheduled' %}selected{% endif %}>Запланирован</option>
+                            <option value="Ongoing" {% if request.args.get('status') == 'Ongoing' %}selected{% endif %}>Идет сейчас</option>
+                            <option value="Completed" {% if request.args.get('status') == 'Completed' %}selected{% endif %}>Завершен</option>
+                        </select>
+                    </div>
+                    <div class="col-12 text-center">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Найти
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary ms-2" id="clearSearch">
+                            <i class="bi bi-x-lg"></i> Очистить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
         <!-- Статистика и действия -->
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
             <div class="mb-2 mb-md-0">
                 <span class="badge bg-primary fs-6">
-                    <i class="bi bi-calendar-event"></i> Турниров: {{ tournaments|length }}
+                    <i class="bi bi-calendar-event"></i> Турниров: <span id="tournamentsCount">{{ tournaments|length }}</span>
                 </span>
                 {% if filters.category %}
                     <span class="badge bg-info ms-1">
@@ -87,6 +131,11 @@
                 {% if filters.status %}
                     <span class="badge bg-warning ms-1">
                         <i class="bi bi-info-circle"></i> {{ filters.status }}
+                    </span>
+                {% endif %}
+                {% if request.args.get('q') %}
+                    <span class="badge bg-success ms-1">
+                        <i class="bi bi-search"></i> Поиск: "{{ request.args.get('q') }}"
                     </span>
                 {% endif %}
             </div>
@@ -270,6 +319,62 @@
 <script>
 // Мобильные оптимизации и улучшения UI
 document.addEventListener('DOMContentLoaded', function() {
+    // Обработка поиска
+    const searchForm = document.getElementById('searchForm');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const tournamentsCount = document.getElementById('tournamentsCount');
+    
+    // Обработка отправки формы поиска
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Собираем данные формы
+            const formData = new FormData(searchForm);
+            const params = new URLSearchParams();
+            
+            for (let [key, value] of formData.entries()) {
+                if (value.trim() !== '') {
+                    params.append(key, value.trim());
+                }
+            }
+            
+            // Добавляем параметры сортировки если они есть
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('sort_by')) {
+                params.append('sort_by', urlParams.get('sort_by'));
+            }
+            
+            // Переход к результатам поиска
+            window.location.search = params.toString();
+        });
+    }
+    
+    // Очистка поиска
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            // Очищаем все поля формы
+            if (searchForm) {
+                searchForm.reset();
+            }
+            
+            // Переход к основному списку (без параметров поиска)
+            const url = new URL(window.location);
+            url.search = '';
+            window.location.href = url.toString();
+        });
+    }
+    
+    // Обновление счетчика турниров
+    function updateTournamentsCount() {
+        const tournamentCards = document.querySelectorAll('.tournament-card');
+        if (tournamentsCount) {
+            tournamentsCount.textContent = tournamentCards.length;
+        }
+    }
+    
+    // Вызываем при загрузке
+    updateTournamentsCount();
     // Автоматическое сворачивание фильтров на мобильных при применении
     if (window.innerWidth <= 768) {
         const filterCollapse = document.getElementById('filterCollapse');

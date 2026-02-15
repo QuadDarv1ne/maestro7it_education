@@ -73,6 +73,41 @@ def api_tournament_detail(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     return jsonify(tournament.to_dict())
 
+@main_bp.route('/api/tournaments/search')
+def api_tournament_search():
+    """API для поиска турниров"""
+    query = request.args.get('q', '').strip()
+    category = request.args.get('category', '')
+    status = request.args.get('status', '')
+    location = request.args.get('location', '')
+    
+    if not query and not category and not status and not location:
+        return jsonify([])
+    
+    # Start with base query
+    db_query = Tournament.query
+    
+    # Apply filters
+    if query:
+        db_query = db_query.filter(
+            db.or_(
+                Tournament.name.contains(query),
+                Tournament.location.contains(query)
+            )
+        )
+    
+    if category:
+        db_query = db_query.filter(Tournament.category == category)
+    
+    if status:
+        db_query = db_query.filter(Tournament.status == status)
+    
+    if location:
+        db_query = db_query.filter(Tournament.location.contains(location))
+    
+    tournaments = db_query.all()
+    return jsonify([t.to_dict() for t in tournaments])
+
 @main_bp.route('/update')
 def update_tournaments():
     """Ручное обновление турниров из источников"""

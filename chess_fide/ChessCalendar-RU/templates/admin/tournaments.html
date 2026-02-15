@@ -8,7 +8,12 @@
     
     <div class="row mb-3">
         <div class="col-md-6">
-            <a href="{{ url_for('admin.add_tournament') }}" class="btn btn-primary">Добавить турнир</a>
+            <a href="{{ url_for('admin.add_tournament') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Добавить турнир
+            </a>
+            <a href="{{ url_for('admin.import_tournaments') }}" class="btn btn-success ms-2">
+                <i class="bi bi-file-earmark-arrow-up"></i> Импорт
+            </a>
         </div>
         <div class="col-md-6">
             <form method="GET" class="form-inline float-end">

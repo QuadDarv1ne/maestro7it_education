@@ -7,6 +7,8 @@ from app.utils.cache import cache_service, TournamentCache
 from app.utils.monitoring import health_checker, performance_monitor
 from datetime import datetime
 import json
+import csv
+from io import StringIO
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -165,6 +167,117 @@ def delete_tournament(id):
         flash(f'Ошибка при удалении турнира: {e}', 'error')
     
     return redirect(url_for('admin.tournaments'))
+
+@admin_bp.route('/tournaments/import', methods=['GET', 'POST'])
+def import_tournaments():
+    """Импорт турниров из файла"""
+    if request.method == 'POST':
+        try:
+            if 'file' not in request.files:
+                flash('Файл не выбран', 'error')
+                return redirect(request.url)
+            
+            file = request.files['file']
+            if file.filename == '':
+                flash('Файл не выбран', 'error')
+                return redirect(request.url)
+            
+            file_type = request.form.get('file_type', 'csv')
+            
+            if file_type == 'csv':
+                imported_count = _import_csv_tournaments(file)
+            elif file_type == 'json':
+                imported_count = _import_json_tournaments(file)
+            else:
+                flash('Неподдерживаемый тип файла', 'error')
+                return redirect(request.url)
+            
+            flash(f'Успешно импортировано {imported_count} турниров', 'success')
+            return redirect(url_for('admin.tournaments'))
+            
+        except Exception as e:
+            flash(f'Ошибка при импорте: {e}', 'error')
+            return redirect(request.url)
+    
+    return render_template('admin/import_tournaments.html')
+
+def _import_csv_tournaments(file):
+    """Импорт турниров из CSV файла"""
+    content = file.read().decode('utf-8')
+    csv_reader = csv.DictReader(StringIO(content))
+    
+    imported_count = 0
+    for row in csv_reader:
+        try:
+            # Проверяем, существует ли уже турнир с таким FIDE ID
+            fide_id = row.get('fide_id') or row.get('FIDE ID')
+            if fide_id:
+                existing = Tournament.query.filter_by(fide_id=fide_id).first()
+                if existing:
+                    continue  # Пропускаем дубликаты
+            
+            # Создаем новый турнир
+            tournament = Tournament(
+                name=row.get('name') or row.get('Название'),
+                start_date=datetime.strptime(row.get('start_date') or row.get('start_date'), '%Y-%m-%d').date(),
+                end_date=datetime.strptime(row.get('end_date') or row.get('end_date'), '%Y-%m-%d').date(),
+                location=row.get('location') or row.get('Место'),
+                category=row.get('category') or row.get('Категория') or 'National',
+                status=row.get('status') or row.get('Статус') or 'Scheduled',
+                fide_id=fide_id,
+                source_url=row.get('source_url') or row.get('source_url')
+            )
+            
+            db.session.add(tournament)
+            imported_count += 1
+            
+        except Exception as e:
+            # Пропускаем строки с ошибками
+            continue
+    
+    db.session.commit()
+    TournamentCache.invalidate_tournaments_cache()
+    return imported_count
+
+def _import_json_tournaments(file):
+    """Импорт турниров из JSON файла"""
+    content = file.read().decode('utf-8')
+    data = json.loads(content)
+    
+    imported_count = 0
+    tournaments_data = data if isinstance(data, list) else data.get('tournaments', [])
+    
+    for item in tournaments_data:
+        try:
+            # Проверяем, существует ли уже турнир с таким FIDE ID
+            fide_id = item.get('fide_id')
+            if fide_id:
+                existing = Tournament.query.filter_by(fide_id=fide_id).first()
+                if existing:
+                    continue  # Пропускаем дубликаты
+            
+            # Создаем новый турнир
+            tournament = Tournament(
+                name=item.get('name'),
+                start_date=datetime.strptime(item.get('start_date'), '%Y-%m-%d').date(),
+                end_date=datetime.strptime(item.get('end_date'), '%Y-%m-%d').date(),
+                location=item.get('location'),
+                category=item.get('category', 'National'),
+                status=item.get('status', 'Scheduled'),
+                fide_id=fide_id,
+                source_url=item.get('source_url')
+            )
+            
+            db.session.add(tournament)
+            imported_count += 1
+            
+        except Exception as e:
+            # Пропускаем записи с ошибками
+            continue
+    
+    db.session.commit()
+    TournamentCache.invalidate_tournaments_cache()
+    return imported_count
 
 @admin_bp.route('/cache')
 def cache_management():
