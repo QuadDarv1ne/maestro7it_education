@@ -4,6 +4,62 @@
 
 {% block content %}
 <div class="container mt-4">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="display-4 fw-bold"><i class="bi bi-trophy"></i> ChessCalendar-RU</h1>
+                            <p class="lead">Календарь шахматных турниров России и мира</p>
+                            <p class="mb-0">Следите за предстоящими турнирами, находите интересующие вас события и будьте в курсе последних новостей шахматного мира</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <i class="bi bi-chess" style="font-size: 5rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ tournaments|length }}</h3>
+                    <p class="text-muted mb-0">Турниров</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <h3 class="text-success">{{ tournaments|selectattr('status', 'equalto', 'Ongoing')|list|length }}</h3>
+                    <p class="text-muted mb-0">Активных</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ tournaments|selectattr('status', 'equalto', 'Scheduled')|list|length }}</h3>
+                    <p class="text-muted mb-0">Предстоящих</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <h3 class="text-info">{{ tournaments|selectattr('category', 'equalto', 'International')|list|length }}</h3>
+                    <p class="text-muted mb-0">Международных</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Filters -->
     <div class="card mb-4">
         <div class="card-body">
@@ -51,7 +107,7 @@
         </div>
     </div>
 
-    <!-- Tournament Stats -->
+    <!-- Tournament Stats and Actions -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center">
@@ -78,7 +134,15 @@
         {% if tournaments %}
             {% for tournament in tournaments %}
             <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100 tournament-card">
+                <div class="card h-100 tournament-card border-start border-{{ 'primary' if tournament.category == 'International' else 'secondary' }} border-3">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-{{ 'primary' if tournament.category == 'International' else 'secondary' }}">{{ tournament.category }}</span>
+                            <span class="badge {{ 'bg-success' if tournament.status == 'Completed' else 'bg-warning' if tournament.status == 'Ongoing' else 'bg-info' }}">
+                                {{ tournament.status }}
+                            </span>
+                        </div>
+                    </div>
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">{{ tournament.name }}</h5>
                         <p class="card-text">
@@ -86,12 +150,6 @@
                             {{ tournament.start_date.strftime('%d.%m.%Y') }} - {{ tournament.end_date.strftime('%d.%m.%Y') }}
                             <br>
                             <i class="bi bi-geo-alt text-success"></i> {{ tournament.location }}
-                            <br>
-                            <i class="bi bi-tag text-info"></i> 
-                            <span class="badge bg-secondary">{{ tournament.category }}</span>
-                            <span class="badge {% if tournament.status == 'Completed' %}bg-success{% elif tournament.status == 'Ongoing' %}bg-warning{% else %}bg-primary{% endif %}">
-                                {{ tournament.status }}
-                            </span>
                         </p>
                         
                         <!-- Display additional info if available -->
@@ -175,194 +233,5 @@ document.getElementById('location').addEventListener('input', function() {
         document.getElementById('filterForm').submit();
     }, 500);  // Wait 500ms after user stops typing
 });
-</script>
-{% endblock %}
-
-{% block scripts %}
-<script>
-// Мобильные оптимизации и улучшения UI
-document.addEventListener('DOMContentLoaded', function() {
-    // Обработка поиска
-    const searchForm = document.getElementById('searchForm');
-    const clearSearchBtn = document.getElementById('clearSearch');
-    const tournamentsCount = document.getElementById('tournamentsCount');
-    
-    // Обработка отправки формы поиска
-    if (searchForm) {
-        searchForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Собираем данные формы
-            const formData = new FormData(searchForm);
-            const params = new URLSearchParams();
-            
-            for (let [key, value] of formData.entries()) {
-                if (value.trim() !== '') {
-                    params.append(key, value.trim());
-                }
-            }
-            
-            // Добавляем параметры сортировки если они есть
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('sort_by')) {
-                params.append('sort_by', urlParams.get('sort_by'));
-            }
-            
-            // Переход к результатам поиска
-            window.location.search = params.toString();
-        });
-    }
-    
-    // Очистка поиска
-    if (clearSearchBtn) {
-        clearSearchBtn.addEventListener('click', function() {
-            // Очищаем все поля формы
-            if (searchForm) {
-                searchForm.reset();
-            }
-            
-            // Переход к основному списку (без параметров поиска)
-            const url = new URL(window.location);
-            url.search = '';
-            window.location.href = url.toString();
-        });
-    }
-    
-    // Обновление счетчика турниров
-    function updateTournamentsCount() {
-        const tournamentCards = document.querySelectorAll('.tournament-card');
-        if (tournamentsCount) {
-            tournamentsCount.textContent = tournamentCards.length;
-        }
-    }
-    
-    // Вызываем при загрузке
-    updateTournamentsCount();
-    // Автоматическое сворачивание фильтров на мобильных при применении
-    if (window.innerWidth <= 768) {
-        const filterCollapse = document.getElementById('filterCollapse');
-        const applyButton = filterCollapse?.querySelector('button[type="submit"]');
-        
-        if (applyButton) {
-            applyButton.addEventListener('click', function() {
-                setTimeout(() => {
-                    const bsCollapse = new bootstrap.Collapse(filterCollapse);
-                    bsCollapse.hide();
-                }, 1000);
-            });
-        }
-    }
-    
-    // Оптимизация для сенсорных устройств
-    const cards = document.querySelectorAll('.tournament-card');
-    cards.forEach(card => {
-        card.addEventListener('touchstart', function(e) {
-            this.classList.add('opacity-75');
-        });
-        
-        card.addEventListener('touchend', function(e) {
-            this.classList.remove('opacity-75');
-        });
-    });
-    
-    // Обновление прогресс-бара
-    const tournamentCount = parseInt(document.getElementById('tournaments-count').textContent);
-    const progressBar = document.getElementById('tournaments-progress');
-    const progressPercentage = Math.min(tournamentCount * 10, 100); // Максимум 100%
-    progressBar.style.width = progressPercentage + '%';
-    
-    // Анимация при загрузке
-    const tournamentCards = document.querySelectorAll('.tournament-card');
-    tournamentCards.forEach((card, index) => {
-        setTimeout(() => {
-            card.classList.add('fade-in');
-        }, index * 100); // Плавное появление карточек
-    });
-    
-    // Добавление тултипов
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    
-    // Initialize favorite buttons
-    initializeFavoriteButtons();
-});
-
-// Function to initialize favorite buttons
-function initializeFavoriteButtons() {
-    const favoriteButtons = document.querySelectorAll('.favorite-btn');
-    
-    favoriteButtons.forEach(button => {
-        const tournamentId = parseInt(button.getAttribute('data-tournament-id'));
-        
-        // Initially check if tournament is favorited
-        checkFavoriteStatus(tournamentId, button);
-        
-        button.addEventListener('click', function() {
-            toggleFavorite(tournamentId, this);
-        });
-    });
-}
-
-// Function to check favorite status
-async function checkFavoriteStatus(tournamentId, buttonElement) {
-    try {
-        const response = await fetch(`/user/favorites/check/${tournamentId}`);
-        const data = await response.json();
-        
-        if (data.is_favorite) {
-            buttonElement.innerHTML = '<i class="bi bi-star-fill text-warning"></i> В избранном';
-            buttonElement.classList.remove('btn-outline-warning');
-            buttonElement.classList.add('btn-warning');
-            buttonElement.setAttribute('data-is-favorite', 'true');
-        } else {
-            buttonElement.innerHTML = '<i class="bi bi-star"></i> В избранное';
-            buttonElement.classList.remove('btn-warning');
-            buttonElement.classList.add('btn-outline-warning');
-            buttonElement.setAttribute('data-is-favorite', 'false');
-        }
-    } catch (error) {
-        console.error('Error checking favorite status:', error);
-    }
-}
-
-// Function to toggle favorite status
-async function toggleFavorite(tournamentId, buttonElement) {
-    try {
-        const response = await fetch(`/user/favorites/toggle/${tournamentId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'same-origin'
-        });
-        
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-            // Update button appearance
-            if (data.is_favorite) {
-                buttonElement.innerHTML = '<i class="bi bi-star-fill text-warning"></i> В избранном';
-                buttonElement.classList.remove('btn-outline-warning');
-                buttonElement.classList.add('btn-warning');
-                buttonElement.setAttribute('data-is-favorite', 'true');
-            } else {
-                buttonElement.innerHTML = '<i class="bi bi-star"></i> В избранное';
-                buttonElement.classList.remove('btn-warning');
-                buttonElement.classList.add('btn-outline-warning');
-                buttonElement.setAttribute('data-is-favorite', 'false');
-            }
-            
-            // Show success message
-            alert(data.message);
-        } else {
-            alert('Ошибка: ' + data.message);
-        }
-    } catch (error) {
-        console.error('Error toggling favorite:', error);
-        alert('Произошла ошибка при изменении избранного');
-    }
-}
 </script>
 {% endblock %}
