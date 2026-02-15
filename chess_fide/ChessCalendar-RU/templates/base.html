@@ -154,11 +154,24 @@
                 </ul>
                 
                 <ul class="navbar-nav">
+                    {% if session.get('user_id') %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ session.get('username') }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-speedometer2"></i> Админ-панель</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.logout') }}"><i class="bi bi-box-arrow-right"></i> Выйти</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.update_tournaments') }}">
-                            <i class="bi bi-arrow-repeat"></i> Обновить
+                        <a class="nav-link" href="{{ url_for('admin.login') }}">
+                            <i class="bi bi-box-arrow-in-right"></i> Вход
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
