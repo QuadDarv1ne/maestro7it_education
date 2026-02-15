@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tournament.name }} - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Главная</a></li>
+                <li class="breadcrumb-item active">{{ tournament.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title mb-0">{{ tournament.name }}</h1>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Информация о турнире</h5>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Дата проведения:</strong></td>
+                                <td>{{ tournament.start_date.strftime('%d.%m.%Y') }} - {{ tournament.end_date.strftime('%d.%m.%Y') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Место проведения:</strong></td>
+                                <td>{{ tournament.location }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Категория:</strong></td>
+                                <td><span class="badge bg-secondary">{{ tournament.category }}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Статус:</strong></td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if tournament.status == 'Scheduled' else 'warning' if tournament.status == 'Ongoing' else 'secondary' }}">
+                                        {{ tournament.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% if tournament.fide_id %}
+                            <tr>
+                                <td><strong>FIDE ID:</strong></td>
+                                <td>{{ tournament.fide_id }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Дополнительная информация</h5>
+                        <div class="alert alert-info">
+                            <strong>Источник:</strong>
+                            {% if tournament.source_url %}
+                                <a href="{{ tournament.source_url }}" target="_blank" class="alert-link">
+                                    Официальная страница турнира
+                                </a>
+                            {% else %}
+                                Данные из базы ChessCalendar-RU
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6>Действия:</h6>
+                            <div class="btn-group" role="group">
+                                {% if tournament.source_url %}
+                                <a href="{{ tournament.source_url }}" target="_blank" class="btn btn-primary">
+                                    Перейти к источнику
+                                </a>
+                                {% endif %}
+                                <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                                    Назад к календарю
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Похожие турниры</h5>
+            </div>
+            <div class="card-body">
+                {% set similar_tournaments = tournament.get_similar() %}
+                {% if similar_tournaments %}
+                    <div class="row">
+                        {% for similar in similar_tournaments[:3] %}
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ similar.name }}</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            {{ similar.start_date.strftime('%d.%m.%Y') }} | {{ similar.location }}
+                                        </small>
+                                    </p>
+                                    <a href="{{ url_for('main.tournament_detail', tournament_id=similar.id) }}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        Подробнее
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Похожих турниров не найдено</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

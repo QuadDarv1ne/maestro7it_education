@@ -2,15 +2,64 @@ from flask import Blueprint, render_template, jsonify, request
 from app import db
 from app.models.tournament import Tournament
 from app.utils.fide_parser import FIDEParses
-from datetime import datetime
+from app.utils.cfr_parser import CFRParser
+from app.utils.updater import updater
+from datetime import datetime, date
 
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
     """Главная страница с календарем турниров"""
-    tournaments = Tournament.query.order_by(Tournament.start_date).all()
-    return render_template('index.html', tournaments=tournaments)
+    # Получаем параметры фильтрации
+    category = request.args.get('category', '')
+    status = request.args.get('status', '')
+    location = request.args.get('location', '')
+    sort_by = request.args.get('sort_by', 'start_date')
+    
+    # Базовый запрос
+    query = Tournament.query
+    
+    # Применяем фильтры
+    if category:
+        query = query.filter(Tournament.category == category)
+    if status:
+        query = query.filter(Tournament.status == status)
+    if location:
+        query = query.filter(Tournament.location.contains(location))
+    
+    # Применяем сортировку
+    if sort_by == 'name':
+        query = query.order_by(Tournament.name)
+    elif sort_by == 'location':
+        query = query.order_by(Tournament.location)
+    else:  # start_date
+        query = query.order_by(Tournament.start_date)
+    
+    tournaments = query.all()
+    
+    # Получаем уникальные значения для фильтров
+    categories = db.session.query(Tournament.category).distinct().all()
+    statuses = db.session.query(Tournament.status).distinct().all()
+    locations = db.session.query(Tournament.location).distinct().all()
+    
+    return render_template('index.html', 
+                         tournaments=tournaments,
+                         categories=[c[0] for c in categories],
+                         statuses=[s[0] for s in statuses],
+                         locations=[l[0] for l in locations],
+                         filters={
+                             'category': category,
+                             'status': status,
+                             'location': location,
+                             'sort_by': sort_by
+                         })
+
+@main_bp.route('/tournament/<int:tournament_id>')
+def tournament_detail(tournament_id):
+    """Страница деталей турнира"""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    return render_template('tournament_detail.html', tournament=tournament)
 
 @main_bp.route('/api/tournaments')
 def api_tournaments():
@@ -28,32 +77,60 @@ def api_tournament_detail(tournament_id):
 def update_tournaments():
     """Ручное обновление турниров из источников"""
     try:
-        parser = FIDEParses()
-        new_tournaments = parser.get_tournaments_russia(2026)
-        
-        updated_count = 0
-        for tourney_data in new_tournaments:
-            # Проверяем, существует ли турнир
-            existing = Tournament.query.filter_by(
-                name=tourney_data['name'],
-                start_date=tourney_data['start_date']
-            ).first()
-            
-            if not existing:
-                tournament = Tournament(**tourney_data)
-                db.session.add(tournament)
-                updated_count += 1
-        
-        db.session.commit()
+        updater.update_all_sources()
         return jsonify({
             'status': 'success',
-            'message': f'Добавлено {updated_count} новых турниров'
+            'message': 'Данные успешно обновлены'
         })
     except Exception as e:
         return jsonify({
             'status': 'error',
             'message': str(e)
         }), 500
+
+@main_bp.route('/export/csv')
+def export_csv():
+    """Экспорт турниров в CSV"""
+    import csv
+    from io import StringIO
+    
+    tournaments = Tournament.query.all()
+    
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Заголовки
+    writer.writerow(['ID', 'Название', 'Дата начала', 'Дата окончания', 
+                    'Место', 'Категория', 'Статус', 'FIDE ID'])
+    
+    # Данные
+    for t in tournaments:
+        writer.writerow([
+            t.id,
+            t.name,
+            t.start_date,
+            t.end_date,
+            t.location,
+            t.category,
+            t.status,
+            t.fide_id
+        ])
+    
+    output.seek(0)
+    return output.getvalue(), 200, {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename=tournaments.csv'
+    }
+
+@main_bp.route('/export/json')
+def export_json():
+    """Экспорт турниров в JSON"""
+    tournaments = Tournament.query.all()
+    data = [t.to_dict() for t in tournaments]
+    
+    return jsonify(data), 200, {
+        'Content-Disposition': 'attachment; filename=tournaments.json'
+    }
 
 @main_bp.route('/about')
 def about():

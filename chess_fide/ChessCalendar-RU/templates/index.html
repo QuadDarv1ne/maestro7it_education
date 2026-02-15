@@ -8,14 +8,87 @@
         <h1>Шахматные турниры в России 2026</h1>
         <p class="lead">Актуальный календарь официальных шахматных турниров FIDE в России</p>
         
+        <!-- Фильтры -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Фильтры и сортировка</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="category" class="form-label">Категория</label>
+                        <select name="category" id="category" class="form-select">
+                            <option value="">Все категории</option>
+                            {% for category in categories %}
+                                <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>
+                                    {{ category }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Статус</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">Все статусы</option>
+                            {% for status in statuses %}
+                                <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>
+                                    {{ status }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="location" class="form-label">Место</label>
+                        <input type="text" name="location" id="location" class="form-control" 
+                               value="{{ filters.location }}" placeholder="Часть названия города">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sort_by" class="form-label">Сортировка</label>
+                        <select name="sort_by" id="sort_by" class="form-select">
+                            <option value="start_date" {% if filters.sort_by == 'start_date' %}selected{% endif %}>
+                                По дате
+                            </option>
+                            <option value="name" {% if filters.sort_by == 'name' %}selected{% endif %}>
+                                По названию
+                            </option>
+                            <option value="location" {% if filters.sort_by == 'location' %}selected{% endif %}>
+                                По месту
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Применить фильтры</button>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Сбросить</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Статистика и действия -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <span class="badge bg-primary">Всего турниров: {{ tournaments|length }}</span>
+                {% if filters.category %}
+                    <span class="badge bg-info">Категория: {{ filters.category }}</span>
+                {% endif %}
+                {% if filters.status %}
+                    <span class="badge bg-warning">Статус: {{ filters.status }}</span>
+                {% endif %}
             </div>
-            <div>
+            <div class="btn-group">
                 <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-outline-primary btn-sm">
                     Обновить данные
                 </a>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                            data-bs-toggle="dropdown">
+                        Экспорт
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('main.export_csv') }}">CSV</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.export_json') }}">JSON</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
 
@@ -25,7 +98,12 @@
                 <div class="col-md-6 col-lg-4">
                     <div class="card tournament-card">
                         <div class="card-body">
-                            <h5 class="card-title">{{ tournament.name }}</h5>
+                            <h5 class="card-title">
+                                <a href="{{ url_for('main.tournament_detail', tournament_id=tournament.id) }}" 
+                                   class="text-decoration-none">
+                                    {{ tournament.name }}
+                                </a>
+                            </h5>
                             <p class="card-text">
                                 <span class="tournament-date">
                                     {{ tournament.start_date.strftime('%d.%m.%Y') }} - 
@@ -38,15 +116,21 @@
                             </p>
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="badge bg-secondary">{{ tournament.category }}</span>
-                                <span class="badge bg-{{ 'success' if tournament.status == 'Scheduled' else 'warning' }}">
+                                <span class="badge bg-{{ 'success' if tournament.status == 'Scheduled' else 'warning' if tournament.status == 'Ongoing' else 'secondary' }}">
                                     {{ tournament.status }}
                                 </span>
                             </div>
-                            {% if tournament.source_url %}
-                            <a href="{{ tournament.source_url }}" class="btn btn-outline-primary btn-sm mt-2" target="_blank">
-                                Подробнее
-                            </a>
-                            {% endif %}
+                            <div class="mt-2">
+                                <a href="{{ url_for('main.tournament_detail', tournament_id=tournament.id) }}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    Подробнее
+                                </a>
+                                {% if tournament.source_url %}
+                                <a href="{{ tournament.source_url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
+                                    Источник
+                                </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -55,8 +139,11 @@
         {% else %}
             <div class="alert alert-info">
                 <h4>Турниры не найдены</h4>
-                <p>Нажмите кнопку "Обновить данные" для загрузки информации о турнирах.</p>
-                <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-primary">Обновить данные</a>
+                <p>Попробуйте изменить параметры фильтрации или обновить данные.</p>
+                <div class="btn-group">
+                    <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-primary">Обновить данные</a>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Сбросить фильтры</a>
+                </div>
             </div>
         {% endif %}
     </div>

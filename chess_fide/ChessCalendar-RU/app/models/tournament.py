@@ -29,3 +29,22 @@ class Tournament(db.Model):
             'fide_id': self.fide_id,
             'source_url': self.source_url
         }
+
+    def get_similar(self, limit=5):
+        """Получить похожие турниры (по категории и месту)"""
+        similar = Tournament.query.filter(
+            Tournament.id != self.id,
+            Tournament.category == self.category,
+            Tournament.location.like(f'%{self.location}%')
+        ).limit(limit).all()
+        
+        # Если не нашли по категории и месту, ищем по категории
+        if len(similar) < limit:
+            additional = Tournament.query.filter(
+                Tournament.id != self.id,
+                Tournament.category == self.category,
+                Tournament.id.notin_([t.id for t in similar])
+            ).limit(limit - len(similar)).all()
+            similar.extend(additional)
+            
+        return similar
