@@ -250,3 +250,31 @@ def service_worker():
 def about():
     """Страница о проекте"""
     return render_template('about.html')
+
+@main_bp.route('/notifications/preferences', methods=['POST'])
+def update_notification_preferences():
+    """Обновление настроек уведомлений пользователя"""
+    from app.models.notification import Subscription
+    from app.utils.notifications import notification_service
+    
+    try:
+        if 'user_id' not in session:
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
+        
+        user = User.query.get(session['user_id'])
+        if not user:
+            return jsonify({'status': 'error', 'message': 'User not found'}), 404
+        
+        preferences = {
+            'new_tournaments': request.form.get('new_tournaments') == 'on',
+            'tournament_updates': request.form.get('tournament_updates') == 'on',
+            'daily_summary': request.form.get('daily_summary') == 'on'
+        }
+        
+        # Обновляем или создаем подписку
+        notification_service.update_subscriber_preferences(user.email, preferences)
+        
+        return jsonify({'status': 'success', 'message': 'Preferences updated successfully'})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
