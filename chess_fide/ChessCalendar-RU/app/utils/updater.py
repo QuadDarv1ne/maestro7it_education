@@ -154,6 +154,75 @@ class TournamentUpdater:
             import traceback
             traceback.print_exc()
 
+    def _validate_and_clean_tournament_data(self, tourney_data):
+        """Валидация и очистка данных турнира перед добавлением"""
+        try:
+            # Filter out None values and ensure required fields are present
+            filtered_data = {k: v for k, v in tourney_data.items() if v is not None}
+
+            # Ensure required fields have defaults if missing
+            if 'description' not in filtered_data:
+                filtered_data['description'] = None
+            if 'prize_fund' not in filtered_data:
+                filtered_data['prize_fund'] = None
+            if 'organizer' not in filtered_data:
+                filtered_data['organizer'] = None
+            
+            # Sanitize fields to prevent XSS and ensure data quality
+            if 'name' in filtered_data and filtered_data['name']:
+                # Clean the name field
+                filtered_data['name'] = str(filtered_data['name']).strip()[:200]  # Limit length
+            
+            if 'location' in filtered_data and filtered_data['location']:
+                # Clean the location field
+                filtered_data['location'] = str(filtered_data['location']).strip()[:100]  # Limit length
+            
+            if 'description' in filtered_data and filtered_data['description']:
+                # Clean the description field
+                filtered_data['description'] = str(filtered_data['description']).strip()[:500]  # Limit length
+            
+            if 'organizer' in filtered_data and filtered_data['organizer']:
+                # Clean the organizer field
+                filtered_data['organizer'] = str(filtered_data['organizer']).strip()[:100]  # Limit length
+            
+            if 'prize_fund' in filtered_data and filtered_data['prize_fund']:
+                # Clean the prize fund field
+                filtered_data['prize_fund'] = str(filtered_data['prize_fund']).strip()[:50]  # Limit length
+            
+            if 'category' in filtered_data and filtered_data['category']:
+                # Clean the category field
+                filtered_data['category'] = str(filtered_data['category']).strip()[:50]  # Limit length
+            
+            if 'status' in filtered_data and filtered_data['status']:
+                # Clean the status field
+                filtered_data['status'] = str(filtered_data['status']).strip()[:20]  # Limit length
+            
+            if 'source_url' in filtered_data and filtered_data['source_url']:
+                # Validate URL format
+                source_url = str(filtered_data['source_url']).strip()
+                if source_url.startswith(('http://', 'https://')):
+                    filtered_data['source_url'] = source_url[:200]  # Limit length
+                else:
+                    filtered_data['source_url'] = None
+            
+            if 'fide_id' in filtered_data and filtered_data['fide_id']:
+                # Ensure FIDE ID is properly formatted
+                filtered_data['fide_id'] = str(filtered_data['fide_id'])[:20]  # Limit length
+            
+            # Ensure dates are valid
+            if 'start_date' in filtered_data and filtered_data['start_date'] is None:
+                logger.warning(f"Invalid start date: {filtered_data['start_date']}")
+                return None  # Skip this tournament if start date is invalid
+            
+            if 'end_date' in filtered_data and filtered_data['end_date'] is None:
+                # Set end date equal to start date if not provided
+                filtered_data['end_date'] = filtered_data['start_date']
+            
+            return filtered_data
+        except Exception as e:
+            logger.error(f"Ошибка при валидации данных турнира: {e}")
+            return None
+    
     def send_tournament_reminders(self):
         """Отправить напоминания о турнирах"""
         try:

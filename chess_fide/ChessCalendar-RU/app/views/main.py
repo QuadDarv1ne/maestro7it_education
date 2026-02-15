@@ -105,8 +105,66 @@ def tournament_detail(tournament_id):
 @main_bp.route('/api/tournaments')
 def api_tournaments():
     """API для получения турниров"""
-    tournaments = Tournament.query.all()
-    return jsonify([t.to_dict() for t in tournaments])
+    # Get query parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    category = request.args.get('category', '')
+    status = request.args.get('status', '')
+    location = request.args.get('location', '')
+    sort_by = request.args.get('sort_by', 'start_date')
+    
+    # Limit per_page to reasonable values
+    per_page = min(max(per_page, 1), 100)
+    
+    # Base query
+    query = Tournament.query
+    
+    # Apply filters
+    if category:
+        query = query.filter(Tournament.category == category)
+    if status:
+        query = query.filter(Tournament.status == status)
+    if location:
+        query = query.filter(Tournament.location.contains(location))
+    
+    # Apply sorting
+    if sort_by == 'name':
+        query = query.order_by(Tournament.name)
+    elif sort_by == 'location':
+        query = query.order_by(Tournament.location)
+    elif sort_by == 'category':
+        query = query.order_by(Tournament.category)
+    elif sort_by == 'status':
+        query = query.order_by(Tournament.status)
+    else:  # start_date
+        query = query.order_by(Tournament.start_date)
+    
+    # Paginate results
+    tournaments = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        'tournaments': [t.to_dict() for t in tournaments.items],
+        'pagination': {
+            'page': page,
+            'pages': tournaments.pages,
+            'per_page': per_page,
+            'total': tournaments.total,
+            'has_next': tournaments.has_next,
+            'has_prev': tournaments.has_prev
+        }
+    })
+
+@main_bp.route('/api/tournaments/latest')
+def api_latest_tournaments():
+    """API для получения последних турниров"""
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        limit = min(max(limit, 1), 50)  # Between 1 and 50
+        
+        tournaments = Tournament.query.order_by(Tournament.created_at.desc()).limit(limit).all()
+        return jsonify([t.to_dict() for t in tournaments])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @main_bp.route('/api/tournaments/<int:tournament_id>')
 def api_tournament_detail(tournament_id):
@@ -156,14 +214,19 @@ def update_tournaments():
     """Ручное обновление турниров из источников"""
     try:
         updater.update_all_sources()
+        # Clear cache after update
+        from app.utils.cache import TournamentCache
+        TournamentCache.clear_all()
         return jsonify({
             'status': 'success',
-            'message': 'Данные успешно обновлены'
+            'message': 'Данные успешно обновлены',
+            'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'timestamp': datetime.now().isoformat()
         }), 500
 
 @main_bp.route('/export/csv')

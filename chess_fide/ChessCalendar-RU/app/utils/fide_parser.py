@@ -452,16 +452,27 @@ class FIDEParses:
         """Парсинг строки с датами"""
         # Пример: "27 February - 6 March 2026"
         try:
-            # Упрощенная реализация
-            import dateutil.parser
             if '-' in date_string:
                 dates = date_string.split('-')
-                start_date = dateutil.parser.parse(dates[0].strip())
-                end_date = dateutil.parser.parse(dates[1].strip())
-                return start_date.date(), end_date.date()
+                start_date = self._parse_date_flexible(dates[0].strip())
+                end_date = self._parse_date_flexible(dates[1].strip())
+                if start_date and end_date:
+                    return start_date, end_date
+                else:
+                    # If flexible parsing fails, try original method
+                    import dateutil.parser
+                    start_date = dateutil.parser.parse(dates[0].strip())
+                    end_date = dateutil.parser.parse(dates[1].strip())
+                    return start_date.date(), end_date.date()
             else:
-                start_date = dateutil.parser.parse(date_string.strip())
-                return start_date.date(), start_date.date()
+                start_date = self._parse_date_flexible(date_string.strip())
+                if start_date:
+                    return start_date, start_date
+                else:
+                    # If flexible parsing fails, try original method
+                    import dateutil.parser
+                    start_date = dateutil.parser.parse(date_string.strip())
+                    return start_date.date(), start_date.date()
         except:
             return None, None
 

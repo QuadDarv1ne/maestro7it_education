@@ -396,9 +396,16 @@ class CFRParser:
                             
                             # Create start and end dates
                             month_num = datetime.strptime(month_name, '%B').month
+                            # Validate days are valid for the month
+                            max_days_in_month = calendar.monthrange(year_num, month_num)[1]
+                            if start_day > max_days_in_month:
+                                start_day = max_days_in_month
+                            if end_day > max_days_in_month:
+                                end_day = max_days_in_month
+                                                    
                             start_date = datetime(year_num, month_num, start_day)
                             end_date = datetime(year_num, month_num, end_day)
-                            
+                                                    
                             return start_date.date(), end_date.date()
                         
                     # Fallback: try to parse the individual parts
