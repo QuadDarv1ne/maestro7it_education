@@ -167,6 +167,79 @@ def export_json():
         'Content-Disposition': 'attachment; filename=tournaments.json'
     }
 
+@main_bp.route('/notifications')
+def notifications():
+    """Страница уведомлений пользователя"""
+    from app.models.notification import Notification
+    from app.models.notification import Subscription
+    
+    # Получаем непрочитанные уведомления (или последние 20)
+    user_notifications = Notification.query.order_by(Notification.created_at.desc()).limit(20).all()
+    
+    # Проверяем подписку пользователя
+    user_email = request.args.get('email', '')
+    user_subscription = None
+    if user_email:
+        user_subscription = Subscription.query.filter_by(email=user_email, active=True).first()
+    
+    return render_template('notifications.html', 
+                         notifications=user_notifications,
+                         subscription=user_subscription,
+                         user_email=user_email)
+
+@main_bp.route('/notifications/subscribe', methods=['POST'])
+def subscribe_notifications():
+    """Подписка на уведомления"""
+    from app.models.notification import Subscription
+    
+    try:
+        email = request.form.get('email')
+        if not email:
+            return jsonify({'status': 'error', 'message': 'Email required'}), 400
+        
+        # Проверяем существующую подписку
+        existing = Subscription.query.filter_by(email=email).first()
+        if existing:
+            existing.active = True
+            existing.updated_at = datetime.utcnow()
+        else:
+            # Создаем новую подписку
+            preferences = {
+                'new_tournaments': request.form.get('new_tournaments') == 'on',
+                'tournament_updates': request.form.get('tournament_updates') == 'on',
+                'reminders': request.form.get('reminders') == 'on'
+            }
+            subscription = Subscription(email=email, preferences=preferences)
+            db.session.add(subscription)
+        
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Subscribed successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@main_bp.route('/notifications/unsubscribe')
+def unsubscribe_notifications():
+    """Отписка от уведомлений"""
+    from app.models.notification import Subscription
+    
+    try:
+        email = request.args.get('email')
+        if not email:
+            return jsonify({'status': 'error', 'message': 'Email required'}), 400
+        
+        subscription = Subscription.query.filter_by(email=email).first()
+        if subscription:
+            subscription.active = False
+            subscription.updated_at = datetime.utcnow()
+            db.session.commit()
+            return jsonify({'status': 'success', 'message': 'Unsubscribed successfully'}), 200
+        else:
+            return jsonify({'status': 'error', 'message': 'Subscription not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @main_bp.route('/sw.js')
 def service_worker():
     """Serve the service worker file"""

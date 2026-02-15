@@ -244,6 +244,11 @@
                             <i class="bi bi-info-circle"></i> О проекте
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.notifications') }}">
+                            <i class="bi bi-bell"></i> Уведомления
+                        </a>
+                    </li>
                     {% if request.path.startswith('/admin') %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin.dashboard') }}">

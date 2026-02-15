@@ -7,6 +7,7 @@ from app import db
 from app.models.tournament import Tournament
 from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser
+from app.utils.notifications import notification_service
 
 # Initialize logging for this module
 logger = logging.getLogger('app.scheduler')
@@ -137,6 +138,15 @@ class TournamentUpdater:
             import traceback
             traceback.print_exc()
 
+    def send_tournament_reminders(self):
+        """Отправить напоминания о турнирах"""
+        try:
+            logger.info("Отправка напоминаний о турнирах...")
+            sent_count = notification_service.send_reminders()
+            logger.info(f"Отправлено {sent_count} напоминаний о турнирах")
+        except Exception as e:
+            logger.error(f"Ошибка при отправке напоминаний: {e}", exc_info=True)
+    
     def start_scheduler(self):
         """Запустить планировщик обновлений"""
         logger.info("Настройка планировщика обновлений")
@@ -146,6 +156,9 @@ class TournamentUpdater:
         
         # Обновление каждые 6 часов
         schedule.every(6).hours.do(self.update_all_sources)
+        
+        # Отправка напоминаний каждый день в 09:00
+        schedule.every().day.at("09:00").do(self.send_tournament_reminders)
         
         def run_scheduler():
             while True:

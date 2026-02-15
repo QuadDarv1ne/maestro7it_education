@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2><i class="bi bi-bell"></i> Уведомления</h2>
+            
+            {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ notification.title }}</h5>
+                            <small class="text-muted">{{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">{{ notification.message }}</p>
+                        <small class="badge bg-{{ 'primary' if notification.type == 'new_tournament' else 'warning' if notification.type == 'tournament_update' else 'danger' if notification.type == 'tournament_cancelled' else 'info' }}">
+                            {{ notification.type }}
+                        </small>
+                        {% if notification.tournament %}
+                            <small class="ms-2">
+                                <a href="{{ url_for('main.tournament_detail', tournament_id=notification.tournament_id) }}">
+                                    Подробнее о турнире
+                                </a>
+                            </small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> У вас пока нет уведомлений
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-envelope"></i> Подписка на уведомления
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if subscription %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Вы подписаны на уведомления
+                        </div>
+                        
+                        <form id="unsubscribeForm">
+                            <input type="hidden" name="email" value="{{ user_email }}">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-x-circle"></i> Отписаться
+                            </button>
+                        </form>
+                        
+                        <hr>
+                        <h6>Ваши предпочтения:</h6>
+                        <ul class="list-unstyled">
+                            <li>
+                                <i class="bi bi-{{ 'check' if subscription.preferences.new_tournaments else 'x' }}"></i>
+                                Новые турниры
+                            </li>
+                            <li>
+                                <i class="bi bi-{{ 'check' if subscription.preferences.tournament_updates else 'x' }}"></i>
+                                Изменения в турнирах
+                            </li>
+                            <li>
+                                <i class="bi bi-{{ 'check' if subscription.preferences.reminders else 'x' }}"></i>
+                                Напоминания
+                            </li>
+                        </ul>
+                    {% else %}
+                        <form id="subscribeForm">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ user_email }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Получать уведомления о:</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="new_tournaments" 
+                                           name="new_tournaments" checked>
+                                    <label class="form-check-label" for="new_tournaments">
+                                        Новых турнирах
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="tournament_updates" 
+                                           name="tournament_updates" checked>
+                                    <label class="form-check-label" for="tournament_updates">
+                                        Изменениях в турнирах
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="reminders" 
+                                           name="reminders" checked>
+                                    <label class="form-check-label" for="reminders">
+                                        Напоминаниях
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-envelope"></i> Подписаться
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Как это работает
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-bell-fill text-primary"></i>
+                            <strong>Новые турниры</strong>
+                            <br>
+                            <small class="text-muted">Уведомления о добавлении новых турниров</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-pencil-square text-warning"></i>
+                            <strong>Изменения</strong>
+                            <br>
+                            <small class="text-muted">Уведомления об изменениях дат, мест и статуса</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-alarm text-danger"></i>
+                            <strong>Напоминания</strong>
+                            <br>
+                            <small class="text-muted">Напоминания перед началом турниров</small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка подписки
+    const subscribeForm = document.getElementById('subscribeForm');
+    if (subscribeForm) {
+        subscribeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(subscribeForm);
+            
+            fetch('/notifications/subscribe', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Ошибка при подписке: ' + error);
+            });
+        });
+    }
+    
+    // Обработка отписки
+    const unsubscribeForm = document.getElementById('unsubscribeForm');
+    if (unsubscribeForm) {
+        unsubscribeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(unsubscribeForm);
+            const email = formData.get('email');
+            
+            if (confirm('Вы уверены, что хотите отписаться от уведомлений?')) {
+                fetch('/notifications/unsubscribe?email=' + encodeURIComponent(email))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Ошибка при отписке: ' + error);
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

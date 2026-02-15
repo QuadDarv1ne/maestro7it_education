@@ -63,6 +63,39 @@ class Subscription(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+class TournamentReminder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False, index=True)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'), nullable=False, index=True)
+    reminder_days = db.Column(db.Integer, default=1)  # За сколько дней напомнить
+    sent = db.Column(db.Boolean, default=False, index=True)
+    sent_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationships
+    tournament = db.relationship('Tournament', backref='reminders')
+    subscription = db.relationship('Subscription', backref='reminders')
+    
+    def __init__(self, tournament_id, subscription_id, reminder_days=1):
+        self.tournament_id = tournament_id
+        self.subscription_id = subscription_id
+        self.reminder_days = reminder_days
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tournament_id': self.tournament_id,
+            'subscription_id': self.subscription_id,
+            'reminder_days': self.reminder_days,
+            'sent': self.sent,
+            'sent_at': self.sent_at.isoformat() if self.sent_at else None,
+            'created_at': self.created_at.isoformat()
+        }
+    
+    def __repr__(self):
+        return f'<TournamentReminder {self.tournament_id}>'
+
     def __init__(self, email, preferences=None):
         self.email = email
         if preferences:

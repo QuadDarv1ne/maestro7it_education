@@ -1,5 +1,5 @@
 from app.models.tournament import Tournament
-from app.models.notification import Notification, Subscription, NotificationType
+from app.models.notification import Notification, Subscription, NotificationType, TournamentReminder
 from app import db
 import smtplib
 from email.mime.text import MIMEText
@@ -199,6 +199,93 @@ class NotificationService:
         except Exception as e:
             self.logger.error(f"Error getting subscriber stats: {e}")
             return {'total_subscribers': 0}
+    
+    def create_tournament_reminder(self, tournament_id, subscription_id, reminder_days=1):
+        """Создать напоминание о турнире"""
+        try:
+            reminder = TournamentReminder(
+                tournament_id=tournament_id,
+                subscription_id=subscription_id,
+                reminder_days=reminder_days
+            )
+            db.session.add(reminder)
+            db.session.commit()
+            self.logger.info(f"Tournament reminder created for tournament {tournament_id}")
+            return reminder
+        except Exception as e:
+            self.logger.error(f"Error creating tournament reminder: {e}")
+            return None
+    
+    def send_reminders(self):
+        """Отправить все запланированные напоминания"""
+        try:
+            from datetime import date, timedelta
+            
+            # Находим напоминания, которые нужно отправить сегодня
+            today = date.today()
+            reminders_to_send = db.session.query(TournamentReminder).filter(
+                TournamentReminder.sent == False,
+                TournamentReminder.tournament.has(
+                    Tournament.start_date == today + timedelta(days=TournamentReminder.reminder_days)
+                )
+            ).all()
+            
+            sent_count = 0
+            for reminder in reminders_to_send:
+                try:
+                    # Создаем уведомление
+                    tournament = reminder.tournament
+                    subscription = reminder.subscription
+                    
+                    title = f"Напоминание: {tournament.name} начинается через {reminder.reminder_days} дней"
+                    message = f"Турнир '{tournament.name}' начнется {tournament.start_date.strftime('%d.%m.%Y')} в {tournament.location}."
+                    
+                    notification = Notification(
+                        title=title,
+                        message=message,
+                        type=NotificationType.REMINDER,
+                        recipient_email=subscription.email,
+                        tournament_id=tournament.id,
+                        priority=1
+                    )
+                    
+                    db.session.add(notification)
+                    reminder.sent = True
+                    reminder.sent_at = datetime.utcnow()
+                    sent_count += 1
+                    
+                    self.logger.info(f"Reminder sent to {subscription.email} for tournament {tournament.name}")
+                    
+                except Exception as e:
+                    self.logger.error(f"Error sending reminder {reminder.id}: {e}")
+                    continue
+            
+            db.session.commit()
+            self.logger.info(f"Sent {sent_count} tournament reminders")
+            return sent_count
+            
+        except Exception as e:
+            self.logger.error(f"Error sending reminders: {e}")
+            return 0
+    
+    def get_upcoming_tournaments(self, days_ahead=7):
+        """Получить турниры, начинающиеся в ближайшие дни"""
+        try:
+            from datetime import date, timedelta
+            
+            start_date = date.today()
+            end_date = start_date + timedelta(days=days_ahead)
+            
+            tournaments = Tournament.query.filter(
+                Tournament.start_date >= start_date,
+                Tournament.start_date <= end_date,
+                Tournament.status.in_(['Scheduled', 'Ongoing'])
+            ).order_by(Tournament.start_date).all()
+            
+            return tournaments
+        except Exception as e:
+            self.logger.error(f"Error getting upcoming tournaments: {e}")
+            return []
 
 # Глобальный экземпляр сервиса уведомлений
 notification_service = NotificationService()
