@@ -224,6 +224,9 @@ def _import_csv_tournaments(file):
                 location=row.get('location') or row.get('Место'),
                 category=row.get('category') or row.get('Категория') or 'National',
                 status=row.get('status') or row.get('Статус') or 'Scheduled',
+                description=row.get('description') or row.get('Описание'),
+                prize_fund=row.get('prize_fund') or row.get('Призовой фонд'),
+                organizer=row.get('organizer') or row.get('Организатор'),
                 fide_id=fide_id,
                 source_url=row.get('source_url') or row.get('source_url')
             )
@@ -264,6 +267,9 @@ def _import_json_tournaments(file):
                 location=item.get('location'),
                 category=item.get('category', 'National'),
                 status=item.get('status', 'Scheduled'),
+                description=item.get('description'),
+                prize_fund=item.get('prize_fund'),
+                organizer=item.get('organizer'),
                 fide_id=fide_id,
                 source_url=item.get('source_url')
             )

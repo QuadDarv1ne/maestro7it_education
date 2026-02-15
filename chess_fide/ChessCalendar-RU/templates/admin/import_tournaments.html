@@ -1,90 +1,79 @@
 {% extends "admin/base.html" %}
 
-{% block title %}Импорт турниров{% endblock %}
+{% block title %}Импорт турниров - Админ панель - ChessCalendar-RU{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="bi bi-file-earmark-arrow-up"></i> Импорт турниров</h2>
-                <a href="{{ url_for('admin.tournaments') }}" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Назад к турнирам
-                </a>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-upload"></i> Загрузить файл с турнирами
-                    </h5>
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-upload"></i> Импорт турниров</h4>
                 </div>
                 <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
                     <form method="POST" enctype="multipart/form-data">
                         <div class="mb-3">
-                            <label for="file" class="form-label">Выберите файл</label>
+                            <label for="file" class="form-label">Файл для импорта *</label>
                             <input type="file" class="form-control" id="file" name="file" accept=".csv,.json" required>
-                            <div class="form-text">
-                                Поддерживаемые форматы: CSV, JSON
-                            </div>
+                            <div class="form-text">Поддерживаются форматы: CSV, JSON</div>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="file_type" class="form-label">Тип файла</label>
+                            <label for="file_type" class="form-label">Тип файла *</label>
                             <select class="form-select" id="file_type" name="file_type" required>
                                 <option value="csv">CSV</option>
                                 <option value="json">JSON</option>
                             </select>
                         </div>
                         
-                        <div class="alert alert-info">
-                            <h6><i class="bi bi-info-circle"></i> Форматы файлов:</h6>
-                            <strong>CSV:</strong> Столбцы - name, start_date, end_date, location, category, status, fide_id, source_url<br>
-                            <strong>JSON:</strong> Массив объектов с полями: name, start_date, end_date, location, category, status, fide_id, source_url
+                        <div class="mb-3">
+                            <h5>Формат CSV:</h5>
+                            <p>Допустимые колонки: name, start_date, end_date, location, category, status, description, prize_fund, organizer, fide_id, source_url</p>
+                            <pre>name,start_date,end_date,location,category,status,description,prize_fund,organizer,fide_id,source_url
+"Московский турнир","2026-03-15","2026-03-20","Москва","National","Scheduled","Крупный международный турнир","100000 руб","ФШР","123456","https://example.com/tournament"
+"Санкт-Петербургский чемпионат","2026-04-01","2026-04-05","Санкт-Петербург","FIDE","Scheduled","Чемпионат Северо-Западного округа","50000 USD","ФШР","123457","https://example.com/tournament2"</pre>
                         </div>
                         
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-upload"></i> Импортировать
-                            </button>
-                            <a href="{{ url_for('admin.tournaments') }}" class="btn btn-secondary">
-                                <i class="bi bi-x-lg"></i> Отмена
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-file-earmark-code"></i> Примеры форматов
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Пример CSV:</h6>
-                            <pre class="bg-light p-3 small">name,start_date,end_date,location,category,status,fide_id,source_url
-Чемпионат России,2026-03-15,2026-03-30,Москва,National,Scheduled,,https://example.com
-Международный турнир,2026-05-10,2026-05-20,Санкт-Петербург,FIDE,Scheduled,12345,https://fide.com</pre>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Пример JSON:</h6>
-                            <pre class="bg-light p-3 small">[
+                        <div class="mb-3">
+                            <h5>Формат JSON:</h5>
+                            <p>Массив объектов с полями: name, start_date, end_date, location, category, status, description, prize_fund, organizer, fide_id, source_url</p>
+                            <pre>[
   {
-    "name": "Чемпионат России",
+    "name": "Московский турнир",
     "start_date": "2026-03-15",
-    "end_date": "2026-03-30",
+    "end_date": "2026-03-20",
     "location": "Москва",
     "category": "National",
     "status": "Scheduled",
-    "fide_id": null,
-    "source_url": "https://example.com"
+    "description": "Крупный международный турнир",
+    "prize_fund": "100000 руб",
+    "organizer": "ФШР",
+    "fide_id": "123456",
+    "source_url": "https://example.com/tournament"
   }
 ]</pre>
                         </div>
-                    </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin.tournaments') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Назад к списку
+                            </a>
+                            <button type="submit" class="btn btn-info">
+                                <i class="bi bi-upload"></i> Импортировать
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
