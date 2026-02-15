@@ -236,7 +236,12 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.index') }}">
-                            <i class="bi bi-calendar"></i> Календарь
+                            <i class="bi bi-list-task"></i> Список
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.calendar') }}">
+                            <i class="bi bi-calendar3"></i> Календарь
                         </a>
                     </li>
                     <li class="nav-item">
@@ -247,6 +252,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.notifications') }}">
                             <i class="bi bi-bell"></i> Уведомления
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.recommendations') }}">
+                            <i class="bi bi-lightbulb"></i> Рекомендации
                         </a>
                     </li>
                     {% if session.get('user_id') %}

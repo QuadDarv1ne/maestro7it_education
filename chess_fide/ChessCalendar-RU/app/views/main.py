@@ -60,6 +60,13 @@ def index():
 def tournament_detail(tournament_id):
     """Страница деталей турнира"""
     tournament = Tournament.query.get_or_404(tournament_id)
+    
+    # Record user interaction if user is logged in
+    if 'user_id' in session:
+        from app.utils.recommendations import RecommendationEngine
+        user_id = session['user_id']
+        RecommendationEngine.record_interaction(user_id, tournament_id, 'view', 1)
+    
     return render_template('tournament_detail.html', tournament=tournament)
 
 @main_bp.route('/api/tournaments')
