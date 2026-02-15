@@ -138,6 +138,13 @@
                                     <i class="bi bi-box-arrow-up-right"></i> Перейти к источнику
                                 </a>
                                 {% endif %}
+                                {% if session.get('user_id') %}
+                                <button class="btn btn-outline-warning flex-fill favorite-btn" 
+                                        data-tournament-id="{{ tournament.id }}"
+                                        data-is-favorite="false">
+                                    <i class="bi bi-star"></i> В избранное
+                                </button>
+                                {% endif %}
                                 <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary flex-fill">
                                     <i class="bi bi-arrow-left"></i> Назад
                                 </a>
@@ -218,6 +225,85 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.remove('active');
         });
     });
+    
+    // Initialize favorite button on tournament detail page
+    initializeFavoriteButton();
 });
+
+// Function to initialize favorite button on tournament detail page
+function initializeFavoriteButton() {
+    const favoriteButton = document.querySelector('.favorite-btn');
+    
+    if (favoriteButton) {
+        const tournamentId = parseInt(favoriteButton.getAttribute('data-tournament-id'));
+        
+        // Initially check if tournament is favorited
+        checkFavoriteStatus(tournamentId, favoriteButton);
+        
+        favoriteButton.addEventListener('click', function() {
+            toggleFavorite(tournamentId, this);
+        });
+    }
+}
+
+// Function to check favorite status
+async function checkFavoriteStatus(tournamentId, buttonElement) {
+    try {
+        const response = await fetch(`/user/favorites/check/${tournamentId}`);
+        const data = await response.json();
+        
+        if (data.is_favorite) {
+            buttonElement.innerHTML = '<i class="bi bi-star-fill text-warning"></i> В избранном';
+            buttonElement.classList.remove('btn-outline-warning');
+            buttonElement.classList.add('btn-warning');
+            buttonElement.setAttribute('data-is-favorite', 'true');
+        } else {
+            buttonElement.innerHTML = '<i class="bi bi-star"></i> В избранное';
+            buttonElement.classList.remove('btn-warning');
+            buttonElement.classList.add('btn-outline-warning');
+            buttonElement.setAttribute('data-is-favorite', 'false');
+        }
+    } catch (error) {
+        console.error('Error checking favorite status:', error);
+    }
+}
+
+// Function to toggle favorite status
+async function toggleFavorite(tournamentId, buttonElement) {
+    try {
+        const response = await fetch(`/user/favorites/toggle/${tournamentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            // Update button appearance
+            if (data.is_favorite) {
+                buttonElement.innerHTML = '<i class="bi bi-star-fill text-warning"></i> В избранном';
+                buttonElement.classList.remove('btn-outline-warning');
+                buttonElement.classList.add('btn-warning');
+                buttonElement.setAttribute('data-is-favorite', 'true');
+            } else {
+                buttonElement.innerHTML = '<i class="bi bi-star"></i> В избранное';
+                buttonElement.classList.remove('btn-warning');
+                buttonElement.classList.add('btn-outline-warning');
+                buttonElement.setAttribute('data-is-favorite', 'false');
+            }
+            
+            // Show success message
+            alert(data.message);
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        alert('Произошла ошибка при изменении избранного');
+    }
+}
 </script>
 {% endblock %}

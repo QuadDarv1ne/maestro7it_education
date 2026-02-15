@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, session
 from app import db
 from app.models.tournament import Tournament
+from app.models.user import User
 from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser
 from app.utils.updater import updater
@@ -278,3 +279,85 @@ def update_notification_preferences():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@main_bp.route('/calendar')
+def calendar():
+    """Календарь турниров"""
+    from datetime import date, timedelta
+    from collections import defaultdict
+    
+    # Получаем турниры за ближайшие 3 месяца
+    today = date.today()
+    start_date = today.replace(day=1)  # Первый день текущего месяца
+    end_date = (start_date + timedelta(days=90))  # Примерно 3 месяца вперед
+    
+    # Получаем турниры в этом диапазоне
+    tournaments = Tournament.query.filter(
+        Tournament.start_date >= start_date,
+        Tournament.start_date <= end_date
+    ).order_by(Tournament.start_date).all()
+    
+    # Группируем турниры по датам
+    tournaments_by_date = defaultdict(list)
+    for tournament in tournaments:
+        # Для каждого дня турнира добавляем его в соответствующую дату
+        current_date = tournament.start_date
+        while current_date <= tournament.end_date:
+            tournaments_by_date[current_date].append(tournament)
+            current_date += timedelta(days=1)
+    
+    # Подготовим данные для календаря
+    calendar_data = {}
+    current_month = start_date
+    
+    # Создаем календарь для 3 месяцев
+    months_data = []
+    for i in range(3):
+        month_date = current_month.replace(day=1) + timedelta(days=i*31)
+        month_name = month_date.strftime('%B %Y')
+        
+        # Получаем первый день недели для этого месяца
+        first_day_of_month = month_date.replace(day=1)
+        last_day_of_month = month_date.replace(day=1) + timedelta(days=32)
+        last_day_of_month = last_day_of_month.replace(day=1) - timedelta(days=1)
+        
+        # Создаем сетку календаря
+        calendar_weeks = []
+        week = []
+        
+        # Добавляем пустые дни до первого дня месяца
+        first_weekday = first_day_of_month.weekday()  # 0=Monday, 6=Sunday
+        for i in range(first_weekday):
+            week.append(None)
+        
+        # Добавляем дни месяца
+        for day in range(1, last_day_of_month.day + 1):
+            current_date = first_day_of_month.replace(day=day)
+            day_data = {
+                'date': current_date,
+                'day': day,
+                'tournaments': tournaments_by_date.get(current_date, []),
+                'is_today': current_date == today,
+                'is_past': current_date < today
+            }
+            week.append(day_data)
+            
+            # Если неделя полная или это последний день месяца
+            if len(week) == 7 or day == last_day_of_month.day:
+                calendar_weeks.append(week)
+                week = []
+        
+        # Если в последней неделе есть дни
+        if week:
+            # Добавляем пустые дни до конца недели
+            while len(week) < 7:
+                week.append(None)
+            calendar_weeks.append(week)
+        
+        months_data.append({
+            'name': month_name,
+            'weeks': calendar_weeks,
+            'first_day': first_day_of_month
+        })
+    
+    return render_template('calendar.html', months_data=months_data, today=today)

@@ -272,6 +272,13 @@
                                         <i class="bi bi-box-arrow-up-right"></i> Источник
                                     </a>
                                     {% endif %}
+                                    {% if session.get('user_id') %}
+                                    <button class="btn btn-outline-warning btn-sm flex-fill favorite-btn" 
+                                            data-tournament-id="{{ tournament.id }}"
+                                            data-is-favorite="false">
+                                        <i class="bi bi-star"></i> В избранное
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -421,6 +428,85 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    
+    // Initialize favorite buttons
+    initializeFavoriteButtons();
 });
+
+// Function to initialize favorite buttons
+function initializeFavoriteButtons() {
+    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+    
+    favoriteButtons.forEach(button => {
+        const tournamentId = parseInt(button.getAttribute('data-tournament-id'));
+        
+        // Initially check if tournament is favorited
+        checkFavoriteStatus(tournamentId, button);
+        
+        button.addEventListener('click', function() {
+            toggleFavorite(tournamentId, this);
+        });
+    });
+}
+
+// Function to check favorite status
+async function checkFavoriteStatus(tournamentId, buttonElement) {
+    try {
+        const response = await fetch(`/user/favorites/check/${tournamentId}`);
+        const data = await response.json();
+        
+        if (data.is_favorite) {
+            buttonElement.innerHTML = '<i class="bi bi-star-fill text-warning"></i> В избранном';
+            buttonElement.classList.remove('btn-outline-warning');
+            buttonElement.classList.add('btn-warning');
+            buttonElement.setAttribute('data-is-favorite', 'true');
+        } else {
+            buttonElement.innerHTML = '<i class="bi bi-star"></i> В избранное';
+            buttonElement.classList.remove('btn-warning');
+            buttonElement.classList.add('btn-outline-warning');
+            buttonElement.setAttribute('data-is-favorite', 'false');
+        }
+    } catch (error) {
+        console.error('Error checking favorite status:', error);
+    }
+}
+
+// Function to toggle favorite status
+async function toggleFavorite(tournamentId, buttonElement) {
+    try {
+        const response = await fetch(`/user/favorites/toggle/${tournamentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            // Update button appearance
+            if (data.is_favorite) {
+                buttonElement.innerHTML = '<i class="bi bi-star-fill text-warning"></i> В избранном';
+                buttonElement.classList.remove('btn-outline-warning');
+                buttonElement.classList.add('btn-warning');
+                buttonElement.setAttribute('data-is-favorite', 'true');
+            } else {
+                buttonElement.innerHTML = '<i class="bi bi-star"></i> В избранное';
+                buttonElement.classList.remove('btn-warning');
+                buttonElement.classList.add('btn-outline-warning');
+                buttonElement.setAttribute('data-is-favorite', 'false');
+            }
+            
+            // Show success message
+            alert(data.message);
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        alert('Произошла ошибка при изменении избранного');
+    }
+}
 </script>
 {% endblock %}

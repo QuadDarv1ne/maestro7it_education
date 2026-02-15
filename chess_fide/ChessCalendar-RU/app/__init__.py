@@ -55,6 +55,12 @@ def create_app(config_name='default'):
     def manifest():
         return send_from_directory('static', 'manifest.json')
     
+    # Template globals
+    @app.template_global()
+    def get_user_by_id(user_id):
+        from app.models.user import User
+        return User.query.get(user_id)
+    
     # Регистрация blueprint'ов
     from app.views.main import main_bp
     from app.views.admin import admin_bp
