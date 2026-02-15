@@ -132,6 +132,12 @@ def export_json():
         'Content-Disposition': 'attachment; filename=tournaments.json'
     }
 
+@main_bp.route('/sw.js')
+def service_worker():
+    """Serve the service worker file"""
+    from flask import send_from_directory
+    return send_from_directory('static', 'sw.js', mimetype='application/javascript')
+
 @main_bp.route('/about')
 def about():
     """Страница о проекте"""

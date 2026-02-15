@@ -5,6 +5,7 @@ import os
 db = SQLAlchemy()
 
 def create_app(config_name='default'):
+    import logging
     # Initialize logging before anything else
     try:
         from app.utils.logging_config import init_logging
@@ -46,7 +47,9 @@ def create_app(config_name='default'):
     # PWA маршруты
     @app.route('/sw.js')
     def service_worker():
-        return send_from_directory('static', 'sw.js')
+        import os
+        static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+        return send_from_directory(static_dir, 'sw.js', mimetype='application/javascript')
     
     @app.route('/manifest.json')
     def manifest():
