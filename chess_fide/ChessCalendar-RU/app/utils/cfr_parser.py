@@ -4,42 +4,213 @@ from datetime import datetime
 import re
 from app.models.tournament import Tournament
 import logging
+import random
+from urllib.parse import urljoin
 
 logger = logging.getLogger('app.parsers')
 
 class CFRParser:
     def __init__(self):
         self.base_url = "https://ruchess.ru"
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        })
         self.logger = logging.getLogger(__name__)
+        self.user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1'
+        ]
+        self.session = self._create_session()
+    
+    def _create_session(self):
+        """Создание сессии с ротацией User-Agent"""
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': random.choice(self.user_agents),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Cache-Control': 'max-age=0'
+        })
+        return session
 
     def get_tournaments(self, year=2026):
         """Получить турниры с сайта Федерации шахмат России"""
-        tournaments = []
+        self.logger.info(f"Fetching CFR tournaments for year {year}")
         
-        # Попробуем несколько возможных URL
+        # Strategy 1: Try direct access with different sessions
+        tournaments = self._try_direct_access(year)
+        if tournaments:
+            self.logger.info(f"Successfully fetched {len(tournaments)} tournaments via direct access")
+            return tournaments
+        
+        # Strategy 2: Try alternative URLs and paths
+        tournaments = self._try_alternative_paths(year)
+        if tournaments:
+            self.logger.info(f"Successfully fetched {len(tournaments)} tournaments via alternative paths")
+            return tournaments
+        
+        # Strategy 3: Try to find tournaments in main page content
+        tournaments = self._try_main_page_scraping(year)
+        if tournaments:
+            self.logger.info(f"Successfully fetched {len(tournaments)} tournaments via main page scraping")
+            return tournaments
+        
+        # Strategy 4: Try to find tournament links in navigation
+        tournaments = self._try_navigation_scraping(year)
+        if tournaments:
+            self.logger.info(f"Successfully fetched {len(tournaments)} tournaments via navigation scraping")
+            return tournaments
+        
+        self.logger.warning(f"No tournaments found from CFR for year {year}")
+        return []
+    
+    def _try_direct_access(self, year):
+        """Попытка прямого доступа с различными сессиями"""
         urls = [
             f"{self.base_url}/",
             f"{self.base_url}/championship/",
-            f"{self.base_url}/tournaments/"
+            f"{self.base_url}/tournaments/",
+            f"{self.base_url}/news/",
+            f"{self.base_url}/events/"
         ]
         
-        self.logger.info(f"Fetching CFR tournaments for year {year}")
+        tournaments = []
         
         for url in urls:
             try:
+                # Try with fresh session for each URL
+                self.session = self._create_session()
                 page_tournaments = self._parse_page(url, year)
-                tournaments.extend(page_tournaments)
-                self.logger.info(f"Fetched {len(page_tournaments)} tournaments from {url}")
+                if page_tournaments:
+                    tournaments.extend(page_tournaments)
+                    self.logger.info(f"Fetched {len(page_tournaments)} tournaments from {url}")
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 403:
+                    self.logger.info(f"403 Forbidden for {url}, trying alternative approach")
+                    continue
+                else:
+                    self.logger.error(f"HTTP error for {url}: {e}")
+                    continue
             except Exception as e:
                 self.logger.error(f"Error parsing {url}: {e}", exc_info=True)
                 continue
-                
-        self.logger.info(f"Total CFR tournaments fetched: {len(tournaments)}")
+        
         return tournaments
+    
+    def _try_alternative_paths(self, year):
+        """Попытка альтернативных путей"""
+        # Try common Russian chess website patterns
+        alternative_paths = [
+            '/championships/',
+            '/competitions/',
+            '/calendar/',
+            '/events/calendar/',
+            '/news/tournaments/',
+            '/chess-news/',
+            '/turniry/',  # Russian word for tournaments
+            '/chempionaty/'  # Russian word for championships
+        ]
+        
+        tournaments = []
+        
+        for path in alternative_paths:
+            try:
+                url = urljoin(self.base_url, path)
+                self.session = self._create_session()
+                page_tournaments = self._parse_page(url, year)
+                if page_tournaments:
+                    tournaments.extend(page_tournaments)
+                    self.logger.info(f"Fetched {len(page_tournaments)} tournaments from {url}")
+            except Exception as e:
+                self.logger.error(f"Error with alternative path {path}: {e}")
+                continue
+        
+        return tournaments
+    
+    def _try_main_page_scraping(self, year):
+        """Попытка извлечения из главной страницы"""
+        try:
+            self.session = self._create_session()
+            response = self.session.get(self.base_url, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            tournaments = []
+            
+            # Look for any links that might contain tournament information
+            links = soup.find_all('a', href=True)
+            
+            for link in links:
+                try:
+                    href = link.get('href', '')
+                    text = link.get_text(strip=True)
+                    
+                    # Check for tournament-related keywords in Russian and English
+                    tournament_keywords = ['турнир', 'чемпионат', 'турниры', 'championship', 'tournament', 'competition']
+                    
+                    if any(keyword in href.lower() or keyword in text.lower() for keyword in tournament_keywords):
+                        # Try to access the tournament page
+                        full_url = urljoin(self.base_url, href) if href.startswith('/') else href
+                        if full_url != self.base_url:  # Avoid infinite loop
+                            try:
+                                page_tournaments = self._parse_page(full_url, year)
+                                if page_tournaments:
+                                    tournaments.extend(page_tournaments)
+                            except Exception:
+                                continue
+                except Exception as e:
+                    self.logger.error(f"Error processing main page link: {e}")
+                    continue
+            
+            return tournaments
+        except Exception as e:
+            self.logger.error(f"Error scraping main page: {e}")
+            return []
+    
+    def _try_navigation_scraping(self, year):
+        """Попытка извлечения из навигационного меню"""
+        try:
+            self.session = self._create_session()
+            response = self.session.get(self.base_url, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            tournaments = []
+            
+            # Look for navigation elements
+            nav_elements = soup.find_all(['nav', 'ul', 'div'], class_=re.compile(r'menu|nav|navigation'))
+            
+            for nav in nav_elements:
+                links = nav.find_all('a', href=True)
+                for link in links:
+                    try:
+                        href = link.get('href', '')
+                        text = link.get_text(strip=True)
+                        
+                        # Check for tournament-related navigation items
+                        if any(keyword in text.lower() for keyword in ['турниры', 'чемпионаты', 'календарь', 'tournaments', 'calendar']):
+                            full_url = urljoin(self.base_url, href) if href.startswith('/') else href
+                            if full_url != self.base_url:
+                                try:
+                                    page_tournaments = self._parse_page(full_url, year)
+                                    if page_tournaments:
+                                        tournaments.extend(page_tournaments)
+                                except Exception:
+                                    continue
+                    except Exception as e:
+                        self.logger.error(f"Error processing navigation link: {e}")
+                        continue
+            
+            return tournaments
+        except Exception as e:
+            self.logger.error(f"Error scraping navigation: {e}")
+            return []
 
     def _parse_page(self, url, year):
         """Парсинг страницы CFR"""
