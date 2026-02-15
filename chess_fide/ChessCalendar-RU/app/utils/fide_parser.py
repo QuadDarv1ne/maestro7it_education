@@ -3,14 +3,16 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import re
 from app.models.tournament import Tournament
+import logging
 
 class FIDEParses:
     def __init__(self):
         self.base_url = "https://calendar.fide.com"
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+        self.logger = logging.getLogger(__name__)
 
     def get_tournaments_russia(self, year=2026):
         """Получить турниры в России на указанный год"""
@@ -29,11 +31,20 @@ class FIDEParses:
         }
         
         try:
-            response = self.session.get(url, params=params, timeout=10)
+            self.logger.info(f"Fetching FIDE tournaments for Russia, year {year}")
+            response = self.session.get(url, params=params, timeout=15)
             response.raise_for_status()
-            return self._parse_tournaments_page(response.text)
+            tournaments = self._parse_tournaments_page(response.text)
+            self.logger.info(f"Successfully fetched {len(tournaments)} tournaments from FIDE")
+            return tournaments
+        except requests.exceptions.Timeout:
+            self.logger.error(f"Timeout error when fetching FIDE data for year {year}")
+            return []
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Request error when fetching FIDE data: {e}")
+            return []
         except Exception as e:
-            print(f"Error fetching FIDE data: {e}")
+            self.logger.error(f"Unexpected error when fetching FIDE data: {e}")
             return []
 
     def _parse_tournaments_page(self, html_content):
@@ -44,15 +55,18 @@ class FIDEParses:
         # Ищем элементы с информацией о турнирах
         tournament_elements = soup.find_all(['div', 'a'], class_=re.compile(r'event|tournament|tile'))
         
-        for element in tournament_elements:
+        self.logger.info(f"Found {len(tournament_elements)} potential tournament elements")
+        
+        for i, element in enumerate(tournament_elements):
             try:
                 tournament_data = self._extract_tournament_data(element)
                 if tournament_data and self._is_valid_russian_tournament(tournament_data):
                     tournaments.append(tournament_data)
             except Exception as e:
-                print(f"Error parsing tournament element: {e}")
+                self.logger.error(f"Error parsing tournament element {i}: {e}", exc_info=True)
                 continue
                 
+        self.logger.info(f"Successfully parsed {len(tournaments)} valid Russian tournaments")
         return tournaments
 
     def _extract_tournament_data(self, element):

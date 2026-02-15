@@ -3,10 +3,11 @@
     "short_name": "ChessCalendar",
     "description": "Календарь шахматных турниров в России",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#007bff",
+    "background_color": "#ffffff",
     "theme_color": "#007bff",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "icons": [
         {
             "src": "/static/icons/icon-72x72.png",
@@ -65,5 +66,12 @@
     ],
     "categories": ["sports", "utilities"],
     "lang": "ru",
-    "dir": "ltr"
+    "dir": "ltr",
+    "prefer_related_applications": false,
+    "related_applications": [],
+    "serviceworker": {
+        "src": "/sw.js",
+        "scope": "/",
+        "update_via_cache": "all"
+    }
 }

@@ -3,14 +3,16 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import re
 from app.models.tournament import Tournament
+import logging
 
 class CFRParser:
     def __init__(self):
         self.base_url = "https://ruchess.ru"
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+        self.logger = logging.getLogger(__name__)
 
     def get_tournaments(self, year=2026):
         """Получить турниры с сайта Федерации шахмат России"""
@@ -23,19 +25,25 @@ class CFRParser:
             f"{self.base_url}/tournaments/"
         ]
         
+        self.logger.info(f"Fetching CFR tournaments for year {year}")
+        
         for url in urls:
             try:
-                tournaments.extend(self._parse_page(url, year))
+                page_tournaments = self._parse_page(url, year)
+                tournaments.extend(page_tournaments)
+                self.logger.info(f"Fetched {len(page_tournaments)} tournaments from {url}")
             except Exception as e:
-                print(f"Error parsing {url}: {e}")
+                self.logger.error(f"Error parsing {url}: {e}", exc_info=True)
                 continue
                 
+        self.logger.info(f"Total CFR tournaments fetched: {len(tournaments)}")
         return tournaments
 
     def _parse_page(self, url, year):
         """Парсинг страницы CFR"""
         try:
-            response = self.session.get(url, timeout=10)
+            self.logger.info(f"Parsing CFR page: {url}")
+            response = self.session.get(url, timeout=15)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -46,18 +54,27 @@ class CFRParser:
             tournament_elements = soup.find_all(['div', 'article', 'li'], 
                                               class_=re.compile(r'tournament|event|competition'))
             
-            for element in tournament_elements:
+            self.logger.info(f"Found {len(tournament_elements)} potential tournament elements on {url}")
+            
+            for i, element in enumerate(tournament_elements):
                 try:
                     tournament_data = self._extract_tournament_data(element, year)
                     if tournament_data:
                         tournaments.append(tournament_data)
                 except Exception as e:
-                    print(f"Error extracting tournament: {e}")
+                    self.logger.error(f"Error extracting tournament {i} from {url}: {e}", exc_info=True)
                     continue
                     
+            self.logger.info(f"Successfully extracted {len(tournaments)} tournaments from {url}")
             return tournaments
+        except requests.exceptions.Timeout:
+            self.logger.error(f"Timeout error when fetching page {url}")
+            return []
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Request error when fetching page {url}: {e}")
+            return []
         except Exception as e:
-            print(f"Error fetching page {url}: {e}")
+            self.logger.error(f"Error fetching page {url}: {e}", exc_info=True)
             return []
 
     def _extract_tournament_data(self, element, year):
@@ -129,5 +146,5 @@ class CFRParser:
                 return date.date(), date.date()
                 
         except Exception as e:
-            print(f"Error parsing dates '{date_string}': {e}")
+            self.logger.error(f"Error parsing dates '{date_string}': {e}", exc_info=True)
             return None, None

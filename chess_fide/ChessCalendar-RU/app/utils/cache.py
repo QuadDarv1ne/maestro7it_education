@@ -154,11 +154,42 @@ class TournamentCache:
                 keys = cache_service.redis_client.keys('tournaments*')
                 if keys:
                     cache_service.redis_client.delete(*keys)
+                # Также удаляем ключи, связанные с фильтрацией
+                filtered_keys = cache_service.redis_client.keys('tournaments_filtered*')
+                if filtered_keys:
+                    cache_service.redis_client.delete(*filtered_keys)
             else:
                 # Для in-memory кэша очищаем все (упрощенный вариант)
                 cache_service.clear()
         except Exception as e:
             logging.error(f"Cache invalidation error: {e}")
+    
+    @staticmethod
+    def invalidate_specific_cache(pattern):
+        """Инвалидировать кэш по заданному паттерну"""
+        try:
+            if cache_service.use_redis:
+                keys = cache_service.redis_client.keys(pattern)
+                if keys:
+                    cache_service.redis_client.delete(*keys)
+            else:
+                cache_service.clear()
+        except Exception as e:
+            logging.error(f"Cache invalidation error for pattern {pattern}: {e}")
+    
+    @staticmethod
+    def get_tournament_by_id(tournament_id):
+        """Получить турнир по ID с кэшированием"""
+        cache_key = f'tournament_{tournament_id}'
+        tournament = cache_service.get(cache_key)
+        
+        if tournament is None:
+            from app.models.tournament import Tournament
+            tournament = Tournament.query.get(tournament_id)
+            if tournament:
+                cache_service.set(cache_key, tournament, timeout=1800)  # 30 минут
+        
+        return tournament
     
     @staticmethod
     @cached(timeout=3600, key_prefix='tournaments_stats')
@@ -174,6 +205,6 @@ class TournamentCache:
             'by_status': dict(db.session.query(Tournament.status, db.func.count(Tournament.id))
                             .group_by(Tournament.status).all()),
             'by_location': dict(db.session.query(Tournament.location, db.func.count(Tournament.id))
-                              .group_by(Tournament.location).all()[:10])  # Топ 10 локаций
+                              .group_by(Tournament.location).limit(10).all())  # Топ 10 локаций
         }
         return stats

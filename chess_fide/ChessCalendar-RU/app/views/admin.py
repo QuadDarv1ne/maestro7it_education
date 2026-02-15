@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from app import db
 from app.models.tournament import Tournament
+from app.models.user import User
 from app.utils.notifications import notification_service
 from app.utils.cache import cache_service, TournamentCache
 from app.utils.monitoring import health_checker, performance_monitor
@@ -9,11 +10,18 @@ import json
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+# Функция для проверки аутентификации администратора
 @admin_bp.before_request
 def admin_required():
-    """Проверка прав администратора (в реальном приложении использовать авторизацию)"""
-    # Пока просто пропускаем все запросы
-    pass
+    """Проверка прав администратора"""
+    # Проверяем, авторизован ли пользователь
+    if 'user_id' not in session:
+        return redirect(url_for('admin.login'))
+    
+    # Проверяем, является ли пользователь администратором
+    user = User.query.get(session['user_id'])
+    if not user or not user.is_admin:
+        return redirect(url_for('admin.login'))
 
 @admin_bp.route('/')
 def dashboard():
@@ -220,6 +228,36 @@ def api_health():
 def api_metrics():
     """API для получения метрик производительности"""
     return jsonify(performance_monitor.get_metrics_summary())
+
+@admin_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    """Страница входа для администратора"""
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password) and user.is_admin:
+            session['user_id'] = user.id
+            session['username'] = user.username
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            # Перенаправляем на главную страницу админки
+            next_url = request.args.get('next')
+            return redirect(next_url or url_for('admin.dashboard'))
+        else:
+            flash('Неправильное имя пользователя или пароль', 'error')
+    
+    return render_template('admin/login.html')
+
+@admin_bp.route('/logout')
+def logout():
+    """Выход из аккаунта администратора"""
+    session.pop('user_id', None)
+    session.pop('username', None)
+    return redirect(url_for('main.index'))
 
 @admin_bp.route('/settings')
 def settings():
