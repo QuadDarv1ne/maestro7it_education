@@ -2,6 +2,84 @@
 
 {% block title %}Управление турнирами{% endblock %}
 
+{% block scripts %}
+<script>
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.tournament-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+}
+
+function getSelectedTournaments() {
+    const checkboxes = document.querySelectorAll('.tournament-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function bulkDelete() {
+    const selected = getSelectedTournaments();
+    if (selected.length === 0) {
+        alert('Пожалуйста, выберите турниры для удаления');
+        return;
+    }
+    
+    if (confirm(`Вы уверены, что хотите удалить ${selected.length} турниров?`)) {
+        fetch('{{ url_for("admin.bulk_delete_tournaments") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({tournament_ids: selected})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка при удалении: ' + error);
+        });
+    }
+}
+
+function bulkUpdateStatus(status) {
+    const selected = getSelectedTournaments();
+    if (selected.length === 0) {
+        alert('Пожалуйста, выберите турниры для обновления');
+        return;
+    }
+    
+    if (confirm(`Вы уверены, что хотите обновить статус ${selected.length} турниров на "${status}"?`)) {
+        fetch('{{ url_for("admin.bulk_update_status") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                tournament_ids: selected,
+                status: status
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка при обновлении: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Управление турнирами</h1>
@@ -14,6 +92,28 @@
             <a href="{{ url_for('admin.import_tournaments') }}" class="btn btn-success ms-2">
                 <i class="bi bi-file-earmark-arrow-up"></i> Импорт
             </a>
+            <div class="btn-group ms-2">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-tools"></i> Инструменты
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('admin.export_tournaments') }}">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Экспорт всех турниров
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="bulkDelete()">
+                        <i class="bi bi-trash"></i> Массовое удаление
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="bulkUpdateStatus('Scheduled')">
+                        <i class="bi bi-calendar-check"></i> Отметить как запланированные
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="bulkUpdateStatus('Ongoing')">
+                        <i class="bi bi-play-circle"></i> Отметить как текущие
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="bulkUpdateStatus('Completed')">
+                        <i class="bi bi-check-circle"></i> Отметить как завершенные
+                    </a></li>
+                </ul>
+            </div>
         </div>
         <div class="col-md-6">
             <form method="GET" class="form-inline float-end">
@@ -27,6 +127,9 @@
         <table class="table table-striped table-hover">
             <thead>
                 <tr>
+                    <th>
+                        <input type="checkbox" id="selectAll" onclick="toggleSelectAll()">
+                    </th>
                     <th>ID</th>
                     <th>Название</th>
                     <th>Дата начала</th>
@@ -40,6 +143,9 @@
             <tbody>
                 {% for tournament in tournaments.items %}
                 <tr>
+                    <td>
+                        <input type="checkbox" class="tournament-checkbox" value="{{ tournament.id }}">
+                    </td>
                     <td>{{ tournament.id }}</td>
                     <td>{{ tournament.name }}</td>
                     <td>{{ tournament.start_date.strftime('%d.%m.%Y') if tournament.start_date else '' }}</td>

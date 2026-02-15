@@ -363,6 +363,85 @@ def api_metrics():
     """API для получения метрик производительности"""
     return jsonify(performance_monitor.get_metrics_summary())
 
+@admin_bp.route('/tournaments/export')
+def export_tournaments():
+    """Экспорт всех турниров"""
+    try:
+        tournaments = Tournament.query.all()
+        data = [t.to_dict() for t in tournaments]
+        
+        return jsonify(data), 200, {
+            'Content-Disposition': 'attachment; filename=all_tournaments.json'
+        }
+    except Exception as e:
+        flash(f'Ошибка при экспорте: {e}', 'error')
+        return redirect(url_for('admin.tournaments'))
+
+@admin_bp.route('/tournaments/bulk-delete', methods=['POST'])
+def bulk_delete_tournaments():
+    """Массовое удаление турниров"""
+    try:
+        data = request.get_json()
+        tournament_ids = data.get('tournament_ids', [])
+        
+        if not tournament_ids:
+            return jsonify({'status': 'error', 'message': 'No tournaments selected'}), 400
+        
+        deleted_count = 0
+        for tournament_id in tournament_ids:
+            try:
+                tournament = Tournament.query.get(tournament_id)
+                if tournament:
+                    db.session.delete(tournament)
+                    deleted_count += 1
+            except Exception:
+                continue
+        
+        db.session.commit()
+        TournamentCache.invalidate_tournaments_cache()
+        
+        return jsonify({
+            'status': 'success', 
+            'message': f'Удалено {deleted_count} турниров'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@admin_bp.route('/tournaments/bulk-update-status', methods=['POST'])
+def bulk_update_status():
+    """Массовое обновление статуса турниров"""
+    try:
+        data = request.get_json()
+        tournament_ids = data.get('tournament_ids', [])
+        new_status = data.get('status')
+        
+        if not tournament_ids or not new_status:
+            return jsonify({'status': 'error', 'message': 'Missing data'}), 400
+        
+        updated_count = 0
+        for tournament_id in tournament_ids:
+            try:
+                tournament = Tournament.query.get(tournament_id)
+                if tournament:
+                    old_status = tournament.status
+                    tournament.status = new_status
+                    tournament.updated_at = datetime.utcnow()
+                    updated_count += 1
+            except Exception:
+                continue
+        
+        db.session.commit()
+        TournamentCache.invalidate_tournaments_cache()
+        
+        return jsonify({
+            'status': 'success', 
+            'message': f'Обновлено {updated_count} турниров'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Страница входа для администратора"""
