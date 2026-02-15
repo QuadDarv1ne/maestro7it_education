@@ -9,6 +9,9 @@ from app.utils.updater import updater
 from datetime import datetime, date
 import re
 
+# Import performance monitoring
+from app.utils.performance_monitor import track_performance
+
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')

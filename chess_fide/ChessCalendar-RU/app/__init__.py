@@ -8,8 +8,7 @@ import os
 db = SQLAlchemy()
 csrf = CSRFProtect()
 
-# Import performance monitoring
-from .utils.performance_monitor import track_performance
+
 
 def create_app(config_name='default'):
     import logging
@@ -87,6 +86,11 @@ def create_app(config_name='default'):
     def get_user_by_id(user_id):
         from app.models.user import User
         return User.query.get(user_id)
+    
+    @app.template_global()
+    def now():
+        from datetime import datetime
+        return datetime.now()
     
     # Security headers
     @app.after_request

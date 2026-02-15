@@ -107,14 +107,14 @@ class TestComprehensive(unittest.TestCase):
         """Test user model functionality"""
         with self.app.app_context():
             # Create a test user
-            user = User(username="testuser", email="test@example.com", password="password123")
+            user = User(username="testuser", email="test@example.com", password="SecurePass123!")
             db.session.add(user)
             db.session.commit()
             
             # Verify user was created
             retrieved_user = User.query.filter_by(username="testuser").first()
             self.assertIsNotNone(retrieved_user)
-            self.assertTrue(retrieved_user.check_password("password123"))
+            self.assertTrue(retrieved_user.check_password("SecurePass123!"))
             self.assertFalse(retrieved_user.check_password("wrongpassword"))
             self.assertIsNotNone(retrieved_user.api_key)
     
