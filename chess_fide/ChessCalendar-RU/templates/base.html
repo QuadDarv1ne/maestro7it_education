@@ -2,232 +2,100 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#007bff">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ChessCalendar-RU">
-    <meta name="description" content="Календарь шахматных турниров в России">
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/static/manifest.json">
-    
-    <!-- iOS Icons -->
-    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/static/icons/icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="/static/icons/icon-192x192.png">
-    
-    <title>{% block title %}ChessCalendar-RU{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Шахматный календарь - ChessCalendar-RU{% endblock %}</title>
     
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
     <style>
-        /* Основные цвета бренда */
-        :root {
-            --primary-color: #007bff;
-            --primary-dark: #0056b3;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --info-color: #17a2b8;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --light-bg: #f8f9fa;
-            --dark-bg: #343a40;
-            --border-radius: 8px;
-            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition: all 0.3s ease;
-        }
-        
-        /* Мобильная адаптация */
-        .tournament-card {
-            margin-bottom: 15px;
-            border-left: 3px solid var(--primary-color);
-            transition: var(--transition);
-            overflow: hidden;
-        }
-        
-        .tournament-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--box-shadow);
-        }
-        
-        .tournament-date {
-            font-weight: bold;
-            color: var(--success-color);
-            font-size: 0.9rem;
-        }
-        
-        .tournament-location {
-            color: var(--secondary-color);
-            font-size: 0.85rem;
+        body {
+            padding-top: 56px;
         }
         
         .navbar-brand {
-            font-size: 1.2rem;
-            font-weight: 600;
+            font-weight: bold;
         }
         
-        /* Адаптация для мобильных */
-        @media (max-width: 768px) {
-            .container {
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-            
-            .card-body {
-                padding: 1rem;
-            }
-            
-            .tournament-card .btn {
-                font-size: 0.8rem;
-                padding: 0.25rem 0.5rem;
-            }
-            
-            .navbar-nav .nav-link {
-                padding: 0.5rem 0.75rem;
-            }
-            
-            h1 {
-                font-size: 1.5rem;
-            }
-            
-            h5 {
-                font-size: 1.1rem;
-            }
+        .tournament-card {
+            transition: transform 0.2s;
         }
         
-        /* Очень маленькие экраны */
-        @media (max-width: 480px) {
-            .btn-group .btn {
-                font-size: 0.75rem;
-                padding: 0.2rem 0.4rem;
-            }
-            
-            .badge {
-                font-size: 0.7rem;
-            }
-            
-            .tournament-date {
-                font-size: 0.8rem;
-            }
+        .tournament-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         
-        /* Темная тема */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #121212;
-                color: #e0e0e0;
-            }
-            
-            .card {
-                background-color: #1e1e1e;
-                border-color: #333;
-            }
-            
-            .navbar {
-                background-color: #1a1a1a !important;
-            }
-            
-            .tournament-card {
-                background-color: #2d2d2d;
-            }
-            
-            .tournament-date {
-                color: #4caf50;
-            }
-            
-            .tournament-location {
-                color: #aaa;
-            }
+        .rating-stars {
+            color: #ffc107;
         }
         
-        /* Улучшенные стили для кнопок */
-        .btn {
-            border-radius: var(--border-radius);
-            transition: var(--transition);
+        .footer {
+            margin-top: 50px;
+            padding: 20px 0;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
         }
         
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-        
-        /* Стили для бейджей */
-        .badge {
-            border-radius: 50px;
-            padding: 0.35em 0.65em;
-        }
-        
-        /* Анимации загрузки */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Стили для прогресс-бара */
-        .progress-container {
-            background-color: #e9ecef;
-            border-radius: 4px;
-            height: 8px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            background-color: var(--primary-color);
-            transition: width 0.4s ease;
-        }
-        
-        /* Стили для тултипов */
-        [data-bs-toggle="tooltip"] {
+        .search-container {
             position: relative;
         }
         
-        [data-bs-toggle="tooltip"]::after {
-            content: attr(data-bs-title);
+        .search-results {
             position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0.375rem;
+            max-height: 300px;
+            overflow-y: auto;
             z-index: 1000;
+            display: none;
         }
         
-        [data-bs-toggle="tooltip"]:hover::after {
-            opacity: 1;
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-title {
+            font-weight: bold;
+        }
+        
+        .search-result-location {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        .search-result-dates {
+            font-size: 0.85em;
+            color: #28a745;
         }
     </style>
     
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Навигационная панель -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
-                <i class="bi bi-calendar-event"></i> ChessCalendar-RU
+                <i class="bi bi-trophy"></i> ChessCalendar-RU
             </a>
             
-            <!-- Мобильное меню кнопка -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -236,164 +104,178 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.index') }}">
-                            <i class="bi bi-list-task"></i> Список
+                            <i class="bi bi-calendar-check"></i> Турниры
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.calendar') }}">
-                            <i class="bi bi-calendar3"></i> Календарь
+                            <i class="bi bi-calendar-month"></i> Календарь
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.about') }}">
-                            <i class="bi bi-info-circle"></i> О проекте
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.notifications') }}">
-                            <i class="bi bi-bell"></i> Уведомления
-                        </a>
-                    </li>
+                    {% if 'user_id' in session %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.recommendations') }}">
                             <i class="bi bi-lightbulb"></i> Рекомендации
                         </a>
                     </li>
-                    {% if session.get('user_id') %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('user.favorites') }}">
-                            <i class="bi bi-star"></i> Избранное
+                            <i class="bi bi-heart"></i> Избранное
                         </a>
                     </li>
                     {% endif %}
-                    {% if request.path.startswith('/admin') %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                            <i class="bi bi-speedometer2"></i> Админ-панель
+                        <a class="nav-link" href="{{ url_for('main.notifications') }}">
+                            <i class="bi bi-bell"></i> Уведомления
                         </a>
                     </li>
-                    {% endif %}
                 </ul>
                 
-                <ul class="navbar-nav">
-                    {% if session.get('user_id') %}
-                    {% set user = get_user_by_id(session.get('user_id')) %}
-                    {% if user and user.is_admin %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-shield-lock"></i> {{ session.get('username') }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-speedometer2"></i> Админ-панель</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('user.profile') }}"><i class="bi bi-person"></i> Мой профиль</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('admin.logout') }}"><i class="bi bi-box-arrow-right"></i> Выйти</a></li>
-                        </ul>
-                    </li>
-                    {% else %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> {{ session.get('username') }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('user.profile') }}"><i class="bi bi-person"></i> Мой профиль</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('user.favorites') }}"><i class="bi bi-star"></i> Мои избранные</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('user.logout') }}"><i class="bi bi-box-arrow-right"></i> Выйти</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('user.login') }}">
-                            <i class="bi bi-box-arrow-in-right"></i> Вход
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('user.register') }}">
-                            <i class="bi bi-person-plus"></i> Регистрация
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
+                <div class="d-flex align-items-center">
+                    <!-- Search Bar -->
+                    <div class="search-container me-3">
+                        <form action="{{ url_for('main.index') }}" method="GET" class="d-flex">
+                            <input type="text" name="search" class="form-control" placeholder="Поиск турниров..." 
+                                   value="{{ request.args.get('search', '') }}" id="searchInput">
+                            <button class="btn btn-outline-light" type="submit">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </form>
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                    
+                    <ul class="navbar-nav">
+                        {% if 'user_id' in session %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-circle"></i> {{ session.username }}
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ url_for('user.profile') }}">Профиль</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('user.logout') }}">Выйти</a></li>
+                                </ul>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('user.login') }}">Войти</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% if 'user_id' in session and current_user.is_admin %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+                                    <i class="bi bi-gear"></i> Админ
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Основной контент -->
-    <div class="container mt-3">
-        <!-- Сообщения флеш -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
+    <!-- Main Content -->
+    <main class="container-fluid mt-4">
         {% block content %}{% endblock %}
-    </div>
+    </main>
 
-    <!-- Footer для мобильных -->
-    <footer class="bg-dark text-light text-center py-3 mt-4" style="display: none;" id="mobileFooter">
-        <div class="container">
-            <small>ChessCalendar-RU &copy; 2026</small>
-            <br>
-            <small>Дуплей Максим Игоревич</small>
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted">&copy; 2026 ChessCalendar-RU - Календарь шахматных турниров</span>
         </div>
     </footer>
-
-    <!-- Bootstrap JS и зависимости -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Search functionality -->
     <script>
-        // Мобильная адаптация
         document.addEventListener('DOMContentLoaded', function() {
-            const isMobile = window.innerWidth <= 768;
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
             
-            if (isMobile) {
-                // Показываем мобильный footer
-                document.getElementById('mobileFooter').style.display = 'block';
-                
-                // Оптимизация для сенсорных устройств
-                document.body.addEventListener('touchstart', function() {}, {passive: true});
-                
-                // Отключаем zoom при фокусе на input
-                const inputs = document.querySelectorAll('input, textarea, select');
-                inputs.forEach(input => {
-                    input.addEventListener('focus', function() {
-                        document.querySelector('meta[name="viewport"]').setAttribute('content', 
-                            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-                    });
+            if (searchInput) {
+                searchInput.addEventListener('input', debounce(function() {
+                    const query = this.value.trim();
                     
-                    input.addEventListener('blur', function() {
-                        document.querySelector('meta[name="viewport"]').setAttribute('content', 
-                            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-                    });
+                    if (query.length < 2) {
+                        searchResults.style.display = 'none';
+                        return;
+                    }
+                    
+                    // Perform AJAX search
+                    fetch(`/api/tournaments/search?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.length > 0) {
+                                displaySearchResults(data);
+                                searchResults.style.display = 'block';
+                            } else {
+                                searchResults.style.display = 'none';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Search error:', error);
+                            searchResults.style.display = 'none';
+                        });
+                }, 300));
+                
+                // Hide results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                        searchResults.style.display = 'none';
+                    }
                 });
             }
-        });
-        
-        // Service Worker регистрация (для PWA)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/static/sw.js')
-                .then(function(registration) {
-                    console.log('SW registered: ', registration);
-                })
-                .catch(function(registrationError) {
-                    console.log('SW registration failed: ', registrationError);
+            
+            // Debounce function to limit API calls
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+            
+            function displaySearchResults(results) {
+                searchResults.innerHTML = '';
+                
+                results.slice(0, 10).forEach(tournament => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.onclick = () => {
+                        window.location.href = `/tournament/${tournament.id}`;
+                    };
+                    
+                    item.innerHTML = `
+                        <div class="search-result-title">${escapeHtml(tournament.name)}</div>
+                        <div class="search-result-location">${escapeHtml(tournament.location)}</div>
+                        <div class="search-result-dates">${formatDate(tournament.start_date)} - ${formatDate(tournament.end_date)}</div>
+                    `;
+                    
+                    searchResults.appendChild(item);
                 });
-            });
-        }
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ru-RU');
+            }
+        });
     </script>
-    
-    {% block scripts %}{% endblock %}
-    
-    <!-- Include report modal -->
-    {% include 'report_modal.html' %}
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

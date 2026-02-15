@@ -38,6 +38,8 @@
                             <option value="start_date" {% if filters.sort_by == 'start_date' %}selected{% endif %}>По дате</option>
                             <option value="name" {% if filters.sort_by == 'name' %}selected{% endif %}>По названию</option>
                             <option value="location" {% if filters.sort_by == 'location' %}selected{% endif %}>По месту</option>
+                            <option value="category" {% if filters.sort_by == 'category' %}selected{% endif %}>По категории</option>
+                            <option value="status" {% if filters.sort_by == 'status' %}selected{% endif %}>По статусу</option>
                         </select>
                     </div>
                 </div>
@@ -53,7 +55,7 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h3><i class="bi bi-calendar-check"></i> Турниры</h3>
+                <h3><i class="bi bi-calendar-check"></i> Турниры ({{ tournaments|length }})</h3>
                 <div class="d-flex gap-2">
                     <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-primary">
                         <i class="bi bi-calendar-month"></i> Календарь
@@ -144,6 +146,7 @@
                     <i class="bi bi-calendar-x display-1 text-muted"></i>
                     <h4 class="text-muted">Турниры не найдены</h4>
                     <p class="text-muted">Попробуйте изменить параметры фильтрации</p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary">Сбросить фильтры</a>
                 </div>
             </div>
         {% endif %}

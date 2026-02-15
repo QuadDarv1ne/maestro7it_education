@@ -6,6 +6,7 @@ from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser
 from app.utils.updater import updater
 from datetime import datetime, date
+import re
 
 main_bp = Blueprint('main', __name__)
 
@@ -17,6 +18,7 @@ def index():
     status = request.args.get('status', '')
     location = request.args.get('location', '')
     sort_by = request.args.get('sort_by', 'start_date')
+    search_query = request.args.get('search', '').strip()
     
     # Базовый запрос
     query = Tournament.query
@@ -29,11 +31,33 @@ def index():
     if location:
         query = query.filter(Tournament.location.contains(location))
     
+    # Применяем глобальный поиск если есть
+    if search_query:
+        search_filter = db.or_(
+            Tournament.name.contains(search_query),
+            Tournament.location.contains(search_query),
+            Tournament.description.contains(search_query) if search_query else False,
+            Tournament.organizer.contains(search_query) if search_query else False
+        )
+        # Remove the False condition which would cause an error
+        if search_query:
+            search_filter = db.or_(
+                Tournament.name.contains(search_query),
+                Tournament.location.contains(search_query),
+                Tournament.description.contains(search_query),
+                Tournament.organizer.contains(search_query)
+            )
+            query = query.filter(search_filter)
+    
     # Применяем сортировку
     if sort_by == 'name':
         query = query.order_by(Tournament.name)
     elif sort_by == 'location':
         query = query.order_by(Tournament.location)
+    elif sort_by == 'category':
+        query = query.order_by(Tournament.category)
+    elif sort_by == 'status':
+        query = query.order_by(Tournament.status)
     else:  # start_date
         query = query.order_by(Tournament.start_date)
     
@@ -53,7 +77,8 @@ def index():
                              'category': category,
                              'status': status,
                              'location': location,
-                             'sort_by': sort_by
+                             'sort_by': sort_by,
+                             'search': search_query
                          })
 
 @main_bp.route('/tournament/<int:tournament_id>')
@@ -100,7 +125,20 @@ def api_tournament_search():
         db_query = db_query.filter(
             db.or_(
                 Tournament.name.contains(query),
-                Tournament.location.contains(query)
+                Tournament.location.contains(query),
+                Tournament.description.contains(query) if query else False,
+                Tournament.organizer.contains(query) if query else False
+            )
+        )
+    
+    # Remove the False condition which would cause an error
+    if query:
+        db_query = db_query.filter(
+            db.or_(
+                Tournament.name.contains(query),
+                Tournament.location.contains(query),
+                Tournament.description.contains(query),
+                Tournament.organizer.contains(query)
             )
         )
     
@@ -144,7 +182,7 @@ def export_csv():
     
     # Заголовки
     writer.writerow(['ID', 'Название', 'Дата начала', 'Дата окончания', 
-                    'Место', 'Категория', 'Статус', 'FIDE ID'])
+                    'Место', 'Категория', 'Статус', 'Описание', 'Призовой фонд', 'Организатор', 'FIDE ID'])
     
     # Данные
     for t in tournaments:
@@ -156,6 +194,9 @@ def export_csv():
             t.location,
             t.category,
             t.status,
+            t.description,
+            t.prize_fund,
+            t.organizer,
             t.fide_id
         ])
     
@@ -198,176 +239,103 @@ def notifications():
 @main_bp.route('/notifications/subscribe', methods=['POST'])
 def subscribe_notifications():
     """Подписка на уведомления"""
-    from app.models.notification import Subscription
-    
-    try:
-        email = request.form.get('email')
-        if not email:
-            return jsonify({'status': 'error', 'message': 'Email required'}), 400
-        
-        # Проверяем существующую подписку
-        existing = Subscription.query.filter_by(email=email).first()
-        if existing:
-            existing.active = True
-            existing.updated_at = datetime.utcnow()
-        else:
-            # Создаем новую подписку
-            preferences = {
-                'new_tournaments': request.form.get('new_tournaments') == 'on',
-                'tournament_updates': request.form.get('tournament_updates') == 'on',
-                'reminders': request.form.get('reminders') == 'on'
-            }
-            subscription = Subscription(email=email, preferences=preferences)
-            db.session.add(subscription)
-        
-        db.session.commit()
-        return jsonify({'status': 'success', 'message': 'Subscribed successfully'}), 200
-        
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@main_bp.route('/notifications/unsubscribe')
-def unsubscribe_notifications():
-    """Отписка от уведомлений"""
-    from app.models.notification import Subscription
-    
-    try:
-        email = request.args.get('email')
-        if not email:
-            return jsonify({'status': 'error', 'message': 'Email required'}), 400
-        
-        subscription = Subscription.query.filter_by(email=email).first()
-        if subscription:
-            subscription.active = False
-            subscription.updated_at = datetime.utcnow()
-            db.session.commit()
-            return jsonify({'status': 'success', 'message': 'Unsubscribed successfully'}), 200
-        else:
-            return jsonify({'status': 'error', 'message': 'Subscription not found'}), 404
-            
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@main_bp.route('/sw.js')
-def service_worker():
-    """Serve the service worker file"""
-    from flask import send_from_directory
-    return send_from_directory('static', 'sw.js', mimetype='application/javascript')
-
-@main_bp.route('/about')
-def about():
-    """Страница о проекте"""
-    return render_template('about.html')
-
-@main_bp.route('/notifications/preferences', methods=['POST'])
-def update_notification_preferences():
-    """Обновление настроек уведомлений пользователя"""
-    from app.models.notification import Subscription
     from app.utils.notifications import notification_service
     
     try:
-        if 'user_id' not in session:
-            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
-        
-        user = User.query.get(session['user_id'])
-        if not user:
-            return jsonify({'status': 'error', 'message': 'User not found'}), 404
-        
+        email = request.form['email']
         preferences = {
             'new_tournaments': request.form.get('new_tournaments') == 'on',
-            'tournament_updates': request.form.get('tournament_updates') == 'on',
+            'updates': request.form.get('updates') == 'on',
             'daily_summary': request.form.get('daily_summary') == 'on'
         }
         
-        # Обновляем или создаем подписку
-        notification_service.update_subscriber_preferences(user.email, preferences)
-        
-        return jsonify({'status': 'success', 'message': 'Preferences updated successfully'})
-        
+        notification_service.add_subscriber(email, preferences)
+        flash(f'Подписка на уведомления для {email} успешно оформлена', 'success')
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        flash(f'Ошибка при оформлении подписки: {e}', 'error')
+    
+    return redirect(url_for('main.notifications'))
+
+@main_bp.route('/notifications/unsubscribe', methods=['POST'])
+def unsubscribe_notifications():
+    """Отмена подписки на уведомления"""
+    from app.utils.notifications import notification_service
+    
+    try:
+        email = request.form['email']
+        
+        notification_service.remove_subscriber(email)
+        flash(f'Подписка для {email} успешно отменена', 'success')
+    except Exception as e:
+        flash(f'Ошибка при отмене подписки: {e}', 'error')
+    
+    return redirect(url_for('main.notifications'))
 
 @main_bp.route('/calendar')
 def calendar():
     """Календарь турниров"""
     from datetime import date, timedelta
-    from collections import defaultdict
+    import calendar
     
-    # Получаем турниры за ближайшие 3 месяца
-    today = date.today()
-    start_date = today.replace(day=1)  # Первый день текущего месяца
-    end_date = (start_date + timedelta(days=90))  # Примерно 3 месяца вперед
+    # Получаем текущий месяц или указанный
+    year = request.args.get('year', date.today().year, type=int)
+    month = request.args.get('month', date.today().month, type=int)
     
-    # Получаем турниры в этом диапазоне
+    # Получаем турниры для указанного месяца
     tournaments = Tournament.query.filter(
-        Tournament.start_date >= start_date,
-        Tournament.start_date <= end_date
-    ).order_by(Tournament.start_date).all()
+        db.and_(
+            db.extract('year', Tournament.start_date) == year,
+            db.extract('month', Tournament.start_date) == month
+        )
+    ).all()
     
-    # Группируем турниры по датам
-    tournaments_by_date = defaultdict(list)
-    for tournament in tournaments:
-        # Для каждого дня турнира добавляем его в соответствующую дату
-        current_date = tournament.start_date
-        while current_date <= tournament.end_date:
-            tournaments_by_date[current_date].append(tournament)
-            current_date += timedelta(days=1)
+    # Создаем структуру календаря
+    cal = calendar.monthcalendar(year, month)
+    month_name = calendar.month_name[month]
     
-    # Подготовим данные для календаря
-    calendar_data = {}
-    current_month = start_date
+    # Группируем турниры по дням
+    tournaments_by_day = {}
+    for t in tournaments:
+        day = t.start_date.day
+        if day not in tournaments_by_day:
+            tournaments_by_day[day] = []
+        tournaments_by_day[day].append(t)
     
-    # Создаем календарь для 3 месяцев
+    # Получаем информацию о предыдущем и следующем месяце
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+    
+    today = date.today()
+    
+    # Создаем структуру для шаблона
     months_data = []
-    for i in range(3):
-        month_date = current_month.replace(day=1) + timedelta(days=i*31)
-        month_name = month_date.strftime('%B %Y')
-        
-        # Получаем первый день недели для этого месяца
-        first_day_of_month = month_date.replace(day=1)
-        last_day_of_month = month_date.replace(day=1) + timedelta(days=32)
-        last_day_of_month = last_day_of_month.replace(day=1) - timedelta(days=1)
-        
-        # Создаем сетку календаря
-        calendar_weeks = []
-        week = []
-        
-        # Добавляем пустые дни до первого дня месяца
-        first_weekday = first_day_of_month.weekday()  # 0=Monday, 6=Sunday
-        for i in range(first_weekday):
-            week.append(None)
-        
-        # Добавляем дни месяца
-        for day in range(1, last_day_of_month.day + 1):
-            current_date = first_day_of_month.replace(day=day)
-            day_data = {
-                'date': current_date,
-                'day': day,
-                'tournaments': tournaments_by_date.get(current_date, []),
-                'is_today': current_date == today,
-                'is_past': current_date < today
-            }
-            week.append(day_data)
-            
-            # Если неделя полная или это последний день месяца
-            if len(week) == 7 or day == last_day_of_month.day:
-                calendar_weeks.append(week)
-                week = []
-        
-        # Если в последней неделе есть дни
-        if week:
-            # Добавляем пустые дни до конца недели
-            while len(week) < 7:
-                week.append(None)
-            calendar_weeks.append(week)
-        
-        months_data.append({
-            'name': month_name,
-            'weeks': calendar_weeks,
-            'first_day': first_day_of_month
-        })
+    for week in cal:
+        week_data = []
+        for day in week:
+            if day == 0:
+                week_data.append(None)
+            else:
+                day_tournaments = tournaments_by_day.get(day, [])
+                is_today = (year == today.year and month == today.month and day == today.day)
+                week_data.append({
+                    'day': day,
+                    'tournaments': day_tournaments,
+                    'is_today': is_today
+                })
+        months_data.append(week_data)
     
-    return render_template('calendar.html', months_data=months_data, today=today)
+    return render_template('calendar.html', 
+                         months_data=months_data, 
+                         month_name=month_name, 
+                         year=year,
+                         current_month=month,
+                         prev_month=prev_month,
+                         prev_year=prev_year,
+                         next_month=next_month,
+                         next_year=next_year,
+                         today=today)
 
 @main_bp.route('/recommendations')
 def recommendations():
