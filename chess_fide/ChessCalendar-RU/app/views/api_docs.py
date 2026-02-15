@@ -1,375 +1,218 @@
-from flask import Blueprint, render_template, jsonify
+from flask import Blueprint
+from flask_restx import Api, Resource, fields
 from app.models.tournament import Tournament
+from app.models.user import User
+from app.models.rating import TournamentRating
+from app.models.favorite import FavoriteTournament
+from app.models.notification import Subscription
+from app import db
+from datetime import date
 
-api_docs_bp = Blueprint('api_docs', __name__, url_prefix='/api/docs')
+api_docs_bp = Blueprint('api_docs', __name__)
 
-@api_docs_bp.route('/')
-def swagger_ui():
-    """Страница документации API (Swagger UI)"""
-    return render_template('api_docs/swagger.html')
+# Initialize Flask-RESTX API
+api = Api(
+    api_docs_bp,
+    title='ChessCalendar API',
+    version='1.0',
+    description='API для шахматного календаря ChessCalendar-RU',
+    doc='/docs/'  # Documentation will be available at /api/docs/
+)
 
-@api_docs_bp.route('/spec')
-def swagger_spec():
-    """Спецификация OpenAPI 3.0"""
-    spec = {
-        "openapi": "3.0.0",
-        "info": {
-            "title": "ChessCalendar-RU API",
-            "description": "API для получения информации о шахматных турнирах в России",
-            "version": "1.0.0",
-            "contact": {
-                "name": "Дуплей Максим Игоревич",
-                "email": "quadd4rv1n7@gmail.com"
-            }
-        },
-        "servers": [
-            {
-                "url": "http://127.0.0.1:5000",
-                "description": "Локальный сервер разработки"
-            }
-        ],
-        "paths": {
-            "/api/tournaments": {
-                "get": {
-                    "summary": "Получить все турниры",
-                    "description": "Возвращает список всех шахматных турниров в России",
-                    "responses": {
-                        "200": {
-                            "description": "Успешный ответ",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "array",
-                                        "items": {
-                                            "$ref": "#/components/schemas/Tournament"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/tournaments/{id}": {
-                "get": {
-                    "summary": "Получить турнир по ID",
-                    "description": "Возвращает информацию о конкретном турнире",
-                    "parameters": [
-                        {
-                            "name": "id",
-                            "in": "path",
-                            "required": True,
-                            "schema": {
-                                "type": "integer"
-                            },
-                            "description": "ID турнира"
-                        }
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "Успешный ответ",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "$ref": "#/components/schemas/Tournament"
-                                    }
-                                }
-                            }
-                        },
-                        "404": {
-                            "description": "Турнир не найден"
-                        }
-                    }
-                }
-            },
-            "/api/tournaments/filter": {
-                "get": {
-                    "summary": "Получить отфильтрованные турниры",
-                    "description": "Возвращает турниры с применением фильтров",
-                    "parameters": [
-                        {
-                            "name": "category",
-                            "in": "query",
-                            "required": False,
-                            "schema": {
-                                "type": "string",
-                                "enum": ["FIDE", "National", "Youth", "Seniors"]
-                            },
-                            "description": "Категория турнира"
-                        },
-                        {
-                            "name": "status",
-                            "in": "query",
-                            "required": False,
-                            "schema": {
-                                "type": "string",
-                                "enum": ["Scheduled", "Ongoing", "Completed"]
-                            },
-                            "description": "Статус турнира"
-                        },
-                        {
-                            "name": "location",
-                            "in": "query",
-                            "required": False,
-                            "schema": {
-                                "type": "string"
-                            },
-                            "description": "Место проведения (частичное совпадение)"
-                        }
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "Успешный ответ",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "array",
-                                        "items": {
-                                            "$ref": "#/components/schemas/Tournament"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/recommendations/user/{user_id}": {
-                "get": {
-                    "summary": "Получить рекомендации для пользователя",
-                    "description": "Возвращает персонализированные рекомендации турниров для конкретного пользователя",
-                    "parameters": [
-                        {
-                            "name": "user_id",
-                            "in": "path",
-                            "required": True,
-                            "schema": {
-                                "type": "integer"
-                            },
-                            "description": "ID пользователя"
-                        }
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "Успешный ответ",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "array",
-                                        "items": {
-                                            "$ref": "#/components/schemas/Tournament"
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "404": {
-                            "description": "Пользователь не найден"
-                        }
-                    }
-                }
-            },
-            "/api/analytics/report": {
-                "get": {
-                    "summary": "Получить полный отчет аналитики",
-                    "description": "Возвращает комплексный отчет по аналитике приложения",
-                    "responses": {
-                        "200": {
-                            "description": "Успешный ответ",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "$ref": "#/components/schemas/AnalyticsReport"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/analytics/tournament/{tournament_id}": {
-                "get": {
-                    "summary": "Получить аналитику по турниру",
-                    "description": "Возвращает детальную аналитику для конкретного турнира",
-                    "parameters": [
-                        {
-                            "name": "tournament_id",
-                            "in": "path",
-                            "required": True,
-                            "schema": {
-                                "type": "integer"
-                            },
-                            "description": "ID турнира"
-                        }
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "Успешный ответ",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "$ref": "#/components/schemas/TournamentAnalytics"
-                                    }
-                                }
-                            }
-                        },
-                        "404": {
-                            "description": "Турнир не найден"
-                        }
-                    }
-                }
-            }
-        },
-        "components": {
-            "schemas": {
-                "Tournament": {
-                    "type": "object",
-                    "properties": {
-                        "id": {
-                            "type": "integer",
-                            "description": "Уникальный идентификатор турнира"
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Название турнира"
-                        },
-                        "start_date": {
-                            "type": "string",
-                            "format": "date",
-                            "description": "Дата начала турнира"
-                        },
-                        "end_date": {
-                            "type": "string",
-                            "format": "date",
-                            "description": "Дата окончания турнира"
-                        },
-                        "location": {
-                            "type": "string",
-                            "description": "Место проведения"
-                        },
-                        "category": {
-                            "type": "string",
-                            "enum": ["FIDE", "National", "Youth", "Seniors"],
-                            "description": "Категория турнира"
-                        },
-                        "status": {
-                            "type": "string",
-                            "enum": ["Scheduled", "Ongoing", "Completed"],
-                            "description": "Статус турнира"
-                        },
-                        "fide_id": {
-                            "type": "string",
-                            "nullable": True,
-                            "description": "FIDE ID турнира"
-                        },
-                        "source_url": {
-                            "type": "string",
-                            "nullable": True,
-                            "description": "URL источника информации"
-                        }
-                    },
-                    "required": ["id", "name", "start_date", "end_date", "location", "category", "status"]
-                },
-                "AnalyticsReport": {
-                    "type": "object",
-                    "properties": {
-                        "generated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Время генерации отчета"
-                        },
-                        "tournament_analytics": {
-                            "type": "object",
-                            "description": "Аналитика турниров"
-                        },
-                        "user_analytics": {
-                            "type": "object",
-                            "description": "Аналитика пользователей"
-                        },
-                        "interaction_analytics": {
-                            "type": "object",
-                            "description": "Аналитика взаимодействий"
-                        }
-                    }
-                },
-                "TournamentAnalytics": {
-                    "type": "object",
-                    "properties": {
-                        "tournament": {
-                            "$ref": "#/components/schemas/Tournament"
-                        },
-                        "total_interactions": {
-                            "type": "integer",
-                            "description": "Общее количество взаимодействий"
-                        },
-                        "total_ratings": {
-                            "type": "integer",
-                            "description": "Общее количество рейтингов"
-                        },
-                        "average_rating": {
-                            "type": "number",
-                            "format": "float",
-                            "description": "Средний рейтинг"
-                        },
-                        "engagement_score": {
-                            "type": "integer",
-                            "description": "Оценка вовлеченности"
-                        }
-                    }
-                }
-            }
+# Define namespaces
+ns_tournaments = api.namespace('tournaments', description='Операции с турнирами')
+ns_users = api.namespace('users', description='Операции с пользователями')
+ns_ratings = api.namespace('ratings', description='Операции с оценками')
+ns_favorites = api.namespace('favorites', description='Операции с избранными турнирами')
+
+# Define models
+tournament_model = api.model('Tournament', {
+    'id': fields.Integer(required=True, description='ID турнира'),
+    'name': fields.String(required=True, description='Название турнира'),
+    'start_date': fields.Date(required=True, description='Дата начала турнира'),
+    'end_date': fields.Date(required=True, description='Дата окончания турнира'),
+    'location': fields.String(required=True, description='Место проведения'),
+    'category': fields.String(required=True, description='Категория турнира'),
+    'status': fields.String(required=True, description='Статус турнира'),
+    'description': fields.String(description='Описание турнира'),
+    'prize_fund': fields.String(description='Призовой фонд'),
+    'organizer': fields.String(description='Организатор'),
+    'fide_id': fields.String(description='FIDE ID турнира'),
+    'source_url': fields.String(description='URL источника'),
+    'average_rating': fields.Float(description='Средний рейтинг'),
+    'total_ratings': fields.Integer(description='Количество оценок')
+})
+
+user_model = api.model('User', {
+    'id': fields.Integer(required=True, description='ID пользователя'),
+    'username': fields.String(required=True, description='Имя пользователя'),
+    'email': fields.String(required=True, description='Email пользователя'),
+    'is_admin': fields.Boolean(description='Является ли администратором'),
+    'is_regular_user': fields.Boolean(description='Является ли обычным пользователем')
+})
+
+rating_model = api.model('Rating', {
+    'id': fields.Integer(required=True, description='ID оценки'),
+    'user_id': fields.Integer(required=True, description='ID пользователя'),
+    'tournament_id': fields.Integer(required=True, description='ID турнира'),
+    'rating': fields.Integer(required=True, description='Оценка (1-5)'),
+    'review': fields.String(description='Отзыв')
+})
+
+favorite_model = api.model('Favorite', {
+    'id': fields.Integer(required=True, description='ID избранного'),
+    'user_id': fields.Integer(required=True, description='ID пользователя'),
+    'tournament_id': fields.Integer(required=True, description='ID турнира'),
+    'created_at': fields.DateTime(description='Дата добавления в избранное')
+})
+
+register_model = api.model('Register', {
+    'username': fields.String(required=True, description='Имя пользователя'),
+    'email': fields.String(required=True, description='Email пользователя'),
+    'password': fields.String(required=True, description='Пароль пользователя')
+})
+
+login_model = api.model('Login', {
+    'username': fields.String(required=True, description='Имя пользователя'),
+    'password': fields.String(required=True, description='Пароль пользователя')
+})
+
+rate_model = api.model('Rate', {
+    'user_id': fields.Integer(required=True, description='ID пользователя'),
+    'rating': fields.Integer(required=True, description='Оценка (1-5)'),
+    'review': fields.String(description='Отзыв')
+})
+
+@ns_tournaments.route('/')
+class TournamentsList(Resource):
+    @api.doc('list_tournaments')
+    @api.param('page', 'Номер страницы', default=1)
+    @api.param('per_page', 'Количество элементов на странице', default=20)
+    @api.param('category', 'Категория турнира')
+    @api.param('status', 'Статус турнира')
+    @api.param('location', 'Место проведения')
+    @api.param('search', 'Поисковый запрос')
+    @api.marshal_list_with(tournament_model)
+    def get(self):
+        """Получить список турниров"""
+        return [], 200
+    
+    @api.doc('create_tournament')
+    @api.expect(tournament_model)
+    @api.marshal_with(tournament_model, code=201)
+    def post(self):
+        """Создать новый турнир (только для администраторов)"""
+        return {}, 201
+
+@ns_tournaments.route('/<int:tournament_id>')
+@api.param('tournament_id', 'ID турнира')
+class TournamentResource(Resource):
+    @api.doc('get_tournament')
+    @api.marshal_with(tournament_model)
+    def get(self, tournament_id):
+        """Получить турнир по ID"""
+        return {}, 200
+    
+    @api.doc('update_tournament')
+    @api.expect(tournament_model)
+    @api.marshal_with(tournament_model)
+    def put(self, tournament_id):
+        """Обновить турнир (только для администраторов)"""
+        return {}, 200
+    
+    @api.doc('delete_tournament')
+    def delete(self, tournament_id):
+        """Удалить турнир (только для администраторов)"""
+        return {}, 204
+
+@ns_tournaments.route('/upcoming')
+class UpcomingTournaments(Resource):
+    @api.doc('get_upcoming_tournaments')
+    @api.param('limit', 'Ограничение количества результатов', default=10)
+    @api.marshal_list_with(tournament_model)
+    def get(self):
+        """Получить предстоящие турниры"""
+        return [], 200
+
+@ns_tournaments.route('/popular')
+class PopularTournaments(Resource):
+    @api.doc('get_popular_tournaments')
+    @api.param('limit', 'Ограничение количества результатов', default=10)
+    @api.marshal_list_with(tournament_model)
+    def get(self):
+        """Получить популярные турниры"""
+        return [], 200
+
+@ns_users.route('/register')
+class UserRegistration(Resource):
+    @api.doc('register_user')
+    @api.expect(register_model)
+    @api.marshal_with(user_model, code=201)
+    def post(self):
+        """Зарегистрировать нового пользователя"""
+        return {}, 201
+
+@ns_users.route('/login')
+class UserLogin(Resource):
+    @api.doc('login_user')
+    @api.expect(login_model)
+    def post(self):
+        """Войти в систему"""
+        return {}, 200
+
+@ns_ratings.route('/<int:tournament_id>')
+@api.param('tournament_id', 'ID турнира')
+class TournamentRatings(Resource):
+    @api.doc('get_tournament_ratings')
+    @api.marshal_list_with(rating_model)
+    def get(self, tournament_id):
+        """Получить все оценки для турнира"""
+        return [], 200
+    
+    @api.doc('add_tournament_rating')
+    @api.expect(rate_model)
+    @api.marshal_with(rating_model, code=201)
+    def post(self, tournament_id):
+        """Оценить турнир"""
+        return {}, 201
+
+@ns_favorites.route('/<int:tournament_id>')
+@api.param('tournament_id', 'ID турнира')
+class TournamentFavorites(Resource):
+    @api.doc('add_favorite')
+    @api.param('user_id', 'ID пользователя')
+    @api.marshal_with(favorite_model, code=201)
+    def post(self, tournament_id):
+        """Добавить турнир в избранное"""
+        return {}, 201
+    
+    @api.doc('remove_favorite')
+    @api.param('user_id', 'ID пользователя')
+    def delete(self, tournament_id):
+        """Удалить турнир из избранного"""
+        return {}, 200
+
+@ns_users.route('/<int:user_id>/favorites')
+@api.param('user_id', 'ID пользователя')
+class UserFavorites(Resource):
+    @api.doc('get_user_favorites')
+    def get(self, user_id):
+        """Получить избранные турниры пользователя"""
+        return {}, 200
+
+@api.route('/health')
+class HealthCheck(Resource):
+    def get(self):
+        """Проверка работоспособности API"""
+        return {
+            'status': 'healthy',
+            'service': 'ChessCalendar API',
+            'timestamp': '2026-02-15T00:00:00Z'
         }
-    }
-    
-    return jsonify(spec)
 
-
-@api_docs_bp.route('/health')
-def health_check():
-    """Проверка состояния системы"""
-    from app.utils.monitoring import health_checker
-    return jsonify(health_checker.run_health_checks())
-
-
-@api_docs_bp.route('/metrics')
-def metrics():
-    """Получить метрики производительности"""
-    from app.utils.monitoring import performance_monitor
-    return jsonify(performance_monitor.get_metrics_summary())
-
-
-@api_docs_bp.route('/system-info')
-def system_info():
-    """Получить информацию о системе"""
-    import platform
-    import psutil
-    import os
-    from datetime import datetime
-    
-    system_data = {
-        "server": {
-            "name": platform.node(),
-            "platform": platform.platform(),
-            "processor": platform.processor(),
-            "architecture": platform.architecture()[0],
-        },
-        "runtime": {
-            "python_version": platform.python_version(),
-            "python_compiler": platform.python_compiler(),
-        },
-        "process": {
-            "pid": os.getpid(),
-            "cwd": os.getcwd(),
-            "memory_percent": psutil.Process().memory_percent(),
-        },
-        "system": {
-            "cpu_percent": psutil.cpu_percent(interval=1),
-            "memory_total": psutil.virtual_memory().total,
-            "memory_available": psutil.virtual_memory().available,
-            "memory_percent": psutil.virtual_memory().percent,
-            "disk_usage": psutil.disk_usage('/').percent if hasattr(os, 'statvfs') else 'N/A',
-        },
-        "timestamp": datetime.now().isoformat(),
-        "status": "running"
-    }
-    return jsonify(system_data)
+# Add a general documentation route
+@api_docs_bp.route('/swagger/')
+def swagger_ui():
+    """Route to serve Swagger UI"""
+    from flask import redirect
+    return redirect('/api/docs/')
