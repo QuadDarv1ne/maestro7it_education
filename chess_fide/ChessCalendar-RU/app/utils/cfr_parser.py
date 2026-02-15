@@ -5,6 +5,8 @@ import re
 from app.models.tournament import Tournament
 import logging
 
+logger = logging.getLogger('app.parsers')
+
 class CFRParser:
     def __init__(self):
         self.base_url = "https://ruchess.ru"
@@ -121,29 +123,112 @@ class CFRParser:
             
         try:
             import dateutil.parser
+            from datetime import datetime
+            import calendar
             
             # Примеры форматов: "15-20 марта 2026", "Март 2026", "15.03.2026"
-            date_string = date_string.replace('января', 'January').replace('февраля', 'February')
-            date_string = date_string.replace('марта', 'March').replace('апреля', 'April')
-            date_string = date_string.replace('мая', 'May').replace('июня', 'June')
-            date_string = date_string.replace('июля', 'July').replace('августа', 'August')
-            date_string = date_string.replace('сентября', 'September').replace('октября', 'October')
-            date_string = date_string.replace('ноября', 'November').replace('декабря', 'December')
+            # Handle different Russian month name cases (nominative and genitive)
+            date_string = date_string.replace('января', 'January').replace('Января', 'January').replace('январь', 'January').replace('Январь', 'January')
+            date_string = date_string.replace('февраля', 'February').replace('Февраля', 'February').replace('февраль', 'February').replace('Февраль', 'February')
+            date_string = date_string.replace('марта', 'March').replace('Марта', 'March').replace('март', 'March').replace('Март', 'March')
+            date_string = date_string.replace('апреля', 'April').replace('Апреля', 'April').replace('апрель', 'April').replace('Апрель', 'April')
+            date_string = date_string.replace('мая', 'May').replace('Мая', 'May').replace('май', 'May').replace('Май', 'May')
+            date_string = date_string.replace('июня', 'June').replace('Июня', 'June').replace('июнь', 'June').replace('Июнь', 'June')
+            date_string = date_string.replace('июля', 'July').replace('Июля', 'July').replace('июль', 'July').replace('Июль', 'July')
+            date_string = date_string.replace('августа', 'August').replace('Августа', 'August').replace('август', 'August').replace('Август', 'August')
+            date_string = date_string.replace('сентября', 'September').replace('Сентября', 'September').replace('сентябрь', 'September').replace('Сентябрь', 'September')
+            date_string = date_string.replace('октября', 'October').replace('Октября', 'October').replace('октябрь', 'October').replace('Октябрь', 'October')
+            date_string = date_string.replace('ноября', 'November').replace('Ноября', 'November').replace('ноябрь', 'November').replace('Ноябрь', 'November')
+            date_string = date_string.replace('декабря', 'December').replace('Декабря', 'December').replace('декабрь', 'December').replace('Декабрь', 'December')
             
+            # Handle different date formats
             if '-' in date_string:
-                # Диапазон дат
+                # Диапазон дат, например "15-20 March 2026"
                 parts = date_string.split('-')
-                start_str = parts[0].strip()
-                end_str = parts[1].strip() if len(parts) > 1 else start_str
+                if len(parts) == 2:
+                    start_part = parts[0].strip()
+                    end_part = parts[1].strip()
+                    
+                    # Extract day numbers
+                    start_day_match = re.search(r'(\d+)', start_part)
+                    end_day_match = re.search(r'(\d+)', end_part)
+                    
+                    if start_day_match and end_day_match:
+                        start_day = int(start_day_match.group(1))
+                        end_day = int(end_day_match.group(1))
+                        
+                        # Extract month and year from end_part
+                        month_year_match = re.search(r'([A-Za-z]+)\s+(\d{4})', end_part)
+                        if month_year_match:
+                            month_name = month_year_match.group(1)
+                            year_num = int(month_year_match.group(2))
+                            
+                            # Create start and end dates
+                            month_num = datetime.strptime(month_name, '%B').month
+                            start_date = datetime(year_num, month_num, start_day)
+                            end_date = datetime(year_num, month_num, end_day)
+                            
+                            return start_date.date(), end_date.date()
+                        
+                    # Fallback: try to parse the individual parts
+                    try:
+                        start_date = dateutil.parser.parse(f"{start_part} {year}")
+                        end_date = dateutil.parser.parse(f"{end_part} {year}")
+                        return start_date.date(), end_date.date()
+                    except:
+                        pass
+            
+            if '.' in date_string:
+                # Format DD.MM.YYYY
+                try:
+                    date_obj = datetime.strptime(date_string, '%d.%m.%Y')
+                    return date_obj.date(), date_obj.date()
+                except ValueError:
+                    pass
+            
+            # Handle month-year format like "March 2026" -> first and last day of month
+            # First check if the date_string already contains the year
+            month_year_pattern = re.match(r'^([A-Za-z]+)\s+(\d{4})$', date_string.strip())
+            if month_year_pattern:
+                month_name = month_year_pattern.group(1)
+                year_num = int(month_year_pattern.group(2))
                 
-                start_date = dateutil.parser.parse(f"{start_str} {year}")
-                end_date = dateutil.parser.parse(f"{end_str} {year}")
-                
-                return start_date.date(), end_date.date()
+                try:
+                    month_num = datetime.strptime(month_name, '%B').month
+                    last_day = calendar.monthrange(year_num, month_num)[1]
+                    
+                    start_date = datetime(year_num, month_num, 1)
+                    end_date = datetime(year_num, month_num, last_day)
+                    
+                    return start_date.date(), end_date.date()
+                except ValueError:
+                    pass
             else:
-                # Одна дата
-                date = dateutil.parser.parse(f"{date_string} {year}")
-                return date.date(), date.date()
+                # Check if the date_string is just a month name, then append the provided year
+                month_only_pattern = re.match(r'^([A-Za-z]+)$', date_string.strip())
+                if month_only_pattern:
+                    month_name = month_only_pattern.group(1)
+                    try:
+                        month_num = datetime.strptime(month_name, '%B').month
+                        last_day = calendar.monthrange(year, month_num)[1]
+                        
+                        start_date = datetime(year, month_num, 1)
+                        end_date = datetime(year, month_num, last_day)
+                        
+                        return start_date.date(), end_date.date()
+                    except ValueError:
+                        pass
+            
+            # Single date format
+            try:
+                date_obj = dateutil.parser.parse(f"{date_string} {year}")
+                return date_obj.date(), date_obj.date()
+            except:
+                pass
+                
+            # If all parsing attempts fail
+            self.logger.error(f"Could not parse date string: '{date_string}'")
+            return None, None
                 
         except Exception as e:
             self.logger.error(f"Error parsing dates '{date_string}': {e}", exc_info=True)

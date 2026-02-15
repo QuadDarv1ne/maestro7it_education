@@ -28,30 +28,49 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     
     <style>
+        /* Основные цвета бренда */
+        :root {
+            --primary-color: #007bff;
+            --primary-dark: #0056b3;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
         /* Мобильная адаптация */
         .tournament-card {
             margin-bottom: 15px;
-            border-left: 3px solid #007bff;
-            transition: transform 0.2s;
+            border-left: 3px solid var(--primary-color);
+            transition: var(--transition);
+            overflow: hidden;
         }
         
         .tournament-card:hover {
             transform: translateY(-2px);
+            box-shadow: var(--box-shadow);
         }
         
         .tournament-date {
             font-weight: bold;
-            color: #28a745;
+            color: var(--success-color);
             font-size: 0.9rem;
         }
         
         .tournament-location {
-            color: #6c757d;
+            color: var(--secondary-color);
             font-size: 0.85rem;
         }
         
         .navbar-brand {
             font-size: 1.2rem;
+            font-weight: 600;
         }
         
         /* Адаптация для мобильных */
@@ -99,7 +118,7 @@
             }
         }
         
-        /* Темная тема для мобильных */
+        /* Темная тема */
         @media (prefers-color-scheme: dark) {
             body {
                 background-color: #121212;
@@ -114,6 +133,87 @@
             .navbar {
                 background-color: #1a1a1a !important;
             }
+            
+            .tournament-card {
+                background-color: #2d2d2d;
+            }
+            
+            .tournament-date {
+                color: #4caf50;
+            }
+            
+            .tournament-location {
+                color: #aaa;
+            }
+        }
+        
+        /* Улучшенные стили для кнопок */
+        .btn {
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Стили для бейджей */
+        .badge {
+            border-radius: 50px;
+            padding: 0.35em 0.65em;
+        }
+        
+        /* Анимации загрузки */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Стили для прогресс-бара */
+        .progress-container {
+            background-color: #e9ecef;
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.4s ease;
+        }
+        
+        /* Стили для тултипов */
+        [data-bs-toggle="tooltip"] {
+            position: relative;
+        }
+        
+        [data-bs-toggle="tooltip"]::after {
+            content: attr(data-bs-title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+        
+        [data-bs-toggle="tooltip"]:hover::after {
+            opacity: 1;
         }
     </style>
     

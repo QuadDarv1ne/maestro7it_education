@@ -63,9 +63,14 @@
 <div class="row">
     <div class="col-12">
         <!-- Заголовок -->
-        <div class="text-center mb-4">
-            <h1 class="display-6">Шахматные турниры в России 2026</h1>
+        <div class="text-center mb-4 fade-in">
+            <h1 class="display-6 fw-bold">Шахматные турниры в России 2026</h1>
             <p class="lead text-muted">Актуальный календарь официальных турниров FIDE</p>
+            <!-- Прогресс-бар для визуального интереса -->
+            <div class="progress-container mt-3">
+                <div class="progress-bar" style="width: {{ (tournaments|length * 10) if (tournaments|length * 10) < 100 else 100 }}%"></div>
+            </div>
+            <small class="text-muted">{{ tournaments|length }} из 100+ турниров загружено</small>
         </div>
         
         <!-- Статистика и действия -->

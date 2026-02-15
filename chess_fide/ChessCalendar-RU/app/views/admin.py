@@ -283,4 +283,25 @@ def logout():
 @admin_bp.route('/settings')
 def settings():
     """Настройки приложения"""
-    return render_template('admin/settings.html')
+    import sys
+    from flask import __version__ as flask_version
+    from app.models.user import User
+    from app.models.tournament import Tournament
+    
+    def python_version():
+        return f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}'
+    
+    def flask_version_func():
+        return flask_version
+    
+    def total_users():
+        return User.query.count()
+    
+    def total_tournaments():
+        return Tournament.query.count()
+    
+    return render_template('admin/settings.html',
+                         python_version=python_version,
+                         flask_version=flask_version_func,
+                         total_users=total_users,
+                         total_tournaments=total_tournaments)

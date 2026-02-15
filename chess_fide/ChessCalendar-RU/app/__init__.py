@@ -5,6 +5,18 @@ import os
 db = SQLAlchemy()
 
 def create_app(config_name='default'):
+    # Initialize logging before anything else
+    try:
+        from app.utils.logging_config import init_logging
+        init_logging()
+    except Exception as e:
+        logging.warning(f"Failed to initialize advanced logging: {e}")
+        # Fallback to basic logging
+        logging.basicConfig(level=logging.INFO)
+    
+    logger = logging.getLogger(__name__)
+    logger.info("Starting application initialization")
+    
     app = Flask(__name__, template_folder='../templates')
     
     # Загрузка конфигурации

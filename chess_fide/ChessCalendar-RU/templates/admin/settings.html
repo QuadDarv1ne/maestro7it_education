@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки приложения{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Настройки приложения</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Общие настройки</h5>
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label for="appName" class="form-label">Название приложения</label>
+                            <input type="text" class="form-control" id="appName" value="ChessCalendar-RU">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="appDescription" class="form-label">Описание приложения</label>
+                            <textarea class="form-control" id="appDescription" rows="3">Шахматный календарь России - приложение для отслеживания шахматных турниров в России</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="timezone" class="form-label">Часовой пояс</label>
+                            <select class="form-control" id="timezone">
+                                <option value="Europe/Moscow" selected>Europe/Moscow</option>
+                                <option value="UTC">UTC</option>
+                                <option value="Europe/London">Europe/London</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Настройки обновления</h5>
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label for="updateFrequency" class="form-label">Частота автоматического обновления</label>
+                            <select class="form-control" id="updateFrequency">
+                                <option value="6">Каждые 6 часов</option>
+                                <option value="12">Каждые 12 часов</option>
+                                <option value="24">Ежедневно</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="autoUpdateEnabled" checked>
+                            <label class="form-check-label" for="autoUpdateEnabled">Включить автоматическое обновление</label>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="updateHour" class="form-label">Время ежедневного обновления (час)</label>
+                            <input type="number" class="form-control" id="updateHour" min="0" max="23" value="3">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Информация о системе</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>Версия:</strong> 2.0</li>
+                        <li><strong>Python:</strong> {{ python_version() }}</li>
+                        <li><strong>Flask:</strong> {{ flask_version() }}</li>
+                        <li><strong>База данных:</strong> SQLite</li>
+                        <li><strong>Пользователей:</strong> {{ total_users() }}</li>
+                        <li><strong>Турниров:</strong> {{ total_tournaments() }}</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Действия</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-warning" onclick="confirmAction('Перезапустить приложение?', '#')">Перезапустить приложение</button>
+                        <button class="btn btn-info" onclick="confirmAction('Выполнить резервное копирование?', '#')">Создать резервную копию</button>
+                        <button class="btn btn-danger" onclick="confirmAction('Очистить все данные?', '#')">Сбросить приложение</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmAction(message, actionUrl) {
+    if (confirm(message)) {
+        window.location.href = actionUrl;
+    }
+}
+</script>
+{% endblock %}

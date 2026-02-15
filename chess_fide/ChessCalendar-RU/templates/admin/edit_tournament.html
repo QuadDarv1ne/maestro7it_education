@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать турнир{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Редактировать турнир "{{ tournament.name }}"</h1>
+    
+    <form method="POST">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Название турнира</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ tournament.name }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="start_date" class="form-label">Дата начала</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                           value="{{ tournament.start_date.strftime('%Y-%m-%d') if tournament.start_date else '' }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="end_date" class="form-label">Дата окончания</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                           value="{{ tournament.end_date.strftime('%Y-%m-%d') if tournament.end_date else '' }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="location" class="form-label">Место проведения</label>
+                    <input type="text" class="form-control" id="location" name="location" value="{{ tournament.location }}" required>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="category" class="form-label">Категория</label>
+                    <select class="form-control" id="category" name="category" required>
+                        <option value="FIDE" {% if tournament.category == 'FIDE' %}selected{% endif %}>FIDE</option>
+                        <option value="National" {% if tournament.category == 'National' %}selected{% endif %}>Национальный</option>
+                        <option value="Regional" {% if tournament.category == 'Regional' %}selected{% endif %}>Региональный</option>
+                        <option value="Online" {% if tournament.category == 'Online' %}selected{% endif %}>Онлайн</option>
+                        <option value="Youth" {% if tournament.category == 'Youth' %}selected{% endif %}>Молодежный</option>
+                        <option value="Women" {% if tournament.category == 'Women' %}selected{% endif %}>Женский</option>
+                        <option value="Senior" {% if tournament.category == 'Senior' %}selected{% endif %}>Ветеранский</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="status" class="form-label">Статус</label>
+                    <select class="form-control" id="status" name="status">
+                        <option value="Scheduled" {% if tournament.status == 'Scheduled' %}selected{% endif %}>Запланирован</option>
+                        <option value="Ongoing" {% if tournament.status == 'Ongoing' %}selected{% endif %}>Идет</option>
+                        <option value="Completed" {% if tournament.status == 'Completed' %}selected{% endif %}>Завершен</option>
+                        <option value="Cancelled" {% if tournament.status == 'Cancelled' %}selected{% endif %}>Отменен</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="fide_id" class="form-label">FIDE ID</label>
+                    <input type="text" class="form-control" id="fide_id" name="fide_id" value="{{ tournament.fide_id }}">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="source_url" class="form-label">URL источника</label>
+                    <input type="url" class="form-control" id="source_url" name="source_url" value="{{ tournament.source_url }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            <a href="{{ url_for('admin.tournaments') }}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

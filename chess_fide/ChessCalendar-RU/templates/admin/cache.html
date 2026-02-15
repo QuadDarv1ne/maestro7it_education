@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Управление кэшем{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Управление кэшем</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Статистика кэша</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-borderless">
+                <tbody>
+                    <tr>
+                        <td><strong>Количество элементов в кэше:</strong></td>
+                        <td>{{ cache_stats.total_items if cache_stats.total_items else 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Размер кэша:</strong></td>
+                        <td>{{ cache_stats.size if cache_stats.size else 0 }} байт</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Время жизни кэша:</strong></td>
+                        <td>{{ cache_stats.default_ttl if cache_stats.default_ttl else 'Не установлено' }} сек</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Процент попаданий:</strong></td>
+                        <td>{{ cache_stats.hit_rate if cache_stats.hit_rate else 0 }}%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Очистка кэша</h5>
+        </div>
+        <div class="card-body">
+            <p>Очистка кэша удалит все временные данные и заставит приложение заново загрузить данные из базы данных.</p>
+            <form method="POST" action="{{ url_for('admin.clear_cache') }}" onsubmit="return confirm('Вы уверены, что хотите очистить весь кэш?');">
+                <button type="submit" class="btn btn-danger">Очистить кэш</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

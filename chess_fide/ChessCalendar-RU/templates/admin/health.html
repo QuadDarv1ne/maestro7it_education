@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Проверка состояния системы{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Проверка состояния системы</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Общий статус системы</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-{{ 'success' if health_status.overall == 'healthy' else 'danger' }}">
+                <h4 class="alert-heading">
+                    {% if health_status.overall == 'healthy' %}
+                        <i class="bi bi-check-circle"></i> Система в рабочем состоянии
+                    {% else %}
+                        <i class="bi bi-exclamation-triangle"></i> Проблемы в системе
+                    {% endif %}
+                </h4>
+                <p>Общий статус: {{ health_status.overall.upper() }}</p>
+                <p>Время проверки: {{ health_status.timestamp }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Детали проверки компонентов</h5>
+        </div>
+        <div class="card-body">
+            <div class="accordion" id="healthAccordion">
+                {% for component, details in health_details.items() %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading{{ loop.index }}">
+                        <button class="accordion-button {% if details.status != 'ok' %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="{% if details.status == 'ok' %}true{% else %}false{% endif %}" aria-controls="collapse{{ loop.index }}">
+                            <span class="badge bg-{{ 'success' if details.status == 'ok' else 'danger' }} me-2">{{ details.status.upper() }}</span>
+                            {{ details.name }}
+                        </button>
+                    </h2>
+                    <div id="collapse{{ loop.index }}" class="accordion-collapse collapse {% if details.status == 'ok' %}show{% endif %}" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#healthAccordion">
+                        <div class="accordion-body">
+                            <p><strong>Описание:</strong> {{ details.description }}</p>
+                            <p><strong>Состояние:</strong> {{ details.status }}</p>
+                            {% if details.message %}
+                            <p><strong>Сообщение:</strong> {{ details.message }}</p>
+                            {% endif %}
+                            {% if details.details %}
+                            <p><strong>Дополнительно:</strong></p>
+                            <pre class="bg-light p-2">{{ details.details | tojson(indent=2) }}</pre>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
