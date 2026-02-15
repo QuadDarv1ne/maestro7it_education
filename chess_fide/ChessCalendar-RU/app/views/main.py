@@ -363,3 +363,41 @@ def toggle_tournament_subscription(tournament_id):
             return jsonify({'success': True, 'subscribed': True, 'message': 'Подписка оформлена успешно'})
         else:
             return jsonify({'success': False, 'message': 'Ошибка при подписке'})
+
+
+@main_bp.route('/health')
+def health_check():
+    """Health check endpoint for the application"""
+    from app.utils.monitoring import health_checker
+    
+    try:
+        health_status = health_checker.get_health_status()
+        health_details = health_checker.run_health_checks()
+        
+        return jsonify({
+            'status': 'ok',
+            'health_status': health_status,
+            'timestamp': datetime.now().isoformat(),
+            'checks': health_details
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
+@main_bp.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors"""
+    return render_template('error/404.html'), 404
+
+
+@main_bp.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    from app.utils.logging_config import get_logger
+    logger = get_logger('app.errors')
+    logger.error(f'Server Error: {error}', exc_info=True)
+    return render_template('error/500.html'), 500

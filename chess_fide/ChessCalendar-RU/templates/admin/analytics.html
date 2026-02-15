@@ -1,351 +1,233 @@
 {% extends "admin/base.html" %}
 
-{% block title %}Аналитика - Админ панель - ChessCalendar-RU{% endblock %}
-
-{% block styles %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css">
-{% endblock %}
+{% block title %}Аналитика - Шахматный календарь{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Аналитика приложения</h1>
+    
+    <!-- Summary Cards -->
     <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0"><i class="bi bi-bar-chart-line"></i> Аналитика платформы</h4>
-                        <div>
-                            <button class="btn btn-light" id="refreshAnalytics">
-                                <i class="bi bi-arrow-repeat"></i> Обновить
-                            </button>
-                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light ms-2">
-                                <i class="bi bi-arrow-left"></i> Назад к панели
-                            </a>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Турниров</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ analytics_report.tournament_analytics.total_tournaments }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-trophy fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-                    
-                    <!-- Summary Cards -->
-                    <div class="row mb-4">
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-primary shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                                Всего пользователей</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ overview.total_users }}</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-people fs-2 text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Пользователей</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ analytics_report.user_analytics.total_users }}</div>
                         </div>
-                        
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-success shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                                Турниров</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ overview.total_tournaments }}</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-calendar fs-2 text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-info shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                                Активных за 30 дней</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ overview.active_users_30_days }}</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-person-check fs-2 text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-warning shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                                Новых за 30 дней</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ overview.new_users_30_days }}</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-person-plus fs-2 text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
                         </div>
                     </div>
-                    
-                    <!-- Charts Row -->
-                    <div class="row">
-                        <div class="col-xl-8 col-lg-7">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Активность пользователей (последние 30 дней)</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-area">
-                                        <canvas id="userActivityChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Взаимодействий</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ analytics_report.interaction_analytics.total_interactions }}</div>
                         </div>
-                        
-                        <div class="col-xl-4 col-lg-5">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Статистика форума</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-pie pt-4 pb-2">
-                                        <canvas id="forumStatsChart"></canvas>
-                                    </div>
-                                    <div class="mt-4 text-center small">
-                                        <span class="me-2"><i class="fas fa-circle text-primary"></i> Темы</span>
-                                        <span class="me-2"><i class="fas fa-circle text-success"></i> Сообщения</span>
-                                        <span class="me-2"><i class="fas fa-circle text-info"></i> Рейтинги</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
                         </div>
                     </div>
-                    
-                    <!-- Top Content Row -->
-                    <div class="row">
-                        <div class="col-lg-6 mb-4">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Топ рейтинг турниров</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>Турнир</th>
-                                                    <th>Рейтинг</th>
-                                                    <th>Голосов</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for tournament in top_rated %}
-                                                <tr>
-                                                    <td>{{ tournament.name }}</td>
-                                                    <td>
-                                                        <div class="d-flex align-items-center">
-                                                            <span class="me-2">{{ tournament.avg_rating }}/5.0</span>
-                                                            <div class="progress" style="height: 10px; width: 100px;">
-                                                                <div class="progress-bar" role="progressbar" 
-                                                                     style="width: {{ (tournament.avg_rating / 5 * 100)|int }}%" 
-                                                                     aria-valuenow="{{ (tournament.avg_rating / 5 * 100)|round(0, 'floor')|int }}" 
-                                                                     aria-valuemin="0" aria-valuemax="100"></div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>{{ tournament.rating_count }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Рейтингов</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ analytics_report.rating_analytics.total_ratings }}</div>
                         </div>
-                        
-                        <div class="col-lg-6 mb-4">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Самые активные пользователи</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>Пользователь</th>
-                                                    <th>Активность</th>
-                                                    <th>Сообщений</th>
-                                                    <th>Тем</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for user in most_active %}
-                                                <tr>
-                                                    <td>{{ user.username }}</td>
-                                                    <td>{{ user.total_activity }}</td>
-                                                    <td>{{ user.post_count }}</td>
-                                                    <td>{{ user.thread_count }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Recent Reports -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Недавние жалобы</h6>
-                                    <a href="{{ url_for('admin.reports') }}" class="btn btn-sm btn-primary">Все жалобы</a>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>ID</th>
-                                                    <th>Тип</th>
-                                                    <th>Контент</th>
-                                                    <th>Причина</th>
-                                                    <th>Пожаловался</th>
-                                                    <th>Дата</th>
-                                                    <th>Статус</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for report in recent_reports %}
-                                                <tr>
-                                                    <td>{{ report.id }}</td>
-                                                    <td><span class="badge bg-{% if report.reported_type == 'thread' %}primary{% else %}secondary{% endif %}">{{ report.reported_type|upper }}</span></td>
-                                                    <td>{{ report.reported_id }}</td>
-                                                    <td>{{ report.reason }}</td>
-                                                    <td>{{ report.reporter_username }}</td>
-                                                    <td>{{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-                                                    <td>
-                                                        {% if report.is_resolved %}
-                                                            <span class="badge bg-success">Решено</span>
-                                                        {% else %}
-                                                            <span class="badge bg-warning">Открыто</span>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-auto">
+                            <i class="fas fa-star fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script>
-// Prepare data for charts
-const userData = {{ user_activity_data|tojson }};
-const forumData = {{ forum_activity_data|tojson }};
-const overview = {{ overview|tojson }};
-
-// User Activity Chart
-const userActivityCtx = document.getElementById('userActivityChart').getContext('2d');
-const userActivityChart = new Chart(userActivityCtx, {
-    type: 'line',
-    data: {
-        labels: userData.map(item => item[0]),
-        datasets: [{
-            label: 'Новые пользователи',
-            data: userData.map(item => item[1]),
-            borderColor: '#4e73df',
-            backgroundColor: 'rgba(78, 115, 223, 0.05)',
-            tension: 0.3
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: function(value) {
-                        return value;
-                    }
-                }
-            }
-        },
-        plugins: {
-            legend: {
-                display: false
-            }
-        }
-    }
-});
-
-// Forum Stats Chart
-const forumStatsCtx = document.getElementById('forumStatsChart').getContext('2d');
-const forumStatsChart = new Chart(forumStatsCtx, {
-    type: 'doughnut',
-    data: {
-        labels: ['Темы', 'Сообщения', 'Рейтинги'],
-        datasets: [{
-            data: [overview.total_forum_threads, overview.total_forum_posts, overview.total_ratings],
-            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
-            hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
-            hoverBorderColor: 'rgba(234, 236, 244, 1)'
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
-        }
-    }
-});
-
-// Refresh button functionality
-document.getElementById('refreshAnalytics').addEventListener('click', function() {
-    // Show loading state
-    const btn = this;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="bi bi-arrow-repeat bi-spin"></i> Обновление...';
-    btn.disabled = true;
     
-    // Reload the page to refresh data
-    location.reload();
-});
-</script>
+    <!-- Detailed Analytics Sections -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Статистика турниров</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Всего турниров:</strong> {{ analytics_report.tournament_analytics.total_tournaments }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Предстоящие турниры:</strong> {{ analytics_report.tournament_analytics.upcoming_tournaments }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Завершенные турниры:</strong> {{ analytics_report.tournament_analytics.completed_tournaments }}
+                    </div>
+                    
+                    <h6 class="mt-4">Категории турниров:</h6>
+                    <ul class="list-group">
+                        {% for category, count in analytics_report.tournament_analytics.categories.items() %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ category }}
+                            <span class="badge badge-primary badge-pill">{{ count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Статистика пользователей</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Всего пользователей:</strong> {{ analytics_report.user_analytics.total_users }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Активных пользователей:</strong> {{ analytics_report.user_analytics.active_users }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Администраторов:</strong> {{ analytics_report.user_analytics.admin_users }}
+                    </div>
+                    
+                    <h6 class="mt-4">Последние регистрации:</h6>
+                    <ul class="list-group">
+                        {% for date, count in analytics_report.user_analytics.recent_registrations.items() %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ date }}
+                            <span class="badge badge-secondary badge-pill">{{ count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Взаимодействия пользователей</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Всего взаимодействий:</strong> {{ analytics_report.interaction_analytics.total_interactions }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Последние 7 дней:</strong> {{ analytics_report.interaction_analytics.recent_interactions }}
+                    </div>
+                    
+                    <h6 class="mt-4">Типы взаимодействий:</h6>
+                    <ul class="list-group">
+                        {% for interaction_type, count in analytics_report.interaction_analytics.interaction_types.items() %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ interaction_type }}
+                            <span class="badge badge-info badge-pill">{{ count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Рейтинги турниров</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Всего рейтингов:</strong> {{ analytics_report.rating_analytics.total_ratings }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Средний рейтинг:</strong> {{ "%.2f"|format(analytics_report.rating_analytics.overall_average) }}
+                    </div>
+                    
+                    <h6 class="mt-4">Распределение рейтингов:</h6>
+                    <ul class="list-group">
+                        {% for rating, count in analytics_report.rating_analytics.rating_distribution.items() %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ rating }}★
+                            <span class="badge badge-warning badge-pill">{{ count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Топ-10 популярных турниров</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for tournament_name, interaction_count in analytics_report.interaction_analytics.popular_tournaments %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ tournament_name }}
+                            <span class="badge badge-success badge-pill">{{ interaction_count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Топ-10 любимых турниров</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for tournament_name, favorite_count in analytics_report.favorite_analytics.most_favorited %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ tournament_name }}
+                            <span class="badge badge-danger badge-pill">{{ favorite_count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

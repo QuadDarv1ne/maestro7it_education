@@ -8,7 +8,7 @@ def create_app(config_name='default'):
     import logging
     # Initialize logging before anything else
     try:
-        from app.utils.logging_config import init_logging
+        from app.utils.logging_config import init_logging, setup_error_handlers
         init_logging()
     except Exception as e:
         logging.warning(f"Failed to initialize advanced logging: {e}")
@@ -29,6 +29,9 @@ def create_app(config_name='default'):
     # Создание таблиц
     with app.app_context():
         db.create_all()
+    
+    # Setup error handlers
+    setup_error_handlers(app)
     
     # Статические файлы
     @app.route('/static/<path:filename>')

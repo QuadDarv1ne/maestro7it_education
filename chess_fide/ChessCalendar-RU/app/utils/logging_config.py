@@ -3,6 +3,7 @@ import logging.handlers
 import os
 from datetime import datetime
 from pathlib import Path
+from flask import request, render_template, jsonify
 
 
 class LoggingConfig:
@@ -170,3 +171,39 @@ def log_event(event_type, message, level=logging.INFO, extra_data=None):
 def init_logging():
     """Initialize the logging system"""
     log_config.setup_logging()
+
+
+def get_error_logger():
+    """Get a logger specifically for errors"""
+    return logging.getLogger('app.errors')
+
+
+def log_exception(logger, message="Exception occurred", exc_info=True):
+    """Log an exception with additional context"""
+    logger.error(message, exc_info=exc_info)
+
+
+def setup_error_handlers(app):
+    """Setup global error handlers for the Flask app"""
+    @app.errorhandler(404)
+    def not_found_error(error):
+        logger = logging.getLogger('app.errors')
+        logger.warning(f'404 error: {request.url}')
+        return render_template('error/404.html'), 404
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        logger = logging.getLogger('app.errors')
+        logger.error(f'500 error: {error}', exc_info=True)
+        return render_template('error/500.html'), 500
+    
+    @app.errorhandler(Exception)
+    def handle_exception(error):
+        logger = logging.getLogger('app.errors')
+        logger.error(f'Unhandled exception: {error}', exc_info=True)
+        
+        # Return JSON error if AJAX request
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'error': 'Internal server error', 'message': 'An error occurred'}), 500
+        
+        return render_template('error/500.html'), 500

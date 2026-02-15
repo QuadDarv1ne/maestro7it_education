@@ -1,256 +1,240 @@
-from datetime import datetime, timedelta
-from collections import defaultdict
 from app import db
-from app.models.user import User
 from app.models.tournament import Tournament
-from app.models.forum import ForumThread, ForumPost
+from app.models.user import User
 from app.models.rating import TournamentRating
-from app.models.notification import Notification
-from app.models.report import Report
+from app.models.preference import UserInteraction
+from app.models.favorite import FavoriteTournament
+from datetime import datetime, timedelta
+from collections import defaultdict, Counter
+import json
 
 
 class AnalyticsService:
-    """Service for analytics and reporting"""
-    
+    """Service for collecting and analyzing application usage data"""
+
     @staticmethod
-    def get_platform_overview():
-        """Get overall platform statistics"""
-        stats = {
-            'total_users': User.query.count(),
-            'total_tournaments': Tournament.query.count(),
-            'total_forum_threads': ForumThread.query.count(),
-            'total_forum_posts': ForumPost.query.count(),
-            'total_ratings': TournamentRating.query.count(),
-            'total_notifications': Notification.query.count(),
-            'total_reports': Report.query.count(),
-            'active_users_30_days': AnalyticsService.get_active_users_count(30),
-            'new_users_30_days': AnalyticsService.get_new_users_count(30)
-        }
-        return stats
-    
-    @staticmethod
-    def get_active_users_count(days=30):
-        """Get count of users who were active in the last N days"""
-        from datetime import datetime, timedelta
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+    def get_tournament_analytics():
+        """Get comprehensive tournament analytics"""
+        # Overall tournament statistics
+        total_tournaments = Tournament.query.count()
+        upcoming_tournaments = Tournament.query.filter(
+            Tournament.start_date >= datetime.today().date(),
+            Tournament.status != 'Completed'
+        ).count()
+        completed_tournaments = Tournament.query.filter_by(status='Completed').count()
         
-        # Assuming we track user activity through last_login or similar field
-        # In a real app, you'd have more sophisticated activity tracking
-        active_users = User.query.filter(User.last_login >= cutoff_date).count()
-        return active_users
-    
-    @staticmethod
-    def get_new_users_count(days=30):
-        """Get count of new users registered in the last N days"""
-        from datetime import datetime, timedelta
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        # Category distribution
+        category_counts = db.session.query(
+            Tournament.category, 
+            db.func.count(Tournament.id)
+        ).group_by(Tournament.category).all()
         
-        new_users = User.query.filter(User.created_at >= cutoff_date).count()
-        return new_users
-    
-    @staticmethod
-    def get_user_activity_data(days=30):
-        """Get user activity data for the last N days"""
-        from datetime import datetime, timedelta
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        # Status distribution
+        status_counts = db.session.query(
+            Tournament.status, 
+            db.func.count(Tournament.id)
+        ).group_by(Tournament.status).all()
         
-        # Get daily user activity counts
-        user_activities = db.session.query(
-            db.func.date(User.created_at).label('date'),
-            db.func.count(User.id).label('count')
+        # Location distribution (top 10)
+        location_counts = db.session.query(
+            Tournament.location, 
+            db.func.count(Tournament.id)
+        ).group_by(Tournament.location).order_by(
+            db.func.count(Tournament.id).desc()
+        ).limit(10).all()
+        
+        # Monthly tournament counts for the past year
+        one_year_ago = datetime.today() - timedelta(days=365)
+        monthly_counts = db.session.query(
+            db.func.strftime('%Y-%m', Tournament.start_date),
+            db.func.count(Tournament.id)
         ).filter(
-            User.created_at >= cutoff_date
+            Tournament.start_date >= one_year_ago
+        ).group_by(db.func.strftime('%Y-%m', Tournament.start_date)).all()
+        
+        return {
+            'total_tournaments': total_tournaments,
+            'upcoming_tournaments': upcoming_tournaments,
+            'completed_tournaments': completed_tournaments,
+            'categories': dict(category_counts),
+            'statuses': dict(status_counts),
+            'top_locations': dict(location_counts),
+            'monthly_distribution': dict(monthly_counts)
+        }
+
+    @staticmethod
+    def get_user_analytics():
+        """Get comprehensive user analytics"""
+        total_users = User.query.count()
+        active_users = User.query.filter(User.is_active == True).count()
+        admin_users = User.query.filter(User.is_admin == True).count()
+        
+        # User registration trends
+        thirty_days_ago = datetime.today() - timedelta(days=30)
+        recent_registrations = db.session.query(
+            db.func.date(User.created_at),
+            db.func.count(User.id)
+        ).filter(
+            User.created_at >= thirty_days_ago
         ).group_by(db.func.date(User.created_at)).all()
         
-        # Create a dictionary with dates and counts
-        activity_data = {}
-        current_date = cutoff_date.date()
-        end_date = datetime.utcnow().date()
-        
-        # Initialize all dates with 0
-        while current_date <= end_date:
-            activity_data[current_date.strftime('%Y-%m-%d')] = 0
-            current_date += timedelta(days=1)
-        
-        # Fill in actual counts
-        for activity in user_activities:
-            activity_data[activity.date.strftime('%Y-%m-%d')] = activity.count
-        
-        # Convert to sorted list of tuples
-        sorted_data = sorted(activity_data.items())
-        return sorted_data
-    
+        return {
+            'total_users': total_users,
+            'active_users': active_users,
+            'admin_users': admin_users,
+            'recent_registrations': dict(recent_registrations)
+        }
+
     @staticmethod
-    def get_forum_activity_data(days=30):
-        """Get forum activity data for the last N days"""
-        from datetime import datetime, timedelta
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+    def get_interaction_analytics():
+        """Get user interaction analytics"""
+        total_interactions = UserInteraction.query.count()
         
-        # Get daily forum post counts
-        post_activities = db.session.query(
-            db.func.date(ForumPost.created_at).label('date'),
-            db.func.count(ForumPost.id).label('count')
-        ).filter(
-            ForumPost.created_at >= cutoff_date
-        ).group_by(db.func.date(ForumPost.created_at)).all()
+        # Interaction type distribution
+        interaction_types = db.session.query(
+            UserInteraction.interaction_type,
+            db.func.count(UserInteraction.id)
+        ).group_by(UserInteraction.interaction_type).all()
         
-        # Create a dictionary with dates and counts
-        activity_data = {}
-        current_date = cutoff_date.date()
-        end_date = datetime.utcnow().date()
-        
-        # Initialize all dates with 0
-        while current_date <= end_date:
-            activity_data[current_date.strftime('%Y-%m-%d')] = 0
-            current_date += timedelta(days=1)
-        
-        # Fill in actual counts
-        for activity in post_activities:
-            activity_data[activity.date.strftime('%Y-%m-%d')] = activity.count
-        
-        # Convert to sorted list of tuples
-        sorted_data = sorted(activity_data.items())
-        return sorted_data
-    
-    @staticmethod
-    def get_top_rated_tournaments(limit=10):
-        """Get top-rated tournaments"""
-        # This requires a more complex query to calculate average ratings
-        from sqlalchemy import func
-        
-        # Subquery to calculate average rating per tournament
-        avg_ratings = db.session.query(
-            TournamentRating.tournament_id,
-            func.avg(TournamentRating.rating).label('avg_rating'),
-            func.count(TournamentRating.id).label('rating_count')
-        ).group_by(TournamentRating.tournament_id).subquery()
-        
-        # Join with tournaments to get details
-        top_tournaments = db.session.query(
+        # Popular tournaments based on interactions
+        popular_tournaments = db.session.query(
             Tournament,
-            avg_ratings.c.avg_rating,
-            avg_ratings.c.rating_count
-        ).join(avg_ratings, Tournament.id == avg_ratings.c.tournament_id)\
-         .order_by(avg_ratings.c.avg_rating.desc(), avg_ratings.c.rating_count.desc())\
-         .limit(limit).all()
+            db.func.count(UserInteraction.id).label('interaction_count')
+        ).join(UserInteraction).group_by(Tournament.id).order_by(
+            db.func.count(UserInteraction.id).desc()
+        ).limit(10).all()
         
-        result = []
-        for tournament, avg_rating, rating_count in top_tournaments:
-            result.append({
-                'id': tournament.id,
-                'name': tournament.name,
-                'location': tournament.location,
-                'avg_rating': round(float(avg_rating), 2),
-                'rating_count': rating_count
-            })
+        # Recent interactions
+        seven_days_ago = datetime.today() - timedelta(days=7)
+        recent_interactions = db.session.query(
+            UserInteraction
+        ).filter(
+            UserInteraction.created_at >= seven_days_ago
+        ).count()
         
-        return result
-    
+        return {
+            'total_interactions': total_interactions,
+            'interaction_types': dict(interaction_types),
+            'popular_tournaments': [(t[0].name, t[1]) for t in popular_tournaments],
+            'recent_interactions': recent_interactions
+        }
+
     @staticmethod
-    def get_most_active_users(limit=10):
-        """Get most active users based on forum participation"""
-        # Count posts and threads per user
-        user_activity = db.session.query(
-            User.id,
-            User.username,
-            db.func.count(ForumPost.id).label('post_count'),
-            db.func.count(ForumThread.id).label('thread_count')
-        ).outerjoin(ForumPost, User.id == ForumPost.author_id)\
-         .outerjoin(ForumThread, User.id == ForumThread.author_id)\
-         .group_by(User.id, User.username)\
-         .order_by(db.func.coalesce(db.func.count(ForumPost.id), 0) + 
-                  db.func.coalesce(db.func.count(ForumThread.id), 0).desc())\
-         .limit(limit).all()
+    def get_rating_analytics():
+        """Get tournament rating analytics"""
+        total_ratings = TournamentRating.query.count()
         
-        result = []
-        for user in user_activity:
-            result.append({
-                'id': user.id,
-                'username': user.username,
-                'post_count': user.post_count or 0,
-                'thread_count': user.thread_count or 0,
-                'total_activity': (user.post_count or 0) + (user.thread_count or 0)
-            })
-        
-        return result
-    
-    @staticmethod
-    def get_recent_reports(limit=10):
-        """Get recent reports"""
-        recent_reports = Report.query.order_by(Report.created_at.desc()).limit(limit).all()
-        
-        result = []
-        for report in recent_reports:
-            result.append({
-                'id': report.id,
-                'reported_type': report.reported_type,
-                'reported_id': report.reported_id,
-                'reason': report.reason,
-                'reporter_username': report.reporter.username if report.reporter else 'Unknown',
-                'created_at': report.created_at,
-                'is_resolved': report.is_resolved
-            })
-        
-        return result
-    
-    @staticmethod
-    def get_tournament_engagement():
-        """Get tournament engagement metrics"""
-        # Count favorites, ratings, and forum activity per tournament
-        engagement_data = db.session.query(
+        # Average ratings by tournament
+        avg_ratings = db.session.query(
             Tournament.id,
             Tournament.name,
-            db.func.count(FavoriteTournament.id).label('favorites_count'),
             db.func.avg(TournamentRating.rating).label('avg_rating'),
-            db.func.count(TournamentRating.id).label('rating_count'),
-            db.func.count(ForumThread.id).label('discussion_count')
-        ).outerjoin('favorites')\
-         .outerjoin('ratings')\
-         .outerjoin('forum_threads')\
-         .group_by(Tournament.id, Tournament.name)\
-         .order_by(db.func.coalesce(db.func.count(FavoriteTournament.id), 0).desc())\
-         .limit(10).all()
+            db.func.count(TournamentRating.id).label('rating_count')
+        ).join(TournamentRating).group_by(Tournament.id).order_by(
+            db.func.avg(TournamentRating.rating).desc()
+        ).limit(10).all()
         
-        result = []
-        for item in engagement_data:
-            result.append({
-                'id': item.id,
-                'name': item.name,
-                'favorites_count': item.favorites_count or 0,
-                'avg_rating': float(item.avg_rating) if item.avg_rating else 0,
-                'rating_count': item.rating_count or 0,
-                'discussion_count': item.discussion_count or 0
-            })
+        # Rating distribution
+        rating_distribution = db.session.query(
+            TournamentRating.rating,
+            db.func.count(TournamentRating.id)
+        ).group_by(TournamentRating.rating).all()
         
-        return result
-    
+        # Overall average rating
+        overall_avg = db.session.query(
+            db.func.avg(TournamentRating.rating)
+        ).scalar()
+        
+        return {
+            'total_ratings': total_ratings,
+            'overall_average': float(overall_avg) if overall_avg else 0,
+            'top_rated': [(t[1], float(t[2]), t[3]) for t in avg_ratings],
+            'rating_distribution': dict(rating_distribution)
+        }
+
     @staticmethod
-    def get_growth_metrics():
-        """Get growth metrics for the platform"""
-        from datetime import datetime, timedelta
+    def get_favorite_analytics():
+        """Get favorite tournament analytics"""
+        total_favorites = FavoriteTournament.query.count()
         
-        # Calculate weekly growth for the past 12 weeks
-        weeks_data = []
-        for i in range(12):
-            end_date = datetime.utcnow() - timedelta(weeks=i)
-            start_date = end_date - timedelta(weeks=1)
-            
-            new_users = User.query.filter(
-                User.created_at >= start_date,
-                User.created_at < end_date
-            ).count()
-            
-            new_tournaments = Tournament.query.filter(
-                Tournament.created_at >= start_date,
-                Tournament.created_at < end_date
-            ).count()
-            
-            weeks_data.append({
-                'week': start_date.strftime('%Y-W%U'),
-                'new_users': new_users,
-                'new_tournaments': new_tournaments
+        # Most favorited tournaments
+        most_favorited = db.session.query(
+            Tournament.name,
+            db.func.count(FavoriteTournament.id).label('favorite_count')
+        ).join(FavoriteTournament).group_by(Tournament.id).order_by(
+            db.func.count(FavoriteTournament.id).desc()
+        ).limit(10).all()
+        
+        # Favorites by user
+        user_favorite_counts = db.session.query(
+            User.id,
+            User.username,
+            db.func.count(FavoriteTournament.id).label('favorites_count')
+        ).join(FavoriteTournament).group_by(User.id).order_by(
+            db.func.count(FavoriteTournament.id).desc()
+        ).limit(10).all()
+        
+        return {
+            'total_favorites': total_favorites,
+            'most_favorited': most_favorited,
+            'top_users_by_favorites': [(u[1], u[2]) for u in user_favorite_counts]
+        }
+
+    @staticmethod
+    def get_comprehensive_report():
+        """Generate a comprehensive analytics report"""
+        report = {
+            'generated_at': datetime.now().isoformat(),
+            'tournament_analytics': AnalyticsService.get_tournament_analytics(),
+            'user_analytics': AnalyticsService.get_user_analytics(),
+            'interaction_analytics': AnalyticsService.get_interaction_analytics(),
+            'rating_analytics': AnalyticsService.get_rating_analytics(),
+            'favorite_analytics': AnalyticsService.get_favorite_analytics()
+        }
+        
+        return report
+
+    @staticmethod
+    def get_tournament_performance(tournament_id):
+        """Get detailed performance analytics for a specific tournament"""
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return None
+        
+        # Get all interactions with this tournament
+        interactions = UserInteraction.query.filter_by(
+            tournament_id=tournament_id
+        ).all()
+        
+        interaction_summary = defaultdict(list)
+        for interaction in interactions:
+            interaction_summary[interaction.interaction_type].append({
+                'user_id': interaction.user_id,
+                'created_at': interaction.created_at.isoformat()
             })
         
-        # Reverse to show oldest first
-        weeks_data.reverse()
-        return weeks_data
+        # Get ratings for this tournament
+        ratings = TournamentRating.query.filter_by(
+            tournament_id=tournament_id
+        ).all()
+        
+        avg_rating = sum(r.rating for r in ratings) / len(ratings) if ratings else 0
+        
+        # Get favorites
+        favorites = FavoriteTournament.query.filter_by(
+            tournament_id=tournament_id
+        ).count()
+        
+        return {
+            'tournament': tournament.to_dict(),
+            'interactions': dict(interaction_summary),
+            'total_interactions': len(interactions),
+            'total_ratings': len(ratings),
+            'average_rating': round(avg_rating, 2),
+            'total_favorites': favorites,
+            'engagement_score': len(interactions) + len(ratings) * 2 + favorites * 3
+        }
+
+
+# Global instance
+analytics_service = AnalyticsService()

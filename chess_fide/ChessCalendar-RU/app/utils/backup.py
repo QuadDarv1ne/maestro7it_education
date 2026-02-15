@@ -220,3 +220,80 @@ class BackupRestoreService:
     def get_backup_size(self, backup_path: str) -> int:
         """Get the size of a backup file"""
         return os.path.getsize(backup_path)
+
+
+class DatabaseBackupManager:
+    """Wrapper class for backward compatibility"""
+    
+    def __init__(self, db_path: str, backup_dir: str = "backups"):
+        self.service = BackupRestoreService(db_path, backup_dir)
+    
+    def create_compressed_backup(self) -> str:
+        """Create a compressed backup of the database"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_name = f"chess_calendar_backup_{timestamp}.zip"
+        return self.service.create_backup(backup_name)
+
+
+class DataExportManager:
+    """Manager for exporting data in various formats"""
+    
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+    
+    def export_tournaments_to_json(self, output_path: str) -> bool:
+        """Export tournaments to JSON format"""
+        try:
+            import json
+            from app import create_app, db
+            from app.models.tournament import Tournament
+            
+            app = create_app()
+            with app.app_context():
+                tournaments = Tournament.query.all()
+                data = [t.to_dict() for t in tournaments]
+                
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+            
+            return True
+        except Exception as e:
+            print(f"Error exporting to JSON: {e}")
+            return False
+    
+    def export_tournaments_to_csv(self, output_path: str) -> bool:
+        """Export tournaments to CSV format"""
+        try:
+            import csv
+            from app import create_app, db
+            from app.models.tournament import Tournament
+            
+            app = create_app()
+            with app.app_context():
+                tournaments = Tournament.query.all()
+                
+                with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
+                    fieldnames = ['id', 'name', 'start_date', 'end_date', 'location', 
+                                'category', 'status', 'description', 'prize_fund', 'organizer', 'fide_id']
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    
+                    writer.writeheader()
+                    for t in tournaments:
+                        writer.writerow({
+                            'id': t.id,
+                            'name': t.name,
+                            'start_date': t.start_date,
+                            'end_date': t.end_date,
+                            'location': t.location,
+                            'category': t.category,
+                            'status': t.status,
+                            'description': t.description,
+                            'prize_fund': t.prize_fund,
+                            'organizer': t.organizer,
+                            'fide_id': t.fide_id
+                        })
+            
+            return True
+        except Exception as e:
+            print(f"Error exporting to CSV: {e}")
+            return False

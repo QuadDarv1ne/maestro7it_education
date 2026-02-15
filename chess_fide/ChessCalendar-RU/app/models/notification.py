@@ -51,19 +51,6 @@ class Notification(db.Model):
         return f'<Notification {self.title}>'
 
 
-class Subscription(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    active = db.Column(db.Boolean, default=True, index=True)
-    preferences = db.Column(db.JSON, default=lambda: {
-        'new_tournaments': True,
-        'tournament_updates': True,
-        'reminders': True
-    })
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
 class TournamentReminder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False, index=True)
@@ -96,11 +83,24 @@ class TournamentReminder(db.Model):
     def __repr__(self):
         return f'<TournamentReminder {self.tournament_id}>'
 
+
+class Subscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    active = db.Column(db.Boolean, default=True, index=True)
+    preferences = db.Column(db.JSON, default=lambda: {
+        'new_tournaments': True,
+        'tournament_updates': True,
+        'reminders': True
+    })
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
     def __init__(self, email, preferences=None):
         self.email = email
         if preferences:
             self.preferences = preferences
-
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -109,6 +109,6 @@ class TournamentReminder(db.Model):
             'preferences': self.preferences,
             'created_at': self.created_at.isoformat()
         }
-
+    
     def __repr__(self):
         return f'<Subscription {self.email}>'

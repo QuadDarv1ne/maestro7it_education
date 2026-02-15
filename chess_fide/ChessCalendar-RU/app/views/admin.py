@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app import db
 from app.models.tournament import Tournament
 from app.models.user import User
+from app.utils.analytics import analytics_service
 from app.utils.notifications import notification_service
 from app.utils.cache import cache_service, TournamentCache
 from app.utils.monitoring import health_checker, performance_monitor
@@ -559,3 +560,24 @@ def statistics():
                          upcoming_tournaments=upcoming_tournaments,
                          monthly_stats=monthly_stats,
                          top_locations=top_locations)
+
+@admin_bp.route('/analytics')
+def analytics():
+    """Comprehensive analytics dashboard"""
+    # Get comprehensive analytics report
+    analytics_report = analytics_service.get_comprehensive_report()
+    
+    return render_template('admin/analytics.html', analytics_report=analytics_report)
+
+
+@admin_bp.route('/analytics/tournament/<int:tournament_id>')
+def tournament_analytics(tournament_id):
+    """Analytics for a specific tournament"""
+    tournament_data = analytics_service.get_tournament_performance(tournament_id)
+    
+    if not tournament_data:
+        flash('Турнир не найден', 'error')
+        return redirect(url_for('admin.statistics'))
+    
+    return render_template('admin/tournament_analytics.html', 
+                         tournament_data=tournament_data)

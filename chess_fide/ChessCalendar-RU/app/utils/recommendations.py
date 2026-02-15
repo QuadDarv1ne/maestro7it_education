@@ -3,8 +3,9 @@ from app.models.user import User
 from app.models.tournament import Tournament
 from app.models.favorite import FavoriteTournament
 from app.models.preference import UserInteraction
-from datetime import datetime
-from collections import defaultdict
+from datetime import datetime, timedelta
+from collections import defaultdict, Counter
+import math
 
 
 class RecommendationEngine:
@@ -41,6 +42,10 @@ class RecommendationEngine:
                     weight *= 3
                 elif interaction.interaction_type == 'view':
                     weight *= 1
+                elif interaction.interaction_type == 'register':
+                    weight *= 2
+                elif interaction.interaction_type == 'attend':
+                    weight *= 4
                 
                 category_weights[tournament.category] += weight
                 location_weights[tournament.location] += weight
@@ -76,6 +81,16 @@ class RecommendationEngine:
                 score += 5
             elif 31 <= days_until_start <= 60:  # Tournaments in the next 2 months
                 score += 3
+            elif days_until_start > 60:  # Future tournaments
+                score += 1
+            
+            # Add collaborative filtering component
+            similar_users_score = RecommendationEngine._collaborative_filtering_score(user_id, tournament.id)
+            score += similar_users_score
+            
+            # Add popularity bonus
+            popularity_bonus = RecommendationEngine._calculate_popularity_bonus(tournament.id)
+            score += popularity_bonus
             
             tournament_scores[tournament.id] = score
         
@@ -103,3 +118,77 @@ class RecommendationEngine:
         db.session.add(interaction)
         db.session.commit()
         return interaction
+
+    @staticmethod
+    def _collaborative_filtering_score(user_id, tournament_id):
+        """Calculate collaborative filtering score based on similar users"""
+        # Find users who interacted with the same tournaments
+        user_interactions = UserInteraction.query.filter_by(user_id=user_id).all()
+        user_tournament_ids = {ui.tournament_id for ui in user_interactions}
+
+        # Find other users who interacted with similar tournaments
+        similar_users = set()
+        for tournament_id in user_tournament_ids:
+            interactions = UserInteraction.query.filter_by(tournament_id=tournament_id).all()
+            for interaction in interactions:
+                if interaction.user_id != user_id:
+                    similar_users.add(interaction.user_id)
+
+        # Calculate score based on similar users' interactions with this tournament
+        score = 0
+        for similar_user_id in similar_users:
+            interactions = UserInteraction.query.filter_by(
+                user_id=similar_user_id,
+                tournament_id=tournament_id
+            ).all()
+            for interaction in interactions:
+                if interaction.interaction_type == 'favorite':
+                    score += 2
+                elif interaction.interaction_type == 'register':
+                    score += 1.5
+                elif interaction.interaction_type == 'attend':
+                    score += 3
+                elif interaction.interaction_type == 'view':
+                    score += 0.5
+
+        return score
+
+    @staticmethod
+    def _calculate_popularity_bonus(tournament_id):
+        """Calculate popularity bonus based on number of interactions"""
+        interactions = UserInteraction.query.filter_by(tournament_id=tournament_id).all()
+        interaction_count = len(interactions)
+
+        # Logarithmic scale to prevent overly popular items from dominating
+        if interaction_count > 0:
+            return math.log(interaction_count + 1)
+        return 0
+
+    @staticmethod
+    def get_collaborative_recommendations(user_id, limit=10):
+        """Get recommendations based on collaborative filtering"""
+        # Find users with similar interests
+        user_interactions = UserInteraction.query.filter_by(user_id=user_id).all()
+        user_tournament_ids = {ui.tournament_id for ui in user_interactions}
+
+        # Find other users who interacted with similar tournaments
+        candidate_tournaments = defaultdict(int)
+        for tournament_id in user_tournament_ids:
+            interactions = UserInteraction.query.filter_by(tournament_id=tournament_id).all()
+            for interaction in interactions:
+                if interaction.user_id != user_id:
+                    # Get other tournaments this similar user interacted with
+                    other_interactions = UserInteraction.query.filter_by(user_id=interaction.user_id).all()
+                    for other_interaction in other_interactions:
+                        if other_interaction.tournament_id not in user_tournament_ids:
+                            candidate_tournaments[other_interaction.tournament_id] += 1
+
+        # Sort by score and return top candidates
+        sorted_candidates = sorted(candidate_tournaments.items(), key=lambda x: x[1], reverse=True)
+        recommended_tournaments = []
+        for tournament_id, score in sorted_candidates[:limit]:
+            tournament = Tournament.query.get(tournament_id)
+            if tournament and tournament.status != 'Completed':
+                recommended_tournaments.append(tournament)
+
+        return recommended_tournaments
