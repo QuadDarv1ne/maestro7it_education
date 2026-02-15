@@ -66,6 +66,7 @@ def create_app(config_name='default'):
     from app.views.admin import admin_bp
     from app.views.user import user_bp
     from app.views.api_docs import api_docs_bp
+    from app.views.forum import forum_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)
