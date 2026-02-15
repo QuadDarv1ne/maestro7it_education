@@ -76,20 +76,17 @@ class TournamentUpdater:
                     ).first()
                     
                     if not existing:
-                        # Filter out None values and ensure required fields are present
-                        filtered_data = {k: v for k, v in tourney_data.items() if v is not None}
-
-                        # Ensure required fields have defaults if missing
-                        if 'description' not in filtered_data:
-                            filtered_data['description'] = None
-                        if 'prize_fund' not in filtered_data:
-                            filtered_data['prize_fund'] = None
-                        if 'organizer' not in filtered_data:
-                            filtered_data['organizer'] = None
-
-                        tournament = Tournament(**filtered_data)
-                        db.session.add(tournament)
-                        added_count += 1
+                        # Validate and clean the data before adding
+                        filtered_data = self._validate_and_clean_tournament_data(tourney_data)
+                        
+                        if filtered_data:
+                            tournament = Tournament(**filtered_data)
+                            # Run validation before adding to session
+                            if tournament.validate():
+                                db.session.add(tournament)
+                                added_count += 1
+                            else:
+                                logger.warning(f"Турнир не прошел валидацию: {tournament.name}")
                     processed_count += 1
                 except KeyError as ke:
                     logger.error(f"Ошибка при обработке турнира с FIDE: отсутствует поле {ke}")
@@ -126,20 +123,17 @@ class TournamentUpdater:
                     ).first()
                     
                     if not existing:
-                        # Filter out None values and ensure required fields are present
-                        filtered_data = {k: v for k, v in tourney_data.items() if v is not None}
-
-                        # Ensure required fields have defaults if missing
-                        if 'description' not in filtered_data:
-                            filtered_data['description'] = None
-                        if 'prize_fund' not in filtered_data:
-                            filtered_data['prize_fund'] = None
-                        if 'organizer' not in filtered_data:
-                            filtered_data['organizer'] = None
-
-                        tournament = Tournament(**filtered_data)
-                        db.session.add(tournament)
-                        added_count += 1
+                        # Validate and clean the data before adding
+                        filtered_data = self._validate_and_clean_tournament_data(tourney_data)
+                        
+                        if filtered_data:
+                            tournament = Tournament(**filtered_data)
+                            # Run validation before adding to session
+                            if tournament.validate():
+                                db.session.add(tournament)
+                                added_count += 1
+                            else:
+                                logger.warning(f"Турнир не прошел валидацию: {tournament.name}")
                     processed_count += 1
                 except KeyError as ke:
                     logger.error(f"Ошибка при обработке турнира с CFR: отсутствует поле {ke}")

@@ -1,11 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, date
 import re
 from app.models.tournament import Tournament
 import logging
 import json
 from urllib.parse import urljoin
+from dateutil import parser as date_parser
+import time
 
 logger = logging.getLogger('app.parsers')
 
@@ -265,15 +267,62 @@ class FIDEParses:
             if not start_date_str:
                 return None, None
             
-            start_date = parser.parse(str(start_date_str)).date()
+            start_date = self._parse_date_flexible(str(start_date_str))
             end_date = start_date
             
             if end_date_str:
-                end_date = parser.parse(str(end_date_str)).date()
+                end_date = self._parse_date_flexible(str(end_date_str))
             
             return start_date, end_date
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing JSON dates: {e}")
             return None, None
+    
+    def _parse_date_flexible(self, date_str):
+        """Flexible date parsing with multiple strategies"""
+        if not date_str:
+            return None
+        
+        # Remove any trailing time information
+        date_str = re.sub(r'\s+\d{1,2}:\d{2}(?:\s*[AP]M)?', '', date_str.strip())
+        
+        # Try different parsing strategies
+        strategies = [
+            lambda s: date_parser.parse(s).date(),  # dateutil parser
+            lambda s: datetime.strptime(s, '%Y-%m-%d').date(),  # ISO format
+            lambda s: datetime.strptime(s, '%d.%m.%Y').date(),  # DD.MM.YYYY
+            lambda s: datetime.strptime(s, '%m/%d/%Y').date(),  # MM/DD/YYYY
+        ]
+        
+        for strategy in strategies:
+            try:
+                return strategy(date_str)
+            except:
+                continue
+        
+        # If all strategies fail, try to extract date from string
+        try:
+            # Look for date patterns in the string
+            patterns = [
+                r'(\d{1,2}[./-]\d{1,2}[./-]\d{4})',  # DD/MM/YYYY, DD-MM-YYYY, etc.
+                r'(\d{4}[./-]\d{1,2}[./-]\d{1,2})',  # YYYY-MM-DD, YYYY/MM/DD
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, date_str)
+                if match:
+                    extracted_date = match.group(1)
+                    # Try to parse the extracted date
+                    for strategy in strategies[:2]:  # Try dateutil and ISO format
+                        try:
+                            return strategy(extracted_date)
+                        except:
+                            continue
+        except:
+            pass
+        
+        logger.error(f"Could not parse date string: {date_str}")
+        return None
 
     def _parse_tournaments_page(self, html_content):
         """Парсинг страницы с турнирами"""
@@ -431,3 +480,49 @@ class FIDEParses:
         # Ищем ID в URL вида ?id=12345
         match = re.search(r'id=(\d+)', href)
         return match.group(1) if match else None
+    
+    def _parse_date_flexible(self, date_str):
+        """Flexible date parsing with multiple strategies"""
+        if not date_str:
+            return None
+        
+        # Remove any trailing time information
+        date_str = re.sub(r'\s+\d{1,2}:\d{2}(?:\s*[AP]M)?', '', date_str.strip())
+        
+        # Try different parsing strategies
+        strategies = [
+            lambda s: date_parser.parse(s).date(),  # dateutil parser
+            lambda s: datetime.strptime(s, '%Y-%m-%d').date(),  # ISO format
+            lambda s: datetime.strptime(s, '%d.%m.%Y').date(),  # DD.MM.YYYY
+            lambda s: datetime.strptime(s, '%m/%d/%Y').date(),  # MM/DD/YYYY
+        ]
+        
+        for strategy in strategies:
+            try:
+                return strategy(date_str)
+            except:
+                continue
+        
+        # If all strategies fail, try to extract date from string
+        try:
+            # Look for date patterns in the string
+            patterns = [
+                r'(\d{1,2}[./-]\d{1,2}[./-]\d{4})',  # DD/MM/YYYY, DD-MM-YYYY, etc.
+                r'(\d{4}[./-]\d{1,2}[./-]\d{1,2})',  # YYYY-MM-DD, YYYY/MM/DD
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, date_str)
+                if match:
+                    extracted_date = match.group(1)
+                    # Try to parse the extracted date
+                    for strategy in strategies[:2]:  # Try dateutil and ISO format
+                        try:
+                            return strategy(extracted_date)
+                        except:
+                            continue
+        except:
+            pass
+        
+        logger.error(f"Could not parse date string: {date_str}")
+        return None

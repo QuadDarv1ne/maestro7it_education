@@ -1,11 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, date
 import re
 from app.models.tournament import Tournament
 import logging
 import random
 from urllib.parse import urljoin
+from dateutil import parser as date_parser
+import time
 
 logger = logging.getLogger('app.parsers')
 
@@ -401,9 +403,10 @@ class CFRParser:
                         
                     # Fallback: try to parse the individual parts
                     try:
-                        start_date = dateutil.parser.parse(f"{start_part} {year}")
-                        end_date = dateutil.parser.parse(f"{end_part} {year}")
-                        return start_date.date(), end_date.date()
+                        start_date = self._parse_date_flexible(f"{start_part} {year}")
+                        end_date = self._parse_date_flexible(f"{end_part} {year}")
+                        if start_date and end_date:
+                            return start_date, end_date
                     except:
                         pass
             
@@ -450,15 +453,61 @@ class CFRParser:
             
             # Single date format
             try:
-                date_obj = dateutil.parser.parse(f"{date_string} {year}")
-                return date_obj.date(), date_obj.date()
+                parsed_date = self._parse_date_flexible(f"{date_string} {year}")
+                if parsed_date:
+                    return parsed_date, parsed_date
             except:
                 pass
                 
             # If all parsing attempts fail
             self.logger.error(f"Could not parse date string: '{date_string}'")
             return None, None
-                
         except Exception as e:
             self.logger.error(f"Error parsing dates '{date_string}': {e}", exc_info=True)
             return None, None
+    
+    def _parse_date_flexible(self, date_str):
+        """Flexible date parsing with multiple strategies"""
+        if not date_str:
+            return None
+        
+        # Remove any trailing time information
+        date_str = re.sub(r'\s+\d{1,2}:\d{2}(?:\s*[AP]M)?', '', date_str.strip())
+        
+        # Try different parsing strategies
+        strategies = [
+            lambda s: date_parser.parse(s).date(),  # dateutil parser
+            lambda s: datetime.strptime(s, '%Y-%m-%d').date(),  # ISO format
+            lambda s: datetime.strptime(s, '%d.%m.%Y').date(),  # DD.MM.YYYY
+            lambda s: datetime.strptime(s, '%m/%d/%Y').date(),  # MM/DD/YYYY
+        ]
+        
+        for strategy in strategies:
+            try:
+                return strategy(date_str)
+            except:
+                continue
+        
+        # If all strategies fail, try to extract date from string
+        try:
+            # Look for date patterns in the string
+            patterns = [
+                r'(\d{1,2}[./-]\d{1,2}[./-]\d{4})',  # DD/MM/YYYY, DD-MM-YYYY, etc.
+                r'(\d{4}[./-]\d{1,2}[./-]\d{1,2})',  # YYYY-MM-DD, YYYY/MM/DD
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, date_str)
+                if match:
+                    extracted_date = match.group(1)
+                    # Try to parse the extracted date
+                    for strategy in strategies[:2]:  # Try dateutil and ISO format
+                        try:
+                            return strategy(extracted_date)
+                        except:
+                            continue
+        except:
+            pass
+        
+        self.logger.error(f"Could not parse date string: {date_str}")
+        return None
