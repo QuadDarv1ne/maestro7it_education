@@ -16,12 +16,16 @@ def validate_email(email):
 
 def validate_password(password):
     """Проверка надежности пароля"""
-    if len(password) < 6:
-        return False, "Пароль должен содержать не менее 6 символов"
+    if len(password) < 8:
+        return False, "Пароль должен содержать не менее 8 символов"
     if not re.search(r'[A-Za-z]', password):
         return False, "Пароль должен содержать буквы"
     if not re.search(r'\d', password):
         return False, "Пароль должен содержать цифры"
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>\[\]]', password):
+        return False, "Пароль должен содержать хотя бы один специальный символ (!@#$%^&*(),.?\":{}|<>[])"
+    if re.search(r'(.)\1{2,}', password):  # Check for repeated characters
+        return False, "Пароль не должен содержать повторяющиеся символы подряд"
     return True, "Пароль корректный"
 
 @user_bp.route('/register', methods=['GET', 'POST'])

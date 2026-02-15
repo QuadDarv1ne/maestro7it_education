@@ -84,6 +84,77 @@
             font-size: 0.85em;
             color: #28a745;
         }
+        
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .search-container {
+                min-width: 200px;
+            }
+            
+            .search-results {
+                position: fixed;
+                top: 56px;
+                left: 10px;
+                right: 10px;
+                max-height: 60vh;
+            }
+            
+            .hero-section {
+                padding: 1rem 0;
+            }
+            
+            .stats-card {
+                margin-bottom: 0.5rem;
+            }
+            
+            .tournament-card {
+                margin-bottom: 1rem;
+            }
+            
+            .filter-form {
+                padding: 0.5rem;
+            }
+            
+            .footer {
+                padding: 1rem 0;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            body {
+                padding-top: 56px;
+            }
+            
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+            
+            .search-container {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .search-results {
+                top: 112px;
+            }
+            
+            .btn-group, .d-flex {
+                flex-wrap: wrap;
+            }
+            
+            .form-control, .form-select {
+                font-size: 0.9rem;
+            }
+        }
     </style>
     
     {% block extra_css %}{% endblock %}

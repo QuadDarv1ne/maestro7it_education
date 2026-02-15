@@ -86,6 +86,12 @@ def add_tournament():
                 source_url=request.form.get('source_url')
             )
             
+            # Validate the tournament data
+            validation_errors = tournament.validate()
+            if validation_errors:
+                flash(f'Ошибка валидации данных турнира: {"; ".join(validation_errors)}', 'error')
+                return render_template('admin/add_tournament.html')
+            
             db.session.add(tournament)
             db.session.commit()
             
@@ -133,6 +139,12 @@ def edit_tournament(id):
             tournament.fide_id = request.form.get('fide_id')
             tournament.source_url = request.form.get('source_url')
             tournament.updated_at = datetime.utcnow()
+            
+            # Validate the tournament data
+            validation_errors = tournament.validate()
+            if validation_errors:
+                flash(f'Ошибка валидации данных турнира: {"; ".join(validation_errors)}', 'error')
+                return render_template('admin/edit_tournament.html', tournament=tournament)
             
             db.session.commit()
             

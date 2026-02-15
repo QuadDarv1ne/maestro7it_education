@@ -35,6 +35,13 @@ def create_app(config_name='default'):
     # Инициализация расширений
     db.init_app(app)
     
+    # Initialize scheduler
+    try:
+        from app.utils.scheduler import scheduler_service
+        logger.info("Scheduler initialized")
+    except ImportError:
+        logger.warning("Scheduler module not available")
+    
     # Создание таблиц
     with app.app_context():
         db.create_all()
@@ -89,11 +96,13 @@ def create_app(config_name='default'):
     from app.views.user import user_bp
     from app.views.api_docs import api_docs_bp
     from app.views.forum import forum_bp
+    from app.views.api import api_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(api_docs_bp)
     app.register_blueprint(forum_bp)
+    app.register_blueprint(api_bp)
     
     return app

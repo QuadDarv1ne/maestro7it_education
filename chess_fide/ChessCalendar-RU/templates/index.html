@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mt-4">
     <!-- Hero Section -->
-    <div class="row mb-5">
+    <div class="row mb-5 hero-section">
         <div class="col-12">
             <div class="card bg-primary text-white">
                 <div class="card-body">
@@ -26,32 +26,32 @@
 
     <!-- Stats Overview -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center bg-light">
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-center bg-light stats-card">
                 <div class="card-body">
                     <h3 class="text-primary">{{ tournaments.total }}</h3>
                     <p class="text-muted mb-0">Всего турниров</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center bg-light">
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-center bg-light stats-card">
                 <div class="card-body">
                     <h3 class="text-success">{{ tournaments.items|selectattr('status', 'equalto', 'Ongoing')|list|length }}</h3>
                     <p class="text-muted mb-0">Активных</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center bg-light">
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-center bg-light stats-card">
                 <div class="card-body">
                     <h3 class="text-warning">{{ tournaments.items|selectattr('status', 'equalto', 'Scheduled')|list|length }}</h3>
                     <p class="text-muted mb-0">Предстоящих</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center bg-light">
+        <div class="col-md-3 col-sm-6">
+            <div class="card text-center bg-light stats-card">
                 <div class="card-body">
                     <h3 class="text-info">{{ tournaments.items|selectattr('category', 'equalto', 'International')|list|length }}</h3>
                     <p class="text-muted mb-0">Международных</p>
@@ -61,12 +61,12 @@
     </div>
 
     <!-- Filters -->
-    <div class="card mb-4">
+    <div class="card mb-4 filter-form">
         <div class="card-body">
             <h5 class="card-title"><i class="bi bi-filter"></i> Фильтры</h5>
             <form method="GET" id="filterForm">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-3 col-sm-6">
                         <label for="category" class="form-label">Категория</label>
                         <select name="category" id="category" class="form-select">
                             <option value="">Все категории</option>
@@ -75,7 +75,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 col-sm-6">
                         <label for="status" class="form-label">Статус</label>
                         <select name="status" id="status" class="form-select">
                             <option value="">Все статусы</option>
@@ -84,11 +84,11 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 col-sm-6">
                         <label for="location" class="form-label">Место</label>
                         <input type="text" name="location" id="location" class="form-control" placeholder="Введите место..." value="{{ filters.location or '' }}">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 col-sm-6">
                         <label for="sort_by" class="form-label">Сортировка</label>
                         <select name="sort_by" id="sort_by" class="form-select">
                             <option value="start_date" {% if filters.sort_by == 'start_date' %}selected{% endif %}>По дате</option>
@@ -99,7 +99,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3 d-flex flex-wrap gap-2">
                     <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Применить фильтры</button>
                     <a href="{{ url_for('main.index') }}" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Сбросить</a>
                 </div>
@@ -133,10 +133,10 @@
     <div class="row">
         {% if tournaments.items %}
             {% for tournament in tournaments.items %}
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-12 col-sm-6 col-lg-4 mb-4">
                 <div class="card h-100 tournament-card border-start border-{{ 'primary' if tournament.category == 'International' else 'secondary' }} border-3">
                     <div class="card-header bg-light">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap">
                             <span class="badge bg-{{ 'primary' if tournament.category == 'International' else 'secondary' }}">{{ tournament.category }}</span>
                             <span class="badge {{ 'bg-success' if tournament.status == 'Completed' else 'bg-warning' if tournament.status == 'Ongoing' else 'bg-info' }}">
                                 {{ tournament.status }}
@@ -172,10 +172,10 @@
                         {% endif %}
                         
                         <div class="mt-auto">
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between flex-wrap">
                                 <!-- Rating Display -->
                                 {% if tournament.average_rating %}
-                                <div class="rating-small">
+                                <div class="rating-small mb-2 mb-md-0">
                                     <span class="rating-stars">
                                         {% for i in range(5) %}
                                             {% if i < (tournament.average_rating | int) %}
@@ -215,7 +215,7 @@
     <div class="row mt-4">
         <div class="col-12">
             <nav aria-label="Турниры навигация">
-                <ul class="pagination justify-content-center">
+                <ul class="pagination justify-content-center flex-wrap">
                     <!-- Previous button -->
                     {% if tournaments.has_prev %}
                         <li class="page-item">
