@@ -202,32 +202,55 @@ class FIDEParses:
         """Извлечение данных турнира из JSON элемента"""
         try:
             # Handle various JSON field names
-            name = (item.get('name') or item.get('title') or item.get('event_name') or '').strip()
+            name = (item.get('name') or item.get('title') or item.get('event_name') or 
+                   item.get('eventName') or item.get('eventTitle') or '').strip()
             if not name:
                 return None
             
             # Parse dates
-            start_date_str = item.get('start_date') or item.get('date_start') or item.get('from')
-            end_date_str = item.get('end_date') or item.get('date_end') or item.get('to')
+            start_date_str = (item.get('start_date') or item.get('date_start') or item.get('from') or 
+                             item.get('startDate') or item.get('beginDate') or '')
+            end_date_str = (item.get('end_date') or item.get('date_end') or item.get('to') or 
+                           item.get('endDate') or item.get('finishDate') or start_date_str)
             
             start_date, end_date = self._parse_json_dates(start_date_str, end_date_str)
             if not start_date:
                 return None
             
             # Get location
-            location = (item.get('location') or item.get('city') or item.get('place') or 'Russia').strip()
+            location = (item.get('location') or item.get('city') or item.get('place') or 
+                       item.get('venue') or item.get('address') or 'Russia').strip()
+            
+            # Get additional details
+            category = (item.get('category') or item.get('eventType') or item.get('type') or 
+                       'FIDE').strip()
+            status = (item.get('status') or item.get('eventStatus') or 'Scheduled').strip()
+            description = (item.get('description') or item.get('desc') or 
+                          item.get('eventDescription') or '').strip()
+            prize_fund = (item.get('prize_fund') or item.get('prizeFund') or 
+                         item.get('prize') or '').strip()
+            organizer = (item.get('organizer') or item.get('organizers') or 
+                        item.get('organising_body') or '').strip()
             
             # Get FIDE ID
-            fide_id = item.get('id') or item.get('fide_id') or item.get('event_id')
+            fide_id = (item.get('id') or item.get('fide_id') or item.get('event_id') or 
+                     item.get('eventId') or item.get('eventID'))
+            
+            # Get source URL
+            source_url = (item.get('url') or item.get('link') or item.get('eventUrl') or 
+                         item.get('eventURL') or '')
             
             return {
                 'name': name,
                 'start_date': start_date,
                 'end_date': end_date,
                 'location': location,
-                'category': 'FIDE',
-                'status': 'Scheduled',
-                'source_url': item.get('url') or '',
+                'category': category,
+                'status': status,
+                'description': description,
+                'prize_fund': prize_fund,
+                'organizer': organizer,
+                'source_url': source_url,
                 'fide_id': str(fide_id) if fide_id else None
             }
         except Exception as e:
