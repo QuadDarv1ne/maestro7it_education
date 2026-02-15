@@ -12,6 +12,7 @@ import re
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
+@track_performance()
 def index():
     """Главная страница с календарем турниров"""
     # Получаем параметры фильтрации
@@ -86,6 +87,7 @@ def index():
                          })
 
 @main_bp.route('/tournament/<int:tournament_id>')
+@track_performance()
 def tournament_detail(tournament_id):
     """Страница деталей турнира"""
     tournament = Tournament.query.get_or_404(tournament_id)
@@ -179,21 +181,26 @@ def api_tournament_search():
     category = request.args.get('category', '')
     status = request.args.get('status', '')
     location = request.args.get('location', '')
+    limit = request.args.get('limit', 20, type=int)
     
     if not query and not category and not status and not location:
         return jsonify([])
+    
+    # Limit the number of results
+    limit = min(max(limit, 1), 100)  # Between 1 and 100
     
     # Start with base query
     db_query = Tournament.query
     
     # Apply filters
     if query:
+        # Use ilike for case-insensitive search
         db_query = db_query.filter(
             db.or_(
-                Tournament.name.contains(query),
-                Tournament.location.contains(query),
-                Tournament.description.contains(query),
-                Tournament.organizer.contains(query)
+                Tournament.name.ilike(f'%{query}%'),
+                Tournament.location.ilike(f'%{query}%'),
+                Tournament.description.ilike(f'%{query}%'),
+                Tournament.organizer.ilike(f'%{query}%')
             )
         )
     
@@ -204,9 +211,9 @@ def api_tournament_search():
         db_query = db_query.filter(Tournament.status == status)
     
     if location:
-        db_query = db_query.filter(Tournament.location.contains(location))
+        db_query = db_query.filter(Tournament.location.ilike(f'%{location}%'))
     
-    tournaments = db_query.all()
+    tournaments = db_query.limit(limit).all()
     return jsonify([t.to_dict() for t in tournaments])
 
 @main_bp.route('/update')
@@ -332,6 +339,7 @@ def unsubscribe_notifications():
     return redirect(url_for('main.notifications'))
 
 @main_bp.route('/calendar')
+@track_performance()
 def calendar():
     """Календарь турниров"""
     from datetime import date, timedelta
@@ -342,12 +350,18 @@ def calendar():
     month = request.args.get('month', date.today().month, type=int)
     
     # Получаем турниры для указанного месяца
-    tournaments = Tournament.query.filter(
-        db.and_(
-            db.extract('year', Tournament.start_date) == year,
-            db.extract('month', Tournament.start_date) == month
-        )
-    ).all()
+    try:
+        tournaments = Tournament.query.filter(
+            db.and_(
+                db.extract('year', Tournament.start_date) == year,
+                db.extract('month', Tournament.start_date) == month
+            )
+        ).all()
+    except Exception as e:
+        from app.utils.logging_config import get_logger
+        logger = get_logger('app.calendar')
+        logger.error(f"Error fetching tournaments for {year}-{month}: {e}")
+        tournaments = []
     
     # Создаем структуру календаря
     cal = calendar.monthcalendar(year, month)

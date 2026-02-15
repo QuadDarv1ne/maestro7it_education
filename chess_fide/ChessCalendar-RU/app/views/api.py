@@ -6,12 +6,14 @@ from app.models.rating import TournamentRating
 from app.models.favorite import FavoriteTournament
 from app.models.notification import Subscription
 from app.utils.cache import TournamentCache
+from app.utils.performance_monitor import track_performance
 from datetime import datetime, date
 from sqlalchemy import or_, and_
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 @api_bp.route('/tournaments', methods=['GET'])
+@track_performance()
 def get_tournaments():
     """Get list of tournaments with pagination and filtering"""
     try:
@@ -92,6 +94,7 @@ def get_tournaments():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/tournaments/<int:tournament_id>', methods=['GET'])
+@track_performance()
 def get_tournament(tournament_id):
     """Get tournament by ID"""
     try:
@@ -131,6 +134,42 @@ def get_popular_tournaments():
             'total': len(tournaments)
         }), 200
     
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tournaments/trending', methods=['GET'])
+def get_trending_tournaments():
+    """Get trending tournaments based on recent activity"""
+    try:
+        from app.models.preference import UserInteraction
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
+        
+        # Get tournaments that had interactions in the last 7 days
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        
+        # Count interactions per tournament in the last week
+        interaction_counts = db.session.query(
+            UserInteraction.tournament_id,
+            func.count(UserInteraction.id).label('count')
+        ).filter(
+            UserInteraction.created_at >= week_ago
+        ).group_by(UserInteraction.tournament_id).order_by(
+            func.count(UserInteraction.id).desc()
+        ).limit(10).all()
+        
+        # Get tournament objects
+        tournament_ids = [ic.tournament_id for ic in interaction_counts]
+        tournaments = []
+        for tid in tournament_ids:
+            tournament = Tournament.query.get(tid)
+            if tournament and tournament.status != 'Completed':  # Only show non-completed tournaments
+                tournaments.append(tournament)
+        
+        return jsonify({
+            'tournaments': [t.to_dict() for t in tournaments],
+            'count': len(tournaments)
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -484,6 +523,102 @@ def subscribe_to_notifications():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@api_bp.route('/users/<int:user_id>/preferences', methods=['GET'])
+def get_user_preferences(user_id):
+    """Get user preferences"""
+    try:
+        from app.models.preference import UserPreference
+        user_pref = UserPreference.query.filter_by(user_id=user_id).first()
+        
+        if not user_pref:
+            # Create default preferences if not exist
+            user_pref = UserPreference(user_id=user_id)
+            db.session.add(user_pref)
+            db.session.commit()
+        
+        return jsonify(user_pref.to_dict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/users/<int:user_id>/preferences', methods=['POST'])
+def update_user_preferences(user_id):
+    """Update user preferences"""
+    try:
+        from app.models.preference import UserPreference
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        user_pref = UserPreference.query.filter_by(user_id=user_id).first()
+        
+        if not user_pref:
+            user_pref = UserPreference(user_id=user_id)
+            db.session.add(user_pref)
+        
+        # Update preferences if provided
+        if 'category_preference' in data:
+            user_pref.category_preference = data['category_preference']
+        if 'location_preference' in data:
+            user_pref.location_preference = data['location_preference']
+        if 'difficulty_preference' in data:
+            user_pref.difficulty_preference = data['difficulty_preference']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Preferences updated successfully',
+            'preferences': user_pref.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/users/<int:user_id>/interactions', methods=['POST'])
+def record_user_interaction(user_id):
+    """Record user interaction with a tournament"""
+    try:
+        from app.models.preference import UserInteraction
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        tournament_id = data.get('tournament_id')
+        interaction_type = data.get('interaction_type', 'view')
+        interaction_value = data.get('interaction_value', 1)
+        
+        if not tournament_id:
+            return jsonify({'error': 'Tournament ID is required'}), 400
+        
+        # Check if user and tournament exist
+        user = User.query.get(user_id)
+        tournament = Tournament.query.get(tournament_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        # Create interaction record
+        interaction = UserInteraction(
+            user_id=user_id,
+            tournament_id=tournament_id,
+            interaction_type=interaction_type,
+            interaction_value=interaction_value
+        )
+        
+        db.session.add(interaction)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Interaction recorded successfully',
+            'interaction': interaction.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """API health check"""
@@ -492,3 +627,26 @@ def health_check():
         'timestamp': datetime.utcnow().isoformat(),
         'service': 'ChessCalendar API'
     }), 200
+
+@api_bp.route('/users/<int:user_id>/recommendations/collaborative', methods=['GET'])
+def get_collaborative_recommendations(user_id):
+    """Get collaborative filtering recommendations for a user"""
+    try:
+        from app.utils.recommendations import RecommendationEngine
+        
+        # Check if user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = min(max(limit, 1), 50)  # Between 1 and 50
+        
+        recommended_tournaments = RecommendationEngine.get_collaborative_recommendations(user_id, limit)
+        
+        return jsonify({
+            'recommendations': [t.to_dict() for t in recommended_tournaments],
+            'count': len(recommended_tournaments)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

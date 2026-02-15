@@ -2,7 +2,7 @@ import schedule
 import time
 import threading
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from app import db
 from app.models.tournament import Tournament
 from app.utils.fide_parser import FIDEParses
@@ -214,9 +214,26 @@ class TournamentUpdater:
                 logger.warning(f"Invalid start date: {filtered_data['start_date']}")
                 return None  # Skip this tournament if start date is invalid
             
-            if 'end_date' in filtered_data and filtered_data['end_date'] is None:
-                # Set end date equal to start date if not provided
+            if 'end_date' in filtered_data and (filtered_data['end_date'] is None or filtered_data['end_date'] < filtered_data['start_date']):
+                # Set end date equal to start date if not provided or invalid
                 filtered_data['end_date'] = filtered_data['start_date']
+            
+            # Ensure dates are date objects, not strings
+            if 'start_date' in filtered_data and isinstance(filtered_data['start_date'], str):
+                try:
+                    from datetime import datetime
+                    filtered_data['start_date'] = datetime.strptime(filtered_data['start_date'], '%Y-%m-%d').date()
+                except ValueError:
+                    logger.warning(f"Invalid date format for start_date: {filtered_data['start_date']}")
+                    return None
+            
+            if 'end_date' in filtered_data and isinstance(filtered_data['end_date'], str):
+                try:
+                    from datetime import datetime
+                    filtered_data['end_date'] = datetime.strptime(filtered_data['end_date'], '%Y-%m-%d').date()
+                except ValueError:
+                    logger.warning(f"Invalid date format for end_date: {filtered_data['end_date']}")
+                    return None
             
             return filtered_data
         except Exception as e:

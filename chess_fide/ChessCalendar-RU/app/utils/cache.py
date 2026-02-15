@@ -32,7 +32,11 @@ class CacheService:
             if self.use_redis:
                 value = self.redis_client.get(key)
                 if value:
-                    return pickle.loads(value)
+                    try:
+                        return pickle.loads(value)
+                    except pickle.UnpicklingError:
+                        self.logger.warning(f"Failed to unpickle cached value for key: {key}")
+                        return None
             else:
                 return self.cache.get(key)
         except Exception as e:
@@ -46,8 +50,12 @@ class CacheService:
             
         try:
             if self.use_redis:
-                serialized_value = pickle.dumps(value)
-                self.redis_client.setex(key, timeout, serialized_value)
+                try:
+                    serialized_value = pickle.dumps(value)
+                    self.redis_client.setex(key, timeout, serialized_value)
+                except (pickle.PicklingError, TypeError) as pickle_error:
+                    self.logger.warning(f"Failed to pickle value for cache key {key}: {pickle_error}")
+                    return
             else:
                 self.cache[key] = value
                 # Для in-memory кэша реализуем простое удаление по времени

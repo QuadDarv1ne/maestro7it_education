@@ -28,6 +28,10 @@ class Tournament(db.Model):
         db.Index('idx_category_status', 'category', 'status'),
         db.Index('idx_start_date_status', 'start_date', 'status'),
         db.Index('idx_created_at_status', 'created_at', 'status'),
+        db.Index('idx_end_date_status', 'end_date', 'status'),
+        db.Index('idx_name_status', 'name', 'status'),
+        db.Index('idx_organizer_status', 'organizer', 'status'),
+        db.Index('idx_dates_range', 'start_date', 'end_date'),
     )
 
     def __repr__(self):
@@ -79,6 +83,14 @@ class Tournament(db.Model):
             errors.append("Дата окончания обязательна")
         if self.start_date and self.end_date and self.start_date > self.end_date:
             errors.append("Дата начала не может быть позже даты окончания")
+        
+        # Проверка диапазона дат
+        if self.start_date and self.end_date:
+            # Проверяем, чтобы турнир не был в прошлом более чем на 30 дней
+            from datetime import date, timedelta
+            thirty_days_ago = date.today() - timedelta(days=30)
+            if self.end_date < thirty_days_ago:
+                errors.append("Нельзя добавлять турниры, которые уже закончились более чем 30 дней назад")
         
         # Проверка места проведения
         if not self.location or len(self.location.strip()) == 0:
