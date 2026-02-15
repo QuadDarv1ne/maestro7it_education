@@ -2,200 +2,171 @@
 
 {% block title %}{{ tournament.name }} - ChessCalendar-RU{% endblock %}
 
-{% block extra_css %}
-<style>
-    @media (max-width: 768px) {
-        .card-body {
-            padding: 1rem;
-        }
-        
-        .table td, .table th {
-            padding: 0.5rem;
-            font-size: 0.9rem;
-        }
-        
-        .btn-group .btn {
-            font-size: 0.85rem;
-            padding: 0.375rem 0.75rem;
-        }
-        
-        h1 {
-            font-size: 1.5rem;
-        }
-        
-        h5 {
-            font-size: 1.1rem;
-        }
-    }
-    
-    @media (max-width: 480px) {
-        .breadcrumb {
-            font-size: 0.8rem;
-        }
-        
-        .alert {
-            padding: 0.75rem;
-        }
-        
-        .btn {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.5rem;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <!-- Навигационная цепочка -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="{{ url_for('main.index') }}">
-                        <i class="bi bi-calendar"></i> Календарь
-                    </a>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">
-                    {{ tournament.name }}
-                </li>
-            </ol>
-        </nav>
-
-        <!-- Основная карточка турнира -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h1 class="card-title mb-0 h4">
-                    <i class="bi bi-trophy"></i> {{ tournament.name }}
-                </h1>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5>
-                            <i class="bi bi-info-circle"></i> Информация
-                        </h5>
-                        <table class="table table-borderless table-sm">
-                            <tr>
-                                <td class="text-muted"><strong>Дата:</strong></td>
-                                <td>
-                                    <i class="bi bi-calendar-event"></i> 
-                                    {{ tournament.start_date.strftime('%d.%m.%Y') }} - 
-                                    {{ tournament.end_date.strftime('%d.%m.%Y') }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><strong>Место:</strong></td>
-                                <td>
-                                    <i class="bi bi-geo-alt"></i> {{ tournament.location }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><strong>Категория:</strong></td>
-                                <td>
-                                    <span class="badge bg-secondary">{{ tournament.category }}</span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted"><strong>Статус:</strong></td>
-                                <td>
-                                    <span class="badge bg-{{ 'success' if tournament.status == 'Scheduled' else 'warning' if tournament.status == 'Ongoing' else 'secondary' }}">
-                                        {{ tournament.status }}
-                                    </span>
-                                </td>
-                            </tr>
-                            {% if tournament.fide_id %}
-                            <tr>
-                                <td class="text-muted"><strong>FIDE ID:</strong></td>
-                                <td>
-                                    <code>{{ tournament.fide_id }}</code>
-                                </td>
-                            </tr>
-                            {% endif %}
-                        </table>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">{{ tournament.name }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <strong><i class="bi bi-calendar-event"></i> Даты:</strong><br>
+                            {{ tournament.start_date.strftime('%d.%m.%Y') }} - {{ tournament.end_date.strftime('%d.%m.%Y') }}
+                        </div>
+                        <div class="col-sm-6">
+                            <strong><i class="bi bi-geo-alt"></i> Место:</strong><br>
+                            {{ tournament.location }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <strong><i class="bi bi-tag"></i> Категория:</strong><br>
+                            {{ tournament.category }}
+                        </div>
+                        <div class="col-sm-6">
+                            <strong><i class="bi bi-clock"></i> Статус:</strong><br>
+                            <span class="badge bg-{% if tournament.status == 'Completed' %}success{% elif tournament.status == 'Ongoing' %}warning{% else %}primary{% endif %}">
+                                {{ tournament.status }}
+                            </span>
+                        </div>
                     </div>
                     
-                    <div class="col-md-6">
-                        <h5>
-                            <i class="bi bi-link"></i> Дополнительно
-                        </h5>
-                        <div class="alert alert-info">
-                            <strong>Источник:</strong>
-                            {% if tournament.source_url %}
-                                <a href="{{ tournament.source_url }}" target="_blank" class="alert-link">
-                                    <i class="bi bi-box-arrow-up-right"></i> Официальная страница
-                                </a>
-                            {% else %}
-                                Данные из базы ChessCalendar-RU
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mt-3">
-                            <h6>Действия:</h6>
-                            <div class="btn-group w-100" role="group">
-                                {% if tournament.source_url %}
-                                <a href="{{ tournament.source_url }}" target="_blank" class="btn btn-primary flex-fill">
-                                    <i class="bi bi-box-arrow-up-right"></i> Перейти к источнику
-                                </a>
-                                {% endif %}
-                                {% if session.get('user_id') %}
-                                <button class="btn btn-outline-warning flex-fill favorite-btn" 
-                                        data-tournament-id="{{ tournament.id }}"
-                                        data-is-favorite="false">
-                                    <i class="bi bi-star"></i> В избранное
-                                </button>
-                                {% endif %}
-                                <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary flex-fill">
-                                    <i class="bi bi-arrow-left"></i> Назад
-                                </a>
+                    <!-- New Detailed Information Fields -->
+                    {% if tournament.description %}
+                    <div class="mb-3">
+                        <strong><i class="bi bi-info-circle"></i> Описание:</strong><br>
+                        <p class="text-muted">{{ tournament.description }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if tournament.prize_fund %}
+                    <div class="mb-3">
+                        <strong><i class="bi bi-cash-coin"></i> Призовой фонд:</strong><br>
+                        <span class="fw-bold text-success">{{ tournament.prize_fund }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if tournament.organizer %}
+                    <div class="mb-3">
+                        <strong><i class="bi bi-people"></i> Организатор:</strong><br>
+                        <span class="fw-medium">{{ tournament.organizer }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if tournament.source_url %}
+                    <div class="mb-3">
+                        <strong><i class="bi bi-link-45deg"></i> Источник:</strong><br>
+                        <a href="{{ tournament.source_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-box-arrow-up-right"></i> Перейти к официальному сайту
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <h4>Оценка турнира</h4>
+                        {% if tournament.average_rating %}
+                            <div class="rating-display">
+                                <span class="rating-stars">
+                                    {% for i in range(5) %}
+                                        {% if i < (tournament.average_rating | int) %}
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                            <i class="bi bi-star text-muted"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                                <span class="rating-value">{{ tournament.average_rating }}/5 ({{ tournament.get_average_rating() }} средняя оценка)</span>
                             </div>
-                        </div>
+                        {% else %}
+                            <p>Пока нет оценок</p>
+                        {% endif %}
+                        
+                        <!-- Rating Form -->
+                        {% if 'user_id' in session %}
+                            {% if not tournament.id in rated_tournaments %}
+                                {% include 'rating_form.html' %}
+                            {% else %}
+                                <p>Вы уже оценили этот турнир</p>
+                            {% endif %}
+                        {% else %}
+                            <p><a href="{{ url_for('user.login') }}">Войдите</a>, чтобы оставить оценку</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Похожие турниры -->
-        <div class="card">
-            <div class="card-header bg-light">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-stars"></i> Похожие турниры
-                </h5>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Действия</h5>
+                    <div class="d-grid gap-2">
+                        <!-- Favorite Button -->
+                        {% if 'user_id' in session %}
+                            <form method="POST" action="{{ url_for('main.toggle_favorite', tournament_id=tournament.id) }}" class="d-inline">
+                                <button type="submit" class="btn {% if tournament.id in user_favorites %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                                    <i class="bi bi-heart{% if tournament.id in user_favorites %}-fill{% else %}{% endif %}"></i>
+                                    {% if tournament.id in user_favorites %}Удалить из избранного{% else %}Добавить в избранное{% endif %}
+                                </button>
+                            </form>
+                        {% else %}
+                            <a href="{{ url_for('user.login') }}" class="btn btn-outline-warning">
+                                <i class="bi bi-heart"></i> Добавить в избранное
+                            </a>
+                        {% endif %}
+                        
+                        <!-- Forum Link -->
+                        <a href="{{ url_for('forum.tournament_forum', tournament_id=tournament.id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-chat"></i> Форум турнира
+                        </a>
+                        
+                        <!-- Share Button -->
+                        <button class="btn btn-outline-info" onclick="shareTournament()">
+                            <i class="bi bi-share"></i> Поделиться
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                {% set similar_tournaments = tournament.get_similar() %}
-                {% if similar_tournaments %}
-                    <div class="row">
-                        {% for similar in similar_tournaments[:3] %}
-                        <div class="col-md-4 col-12 mb-3">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title">{{ similar.name }}</h6>
-                                    <p class="card-text small text-muted">
-                                        <i class="bi bi-calendar"></i> 
-                                        {{ similar.start_date.strftime('%d.%m.%Y') }}
-                                        <br>
-                                        <i class="bi bi-geo-alt"></i> {{ similar.location }}
-                                    </p>
-                                    <a href="{{ url_for('main.tournament_detail', tournament_id=similar.id) }}" 
-                                       class="btn btn-outline-primary btn-sm w-100">
-                                        <i class="bi bi-eye"></i> Подробнее
-                                    </a>
-                                </div>
+            
+            <!-- Similar Tournaments -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Похожие турниры</h5>
+                    {% if similar_tournaments %}
+                        {% for similar in similar_tournaments %}
+                            <div class="mb-2">
+                                <a href="{{ url_for('main.tournament_detail', tournament_id=similar.id) }}">{{ similar.name }}</a><br>
+                                <small class="text-muted">{{ similar.start_date.strftime('%d.%m.%Y') }}</small>
                             </div>
-                        </div>
                         {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="bi bi-search text-muted" style="font-size: 2rem;"></i>
-                        <p class="text-muted mt-2">Похожих турниров не найдено</p>
-                    </div>
-                {% endif %}
+                    {% else %}
+                        <p class="text-muted">Нет похожих турниров</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function shareTournament() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ tournament.name }}',
+            text: 'Посмотрите турнир: {{ tournament.name }}',
+            url: window.location.href
+        }).catch(console.error);
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(window.location.href).then(function() {
+            alert('Ссылка скопирована в буфер обмена');
+        });
+    }
+}
+</script>
 {% endblock %}
 
 {% block scripts %}

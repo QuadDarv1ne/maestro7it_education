@@ -11,6 +11,9 @@ class Tournament(db.Model):
     location = db.Column(db.String(100), nullable=False, index=True)
     category = db.Column(db.String(50), nullable=False, index=True)  # FIDE, National, Youth, etc.
     status = db.Column(db.String(50), default='Scheduled', index=True)  # Scheduled, Ongoing, Completed
+    description = db.Column(db.Text, nullable=True)  # Description of the tournament
+    prize_fund = db.Column(db.String(200), nullable=True)  # Prize fund amount
+    organizer = db.Column(db.String(200), nullable=True)  # Organizer of the tournament
     fide_id = db.Column(db.String(20), unique=True, index=True)  # FIDE tournament ID
     source_url = db.Column(db.String(300))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -30,6 +33,9 @@ class Tournament(db.Model):
             'location': self.location,
             'category': self.category,
             'status': self.status,
+            'description': self.description,
+            'prize_fund': self.prize_fund,
+            'organizer': self.organizer,
             'fide_id': self.fide_id,
             'source_url': self.source_url,
             'average_rating': avg_rating['average_rating'],
@@ -65,6 +71,18 @@ class Tournament(db.Model):
             errors.append("Место проведения не может быть пустым")
         elif len(self.location) > 100:
             errors.append("Название места проведения слишком длинное (максимум 100 символов)")
+        
+        # Проверка описания
+        if self.description and len(self.description) > 2000:
+            errors.append("Описание турнира слишком длинное (максимум 2000 символов)")
+        
+        # Проверка призового фонда
+        if self.prize_fund and len(self.prize_fund) > 200:
+            errors.append("Информация о призовом фонде слишком длинная (максимум 200 символов)")
+        
+        # Проверка организатора
+        if self.organizer and len(self.organizer) > 200:
+            errors.append("Название организатора слишком длинное (максимум 200 символов)")
         
         # Проверка категории
         valid_categories = ['FIDE', 'National', 'Regional', 'Youth', 'Women', 'Senior', 'Online']

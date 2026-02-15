@@ -1,75 +1,114 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
 
-{% block title %}Добавить турнир{% endblock %}
+{% block title %}Добавить турнир - Админ панель - ChessCalendar-RU{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Добавить турнир</h1>
-    
-    <form method="POST">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Название турнира</label>
-                    <input type="text" class="form-control" id="name" name="name" required>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Добавить турнир</h4>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="start_date" class="form-label">Дата начала</label>
-                    <input type="date" class="form-control" id="start_date" name="start_date" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="end_date" class="form-label">Дата окончания</label>
-                    <input type="date" class="form-control" id="end_date" name="end_date" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="location" class="form-label">Место проведения</label>
-                    <input type="text" class="form-control" id="location" name="location" required>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="category" class="form-label">Категория</label>
-                    <select class="form-control" id="category" name="category" required>
-                        <option value="FIDE">FIDE</option>
-                        <option value="National">Национальный</option>
-                        <option value="Regional">Региональный</option>
-                        <option value="Online">Онлайн</option>
-                        <option value="Youth">Молодежный</option>
-                        <option value="Women">Женский</option>
-                        <option value="Senior">Ветеранский</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="status" class="form-label">Статус</label>
-                    <select class="form-control" id="status" name="status">
-                        <option value="Scheduled">Запланирован</option>
-                        <option value="Ongoing">Идет</option>
-                        <option value="Completed">Завершен</option>
-                        <option value="Cancelled">Отменен</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="fide_id" class="form-label">FIDE ID</label>
-                    <input type="text" class="form-control" id="fide_id" name="fide_id">
-                </div>
-                
-                <div class="mb-3">
-                    <label for="source_url" class="form-label">URL источника</label>
-                    <input type="url" class="form-control" id="source_url" name="source_url">
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Название турнира *</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="start_date" class="form-label">Дата начала *</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="end_date" class="form-label">Дата окончания *</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="location" class="form-label">Место проведения *</label>
+                                    <input type="text" class="form-control" id="location" name="location" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Категория *</label>
+                                    <select class="form-select" id="category" name="category" required>
+                                        <option value="FIDE">FIDE</option>
+                                        <option value="National">National</option>
+                                        <option value="Regional">Regional</option>
+                                        <option value="Youth">Youth</option>
+                                        <option value="Women">Women</option>
+                                        <option value="Senior">Senior</option>
+                                        <option value="Online">Online</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">Статус</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="Scheduled" selected>Scheduled</option>
+                                        <option value="Ongoing">Ongoing</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Описание</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3" placeholder="Описание турнира"></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="prize_fund" class="form-label">Призовой фонд</label>
+                                    <input type="text" class="form-control" id="prize_fund" name="prize_fund" placeholder="Например: 100000 руб">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="organizer" class="form-label">Организатор</label>
+                                    <input type="text" class="form-control" id="organizer" name="organizer" placeholder="Организатор турнира">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="fide_id" class="form-label">FIDE ID</label>
+                                    <input type="text" class="form-control" id="fide_id" name="fide_id" placeholder="FIDE ID турнира">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="source_url" class="form-label">URL источника</label>
+                                    <input type="url" class="form-control" id="source_url" name="source_url" placeholder="https://example.com/tournament">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin.tournaments') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Назад к списку
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save"></i> Сохранить турнир
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-        
-        <div class="mb-3">
-            <button type="submit" class="btn btn-primary">Сохранить турнир</button>
-            <a href="{{ url_for('admin.tournaments') }}" class="btn btn-secondary">Отмена</a>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}

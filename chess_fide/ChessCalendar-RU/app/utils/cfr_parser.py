@@ -254,27 +254,82 @@ class CFRParser:
         """Извлечение данных о турнире"""
         # Ищем название
         name_element = element.find(['h1', 'h2', 'h3', 'h4', 'span', 'div'], 
-                                  class_=re.compile(r'title|name|heading'))
+                                  class_=re.compile(r'title|name|heading|tournament|event'))
         if not name_element:
-            return None
+            # Try to find text that looks like a tournament name
+            text_content = element.get_text(strip=True)
+            # Look for text that might be a tournament name
+            possible_names = element.find_all(text=re.compile(r'[ШшAa][АаAa][ХхXx][МмMm][АаAa][ТтTt][ЫыYy]', re.IGNORECASE))
+            if possible_names:
+                name = possible_names[0].strip()
+            else:
+                return None
+        else:
+            name = name_element.get_text(strip=True)
             
-        name = name_element.get_text(strip=True)
-        
         # Ищем даты
-        date_element = element.find(['span', 'div', 'time'], 
-                                  class_=re.compile(r'date|time|period'))
-        dates_text = date_element.get_text(strip=True) if date_element else ""
-        
+        date_element = element.find(['span', 'div', 'time', 'p'], 
+                                  class_=re.compile(r'date|time|period|calendar|when'))
+        if not date_element:
+            # Try to find dates in the text content
+            text_content = element.get_text(strip=True)
+            date_patterns = [
+                r'\d{1,2}[.-]\d{1,2}[.-]\d{4}',  # DD.MM.YYYY or DD-MM-YYYY
+                r'\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}',  # DD Month YYYY
+                r'(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}',  # Month YYYY
+            ]
+            for pattern in date_patterns:
+                matches = re.findall(pattern, text_content)
+                if matches:
+                    dates_text = matches[0]
+                    break
+            else:
+                dates_text = ""
+        else:
+            dates_text = date_element.get_text(strip=True)
+            
         # Ищем место проведения
-        location_element = element.find(['span', 'div'], 
-                                      class_=re.compile(r'location|place|city'))
-        location = location_element.get_text(strip=True) if location_element else "Russia"
-        
+        location_element = element.find(['span', 'div', 'p'], 
+                                      class_=re.compile(r'location|place|city|region|venue|address|area'))
+        if not location_element:
+            # Try to find location in text
+            text_content = element.get_text(strip=True)
+            location_matches = re.findall(r'(Москва|Санкт-Петербург|Московская|СПб|Казань|Екатеринбург|Новосибирск|Нижний Новгород|Красноярск|Самара|Волгоград|Воронеж|Ростов-на-Дону|Сочи|Калининград)', text_content)
+            if location_matches:
+                location = location_matches[0]
+            else:
+                location = "Russia"
+        else:
+            location = location_element.get_text(strip=True)
+            
+        # Ищем дополнительную информацию
+        description_element = element.find(['p', 'div', 'span'], 
+                                         class_=re.compile(r'description|desc|info|text|content'))
+        description = description_element.get_text(strip=True) if description_element else ""
+            
+        # Ищем организатора
+        organizer_element = element.find(['p', 'div', 'span'], 
+                                       class_=re.compile(r'organizer|organiser|org|committee'))
+        organizer = organizer_element.get_text(strip=True) if organizer_element else ""
+            
+        # Ищем призовой фонд
+        prize_element = element.find(['p', 'div', 'span'], 
+                                   class_=re.compile(r'prize|fund|money|award|cash'))
+        prize_fund_text = prize_element.get_text(strip=True) if prize_element else ""
+        prize_fund_match = re.search(r'(\d+[\s\d]*(тыс\.?\s*руб|руб|USD|RUB|EUR|€|$|\$))', prize_fund_text)
+        prize_fund = prize_fund_match.group(1) if prize_fund_match else ""
+            
         # Парсинг дат
         start_date, end_date = self._parse_dates(dates_text, year)
-        
+            
         if not start_date:
             return None
+                
+        # Ищем URL источника
+        link_element = element.find('a', href=True)
+        source_url = link_element['href'] if link_element else ''
+        if source_url and not source_url.startswith('http'):
+            source_url = urljoin(self.base_url, source_url)
             
         return {
             'name': name,
@@ -283,7 +338,10 @@ class CFRParser:
             'location': location,
             'category': 'National',
             'status': 'Scheduled',
-            'source_url': element.find('a', href=True)['href'] if element.find('a', href=True) else '',
+            'description': description,
+            'prize_fund': prize_fund,
+            'organizer': organizer,
+            'source_url': source_url,
             'fide_id': None
         }
 

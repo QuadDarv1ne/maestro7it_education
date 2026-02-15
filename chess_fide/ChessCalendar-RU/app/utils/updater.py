@@ -76,7 +76,18 @@ class TournamentUpdater:
                     ).first()
                     
                     if not existing:
-                        tournament = Tournament(**tourney_data)
+                        # Filter out None values and ensure required fields are present
+                        filtered_data = {k: v for k, v in tourney_data.items() if v is not None}
+
+                        # Ensure required fields have defaults if missing
+                        if 'description' not in filtered_data:
+                            filtered_data['description'] = None
+                        if 'prize_fund' not in filtered_data:
+                            filtered_data['prize_fund'] = None
+                        if 'organizer' not in filtered_data:
+                            filtered_data['organizer'] = None
+
+                        tournament = Tournament(**filtered_data)
                         db.session.add(tournament)
                         added_count += 1
                     processed_count += 1
@@ -115,7 +126,18 @@ class TournamentUpdater:
                     ).first()
                     
                     if not existing:
-                        tournament = Tournament(**tourney_data)
+                        # Filter out None values and ensure required fields are present
+                        filtered_data = {k: v for k, v in tourney_data.items() if v is not None}
+
+                        # Ensure required fields have defaults if missing
+                        if 'description' not in filtered_data:
+                            filtered_data['description'] = None
+                        if 'prize_fund' not in filtered_data:
+                            filtered_data['prize_fund'] = None
+                        if 'organizer' not in filtered_data:
+                            filtered_data['organizer'] = None
+
+                        tournament = Tournament(**filtered_data)
                         db.session.add(tournament)
                         added_count += 1
                     processed_count += 1
