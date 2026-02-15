@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Календарь шахматных турниров в России{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>Шахматные турниры в России 2026</h1>
+        <p class="lead">Актуальный календарь официальных шахматных турниров FIDE в России</p>
+        
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="badge bg-primary">Всего турниров: {{ tournaments|length }}</span>
+            </div>
+            <div>
+                <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-outline-primary btn-sm">
+                    Обновить данные
+                </a>
+            </div>
+        </div>
+
+        {% if tournaments %}
+            <div class="row">
+                {% for tournament in tournaments %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card tournament-card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ tournament.name }}</h5>
+                            <p class="card-text">
+                                <span class="tournament-date">
+                                    {{ tournament.start_date.strftime('%d.%m.%Y') }} - 
+                                    {{ tournament.end_date.strftime('%d.%m.%Y') }}
+                                </span>
+                                <br>
+                                <span class="tournament-location">
+                                    {{ tournament.location }}
+                                </span>
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-secondary">{{ tournament.category }}</span>
+                                <span class="badge bg-{{ 'success' if tournament.status == 'Scheduled' else 'warning' }}">
+                                    {{ tournament.status }}
+                                </span>
+                            </div>
+                            {% if tournament.source_url %}
+                            <a href="{{ tournament.source_url }}" class="btn btn-outline-primary btn-sm mt-2" target="_blank">
+                                Подробнее
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <h4>Турниры не найдены</h4>
+                <p>Нажмите кнопку "Обновить данные" для загрузки информации о турнирах.</p>
+                <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-primary">Обновить данные</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

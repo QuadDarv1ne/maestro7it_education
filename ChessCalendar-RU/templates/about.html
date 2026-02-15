@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}О проекте - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>О проекте ChessCalendar-RU</h1>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Описание проекта</h5>
+                <p class="card-text">
+                    ChessCalendar-RU - это веб-приложение для отслеживания шахматных турниров в России.
+                    Проект автоматически собирает информацию с официальных источников FIDE и Федерации шахмат России.
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Источники данных</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="https://calendar.fide.com" target="_blank">FIDE Calendar</a></li>
+                            <li><a href="https://ruchess.ru" target="_blank">Федерация шахмат России</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Технологии</h5>
+                        <ul class="list-unstyled">
+                            <li>Python Flask</li>
+                            <li>SQLite Database</li>
+                            <li>BeautifulSoup4 (парсинг)</li>
+                            <li>Bootstrap 5 (фронтенд)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Автор проекта</h5>
+                <p class="card-text">
+                    <strong>Дуплей Максим Игоревич</strong><br>
+                    Шахматист и разработчик<br>
+                    FIDE ID: 540098680<br>
+                    Рейтинг: 1707
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
