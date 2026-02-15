@@ -1,0 +1,225 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Жалобы - Админ панель - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="bi bi-flag"></i> Управление жалобами</h4>
+                        <div>
+                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light">
+                                <i class="bi bi-arrow-left"></i> Назад к панели
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <ul class="nav nav-tabs mb-4">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#unresolved">Нерассмотренные ({{ unresolved_pagination.total }})</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#all">Все жалобы ({{ all_pagination.total }})</a>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <!-- Unresolved Reports Tab -->
+                        <div class="tab-pane fade show active" id="unresolved">
+                            {% if unresolved_reports %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Тип</th>
+                                                <th>Контент</th>
+                                                <th>Пожаловался</th>
+                                                <th>Причина</th>
+                                                <th>Дата</th>
+                                                <th>Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for report in unresolved_reports %}
+                                            <tr>
+                                                <td>{{ report.id }}</td>
+                                                <td>
+                                                    <span class="badge bg-{% if report.reported_type == 'thread' %}primary{% else %}secondary{% endif %}">
+                                                        {{ report.reported_type|upper }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if report.reported_type == 'thread' %}
+                                                        <a href="{{ url_for('main.thread_detail', thread_id=report.reported_id) }}" target="_blank">
+                                                            Тема #{{ report.reported_id }}
+                                                        </a>
+                                                    {% else %}
+                                                        <a href="{{ url_for('main.thread_detail', thread_id=get_post_thread_id(report.reported_id)) }}#post-{{ report.reported_id }}" target="_blank">
+                                                            Пост #{{ report.reported_id }}
+                                                        </a>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ report.reporter_username }}</td>
+                                                <td>{{ report.reason }}</td>
+                                                <td>{{ report.created_at[:16] }}</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{{ url_for('admin.resolve_report', report_id=report.id) }}" 
+                                                           class="btn btn-sm btn-success"
+                                                           onclick="return confirm('Вы уверены, что хотите отметить эту жалобу как рассмотренную?')">
+                                                            <i class="bi bi-check-circle"></i> Решить
+                                                        </a>
+                                                        <a href="{{ url_for('admin.delete_report', report_id=report.id) }}" 
+                                                           class="btn btn-sm btn-danger"
+                                                           onclick="return confirm('Вы уверены, что хотите удалить эту жалобу?')">
+                                                            <i class="bi bi-trash"></i> Удалить
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Pagination for unresolved reports -->
+                                {% if unresolved_pagination.pages > 1 %}
+                                <nav aria-label="Навигация по нерассмотренным жалобам">
+                                    <ul class="pagination justify-content-center">
+                                        {% if unresolved_pagination.page > 1 %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('admin.reports', tab='unresolved', page=unresolved_pagination.page-1) }}">Предыдущая</a>
+                                            </li>
+                                        {% endif %}
+                                        
+                                        {% for page_num in range(max(1, unresolved_pagination.page-2), min(unresolved_pagination.pages+1, unresolved_pagination.page+3)) %}
+                                            <li class="page-item {% if page_num == unresolved_pagination.page %}active{% endif %}">
+                                                <a class="page-link" href="{{ url_for('admin.reports', tab='unresolved', page=page_num) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% endfor %}
+                                        
+                                        {% if unresolved_pagination.page < unresolved_pagination.pages %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('admin.reports', tab='unresolved', page=unresolved_pagination.page+1) }}">Следующая</a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="bi bi-flag display-1 text-muted"></i>
+                                    <h4 class="text-muted">Нет нерассмотренных жалоб</h4>
+                                    <p class="text-muted">Все жалобы были рассмотрены модераторами</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- All Reports Tab -->
+                        <div class="tab-pane fade" id="all">
+                            {% if all_reports %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Тип</th>
+                                                <th>Контент</th>
+                                                <th>Пожаловался</th>
+                                                <th>Причина</th>
+                                                <th>Статус</th>
+                                                <th>Дата</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for report in all_reports %}
+                                            <tr>
+                                                <td>{{ report.id }}</td>
+                                                <td>
+                                                    <span class="badge bg-{% if report.reported_type == 'thread' %}primary{% else %}secondary{% endif %}">
+                                                        {{ report.reported_type|upper }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if report.reported_type == 'thread' %}
+                                                        <a href="{{ url_for('main.thread_detail', thread_id=report.reported_id) }}" target="_blank">
+                                                            Тема #{{ report.reported_id }}
+                                                        </a>
+                                                    {% else %}
+                                                        <a href="{{ url_for('main.thread_detail', thread_id=get_post_thread_id(report.reported_id)) }}#post-{{ report.reported_id }}" target="_blank">
+                                                            Пост #{{ report.reported_id }}
+                                                        </a>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ report.reporter_username }}</td>
+                                                <td>{{ report.reason }}</td>
+                                                <td>
+                                                    {% if report.is_resolved %}
+                                                        <span class="badge bg-success">Рассмотрено</span>
+                                                        <small class="text-muted">Решено {{ report.resolved_at[:10] if report.resolved_at else '-' }}</small>
+                                                    {% else %}
+                                                        <span class="badge bg-warning">Не рассмотрено</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ report.created_at[:16] }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Pagination for all reports -->
+                                {% if all_pagination.pages > 1 %}
+                                <nav aria-label="Навигация по всем жалобам">
+                                    <ul class="pagination justify-content-center">
+                                        {% if all_pagination.page > 1 %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('admin.reports', tab='all', page=all_pagination.page-1) }}">Предыдущая</a>
+                                            </li>
+                                        {% endif %}
+                                        
+                                        {% for page_num in range(max(1, all_pagination.page-2), min(all_pagination.pages+1, all_pagination.page+3)) %}
+                                            <li class="page-item {% if page_num == all_pagination.page %}active{% endif %}">
+                                                <a class="page-link" href="{{ url_for('admin.reports', tab='all', page=page_num) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% endfor %}
+                                        
+                                        {% if all_pagination.page < all_pagination.pages %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('admin.reports', tab='all', page=all_pagination.page+1) }}">Следующая</a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="bi bi-flag display-1 text-muted"></i>
+                                    <h4 class="text-muted">Нет жалоб</h4>
+                                    <p class="text-muted">Пока не было отправлено ни одной жалобы</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

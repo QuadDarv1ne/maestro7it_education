@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Новая тема - {{ tournament.name }} - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="bi bi-plus-circle"></i> Новая тема в форуме "{{ tournament.name }}"</h3>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{{ url_for('main.create_thread', tournament_id=tournament.id) }}">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Заголовок темы *</label>
+                            <input type="text" class="form-control" id="title" name="title" value="{{ request.form.title or '' }}" required maxlength="200">
+                            <div class="form-text">Кратко опишите тему обсуждения (максимум 200 символов)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Сообщение *</label>
+                            <textarea class="form-control" id="content" name="content" rows="8" placeholder="Введите текст вашего сообщения..." required>{{ request.form.content or '' }}</textarea>
+                            <div class="form-text">Первое сообщение в теме</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('main.tournament_forum', tournament_id=tournament.id) }}" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-x"></i> Отмена
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check"></i> Создать тему
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

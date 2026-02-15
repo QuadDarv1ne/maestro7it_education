@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Форум турнира - {{ tournament.name }} - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="bi bi-chat-square-text"></i> Форум: {{ tournament.name }}</h3>
+                    {% if session.get('user_id') %}
+                    <a href="{{ url_for('main.create_thread', tournament_id=tournament.id) }}" class="btn btn-light">
+                        <i class="bi bi-plus-circle"></i> Начать тему
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    {% if threads %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Тема</th>
+                                        <th>Автор</th>
+                                        <th>Ответов</th>
+                                        <th>Просмотров</th>
+                                        <th>Последнее сообщение</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for thread in threads %}
+                                    <tr class="{% if thread.is_pinned %}table-warning{% endif %}">
+                                        <td>
+                                            {% if thread.is_pinned %}<i class="bi bi-pin-angle text-warning" title="Прикреплено"></i>{% endif %}
+                                            {% if thread.is_locked %}<i class="bi bi-lock text-muted" title="Заблокировано"></i>{% endif %}
+                                            <a href="{{ url_for('main.thread_detail', thread_id=thread.id) }}">{{ thread.title }}</a>
+                                            {% if thread.is_pinned %}<span class="badge bg-warning ms-1">Прикреплено</span>{% endif %}
+                                            {% if thread.is_locked %}<span class="badge bg-secondary ms-1">Закрыто</span>{% endif %}
+                                        </td>
+                                        <td>{{ thread.author_username }}</td>
+                                        <td>{{ thread.posts_count - 1 }}</td>  <!-- Exclude the first post -->
+                                        <td>{{ thread.views_count }}</td>
+                                        <td>
+                                            {% if thread.latest_post %}
+                                                <small>
+                                                    {{ thread.latest_post.author_username }}<br>
+                                                    {{ thread.latest_post.created_at[:10] }}
+                                                </small>
+                                            {% else %}
+                                                <small>-</small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if pagination.pages > 1 %}
+                        <nav aria-label="Форум навигация">
+                            <ul class="pagination justify-content-center">
+                                {% if pagination.page > 1 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('main.tournament_forum', tournament_id=tournament.id, page=pagination.page-1) }}">Предыдущая</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in range(max(1, pagination.page-2), min(pagination.pages+1, pagination.page+3)) %}
+                                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('main.tournament_forum', tournament_id=tournament.id, page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                {% endfor %}
+                                
+                                {% if pagination.page < pagination.pages %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('main.tournament_forum', tournament_id=tournament.id, page=pagination.page+1) }}">Следующая</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-chat-dots display-1 text-muted"></i>
+                            <h4 class="text-muted">Пока нет тем</h4>
+                            <p class="text-muted">Будьте первым, кто начнет обсуждение!</p>
+                            {% if session.get('user_id') %}
+                            <a href="{{ url_for('main.create_thread', tournament_id=tournament.id) }}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Начать первую тему
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('user.login') }}" class="btn btn-primary">
+                                <i class="bi bi-box-arrow-in-right"></i> Войти для создания темы
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

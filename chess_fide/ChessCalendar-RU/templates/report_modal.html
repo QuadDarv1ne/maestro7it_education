@@ -1,0 +1,110 @@
+<!-- Report Modal Component -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalLabel">Пожаловаться на контент</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <input type="hidden" id="reportContentType" name="content_type">
+                    <input type="hidden" id="reportContentId" name="content_id">
+                    
+                    <div class="mb-3">
+                        <label for="reportReason" class="form-label">Причина жалобы *</label>
+                        <select class="form-select" id="reportReason" name="reason" required>
+                            <option value="">Выберите причину...</option>
+                            <option value="spam">Спам или реклама</option>
+                            <option value="harassment">Оскорбления или травля</option>
+                            <option value="inappropriate">Неприемлемый контент</option>
+                            <option value="misleading">Дезинформация</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="reportDescription" class="form-label">Дополнительные подробности</label>
+                        <textarea class="form-control" id="reportDescription" name="description" rows="3" 
+                                  placeholder="Пожалуйста, предоставьте дополнительную информацию о вашей жалобе..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle"></i> Ваша жалоба будет рассмотрена модераторами. 
+                        Сообщество ценит ваше участие в поддержании безопасной среды.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="submitReportBtn">Отправить жалобу</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentReportType = null;
+let currentReportId = null;
+
+function openReportModal(contentType, contentId) {
+    currentReportType = contentType;
+    currentReportId = contentId;
+    
+    document.getElementById('reportContentType').value = contentType;
+    document.getElementById('reportContentId').value = contentId;
+    
+    // Reset form
+    document.getElementById('reportReason').value = '';
+    document.getElementById('reportDescription').value = '';
+    
+    // Show modal
+    const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+    reportModal.show();
+}
+
+document.getElementById('submitReportBtn').addEventListener('click', function() {
+    const reason = document.getElementById('reportReason').value;
+    
+    if (!reason) {
+        alert('Пожалуйста, выберите причину жалобы');
+        return;
+    }
+    
+    const formData = new FormData(document.getElementById('reportForm'));
+    
+    fetch('/report/submit', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Жалоба успешно отправлена! Спасибо за помощь в поддержании безопасности сообщества.');
+            // Close modal
+            const reportModal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+            reportModal.hide();
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting report:', error);
+        alert('Произошла ошибка при отправке жалобы');
+    });
+});
+
+// Add report buttons functionality if they exist on the page
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for report buttons that may exist on the page
+    const reportButtons = document.querySelectorAll('.report-btn');
+    reportButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const contentType = this.getAttribute('data-content-type');
+            const contentId = this.getAttribute('data-content-id');
+            openReportModal(contentType, contentId);
+        });
+    });
+});
+</script>

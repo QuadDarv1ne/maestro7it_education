@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}{{ thread.title }} - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="bi bi-chat-left-text"></i> {{ thread.title }}</h3>
+                    <a href="{{ url_for('main.tournament_forum', tournament_id=thread.tournament_id) }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-arrow-left"></i> Назад к форуму
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <!-- Thread Info -->
+                    <div class="border-bottom pb-2 mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">
+                                    Автор: <strong>{{ thread.author_username }}</strong> | 
+                                    Создано: {{ thread.created_at[:10] }} | 
+                                    Просмотров: {{ thread.views_count }}
+                                </small>
+                            </div>
+                            <div>
+                                {% if thread.is_pinned %}<span class="badge bg-warning"><i class="bi bi-pin-angle"></i> Прикреплено</span>{% endif %}
+                                {% if thread.is_locked %}<span class="badge bg-secondary"><i class="bi bi-lock"></i> Закрыто</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Posts -->
+                    {% if posts %}
+                        {% for post in posts %}
+                        <div class="card mb-3 {% if loop.first %}border-top-0 border-start-0 border-end-0 rounded-0{% else %}shadow-sm{% endif %}">
+                            {% if loop.first %}
+                                <!-- First post (OP) -->
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="card-subtitle text-muted mb-1">
+                                                <strong>{{ post.author_username }}</strong> <small class="text-muted">| {{ post.created_at[:16] }}</small>
+                                            </h6>
+                                        </div>
+                                        <div>
+                                            {% if session.get('user_id') == post.author_id or session.get('user_id') and current_user and current_user.is_admin %}
+                                            <a href="{{ url_for('main.delete_post', post_id=post.id, thread_id=thread.id) }}" 
+                                               class="btn btn-sm btn-outline-danger" 
+                                               onclick="return confirm('Вы уверены, что хотите удалить это сообщение?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="card-text mt-2">
+                                        {{ post.content.replace('\n', '<br>') | safe }}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Reply post -->
+                                <div class="card-header py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="text-muted">
+                                                <strong>{{ post.author_username }}</strong> | {{ post.created_at[:16] }}
+                                            </small>
+                                        </div>
+                                        <div>
+                                            {% if session.get('user_id') == post.author_id or session.get('user_id') and current_user and current_user.is_admin %}
+                                            <a href="{{ url_for('main.delete_post', post_id=post.id, thread_id=thread.id) }}" 
+                                               class="btn btn-sm btn-outline-danger" 
+                                               onclick="return confirm('Вы уверены, что хотите удалить это сообщение?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body py-2">
+                                    <div class="card-text">
+                                        {{ post.content.replace('\n', '<br>') | safe }}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <p class="text-muted">Пока нет сообщений в этой теме.</p>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Reply Form -->
+                    {% if session.get('user_id') and not thread.is_locked %}
+                    <div class="card mt-4 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="bi bi-reply"></i> Ответить</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('main.reply_to_thread', thread_id=thread.id) }}">
+                                <div class="mb-3">
+                                    <textarea name="content" class="form-control" rows="4" placeholder="Введите ваш ответ..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> Отправить ответ
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% elif thread.is_locked %}
+                    <div class="alert alert-warning mt-4" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> Эта тема закрыта. Новые ответы невозможны.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mt-4" role="alert">
+                        <i class="bi bi-info-circle"></i> <a href="{{ url_for('user.login') }}">Войдите</a>, чтобы ответить в этой теме.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
