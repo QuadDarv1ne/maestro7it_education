@@ -187,7 +187,8 @@ def clear_cache():
 @admin_bp.route('/notifications')
 def notifications():
     """Управление уведомлениями"""
-    subscribers = notification_service.subscribers
+    from app.models.notification import Subscription
+    subscribers = Subscription.query.all()
     stats = notification_service.get_subscriber_stats()
     return render_template('admin/notifications.html', subscribers=subscribers, stats=stats)
 
@@ -206,6 +207,26 @@ def add_subscriber():
         flash(f'Подписчик {email} успешно добавлен', 'success')
     except Exception as e:
         flash(f'Ошибка при добавлении подписчика: {e}', 'error')
+    
+    return redirect(url_for('admin.notifications'))
+
+@admin_bp.route('/notifications/remove_subscriber', methods=['POST'])
+def remove_subscriber():
+    """Удалить подписчика"""
+    try:
+        email = request.form['email']
+        
+        # Удаляем подписчика из базы данных
+        from app.models.notification import Subscription
+        subscription = Subscription.query.filter_by(email=email).first()
+        if subscription:
+            db.session.delete(subscription)
+            db.session.commit()
+            flash(f'Подписчик {email} успешно удален', 'success')
+        else:
+            flash(f'Подписчик {email} не найден', 'error')
+    except Exception as e:
+        flash(f'Ошибка при удалении подписчика: {e}', 'error')
     
     return redirect(url_for('admin.notifications'))
 

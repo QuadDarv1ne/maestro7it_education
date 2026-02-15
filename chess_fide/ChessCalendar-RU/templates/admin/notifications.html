@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Управление уведомлениями - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="h3 mb-4"><i class="bi bi-bell"></i> Управление уведомлениями</h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Статистика подписок</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Всего подписчиков
+                        <span class="badge bg-primary rounded-pill">{{ stats.total_subscribers }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Новые турниры
+                        <span class="badge bg-success rounded-pill">{{ stats.new_tournaments_enabled }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Обновления турниров
+                        <span class="badge bg-info rounded-pill">{{ stats.tournament_updates_enabled }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Напоминания
+                        <span class="badge bg-warning rounded-pill">{{ stats.reminders_enabled }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Добавить подписчика</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.add_subscriber') }}">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="new_tournaments" name="new_tournaments" checked>
+                        <label class="form-check-label" for="new_tournaments">
+                            Уведомления о новых турнирах
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="updates" name="updates" checked>
+                        <label class="form-check-label" for="updates">
+                            Уведомления об изменениях
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="daily_summary" name="daily_summary">
+                        <label class="form-check-label" for="daily_summary">
+                            Ежедневная сводка
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Добавить подписчика</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Список подписчиков</h5>
+            </div>
+            <div class="card-body">
+                {% if subscribers %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Статус</th>
+                                <th>Предпочтения</th>
+                                <th>Дата регистрации</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sub in subscribers %}
+                            <tr>
+                                <td>{{ sub.email }}</td>
+                                <td>
+                                    <span class="badge bg-{% if sub.active %}success{% else %}secondary{% endif %}">
+                                        {% if sub.active %}Активен{% else %}Неактивен{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if sub.preferences.new_tournaments %}<span class="badge bg-success">Новые турниры</span>{% endif %}
+                                    {% if sub.preferences.tournament_updates %}<span class="badge bg-info">Обновления</span>{% endif %}
+                                    {% if sub.preferences.reminders %}<span class="badge bg-warning">Напоминания</span>{% endif %}
+                                </td>
+                                <td>{{ sub.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="confirmDelete('{{ sub.email }}')">Удалить</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Нет подписчиков</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(email) {
+    if (confirm(`Удалить подписчика ${email}?`)) {
+        // Create form and submit POST request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("admin.remove_subscriber") }}';
+        
+        const emailInput = document.createElement('input');
+        emailInput.type = 'hidden';
+        emailInput.name = 'email';
+        emailInput.value = email;
+        
+        form.appendChild(emailInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

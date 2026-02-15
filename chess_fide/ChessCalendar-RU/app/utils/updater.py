@@ -6,6 +6,7 @@ from app import db
 from app.models.tournament import Tournament
 from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser
+from app.utils.backup import backup_manager
 
 class TournamentUpdater:
     def __init__(self):
@@ -17,6 +18,10 @@ class TournamentUpdater:
         print(f"[{datetime.now()}] Начинаю обновление турниров...")
         
         try:
+            # Создаем бэкап перед обновлением
+            print(f"[{datetime.now()}] Создаю резервную копию перед обновлением...")
+            backup_manager.create_compressed_backup()
+            
             # Обновляем с FIDE
             self._update_from_fide()
             

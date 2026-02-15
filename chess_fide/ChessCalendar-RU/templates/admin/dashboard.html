@@ -2,122 +2,228 @@
 
 {% block title %}Админ-панель - ChessCalendar-RU{% endblock %}
 
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .progress {
+        height: 10px;
+    }
+    .activity-item {
+        border-left: 3px solid #007bff;
+        padding-left: 15px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row">
-    <div class="col-md-12">
-        <h1>Админ-панель</h1>
-        
-        <!-- Статистика -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card text-white bg-primary">
-                    <div class="card-body">
-                        <h5 class="card-title">Турниры</h5>
-                        <p class="card-text display-4">{{ total_tournaments }}</p>
+    <div class="col-12">
+        <h1 class="h3 mb-4"><i class="bi bi-speedometer2"></i> Админ-панель</h1>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Турниров</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_tournaments }}</div>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-success">
-                    <div class="card-body">
-                        <h5 class="card-title">Подписчики</h5>
-                        <p class="card-text display-4">{{ notification_stats.total_subscribers }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-info">
-                    <div class="card-body">
-                        <h5 class="card-title">Кэш</h5>
-                        <p class="card-text">{{ cache_stats.type }}</p>
-                        <small>{{ cache_stats.keys }} ключей</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-{{ 'success' if health_status == 'healthy' else 'warning' if health_status == 'degraded' else 'danger' }}">
-                    <div class="card-body">
-                        <h5 class="card-title">Состояние</h5>
-                        <p class="card-text">{{ health_status|title }}</p>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-check fs-1 text-gray-300"></i>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Быстрые действия -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Быстрые действия</h5>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Подписчиков</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ notification_stats.total_subscribers }}</div>
                     </div>
-                    <div class="card-body">
-                        <div class="btn-group" role="group">
-                            <a href="{{ url_for('admin.add_tournament') }}" class="btn btn-primary">
-                                Добавить турнир
-                            </a>
-                            <a href="{{ url_for('admin.tournaments') }}" class="btn btn-outline-primary">
-                                Управление турнирами
-                            </a>
-                            <a href="{{ url_for('admin.notifications') }}" class="btn btn-outline-success">
-                                Уведомления
-                            </a>
-                            <a href="{{ url_for('admin.cache_management') }}" class="btn btn-outline-info">
-                                Кэш
-                            </a>
-                            <a href="{{ url_for('admin.health_check') }}" class="btn btn-outline-warning">
-                                Состояние системы
-                            </a>
+                    <div class="col-auto">
+                        <i class="bi bi-person-badge fs-1 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Кэш</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cache_stats.keys }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cache fs-1 text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Состояние</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <span class="badge bg-{% if health_status == 'healthy' %}success{% elif health_status == 'degraded' %}warning{% else %}danger{% endif %}">
+                                {{ health_status }}
+                            </span>
                         </div>
                     </div>
+                    <div class="col-auto">
+                        <i class="bi bi-heart-pulse fs-1 text-gray-300"></i>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Последние турниры -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Последние турниры</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if recent_tournaments %}
-                            <div class="list-group">
+<div class="row">
+    <!-- Последние турниры -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Последние турниры</h6>
+                <a href="{{ url_for('admin.tournaments') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-list"></i> Все
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_tournaments %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Дата</th>
+                                    <th>Место</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody>
                                 {% for tournament in recent_tournaments %}
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between">
-                                        <h6 class="mb-1">{{ tournament.name }}</h6>
-                                        <small>{{ tournament.start_date.strftime('%d.%m.%Y') }}</small>
-                                    </div>
-                                    <p class="mb-1">{{ tournament.location }}</p>
-                                    <small class="badge bg-secondary">{{ tournament.category }}</small>
-                                </div>
+                                <tr>
+                                    <td>{{ tournament.name[:30] }}{% if tournament.name|length > 30 %}...{% endif %}</td>
+                                    <td>{{ tournament.start_date.strftime('%d.%m.%y') }}</td>
+                                    <td>{{ tournament.location[:15] }}{% if tournament.location|length > 15 %}...{% endif %}</td>
+                                    <td><span class="badge bg-{% if tournament.status == 'Scheduled' %}primary{% elif tournament.status == 'Ongoing' %}warning{% else %}success{% endif %}">{{ tournament.status }}</span></td>
+                                </tr>
                                 {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-muted">Нет турниров</p>
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Нет недавних турниров</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Состояние системы -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Состояние системы</h6>
+                <a href="{{ url_for('admin.health') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-activity"></i> Подробнее
+                </a>
+            </div>
+            <div class="card-body">
+                {% for check_name, result in health_details.items() %}
+                <div class="activity-item">
+                    <div class="mb-1">
+                        <strong>{{ check_name }}</strong>
+                        <span class="float-end badge bg-{% if result.status == 'healthy' %}success{% elif result.status == 'error' %}danger{% else %}warning{% endif %}">
+                            {{ result.status }}
+                        </span>
+                    </div>
+                    <small class="text-muted">Проверено: {{ result.timestamp[:19] }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Кэш и производительность -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Кэш</h6>
+                <a href="{{ url_for('admin.cache_management') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-arrow-repeat"></i> Управление
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Тип:</strong> {{ cache_stats.type }}</p>
+                        <p><strong>Ключей:</strong> {{ cache_stats.keys }}</p>
+                        <p><strong>Подключен:</strong> 
+                            <span class="badge bg-{% if cache_stats.connected %}success{% else %}danger{% endif %}">
+                                {{ cache_stats.connected }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-6">
+                        {% if cache_stats.used_memory %}
+                        <p><strong>Память:</strong> {{ cache_stats.used_memory }}</p>
                         {% endif %}
                     </div>
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Состояние системы</h5>
+        </div>
+    </div>
+    
+    <!-- Быстрые действия -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Быстрые действия</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('admin.tournaments') }}" class="btn btn-block btn-outline-primary">
+                            <i class="bi bi-calendar-event"></i> Турниры
+                        </a>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-group">
-                            {% for name, details in health_details.items() %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ name|title }}
-                                <span class="badge bg-{{ 'success' if details.status == 'healthy' else 'danger' if details.status == 'error' else 'warning' }}">
-                                    {{ details.status|title }}
-                                </span>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('admin.notifications') }}" class="btn btn-block btn-outline-success">
+                            <i class="bi bi-bell"></i> Уведомления
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-block btn-outline-info">
+                            <i class="bi bi-arrow-repeat"></i> Обновить
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('admin.settings') }}" class="btn btn-block btn-outline-secondary">
+                            <i class="bi bi-gear"></i> Настройки
+                        </a>
                     </div>
                 </div>
             </div>

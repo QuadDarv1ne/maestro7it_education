@@ -1,3 +1,6 @@
+from app.models.tournament import Tournament
+from app.models.notification import Notification, Subscription, NotificationType
+from app import db
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -13,161 +16,189 @@ class NotificationService:
         self.password = password
         self.sender_email = sender_email or username
         self.logger = logging.getLogger(__name__)
-        
-        # Список подписчиков (в реальном приложении хранить в БД)
-        self.subscribers = []
-    
-    def add_subscriber(self, email, preferences=None):
-        """Добавить подписчика на уведомления"""
-        if not preferences:
-            preferences = {'new_tournaments': True, 'updates': True}
-            
-        self.subscribers.append({
-            'email': email,
-            'preferences': preferences,
-            'subscribed_at': datetime.utcnow()
-        })
-        self.logger.info(f"Добавлен подписчик: {email}")
-    
-    def remove_subscriber(self, email):
-        """Удалить подписчика"""
-        self.subscribers = [s for s in self.subscribers if s['email'] != email]
-        self.logger.info(f"Удален подписчик: {email}")
     
     def send_new_tournament_notification(self, tournament):
         """Отправить уведомление о новом турнире"""
-        subject = f"Новый шахматный турнир: {tournament.name}"
-        
-        html_content = f"""
-        <html>
-        <body>
-            <h2>Новый турнир добавлен в календарь!</h2>
-            <h3>{tournament.name}</h3>
-            <p><strong>Дата:</strong> {tournament.start_date.strftime('%d.%m.%Y')} - {tournament.end_date.strftime('%d.%m.%Y')}</p>
-            <p><strong>Место:</strong> {tournament.location}</p>
-            <p><strong>Категория:</strong> {tournament.category}</p>
-            <p><strong>Статус:</strong> {tournament.status}</p>
+        try:
+            # Создаем уведомление
+            title = f"Новый турнир: {tournament.name}"
+            message = f"Добавлен новый турнир: {tournament.name}. Начало: {tournament.start_date}. Место: {tournament.location}."
             
-            <hr>
-            <p><small>Это автоматическое уведомление от ChessCalendar-RU</small></p>
-            <p><small>Чтобы отписаться, перейдите в настройки уведомлений на сайте</small></p>
-        </body>
-        </html>
-        """
-        
-        self._send_bulk_email(subject, html_content, 
-                            lambda sub: sub['preferences'].get('new_tournaments', True))
+            notification = Notification(
+                title=title,
+                message=message,
+                type=NotificationType.NEW_TOURNAMENT,
+                tournament_id=tournament.id
+            )
+            
+            db.session.add(notification)
+            db.session.commit()
+            
+            # Отправляем уведомления подписчикам
+            self._send_to_subscribers(notification)
+            
+            self.logger.info(f"New tournament notification created for {tournament.name}")
+        except Exception as e:
+            self.logger.error(f"Error sending new tournament notification: {e}")
     
     def send_tournament_update_notification(self, tournament, changes):
         """Отправить уведомление об изменении турнира"""
-        subject = f"Обновление турнира: {tournament.name}"
-        
-        changes_html = "<ul>"
-        for field, (old_val, new_val) in changes.items():
-            changes_html += f"<li><strong>{field}:</strong> {old_val} → {new_val}</li>"
-        changes_html += "</ul>"
-        
-        html_content = f"""
-        <html>
-        <body>
-            <h2>Турнир обновлен!</h2>
-            <h3>{tournament.name}</h3>
-            <p>В турнире произошли следующие изменения:</p>
-            {changes_html}
-            
-            <hr>
-            <p><small>Это автоматическое уведомление от ChessCalendar-RU</small></p>
-        </body>
-        </html>
-        """
-        
-        self._send_bulk_email(subject, html_content,
-                            lambda sub: sub['preferences'].get('updates', True))
-    
-    def send_daily_summary(self, tournaments_count, new_tournaments):
-        """Отправить ежедневную сводку"""
-        if not new_tournaments:
-            return  # Нет новых турниров
-            
-        subject = f"Ежедневная сводка: {tournaments_count} турниров в календаре"
-        
-        tournaments_list = "<ul>"
-        for tourney in new_tournaments[:5]:  # Показываем первые 5
-            tournaments_list += f"<li>{tourney.name} ({tourney.location})</li>"
-        tournaments_list += "</ul>"
-        
-        html_content = f"""
-        <html>
-        <body>
-            <h2>Ежедневная сводка ChessCalendar-RU</h2>
-            <p>В календаре зарегистрировано <strong>{tournaments_count}</strong> турниров.</p>
-            
-            <h3>Новые турниры за последние сутки:</h3>
-            {tournaments_list}
-            
-            <p><a href="http://127.0.0.1:5000">Перейти к календарю</a></p>
-            
-            <hr>
-            <p><small>Это автоматическое уведомление от ChessCalendar-RU</small></p>
-        </body>
-        </html>
-        """
-        
-        self._send_bulk_email(subject, html_content, 
-                            lambda sub: sub['preferences'].get('daily_summary', True))
-    
-    def _send_bulk_email(self, subject, html_content, filter_func=None):
-        """Отправить email нескольким подписчикам"""
-        if not self.subscribers:
-            self.logger.warning("Нет подписчиков для отправки уведомлений")
-            return
-            
-        # Фильтруем подписчиков
-        if filter_func:
-            recipients = [sub for sub in self.subscribers if filter_func(sub)]
-        else:
-            recipients = self.subscribers
-            
-        if not recipients:
-            return
-            
         try:
-            # Создаем сообщение
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = self.sender_email
+            # Создаем уведомление
+            title = f"Изменения в турнире: {tournament.name}"
+            change_descriptions = []
+            for field, (old_val, new_val) in changes.items():
+                field_names = {
+                    'name': 'название',
+                    'start_date': 'дата начала',
+                    'end_date': 'дата окончания',
+                    'location': 'место проведения',
+                    'category': 'категория',
+                    'status': 'статус'
+                }
+                field_name = field_names.get(field, field)
+                change_descriptions.append(f"{field_name}: {old_val} → {new_val}")
             
-            # Добавляем HTML часть
-            html_part = MIMEText(html_content, 'html')
-            msg.attach(html_part)
+            message = f"В турнире '{tournament.name}' произошли изменения:\n" + "\n".join(change_descriptions)
             
-            # Отправляем каждому подписчику отдельно (BCC)
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                if self.username and self.password:
-                    server.starttls()
-                    server.login(self.username, self.password)
-                
-                for subscriber in recipients:
-                    msg['To'] = subscriber['email']
-                    server.send_message(msg)
-                    msg.replace_header('To', '')  # Очищаем для следующего получателя
-                    
-            self.logger.info(f"Отправлено {len(recipients)} уведомлений")
+            notification = Notification(
+                title=title,
+                message=message,
+                type=NotificationType.TOURNAMENT_UPDATE,
+                tournament_id=tournament.id
+            )
             
+            db.session.add(notification)
+            db.session.commit()
+
+            # Отправляем уведомления подписчикам
+            self._send_to_subscribers(notification)
+            
+            self.logger.info(f"Tournament update notification created for {tournament.name}")
         except Exception as e:
-            self.logger.error(f"Ошибка отправки уведомлений: {e}")
+            self.logger.error(f"Error sending tournament update notification: {e}")
     
+    def send_tournament_cancelled_notification(self, tournament):
+        """Отправить уведомление об отмене турнира"""
+        try:
+            title = f"Турнир отменен: {tournament.name}"
+            message = f"Турнир '{tournament.name}' был отменен."
+            
+            notification = Notification(
+                title=title,
+                message=message,
+                type=NotificationType.TOURNAMENT_CANCELLED,
+                tournament_id=tournament.id,
+                priority=3  # High priority
+            )
+            
+            db.session.add(notification)
+            db.session.commit()
+
+            # Отправляем уведомления подписчикам
+            self._send_to_subscribers(notification)
+            
+            self.logger.info(f"Tournament cancelled notification created for {tournament.name}")
+        except Exception as e:
+            self.logger.error(f"Error sending tournament cancelled notification: {e}")
+    
+    def _send_to_subscribers(self, notification):
+        """Отправить уведомление всем подходящим подписчикам"""
+        try:
+            # Получаем активных подписчиков с соответствующими предпочтениями
+            subscriptions = Subscription.query.filter_by(active=True).all()
+
+            for subscription in subscriptions:
+                # Проверяем предпочтения подписчика
+                should_send = False
+                if notification.type == NotificationType.NEW_TOURNAMENT and subscription.preferences.get('new_tournaments', True):
+                    should_send = True
+                elif notification.type == NotificationType.TOURNAMENT_UPDATE and subscription.preferences.get('tournament_updates', True):
+                    should_send = True
+                elif notification.type == NotificationType.TOURNAMENT_CANCELLED:
+                    should_send = True  # Отправляем всегда при отмене
+
+                if should_send:
+                    # В реальной системе здесь будет отправка email
+                    self.logger.info(f"Notification {notification.title} queued for {subscription.email}")
+                    
+                    # Здесь можно добавить фактическую отправку email
+                    # self._send_email(subscription.email, notification.title, notification.message)
+        except Exception as e:
+            self.logger.error(f"Error sending notification to subscribers: {e}")
+    
+    def create_subscription(self, email, preferences=None):
+        """Создать новую подписку"""
+        try:
+            if not preferences:
+                preferences = {
+                    'new_tournaments': True,
+                    'tournament_updates': True,
+                    'reminders': True
+                }
+            
+            subscription = Subscription(email=email, preferences=preferences)
+            db.session.add(subscription)
+            db.session.commit()
+            
+            self.logger.info(f"New subscription created for {email}")
+            return subscription
+        except Exception as e:
+            self.logger.error(f"Error creating subscription for {email}: {e}")
+            return None
+    
+    def get_unread_notifications(self, email):
+        """Получить непрочитанные уведомления для пользователя"""
+        try:
+            notifications = Notification.query.filter(
+                Notification.recipient_email == email,
+                Notification.is_read == False
+            ).order_by(Notification.created_at.desc()).all()
+            
+            return notifications
+        except Exception as e:
+            self.logger.error(f"Error getting unread notifications for {email}: {e}")
+            return []
+    
+    def mark_notification_as_read(self, notification_id):
+        """Отметить уведомление как прочитанное"""
+        try:
+            notification = Notification.query.get(notification_id)
+            if notification:
+                notification.is_read = True
+                notification.sent_at = datetime.utcnow()
+                db.session.commit()
+                return True
+        except Exception as e:
+            self.logger.error(f"Error marking notification {notification_id} as read: {e}")
+        return False
+
+    def add_subscriber(self, email, preferences=None):
+        """Добавить подписчика на уведомления"""
+        return self.create_subscription(email, preferences)
+
     def get_subscriber_stats(self):
         """Получить статистику по подписчикам"""
-        return {
-            'total_subscribers': len(self.subscribers),
-            'new_tournaments_enabled': len([s for s in self.subscribers 
-                                         if s['preferences'].get('new_tournaments', True)]),
-            'updates_enabled': len([s for s in self.subscribers 
-                                  if s['preferences'].get('updates', True)]),
-            'daily_summary_enabled': len([s for s in self.subscribers 
-                                        if s['preferences'].get('daily_summary', True)])
-        }
+        try:
+            total_subscribers = Subscription.query.filter_by(active=True).count()
+            return {
+                'total_subscribers': total_subscribers,
+                'new_tournaments_enabled': Subscription.query.filter(
+                    Subscription.active == True,
+                    db.func.json_extract(Subscription.preferences, '$.new_tournaments') == True
+                ).count(),
+                'tournament_updates_enabled': Subscription.query.filter(
+                    Subscription.active == True,
+                    db.func.json_extract(Subscription.preferences, '$.tournament_updates') == True
+                ).count(),
+                'reminders_enabled': Subscription.query.filter(
+                    Subscription.active == True,
+                    db.func.json_extract(Subscription.preferences, '$.reminders') == True
+                ).count()
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting subscriber stats: {e}")
+            return {'total_subscribers': 0}
 
 # Глобальный экземпляр сервиса уведомлений
 notification_service = NotificationService()
