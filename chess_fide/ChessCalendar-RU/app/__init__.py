@@ -72,5 +72,6 @@ def create_app(config_name='default'):
     app.register_blueprint(admin_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(api_docs_bp)
+    app.register_blueprint(forum_bp)
     
     return app
