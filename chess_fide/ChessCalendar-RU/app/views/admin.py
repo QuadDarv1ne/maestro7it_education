@@ -497,3 +497,53 @@ def settings():
                          flask_version=flask_version_func,
                          total_users=total_users,
                          total_tournaments=total_tournaments)
+
+@admin_bp.route('/statistics')
+def statistics():
+    """Статистика турниров"""
+    from datetime import date, timedelta
+    from collections import Counter
+    
+    # Общая статистика
+    total_tournaments = Tournament.query.count()
+    scheduled_tournaments = Tournament.query.filter_by(status='Scheduled').count()
+    ongoing_tournaments = Tournament.query.filter_by(status='Ongoing').count()
+    completed_tournaments = Tournament.query.filter_by(status='Completed').count()
+    
+    # Статистика по категориям
+    category_stats = dict(Counter([t.category for t in Tournament.query.all()]))
+    
+    # Статистика по статусам
+    status_stats = dict(Counter([t.status for t in Tournament.query.all()]))
+    
+    # Турниры в ближайшие 30 дней
+    today = date.today()
+    next_month = today + timedelta(days=30)
+    upcoming_tournaments = Tournament.query.filter(
+        Tournament.start_date >= today,
+        Tournament.start_date <= next_month
+    ).count()
+    
+    # Турниры по месяцам
+    monthly_stats = {}
+    for i in range(1, 13):
+        month_count = Tournament.query.filter(
+            db.extract('month', Tournament.start_date) == i
+        ).count()
+        if month_count > 0:
+            monthly_stats[f'Месяц {i}'] = month_count
+    
+    # Топ локаций
+    location_stats = dict(Counter([t.location for t in Tournament.query.all()]))
+    top_locations = dict(sorted(location_stats.items(), key=lambda x: x[1], reverse=True)[:10])
+    
+    return render_template('admin/statistics.html',
+                         total_tournaments=total_tournaments,
+                         scheduled_tournaments=scheduled_tournaments,
+                         ongoing_tournaments=ongoing_tournaments,
+                         completed_tournaments=completed_tournaments,
+                         category_stats=category_stats,
+                         status_stats=status_stats,
+                         upcoming_tournaments=upcoming_tournaments,
+                         monthly_stats=monthly_stats,
+                         top_locations=top_locations)
