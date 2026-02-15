@@ -368,3 +368,17 @@ def calendar():
         })
     
     return render_template('calendar.html', months_data=months_data, today=today)
+
+@main_bp.route('/recommendations')
+def recommendations():
+    """Show tournament recommendations for the user"""
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите в систему для получения персональных рекомендаций', 'info')
+        return redirect(url_for('main.index'))
+    
+    from app.utils.recommendations import RecommendationEngine
+    user_id = session['user_id']
+    recommended_tournaments = RecommendationEngine.get_user_recommendations(user_id)
+    
+    return render_template('recommendations.html', 
+                           recommended_tournaments=recommended_tournaments)
