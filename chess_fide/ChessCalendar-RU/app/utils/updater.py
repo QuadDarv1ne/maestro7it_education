@@ -1,12 +1,23 @@
 import schedule
 import time
 import threading
+import logging
 from datetime import datetime
 from app import db
 from app.models.tournament import Tournament
 from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser
-from app.utils.backup import backup_manager
+try:
+    from app.utils.backup import DatabaseBackupManager
+    backup_manager = DatabaseBackupManager("chess_calendar.db")
+except ImportError:
+    # Mock backup manager if backup module not available
+    class MockBackupManager:
+        def create_compressed_backup(self):
+            print(f"[{datetime.now()}] Backup manager not available, skipping backup")
+            return None
+    backup_manager = MockBackupManager()
+    logging.warning("Backup manager not available, using mock implementation")
 
 class TournamentUpdater:
     def __init__(self):
@@ -20,7 +31,16 @@ class TournamentUpdater:
         try:
             # Создаем бэкап перед обновлением
             print(f"[{datetime.now()}] Создаю резервную копию перед обновлением...")
-            backup_manager.create_compressed_backup()
+            try:
+                backup_result = backup_manager.create_compressed_backup()
+                if backup_result:
+                    print(f"[{datetime.now()}] Резервная копия создана: {backup_result}")
+                else:
+                    print(f"[{datetime.now()}] Создание резервной копии пропущено")
+            except FileNotFoundError:
+                print(f"[{datetime.now()}] Файл базы данных не найден, пропускаю создание резервной копии")
+            except Exception as backup_error:
+                print(f"[{datetime.now()}] Ошибка при создании резервной копии: {backup_error}")
             
             # Обновляем с FIDE
             self._update_from_fide()
@@ -31,7 +51,9 @@ class TournamentUpdater:
             print(f"[{datetime.now()}] Обновление завершено успешно")
             
         except Exception as e:
-            print(f"[{datetime.now()}] Ошибка при обновлении: {e}")
+            print(f"[{datetime.now()}] Критическая ошибка при обновлении: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _update_from_fide(self):
         """Обновить данные с FIDE"""
@@ -39,23 +61,38 @@ class TournamentUpdater:
         try:
             fide_tournaments = self.fide_parser.get_tournaments_russia(2026)
             added_count = 0
+            processed_count = 0
             
             for tourney_data in fide_tournaments:
-                existing = Tournament.query.filter_by(
-                    name=tourney_data['name'],
-                    start_date=tourney_data['start_date']
-                ).first()
+                try:
+                    existing = Tournament.query.filter_by(
+                        name=tourney_data['name'],
+                        start_date=tourney_data['start_date']
+                    ).first()
+                    
+                    if not existing:
+                        tournament = Tournament(**tourney_data)
+                        db.session.add(tournament)
+                        added_count += 1
+                    processed_count += 1
+                except KeyError as ke:
+                    print(f"Ошибка при обработке турнира с FIDE: отсутствует поле {ke}")
+                    continue
+                except Exception as te:
+                    print(f"Ошибка при добавлении турнира с FIDE: {te}")
+                    continue
+            
+            try:
+                db.session.commit()
+                print(f"Обработано {processed_count} турниров с FIDE, добавлено {added_count} новых")
+            except Exception as db_error:
+                print(f"Ошибка при сохранении в базу: {db_error}")
+                db.session.rollback()
                 
-                if not existing:
-                    tournament = Tournament(**tourney_data)
-                    db.session.add(tournament)
-                    added_count += 1
-            
-            db.session.commit()
-            print(f"Добавлено {added_count} турниров с FIDE")
-            
         except Exception as e:
-            print(f"Ошибка при обновлении с FIDE: {e}")
+            print(f"Ошибка при получении данных с FIDE: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _update_from_cfr(self):
         """Обновить данные с CFR"""
@@ -63,23 +100,38 @@ class TournamentUpdater:
         try:
             cfr_tournaments = self.cfr_parser.get_tournaments(2026)
             added_count = 0
+            processed_count = 0
             
             for tourney_data in cfr_tournaments:
-                existing = Tournament.query.filter_by(
-                    name=tourney_data['name'],
-                    start_date=tourney_data['start_date']
-                ).first()
+                try:
+                    existing = Tournament.query.filter_by(
+                        name=tourney_data['name'],
+                        start_date=tourney_data['start_date']
+                    ).first()
+                    
+                    if not existing:
+                        tournament = Tournament(**tourney_data)
+                        db.session.add(tournament)
+                        added_count += 1
+                    processed_count += 1
+                except KeyError as ke:
+                    print(f"Ошибка при обработке турнира с CFR: отсутствует поле {ke}")
+                    continue
+                except Exception as te:
+                    print(f"Ошибка при добавлении турнира с CFR: {te}")
+                    continue
+            
+            try:
+                db.session.commit()
+                print(f"Обработано {processed_count} турниров с CFR, добавлено {added_count} новых")
+            except Exception as db_error:
+                print(f"Ошибка при сохранении в базу: {db_error}")
+                db.session.rollback()
                 
-                if not existing:
-                    tournament = Tournament(**tourney_data)
-                    db.session.add(tournament)
-                    added_count += 1
-            
-            db.session.commit()
-            print(f"Добавлено {added_count} турниров с CFR")
-            
         except Exception as e:
-            print(f"Ошибка при обновлении с CFR: {e}")
+            print(f"Ошибка при получении данных с CFR: {e}")
+            import traceback
+            traceback.print_exc()
 
     def start_scheduler(self):
         """Запустить планировщик обновлений"""

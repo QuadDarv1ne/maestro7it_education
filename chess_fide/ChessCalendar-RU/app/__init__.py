@@ -5,7 +5,7 @@ import os
 db = SQLAlchemy()
 
 def create_app(config_name='default'):
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='../templates')
     
     # Загрузка конфигурации
     app.config.from_object('config.Config')
@@ -21,6 +21,15 @@ def create_app(config_name='default'):
     @app.route('/static/<path:filename>')
     def static_files(filename):
         return send_from_directory('static', filename)
+    
+    # Дополнительные статические маршруты для PWA
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory('static', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    
+    @app.route('/robots.txt')
+    def robots():
+        return send_from_directory('static', 'robots.txt', mimetype='text/plain')
     
     # PWA маршруты
     @app.route('/sw.js')
