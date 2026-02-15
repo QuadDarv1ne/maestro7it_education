@@ -1,0 +1,193 @@
+<!-- Rating Form Component -->
+<div class="rating-section mt-4">
+    <h5><i class="bi bi-star-half"></i> Оценить турнир</h5>
+    
+    {% if session.get('user_id') %}
+        <form id="ratingForm" class="mb-3">
+            <input type="hidden" id="tournamentId" value="{{ tournament.id }}">
+            
+            <div class="mb-2">
+                <label class="form-label">Ваша оценка:</label>
+                <div class="star-rating">
+                    <input type="radio" id="star5" name="rating" value="5" class="star-input" />
+                    <label for="star5" title="Отлично" class="star-label bi bi-star"></label>
+                    <input type="radio" id="star4" name="rating" value="4" class="star-input" />
+                    <label for="star4" title="Хорошо" class="star-label bi bi-star"></label>
+                    <input type="radio" id="star3" name="rating" value="3" class="star-input" />
+                    <label for="star3" title="Удовлетворительно" class="star-label bi bi-star"></label>
+                    <input type="radio" id="star2" name="rating" value="2" class="star-input" />
+                    <label for="star2" title="Плохо" class="star-label bi bi-star"></label>
+                    <input type="radio" id="star1" name="rating" value="1" class="star-input" />
+                    <label for="star1" title="Ужасно" class="star-label bi bi-star"></label>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="review" class="form-label">Ваш отзыв (необязательно):</label>
+                <textarea id="review" class="form-control" rows="3" placeholder="Поделитесь своим мнением о турнире..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send"></i> Отправить оценку
+            </button>
+        </form>
+        
+        <div id="ratingFeedback" class="alert d-none" role="alert"></div>
+    {% else %}
+        <p><a href="{{ url_for('user.login') }}">Войдите</a>, чтобы оценить турнир</p>
+    {% endif %}
+</div>
+
+<style>
+.star-rating {
+    display: inline-block;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    position: relative;
+    line-height: 1.2em;
+    width: 10em;
+    height: 1.2em;
+}
+
+.star-input {
+    opacity: 0;
+    display: none;
+}
+
+.star-label {
+    float: right;
+    padding: 0;
+    cursor: pointer;
+    font-size: 1.5em;
+    color: #ddd;
+    transition: color 0.3s;
+    margin-right: 0.1em;
+}
+
+.star-label:hover {
+    color: #ffd700;
+}
+
+.star-input:checked ~ .star-label,
+.star-input:focus ~ .star-label {
+    color: #ffd700;
+}
+
+.star-input:checked ~ .star-label:hover,
+.star-input:checked ~ .star-label:hover ~ .star-label {
+    color: #ffd700;
+}
+</style>
+
+<script>
+// Load user's existing rating when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserRating();
+    setupRatingForm();
+});
+
+function loadUserRating() {
+    const tournamentId = document.getElementById('tournamentId').value;
+    
+    fetch(`/user/get-rating/${tournamentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.rating && data.rating > 0) {
+                // Set the radio button for the rating
+                document.querySelector(`input[name="rating"][value="${data.rating}"]`).checked = true;
+                
+                // Update star display
+                updateStarDisplay(data.rating);
+                
+                // Set review text
+                if (data.review) {
+                    document.getElementById('review').value = data.review;
+                }
+            }
+        })
+        .catch(error => console.error('Error loading rating:', error));
+}
+
+function updateStarDisplay(rating) {
+    const stars = document.querySelectorAll('.star-label');
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.style.color = '#ffd700';
+        } else {
+            star.style.color = '#ddd';
+        }
+    });
+}
+
+function setupRatingForm() {
+    const form = document.getElementById('ratingForm');
+    const stars = document.querySelectorAll('.star-label');
+    
+    // Update star display when clicking on stars
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const ratingValue = this.previousElementSibling.value;
+            updateStarDisplay(ratingValue);
+        });
+    });
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const tournamentId = document.getElementById('tournamentId').value;
+        const ratingInput = document.querySelector('input[name="rating"]:checked');
+        const review = document.getElementById('review').value.trim();
+        
+        if (!ratingInput) {
+            showRatingFeedback('Пожалуйста, выберите оценку', 'danger');
+            return;
+        }
+        
+        const rating = ratingInput.value;
+        
+        fetch(`/user/rate-tournament/${tournamentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `rating=${rating}&review=${encodeURIComponent(review)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showRatingFeedback(data.message, 'success');
+                
+                // Update average rating display if present
+                updateAverageRatingDisplay(rating);
+            } else {
+                showRatingFeedback(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showRatingFeedback('Произошла ошибка при отправке оценки', 'danger');
+        });
+    });
+}
+
+function showRatingFeedback(message, type) {
+    const feedbackDiv = document.getElementById('ratingFeedback');
+    feedbackDiv.className = `alert alert-${type} d-block`;
+    feedbackDiv.textContent = message;
+    
+    // Hide feedback after 5 seconds
+    setTimeout(() => {
+        feedbackDiv.classList.add('d-none');
+    }, 5000);
+}
+
+function updateAverageRatingDisplay(newRating) {
+    // Update the average rating display on the page
+    const avgRatingElement = document.querySelector('.avg-rating-value');
+    if (avgRatingElement) {
+        // In a real scenario, we would fetch the updated average
+        // For now, we'll just show a message indicating the rating was updated
+    }
+}
+</script>

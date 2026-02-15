@@ -20,6 +20,8 @@ class Tournament(db.Model):
         return f'<Tournament {self.name}>'
 
     def to_dict(self):
+        from app.utils.ratings import RatingService
+        avg_rating = RatingService.get_tournament_average_rating(self.id)
         return {
             'id': self.id,
             'name': self.name,
@@ -29,8 +31,16 @@ class Tournament(db.Model):
             'category': self.category,
             'status': self.status,
             'fide_id': self.fide_id,
-            'source_url': self.source_url
+            'source_url': self.source_url,
+            'average_rating': avg_rating['average_rating'],
+            'total_ratings': avg_rating['total_ratings']
         }
+    
+    def get_average_rating(self):
+        """Get average rating for this tournament"""
+        from app.utils.ratings import RatingService
+        avg_rating = RatingService.get_tournament_average_rating(self.id)
+        return avg_rating['average_rating']
     
     def validate(self):
         """Валидация данных турнира"""
