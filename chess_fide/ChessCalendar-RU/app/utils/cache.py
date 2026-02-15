@@ -4,6 +4,7 @@ import pickle
 from datetime import timedelta
 from functools import wraps
 import logging
+import time
 
 class CacheService:
     def __init__(self, host='localhost', port=6379, db=0, default_timeout=300):
@@ -28,19 +29,29 @@ class CacheService:
     
     def get(self, key):
         """Получить значение из кэша"""
+        start_time = time.time()
         try:
             if self.use_redis:
                 value = self.redis_client.get(key)
                 if value:
                     try:
-                        return pickle.loads(value)
+                        result = pickle.loads(value)
+                        elapsed_time = time.time() - start_time
+                        if elapsed_time > 0.1:  # Log if operation takes more than 100ms
+                            self.logger.warning(f"Slow cache get operation for key {key}: {elapsed_time:.3f}s")
+                        return result
                     except pickle.UnpicklingError:
                         self.logger.warning(f"Failed to unpickle cached value for key: {key}")
                         return None
             else:
-                return self.cache.get(key)
+                result = self.cache.get(key)
+                elapsed_time = time.time() - start_time
+                if elapsed_time > 0.1:  # Log if operation takes more than 100ms
+                    self.logger.warning(f"Slow cache get operation for key {key}: {elapsed_time:.3f}s")
+                return result
         except Exception as e:
-            self.logger.error(f"Cache get error: {e}")
+            elapsed_time = time.time() - start_time
+            self.logger.error(f"Cache get error for key {key} after {elapsed_time:.3f}s: {e}")
         return None
     
     def set(self, key, value, timeout=None):
@@ -48,20 +59,29 @@ class CacheService:
         if timeout is None:
             timeout = self.default_timeout
             
+        start_time = time.time()
         try:
             if self.use_redis:
                 try:
                     serialized_value = pickle.dumps(value)
                     self.redis_client.setex(key, timeout, serialized_value)
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time > 0.1:  # Log if operation takes more than 100ms
+                        self.logger.warning(f"Slow cache set operation for key {key}: {elapsed_time:.3f}s")
                 except (pickle.PicklingError, TypeError) as pickle_error:
+                    elapsed_time = time.time() - start_time
                     self.logger.warning(f"Failed to pickle value for cache key {key}: {pickle_error}")
                     return
             else:
                 self.cache[key] = value
+                elapsed_time = time.time() - start_time
+                if elapsed_time > 0.1:  # Log if operation takes more than 100ms
+                    self.logger.warning(f"Slow cache set operation for key {key}: {elapsed_time:.3f}s")
                 # Для in-memory кэша реализуем простое удаление по времени
                 # В реальном приложении использовать более сложную логику
         except Exception as e:
-            self.logger.error(f"Cache set error: {e}")
+            elapsed_time = time.time() - start_time
+            self.logger.error(f"Cache set error for key {key} after {elapsed_time:.3f}s: {e}")
     
     def delete(self, key):
         """Удалить значение из кэша"""

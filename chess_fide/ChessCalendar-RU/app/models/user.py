@@ -20,12 +20,17 @@ class User(db.Model):
     last_login = db.Column(db.DateTime, index=True)
     is_active = db.Column(db.Boolean, default=True, index=True)
     api_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime)
+    password_reset_token = db.Column(db.String(100), unique=True)
+    password_reset_expires = db.Column(db.DateTime)
     
     # Composite indexes for common query patterns
     __table_args__ = (
         db.Index('idx_username_active', 'username', 'is_active'),
         db.Index('idx_email_active', 'email', 'is_active'),
         db.Index('idx_created_active', 'created_at', 'is_active'),
+        db.Index('idx_failed_login', 'failed_login_attempts', 'locked_until'),
     )
 
     def __init__(self, username, email, password, is_admin=False, is_regular_user=True):
@@ -38,11 +43,57 @@ class User(db.Model):
 
     def set_password(self, password):
         """Установить хэш пароля"""
+        # Validate password strength
+        if not self.validate_password_strength(password):
+            raise ValueError("Password does not meet security requirements")
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         """Проверить пароль"""
-        return check_password_hash(self.password_hash, password)
+        # Check if account is locked
+        if self.is_locked():
+            return False
+        
+        is_valid = check_password_hash(self.password_hash, password)
+        
+        if is_valid:
+            # Reset failed attempts on successful login
+            self.failed_login_attempts = 0
+            self.locked_until = None
+        else:
+            # Increment failed attempts
+            self.failed_login_attempts += 1
+            # Lock account after 5 failed attempts
+            if self.failed_login_attempts >= 5:
+                from datetime import datetime, timedelta
+                self.locked_until = datetime.utcnow() + timedelta(minutes=30)
+        
+        return is_valid
+    
+    def is_locked(self):
+        """Check if account is currently locked"""
+        from datetime import datetime
+        if self.locked_until and datetime.utcnow() < self.locked_until:
+            return True
+        elif self.locked_until and datetime.utcnow() >= self.locked_until:
+            # Unlock account if lock period has expired
+            self.failed_login_attempts = 0
+            self.locked_until = None
+        return False
+    
+    def validate_password_strength(self, password):
+        """Validate password meets security requirements"""
+        if len(password) < 8:
+            return False
+        if not re.search(r'[A-Z]', password):  # Has uppercase
+            return False
+        if not re.search(r'[a-z]', password):  # Has lowercase
+            return False
+        if not re.search(r'\d', password):  # Has digit
+            return False
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):  # Has special char
+            return False
+        return True
 
     def generate_api_key(self):
         """Сгенерировать API ключ"""

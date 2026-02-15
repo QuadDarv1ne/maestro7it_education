@@ -137,6 +137,31 @@ def get_popular_tournaments():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@api_bp.route('/metrics/performance', methods=['GET'])
+@track_performance()
+def get_performance_metrics():
+    """Get performance metrics for the application"""
+    try:
+        from app.utils.performance_monitor import perf_monitor
+        
+        # Get performance summary
+        summary = perf_monitor.get_performance_summary()
+        
+        # Get slow endpoints
+        slow_endpoints = perf_monitor.get_slow_endpoints(threshold=0.5)  # Endpoints taking > 0.5s
+        
+        # Get recent requests
+        recent_requests = perf_monitor.get_recent_requests(minutes=5)
+        
+        return jsonify({
+            'summary': summary,
+            'slow_endpoints': slow_endpoints,
+            'recent_requests_count': len(recent_requests),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @api_bp.route('/tournaments/trending', methods=['GET'])
 def get_trending_tournaments():
     """Get trending tournaments based on recent activity"""

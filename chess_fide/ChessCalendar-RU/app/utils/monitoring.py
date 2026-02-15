@@ -5,6 +5,9 @@ from datetime import datetime
 import json
 from functools import wraps
 
+# Import our enhanced performance monitor
+from .performance_monitor import perf_monitor, track_performance, measure_execution_time
+
 class LoggerSetup:
     @staticmethod
     def setup_logging(log_level=logging.INFO, log_file='chess_calendar.log'):
@@ -147,7 +150,8 @@ class HealthChecker:
 
 # Глобальные экземпляры
 logger_setup = LoggerSetup()
-performance_monitor = PerformanceMonitor()
+# Use the enhanced performance monitor from performance_monitor module
+performance_monitor = perf_monitor
 health_checker = HealthChecker()
 
 # Предопределенные проверки состояния

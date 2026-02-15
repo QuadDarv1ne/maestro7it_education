@@ -2,9 +2,11 @@ from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
 import os
 
 db = SQLAlchemy()
+csrf = CSRFProtect()
 
 # Import performance monitoring
 from .utils.performance_monitor import track_performance
@@ -31,6 +33,9 @@ def create_app(config_name='default'):
         default_limits=["200 per day", "50 per hour"]
     )
     limiter.init_app(app)
+    
+    # Initialize CSRF protection
+    csrf.init_app(app)
     
     # Загрузка конфигурации
     app.config.from_object('config.Config')
@@ -92,8 +97,12 @@ def create_app(config_name='default'):
         response.headers['X-Permitted-Cross-Domain-Policies'] = 'none'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
         response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:"
+        response.headers['X-Content-Security-Policy'] = response.headers['Content-Security-Policy']  # For older browsers
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
         return response
     
     # Регистрация blueprint'ов
