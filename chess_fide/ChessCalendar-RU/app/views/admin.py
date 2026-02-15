@@ -126,6 +126,9 @@ def edit_tournament(id):
             tournament.location = request.form['location']
             tournament.category = request.form['category']
             tournament.status = request.form.get('status', 'Scheduled')
+            tournament.description = request.form.get('description')
+            tournament.prize_fund = request.form.get('prize_fund')
+            tournament.organizer = request.form.get('organizer')
             tournament.fide_id = request.form.get('fide_id')
             tournament.source_url = request.form.get('source_url')
             tournament.updated_at = datetime.utcnow()
