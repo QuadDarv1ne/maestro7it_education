@@ -6,5 +6,6 @@ from .preference import UserPreference, UserInteraction
 from .rating import TournamentRating
 from .forum import ForumThread, ForumPost
 from .report import Report
+from .tournament_subscription import TournamentSubscription
 
-__all__ = ['Tournament', 'User', 'Notification', 'Subscription', 'FavoriteTournament', 'UserPreference', 'UserInteraction', 'TournamentRating', 'ForumThread', 'ForumPost', 'Report']
+__all__ = ['Tournament', 'User', 'Notification', 'Subscription', 'FavoriteTournament', 'UserPreference', 'UserInteraction', 'TournamentRating', 'ForumThread', 'ForumPost', 'Report', 'TournamentSubscription']

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app import db
 from app.models.tournament import Tournament
 from app.models.user import User
+from app.models.tournament_subscription import TournamentSubscription
 from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser
 from app.utils.updater import updater
@@ -36,18 +37,10 @@ def index():
         search_filter = db.or_(
             Tournament.name.contains(search_query),
             Tournament.location.contains(search_query),
-            Tournament.description.contains(search_query) if search_query else False,
-            Tournament.organizer.contains(search_query) if search_query else False
+            Tournament.description.contains(search_query),
+            Tournament.organizer.contains(search_query)
         )
-        # Remove the False condition which would cause an error
-        if search_query:
-            search_filter = db.or_(
-                Tournament.name.contains(search_query),
-                Tournament.location.contains(search_query),
-                Tournament.description.contains(search_query),
-                Tournament.organizer.contains(search_query)
-            )
-            query = query.filter(search_filter)
+        query = query.filter(search_filter)
     
     # Применяем сортировку
     if sort_by == 'name':
@@ -86,13 +79,17 @@ def tournament_detail(tournament_id):
     """Страница деталей турнира"""
     tournament = Tournament.query.get_or_404(tournament_id)
     
-    # Record user interaction if user is logged in
+    # Get user subscription status if logged in
+    is_subscribed = False
     if 'user_id' in session:
+        is_subscribed = TournamentSubscription.is_subscribed(session['user_id'], tournament_id)
         from app.utils.recommendations import RecommendationEngine
         user_id = session['user_id']
         RecommendationEngine.record_interaction(user_id, tournament_id, 'view', 1)
     
-    return render_template('tournament_detail.html', tournament=tournament)
+    return render_template('tournament_detail.html', 
+                         tournament=tournament, 
+                         is_subscribed=is_subscribed)
 
 @main_bp.route('/api/tournaments')
 def api_tournaments():
@@ -121,17 +118,6 @@ def api_tournament_search():
     db_query = Tournament.query
     
     # Apply filters
-    if query:
-        db_query = db_query.filter(
-            db.or_(
-                Tournament.name.contains(query),
-                Tournament.location.contains(query),
-                Tournament.description.contains(query) if query else False,
-                Tournament.organizer.contains(query) if query else False
-            )
-        )
-    
-    # Remove the False condition which would cause an error
     if query:
         db_query = db_query.filter(
             db.or_(
@@ -350,3 +336,30 @@ def recommendations():
     
     return render_template('recommendations.html', 
                            recommended_tournaments=recommended_tournaments)
+
+@main_bp.route('/tournament/<int:tournament_id>/subscribe', methods=['POST'])
+def toggle_tournament_subscription(tournament_id):
+    """Toggle subscription to a specific tournament"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Необходимо войти в систему'})
+    
+    user_id = session['user_id']
+    tournament = Tournament.query.get_or_404(tournament_id)
+    
+    # Check if already subscribed
+    is_subscribed = TournamentSubscription.is_subscribed(user_id, tournament_id)
+    
+    if is_subscribed:
+        # Unsubscribe
+        success = TournamentSubscription.unsubscribe(user_id, tournament_id)
+        if success:
+            return jsonify({'success': True, 'subscribed': False, 'message': 'Отписка прошла успешно'})
+        else:
+            return jsonify({'success': False, 'message': 'Ошибка при отписке'})
+    else:
+        # Subscribe
+        success = TournamentSubscription.subscribe(user_id, tournament_id)
+        if success:
+            return jsonify({'success': True, 'subscribed': True, 'message': 'Подписка оформлена успешно'})
+        else:
+            return jsonify({'success': False, 'message': 'Ошибка при подписке'})
