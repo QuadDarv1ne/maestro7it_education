@@ -10,17 +10,19 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    is_regular_user = db.Column(db.Boolean, default=True)  # Regular users who can subscribe to notifications
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
     api_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
 
-    def __init__(self, username, email, password, is_admin=False):
+    def __init__(self, username, email, password, is_admin=False, is_regular_user=True):
         self.username = username
         self.email = email
         self.set_password(password)
         self.is_admin = is_admin
+        self.is_regular_user = is_regular_user
         self.generate_api_key()
 
     def set_password(self, password):
@@ -41,6 +43,7 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'is_admin': self.is_admin,
+            'is_regular_user': self.is_regular_user,
             'created_at': self.created_at.isoformat(),
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'is_active': self.is_active

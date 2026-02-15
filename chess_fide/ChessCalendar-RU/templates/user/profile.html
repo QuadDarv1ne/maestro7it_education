@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-person-fill"></i> Мой профиль</h4>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <form method="POST" action="{{ url_for('user.update_profile') }}" id="profileForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Дата регистрации</label>
+                        <input type="text" class="form-control-plaintext" readonly value="{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Последний вход</label>
+                        <input type="text" class="form-control-plaintext" readonly value="{{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else 'Еще не входил' }}">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-save"></i> Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <h5>Смена пароля</h5>
+                <form method="POST" action="{{ url_for('user.change_password') }}" id="passwordForm">
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">Текущий пароль</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">Новый пароль</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                        <div class="form-text">Пароль должен содержать не менее 6 символов, включая буквы и цифры</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Подтверждение нового пароля</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-key"></i> Изменить пароль
+                        </button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <h5>Настройки уведомлений</h5>
+                <form method="POST" action="{{ url_for('main.update_notification_preferences') }}">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="new_tournaments" name="new_tournaments" {% if preferences.new_tournaments %}checked{% endif %}>
+                        <label class="form-check-label" for="new_tournaments">Новые турниры</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="tournament_updates" name="tournament_updates" {% if preferences.tournament_updates %}checked{% endif %}>
+                        <label class="form-check-label" for="tournament_updates">Обновления турниров</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="daily_summary" name="daily_summary" {% if preferences.daily_summary %}checked{% endif %}>
+                        <label class="form-check-label" for="daily_summary">Ежедневная сводка</label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-bell"></i> Сохранить настройки уведомлений
+                        </button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <a href="{{ url_for('user.logout') }}" class="btn btn-danger">
+                        <i class="bi bi-box-arrow-right"></i> Выйти из аккаунта
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Произошла ошибка при сохранении профиля');
+    });
+});
+
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            document.getElementById('passwordForm').reset();
+        } else {
+            alert('Ошибка: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Произошла ошибка при смене пароля');
+    });
+});
+</script>
+{% endblock %}
