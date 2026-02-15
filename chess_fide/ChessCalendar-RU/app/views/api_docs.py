@@ -190,3 +190,54 @@ def swagger_spec():
     }
     
     return jsonify(spec)
+
+
+@api_docs_bp.route('/health')
+def health_check():
+    """Проверка состояния системы"""
+    from app.utils.monitoring import health_checker
+    return jsonify(health_checker.run_health_checks())
+
+
+@api_docs_bp.route('/metrics')
+def metrics():
+    """Получить метрики производительности"""
+    from app.utils.monitoring import performance_monitor
+    return jsonify(performance_monitor.get_metrics_summary())
+
+
+@api_docs_bp.route('/system-info')
+def system_info():
+    """Получить информацию о системе"""
+    import platform
+    import psutil
+    import os
+    from datetime import datetime
+    
+    system_data = {
+        "server": {
+            "name": platform.node(),
+            "platform": platform.platform(),
+            "processor": platform.processor(),
+            "architecture": platform.architecture()[0],
+        },
+        "runtime": {
+            "python_version": platform.python_version(),
+            "python_compiler": platform.python_compiler(),
+        },
+        "process": {
+            "pid": os.getpid(),
+            "cwd": os.getcwd(),
+            "memory_percent": psutil.Process().memory_percent(),
+        },
+        "system": {
+            "cpu_percent": psutil.cpu_percent(interval=1),
+            "memory_total": psutil.virtual_memory().total,
+            "memory_available": psutil.virtual_memory().available,
+            "memory_percent": psutil.virtual_memory().percent,
+            "disk_usage": psutil.disk_usage('/').percent if hasattr(os, 'statvfs') else 'N/A',
+        },
+        "timestamp": datetime.now().isoformat(),
+        "status": "running"
+    }
+    return jsonify(system_data)

@@ -187,6 +187,37 @@ health_checker.add_health_check('database', check_database_connection)
 health_checker.add_health_check('cache', check_cache_connection)
 health_checker.add_health_check('parsers', check_parser_status)
 
+
+def check_application_status():
+    """Проверка общего статуса приложения"""
+    try:
+        # Простая проверка работоспособности
+        import datetime
+        current_time = datetime.datetime.now()
+        return {
+            'status': 'running',
+            'timestamp': current_time.isoformat(),
+            'uptime_minutes': 0  # Will be calculated in a real implementation
+        }
+    except Exception:
+        return False
+
+
+def check_api_endpoints():
+    """Проверка доступности API эндпоинтов"""
+    try:
+        from app import create_app
+        with create_app().test_client() as client:
+            response = client.get('/api/tournaments')
+            return response.status_code == 200
+    except Exception:
+        return False
+
+
+# Регистрируем дополнительные проверки
+health_checker.add_health_check('application', check_application_status)
+health_checker.add_health_check('api_endpoints', check_api_endpoints)
+
 # Декоратор для автоматического логирования
 def log_action(action_name):
     """Декоратор для логирования действий"""

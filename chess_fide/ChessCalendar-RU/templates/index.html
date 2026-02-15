@@ -68,9 +68,9 @@
             <p class="lead text-muted">Актуальный календарь официальных турниров FIDE</p>
             <!-- Прогресс-бар для визуального интереса -->
             <div class="progress-container mt-3">
-                <div class="progress-bar" style="width: {{ (tournaments|length * 10) if (tournaments|length * 10) < 100 else 100 }}%"></div>
+                <div class="progress-bar" id="tournaments-progress"></div>
             </div>
-            <small class="text-muted">{{ tournaments|length }} из 100+ турниров загружено</small>
+            <small class="text-muted"><span id="tournaments-count">{{ tournaments|length }}</span> из 100+ турниров загружено</small>
         </div>
         
         <!-- Статистика и действия -->
@@ -268,7 +268,7 @@
 
 {% block scripts %}
 <script>
-// Мобильные оптимизации
+// Мобильные оптимизации и улучшения UI
 document.addEventListener('DOMContentLoaded', function() {
     // Автоматическое сворачивание фильтров на мобильных при применении
     if (window.innerWidth <= 768) {
@@ -295,6 +295,26 @@ document.addEventListener('DOMContentLoaded', function() {
         card.addEventListener('touchend', function(e) {
             this.classList.remove('opacity-75');
         });
+    });
+    
+    // Обновление прогресс-бара
+    const tournamentCount = parseInt(document.getElementById('tournaments-count').textContent);
+    const progressBar = document.getElementById('tournaments-progress');
+    const progressPercentage = Math.min(tournamentCount * 10, 100); // Максимум 100%
+    progressBar.style.width = progressPercentage + '%';
+    
+    // Анимация при загрузке
+    const tournamentCards = document.querySelectorAll('.tournament-card');
+    tournamentCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('fade-in');
+        }, index * 100); // Плавное появление карточек
+    });
+    
+    // Добавление тултипов
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 </script>
