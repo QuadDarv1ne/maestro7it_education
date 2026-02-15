@@ -2,150 +2,295 @@
 
 {% block title %}Календарь шахматных турниров в России{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Мобильные стили для фильтров */
+    @media (max-width: 768px) {
+        .filter-card .card-body {
+            padding: 0.75rem;
+        }
+        
+        .form-select, .form-control {
+            font-size: 0.9rem;
+            padding: 0.375rem 0.75rem;
+        }
+        
+        .btn-group .btn {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+    }
+    
+    /* Стили для карточек турниров на мобильных */
+    @media (max-width: 576px) {
+        .tournament-card {
+            margin-bottom: 10px;
+        }
+        
+        .tournament-card .card-body {
+            padding: 0.75rem;
+        }
+        
+        .tournament-card h5 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tournament-date {
+            font-size: 0.85rem;
+        }
+        
+        .tournament-location {
+            font-size: 0.8rem;
+        }
+    }
+    
+    /* Анимации для мобильных */
+    @media (max-width: 768px) {
+        .tournament-card {
+            transition: all 0.3s ease;
+        }
+        
+        .tournament-card:active {
+            transform: scale(0.98);
+            background-color: rgba(0,123,255,0.05);
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row">
-    <div class="col-md-12">
-        <h1>Шахматные турниры в России 2026</h1>
-        <p class="lead">Актуальный календарь официальных шахматных турниров FIDE в России</p>
+    <div class="col-12">
+        <!-- Заголовок -->
+        <div class="text-center mb-4">
+            <h1 class="display-6">Шахматные турниры в России 2026</h1>
+            <p class="lead text-muted">Актуальный календарь официальных турниров FIDE</p>
+        </div>
         
-        <!-- Фильтры -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Фильтры и сортировка</h5>
+        <!-- Статистика и действия -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+            <div class="mb-2 mb-md-0">
+                <span class="badge bg-primary fs-6">
+                    <i class="bi bi-calendar-event"></i> Турниров: {{ tournaments|length }}
+                </span>
+                {% if filters.category %}
+                    <span class="badge bg-info ms-1">
+                        <i class="bi bi-tag"></i> {{ filters.category }}
+                    </span>
+                {% endif %}
+                {% if filters.status %}
+                    <span class="badge bg-warning ms-1">
+                        <i class="bi bi-info-circle"></i> {{ filters.status }}
+                    </span>
+                {% endif %}
             </div>
-            <div class="card-body">
-                <form method="GET" class="row g-3">
-                    <div class="col-md-3">
-                        <label for="category" class="form-label">Категория</label>
-                        <select name="category" id="category" class="form-select">
-                            <option value="">Все категории</option>
-                            {% for category in categories %}
-                                <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>
-                                    {{ category }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="status" class="form-label">Статус</label>
-                        <select name="status" id="status" class="form-select">
-                            <option value="">Все статусы</option>
-                            {% for status in statuses %}
-                                <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>
-                                    {{ status }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="location" class="form-label">Место</label>
-                        <input type="text" name="location" id="location" class="form-control" 
-                               value="{{ filters.location }}" placeholder="Часть названия города">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="sort_by" class="form-label">Сортировка</label>
-                        <select name="sort_by" id="sort_by" class="form-select">
-                            <option value="start_date" {% if filters.sort_by == 'start_date' %}selected{% endif %}>
-                                По дате
-                            </option>
-                            <option value="name" {% if filters.sort_by == 'name' %}selected{% endif %}>
-                                По названию
-                            </option>
-                            <option value="location" {% if filters.sort_by == 'location' %}selected{% endif %}>
-                                По месту
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">Применить фильтры</button>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Сбросить</a>
-                    </div>
-                </form>
+            
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-repeat"></i> <span class="d-none d-sm-inline">Обновить</span>
+                </a>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="bi bi-download"></i> <span class="d-none d-sm-inline">Экспорт</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('main.export_csv') }}">
+                            <i class="bi bi-filetype-csv"></i> CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.export_json') }}">
+                            <i class="bi bi-filetype-json"></i> JSON
+                        </a></li>
+                    </ul>
+                </div>
+                <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+                    <i class="bi bi-funnel"></i> <span class="d-none d-sm-inline">Фильтры</span>
+                </button>
             </div>
         </div>
 
-        <!-- Статистика и действия -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <span class="badge bg-primary">Всего турниров: {{ tournaments|length }}</span>
-                {% if filters.category %}
-                    <span class="badge bg-info">Категория: {{ filters.category }}</span>
-                {% endif %}
-                {% if filters.status %}
-                    <span class="badge bg-warning">Статус: {{ filters.status }}</span>
-                {% endif %}
-            </div>
-            <div class="btn-group">
-                <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-outline-primary btn-sm">
-                    Обновить данные
-                </a>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                            data-bs-toggle="dropdown">
-                        Экспорт
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('main.export_csv') }}">CSV</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('main.export_json') }}">JSON</a></li>
-                    </ul>
+        <!-- Фильтры (сворачиваемые на мобильных) -->
+        <div class="collapse" id="filterCollapse">
+            <div class="card filter-card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-funnel"></i> Фильтры и сортировка
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-2">
+                        <div class="col-md-3 col-6">
+                            <label for="category" class="form-label small">Категория</label>
+                            <select name="category" id="category" class="form-select form-select-sm">
+                                <option value="">Все</option>
+                                {% for category in categories %}
+                                    <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>
+                                        {{ category }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label for="status" class="form-label small">Статус</label>
+                            <select name="status" id="status" class="form-select form-select-sm">
+                                <option value="">Все</option>
+                                {% for status in statuses %}
+                                    <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>
+                                        {{ status }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label for="location" class="form-label small">Место</label>
+                            <input type="text" name="location" id="location" class="form-control form-control-sm" 
+                                   value="{{ filters.location }}" placeholder="Город">
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label for="sort_by" class="form-label small">Сортировка</label>
+                            <select name="sort_by" id="sort_by" class="form-select form-select-sm">
+                                <option value="start_date" {% if filters.sort_by == 'start_date' %}selected{% endif %}>
+                                    По дате
+                                </option>
+                                <option value="name" {% if filters.sort_by == 'name' %}selected{% endif %}>
+                                    По названию
+                                </option>
+                                <option value="location" {% if filters.sort_by == 'location' %}selected{% endif %}>
+                                    По месту
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-12 text-center mt-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-check2"></i> Применить
+                            </button>
+                            <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-sm ms-2">
+                                <i class="bi bi-x-lg"></i> Сбросить
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
+        <!-- Турниры -->
         {% if tournaments %}
             <div class="row">
                 {% for tournament in tournaments %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="card tournament-card">
-                        <div class="card-body">
+                <div class="col-md-6 col-lg-4 col-12">
+                    <div class="card tournament-card h-100 shadow-sm">
+                        <div class="card-body d-flex flex-column">
                             <h5 class="card-title">
                                 <a href="{{ url_for('main.tournament_detail', tournament_id=tournament.id) }}" 
-                                   class="text-decoration-none">
+                                   class="text-decoration-none text-dark">
                                     {{ tournament.name }}
                                 </a>
                             </h5>
-                            <p class="card-text">
-                                <span class="tournament-date">
+                            
+                            <div class="mb-2">
+                                <div class="tournament-date">
+                                    <i class="bi bi-calendar"></i> 
                                     {{ tournament.start_date.strftime('%d.%m.%Y') }} - 
                                     {{ tournament.end_date.strftime('%d.%m.%Y') }}
-                                </span>
-                                <br>
-                                <span class="tournament-location">
-                                    {{ tournament.location }}
-                                </span>
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="badge bg-secondary">{{ tournament.category }}</span>
-                                <span class="badge bg-{{ 'success' if tournament.status == 'Scheduled' else 'warning' if tournament.status == 'Ongoing' else 'secondary' }}">
-                                    {{ tournament.status }}
-                                </span>
+                                </div>
+                                <div class="tournament-location mt-1">
+                                    <i class="bi bi-geo-alt"></i> {{ tournament.location }}
+                                </div>
                             </div>
-                            <div class="mt-2">
-                                <a href="{{ url_for('main.tournament_detail', tournament_id=tournament.id) }}" 
-                                   class="btn btn-outline-primary btn-sm">
-                                    Подробнее
-                                </a>
-                                {% if tournament.source_url %}
-                                <a href="{{ tournament.source_url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
-                                    Источник
-                                </a>
-                                {% endif %}
+                            
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-secondary">{{ tournament.category }}</span>
+                                    <span class="badge bg-{{ 'success' if tournament.status == 'Scheduled' else 'warning' if tournament.status == 'Ongoing' else 'secondary' }}">
+                                        {{ tournament.status }}
+                                    </span>
+                                </div>
+                                
+                                <div class="btn-group w-100" role="group">
+                                    <a href="{{ url_for('main.tournament_detail', tournament_id=tournament.id) }}" 
+                                       class="btn btn-outline-primary btn-sm flex-fill">
+                                        <i class="bi bi-eye"></i> Подробнее
+                                    </a>
+                                    {% if tournament.source_url %}
+                                    <a href="{{ tournament.source_url }}" class="btn btn-outline-secondary btn-sm flex-fill" 
+                                       target="_blank">
+                                        <i class="bi bi-box-arrow-up-right"></i> Источник
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
+            
+            <!-- Пагинация для мобильных -->
+            {% if tournaments|length > 12 %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav>
+                    <ul class="pagination pagination-sm">
+                        <li class="page-item disabled">
+                            <span class="page-link">1 из 1</span>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            
         {% else %}
-            <div class="alert alert-info">
-                <h4>Турниры не найдены</h4>
-                <p>Попробуйте изменить параметры фильтрации или обновить данные.</p>
-                <div class="btn-group">
-                    <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-primary">Обновить данные</a>
-                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Сбросить фильтры</a>
+            <!-- Пустое состояние -->
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-calendar-x" style="font-size: 4rem; color: #6c757d;"></i>
+                </div>
+                <h3 class="text-muted">Турниры не найдены</h3>
+                <p class="text-muted">Попробуйте изменить параметры фильтрации или обновить данные.</p>
+                <div class="btn-group mt-3">
+                    <a href="{{ url_for('main.update_tournaments') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat"></i> Обновить данные
+                    </a>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Сбросить фильтры
+                    </a>
                 </div>
             </div>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Мобильные оптимизации
+document.addEventListener('DOMContentLoaded', function() {
+    // Автоматическое сворачивание фильтров на мобильных при применении
+    if (window.innerWidth <= 768) {
+        const filterCollapse = document.getElementById('filterCollapse');
+        const applyButton = filterCollapse?.querySelector('button[type="submit"]');
+        
+        if (applyButton) {
+            applyButton.addEventListener('click', function() {
+                setTimeout(() => {
+                    const bsCollapse = new bootstrap.Collapse(filterCollapse);
+                    bsCollapse.hide();
+                }, 1000);
+            });
+        }
+    }
+    
+    // Оптимизация для сенсорных устройств
+    const cards = document.querySelectorAll('.tournament-card');
+    cards.forEach(card => {
+        card.addEventListener('touchstart', function(e) {
+            this.classList.add('opacity-75');
+        });
+        
+        card.addEventListener('touchend', function(e) {
+            this.classList.remove('opacity-75');
+        });
+    });
+});
+</script>
 {% endblock %}
