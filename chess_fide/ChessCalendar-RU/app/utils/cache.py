@@ -208,3 +208,67 @@ class TournamentCache:
                               .group_by(Tournament.location).limit(10).all())  # Топ 10 локаций
         }
         return stats
+    
+    @staticmethod
+    @cached(timeout=1800, key_prefix='upcoming_tournaments')
+    def get_upcoming_tournaments(limit=10):
+        """Получить предстоящие турниры с кэшированием на 30 минут"""
+        from app.models.tournament import Tournament
+        from datetime import date
+        
+        return Tournament.query.filter(
+            Tournament.start_date >= date.today(),
+            Tournament.status.in_(['Scheduled', 'Ongoing'])
+        ).order_by(Tournament.start_date).limit(limit).all()
+    
+    @staticmethod
+    @cached(timeout=7200, key_prefix='popular_tournaments')
+    def get_popular_tournaments(limit=10):
+        """Получить популярные турниры с кэшированием на 2 часа"""
+        from app.models.tournament import Tournament
+        from app.models.rating import TournamentRating
+        from app import db
+        
+        # Турниры с наибольшим количеством оценок и высоким средним рейтингом
+        popular = db.session.query(
+            Tournament
+        ).outerjoin(
+            TournamentRating
+        ).group_by(
+            Tournament.id
+        ).order_by(
+            db.func.avg(TournamentRating.rating).desc(),
+            db.func.count(TournamentRating.id).desc()
+        ).limit(limit).all()
+        
+        return popular
+    
+    @staticmethod
+    @cached(timeout=3600, key_prefix='categories_list')
+    def get_categories_list():
+        """Получить список всех категорий турниров с кэшированием на 1 час"""
+        from app.models.tournament import Tournament
+        from app import db
+        
+        categories = db.session.query(Tournament.category).distinct().all()
+        return [cat[0] for cat in categories]
+    
+    @staticmethod
+    @cached(timeout=3600, key_prefix='locations_list')
+    def get_locations_list():
+        """Получить список всех мест проведения с кэшированием на 1 час"""
+        from app.models.tournament import Tournament
+        from app import db
+        
+        locations = db.session.query(Tournament.location).distinct().all()
+        return [loc[0] for loc in locations]
+    
+    @staticmethod
+    @cached(timeout=3600, key_prefix='statuses_list')
+    def get_statuses_list():
+        """Получить список всех статусов турниров с кэшированием на 1 час"""
+        from app.models.tournament import Tournament
+        from app import db
+        
+        statuses = db.session.query(Tournament.status).distinct().all()
+        return [stat[0] for stat in statuses]

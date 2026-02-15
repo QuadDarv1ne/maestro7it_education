@@ -29,15 +29,15 @@
         <div class="col-md-3">
             <div class="card text-center bg-light">
                 <div class="card-body">
-                    <h3 class="text-primary">{{ tournaments|length }}</h3>
-                    <p class="text-muted mb-0">Турниров</p>
+                    <h3 class="text-primary">{{ tournaments.total }}</h3>
+                    <p class="text-muted mb-0">Всего турниров</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-center bg-light">
                 <div class="card-body">
-                    <h3 class="text-success">{{ tournaments|selectattr('status', 'equalto', 'Ongoing')|list|length }}</h3>
+                    <h3 class="text-success">{{ tournaments.items|selectattr('status', 'equalto', 'Ongoing')|list|length }}</h3>
                     <p class="text-muted mb-0">Активных</p>
                 </div>
             </div>
@@ -45,7 +45,7 @@
         <div class="col-md-3">
             <div class="card text-center bg-light">
                 <div class="card-body">
-                    <h3 class="text-warning">{{ tournaments|selectattr('status', 'equalto', 'Scheduled')|list|length }}</h3>
+                    <h3 class="text-warning">{{ tournaments.items|selectattr('status', 'equalto', 'Scheduled')|list|length }}</h3>
                     <p class="text-muted mb-0">Предстоящих</p>
                 </div>
             </div>
@@ -53,7 +53,7 @@
         <div class="col-md-3">
             <div class="card text-center bg-light">
                 <div class="card-body">
-                    <h3 class="text-info">{{ tournaments|selectattr('category', 'equalto', 'International')|list|length }}</h3>
+                    <h3 class="text-info">{{ tournaments.items|selectattr('category', 'equalto', 'International')|list|length }}</h3>
                     <p class="text-muted mb-0">Международных</p>
                 </div>
             </div>
@@ -111,7 +111,7 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h3><i class="bi bi-calendar-check"></i> Турниры ({{ tournaments|length }})</h3>
+                <h3><i class="bi bi-calendar-check"></i> Турниры ({{ tournaments.total }})</h3>
                 <div class="d-flex gap-2">
                     <a href="{{ url_for('main.calendar') }}" class="btn btn-outline-primary">
                         <i class="bi bi-calendar-month"></i> Календарь
@@ -131,8 +131,8 @@
 
     <!-- Tournament List -->
     <div class="row">
-        {% if tournaments %}
-            {% for tournament in tournaments %}
+        {% if tournaments.items %}
+            {% for tournament in tournaments.items %}
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card h-100 tournament-card border-start border-{{ 'primary' if tournament.category == 'International' else 'secondary' }} border-3">
                     <div class="card-header bg-light">
@@ -209,6 +209,64 @@
             </div>
         {% endif %}
     </div>
+    
+    <!-- Pagination -->
+    {% if tournaments.pages > 1 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Турниры навигация">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous button -->
+                    {% if tournaments.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.index', page=tournaments.prev_num, category=filters.category, status=filters.status, location=filters.location, sort_by=filters.sort_by, search=filters.search) }}">
+                                <i class="bi bi-chevron-left"></i> Предыдущая
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"> <i class="bi bi-chevron-left"></i> Предыдущая</span>
+                        </li>
+                    {% endif %}
+
+                    <!-- Page numbers -->
+                    {% for page_num in tournaments.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != tournaments.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('main.index', page=page_num, category=filters.category, status=filters.status, location=filters.location, sort_by=filters.sort_by, search=filters.search) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">…</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Next button -->
+                    {% if tournaments.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.index', page=tournaments.next_num, category=filters.category, status=filters.status, location=filters.location, sort_by=filters.sort_by, search=filters.search) }}">
+                                Следующая <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Следующая <i class="bi bi-chevron-right"></i></span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <script>

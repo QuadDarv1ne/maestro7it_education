@@ -38,16 +38,25 @@ class UserPreference(db.Model):
 
 
 class UserInteraction(db.Model):
+    __tablename__ = 'user_interaction'
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False, index=True)
-    interaction_type = db.Column(db.String(50), nullable=False)  # 'view', 'favorite', 'register', etc.
+    interaction_type = db.Column(db.String(50), nullable=False, index=True)  # 'view', 'favorite', 'register', etc.
     interaction_value = db.Column(db.Integer, default=1)  # Weight of interaction
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
     # Relationships
     user = db.relationship('User', backref=db.backref('interactions', lazy=True))
     tournament = db.relationship('Tournament', backref=db.backref('user_interactions', lazy=True))
+    
+    # Additional indexes for common query patterns
+    __table_args__ = (
+        db.Index('idx_user_interaction', 'user_id', 'interaction_type'),
+        db.Index('idx_tournament_interaction', 'tournament_id', 'interaction_type'),
+        db.Index('idx_created_interaction', 'created_at', 'interaction_type'),
+    )
     
     def __init__(self, user_id, tournament_id, interaction_type, interaction_value=1):
         self.user_id = user_id

@@ -2,8 +2,11 @@ from app import db
 from datetime import datetime
 from sqlalchemy import CheckConstraint
 import re
+import bleach
 
 class Tournament(db.Model):
+    __tablename__ = 'tournament'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False, index=True)
     start_date = db.Column(db.Date, nullable=False, index=True)
@@ -18,6 +21,14 @@ class Tournament(db.Model):
     source_url = db.Column(db.String(300))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        db.Index('idx_location_category', 'location', 'category'),
+        db.Index('idx_category_status', 'category', 'status'),
+        db.Index('idx_start_date_status', 'start_date', 'status'),
+        db.Index('idx_created_at_status', 'created_at', 'status'),
+    )
 
     def __repr__(self):
         return f'<Tournament {self.name}>'
@@ -51,6 +62,9 @@ class Tournament(db.Model):
     def validate(self):
         """Валидация данных турнира"""
         errors = []
+        
+        # Sanitize inputs
+        self.sanitize_fields()
         
         # Проверка имени
         if not self.name or len(self.name.strip()) == 0:
@@ -103,6 +117,25 @@ class Tournament(db.Model):
             errors.append("Недопустимый формат URL")
         
         return errors
+    
+    def sanitize_fields(self):
+        """Sanitize input fields to prevent XSS"""
+        if self.name:
+            self.name = bleach.clean(self.name, strip=True)
+        if self.location:
+            self.location = bleach.clean(self.location, strip=True)
+        if self.description:
+            # Allow some safe HTML tags in description
+            self.description = bleach.clean(self.description, 
+                                         tags=['p', 'br', 'strong', 'em', 'ul', 'ol', 'li'], 
+                                         attributes={}, 
+                                         strip=True)
+        if self.prize_fund:
+            self.prize_fund = bleach.clean(self.prize_fund, strip=True)
+        if self.organizer:
+            self.organizer = bleach.clean(self.organizer, strip=True)
+        if self.source_url:
+            self.source_url = bleach.clean(self.source_url, strip=True)
     
     def _is_valid_url(self, url):
         """Проверка корректности URL"""

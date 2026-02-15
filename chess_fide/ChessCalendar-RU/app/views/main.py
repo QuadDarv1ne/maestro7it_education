@@ -15,6 +15,11 @@ main_bp = Blueprint('main', __name__)
 def index():
     """Главная страница с календарем турниров"""
     # Получаем параметры фильтрации
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    # Ограничиваем количество элементов на странице
+    per_page = min(max(per_page, 5), 100)  # от 5 до 100 турниров на странице
+    
     category = request.args.get('category', '')
     status = request.args.get('status', '')
     location = request.args.get('location', '')
@@ -54,12 +59,16 @@ def index():
     else:  # start_date
         query = query.order_by(Tournament.start_date)
     
-    tournaments = query.all()
+    # Пагинация
+    tournaments = query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
     
-    # Получаем уникальные значения для фильтров
-    categories = db.session.query(Tournament.category).distinct().all()
-    statuses = db.session.query(Tournament.status).distinct().all()
-    locations = db.session.query(Tournament.location).distinct().all()
+    # Получаем уникальные значения для фильтров из кэша
+    from app.utils.cache import TournamentCache
+    categories = [(cat,) for cat in TournamentCache.get_categories_list()]
+    statuses = [(stat,) for stat in TournamentCache.get_statuses_list()]
+    locations = [(loc,) for loc in TournamentCache.get_locations_list()]
     
     return render_template('index.html', 
                          tournaments=tournaments,
@@ -71,7 +80,9 @@ def index():
                              'status': status,
                              'location': location,
                              'sort_by': sort_by,
-                             'search': search_query
+                             'search': search_query,
+                             'page': page,
+                             'per_page': per_page
                          })
 
 @main_bp.route('/tournament/<int:tournament_id>')
