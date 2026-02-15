@@ -78,6 +78,9 @@ def add_tournament():
                 location=request.form['location'],
                 category=request.form['category'],
                 status=request.form.get('status', 'Scheduled'),
+                description=request.form.get('description'),
+                prize_fund=request.form.get('prize_fund'),
+                organizer=request.form.get('organizer'),
                 fide_id=request.form.get('fide_id'),
                 source_url=request.form.get('source_url')
             )
