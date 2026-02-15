@@ -133,6 +133,91 @@ def swagger_spec():
                         }
                     }
                 }
+            },
+            "/api/recommendations/user/{user_id}": {
+                "get": {
+                    "summary": "Получить рекомендации для пользователя",
+                    "description": "Возвращает персонализированные рекомендации турниров для конкретного пользователя",
+                    "parameters": [
+                        {
+                            "name": "user_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {
+                                "type": "integer"
+                            },
+                            "description": "ID пользователя"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Успешный ответ",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {
+                                            "$ref": "#/components/schemas/Tournament"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "404": {
+                            "description": "Пользователь не найден"
+                        }
+                    }
+                }
+            },
+            "/api/analytics/report": {
+                "get": {
+                    "summary": "Получить полный отчет аналитики",
+                    "description": "Возвращает комплексный отчет по аналитике приложения",
+                    "responses": {
+                        "200": {
+                            "description": "Успешный ответ",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/AnalyticsReport"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/analytics/tournament/{tournament_id}": {
+                "get": {
+                    "summary": "Получить аналитику по турниру",
+                    "description": "Возвращает детальную аналитику для конкретного турнира",
+                    "parameters": [
+                        {
+                            "name": "tournament_id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {
+                                "type": "integer"
+                            },
+                            "description": "ID турнира"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Успешный ответ",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/TournamentAnalytics"
+                                    }
+                                }
+                            }
+                        },
+                        "404": {
+                            "description": "Турнир не найден"
+                        }
+                    }
+                }
             }
         },
         "components": {
@@ -184,6 +269,53 @@ def swagger_spec():
                         }
                     },
                     "required": ["id", "name", "start_date", "end_date", "location", "category", "status"]
+                },
+                "AnalyticsReport": {
+                    "type": "object",
+                    "properties": {
+                        "generated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Время генерации отчета"
+                        },
+                        "tournament_analytics": {
+                            "type": "object",
+                            "description": "Аналитика турниров"
+                        },
+                        "user_analytics": {
+                            "type": "object",
+                            "description": "Аналитика пользователей"
+                        },
+                        "interaction_analytics": {
+                            "type": "object",
+                            "description": "Аналитика взаимодействий"
+                        }
+                    }
+                },
+                "TournamentAnalytics": {
+                    "type": "object",
+                    "properties": {
+                        "tournament": {
+                            "$ref": "#/components/schemas/Tournament"
+                        },
+                        "total_interactions": {
+                            "type": "integer",
+                            "description": "Общее количество взаимодействий"
+                        },
+                        "total_ratings": {
+                            "type": "integer",
+                            "description": "Общее количество рейтингов"
+                        },
+                        "average_rating": {
+                            "type": "number",
+                            "format": "float",
+                            "description": "Средний рейтинг"
+                        },
+                        "engagement_score": {
+                            "type": "integer",
+                            "description": "Оценка вовлеченности"
+                        }
+                    }
                 }
             }
         }

@@ -365,6 +365,54 @@ def toggle_tournament_subscription(tournament_id):
             return jsonify({'success': False, 'message': 'Ошибка при подписке'})
 
 
+@main_bp.route('/api/recommendations/user/<int:user_id>')
+def api_user_recommendations(user_id):
+    """API endpoint for getting user recommendations"""
+    from app.utils.recommendations import RecommendationEngine
+    from app.models.user import User
+    
+    # Check if user exists
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    try:
+        recommended_tournaments = RecommendationEngine.get_user_recommendations(user_id)
+        return jsonify([t.to_dict() for t in recommended_tournaments])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@main_bp.route('/api/analytics/report')
+def api_analytics_report():
+    """API endpoint for getting comprehensive analytics report"""
+    from app.utils.analytics import analytics_service
+    
+    try:
+        analytics_report = analytics_service.get_comprehensive_report()
+        return jsonify(analytics_report)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@main_bp.route('/api/analytics/tournament/<int:tournament_id>')
+def api_tournament_analytics(tournament_id):
+    """API endpoint for getting tournament-specific analytics"""
+    from app.utils.analytics import analytics_service
+    from app.models.tournament import Tournament
+    
+    # Check if tournament exists
+    tournament = Tournament.query.get(tournament_id)
+    if not tournament:
+        return jsonify({'error': 'Tournament not found'}), 404
+    
+    try:
+        tournament_analytics = analytics_service.get_tournament_performance(tournament_id)
+        return jsonify(tournament_analytics)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @main_bp.route('/health')
 def health_check():
     """Health check endpoint for the application"""

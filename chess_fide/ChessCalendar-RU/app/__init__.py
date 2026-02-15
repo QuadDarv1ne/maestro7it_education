@@ -1,5 +1,7 @@
 from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 
 db = SQLAlchemy()
@@ -19,6 +21,13 @@ def create_app(config_name='default'):
     logger.info("Starting application initialization")
     
     app = Flask(__name__, template_folder='../templates')
+    
+    # Initialize rate limiter
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["200 per day", "50 per hour"]
+    )
+    limiter.init_app(app)
     
     # Загрузка конфигурации
     app.config.from_object('config.Config')
@@ -63,6 +72,16 @@ def create_app(config_name='default'):
     def get_user_by_id(user_id):
         from app.models.user import User
         return User.query.get(user_id)
+    
+    # Security headers
+    @app.after_request
+    def after_request(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:"
+        return response
     
     # Регистрация blueprint'ов
     from app.views.main import main_bp
