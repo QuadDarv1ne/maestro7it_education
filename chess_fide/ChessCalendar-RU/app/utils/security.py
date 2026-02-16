@@ -1,14 +1,15 @@
 """
 Security utilities for ChessCalendar-RU application
+
+Этот модуль содержит специфические функции безопасности, не дублирующие
+функциональность werkzeug.security (generate_password_hash/check_password_hash).
 """
 import re
 import bleach
 from functools import wraps
-from flask import request, abort
+from flask import request, abort, session
 import logging
 from datetime import datetime, timedelta
-import hashlib
-import secrets
 from typing import Optional
 
 
@@ -20,7 +21,14 @@ class SecurityUtils:
         # Regex patterns for validation
         self.email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
         self.username_pattern = re.compile(r'^[a-zA-Z0-9_]{3,20}$')  # 3-20 chars, alphanumeric and underscore
-        self.password_pattern = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$')
+        self.url_pattern = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:www\.)?'  # optional www.
+            r'[a-zA-Z0-9.-]+'  # domain
+            r'\.[a-zA-Z]{2,}'  # TLD
+            r'(?:/[^\s]*)?$',  # optional path
+            re.IGNORECASE
+        )
         
     def sanitize_input(self, text: str, max_length: int = 1000) -> str:
         """Sanitize input text to prevent XSS and other injection attacks"""
@@ -74,43 +82,6 @@ class SecurityUtils:
         
         return True, "Valid username"
     
-    def validate_password(self, password: str) -> tuple[bool, str]:
-        """Validate password strength"""
-        if not password:
-            return False, "Password is required"
-        
-        if len(password) < 8:
-            return False, "Password must be at least 8 characters"
-        
-        if len(password) > 128:
-            return False, "Password too long"
-        
-        # Check for password strength
-        has_lower = any(c.islower() for c in password)
-        has_upper = any(c.isupper() for c in password)
-        has_digit = any(c.isdigit() for c in password)
-        has_special = any(c in '@$!%*?&' for c in password)
-        
-        if not (has_lower and has_upper and has_digit and has_special):
-            return False, "Password must contain uppercase, lowercase, digit, and special character"
-        
-        return True, "Valid password"
-    
-    def hash_password(self, password: str) -> str:
-        """Hash password with salt"""
-        salt = secrets.token_hex(32)
-        pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
-        return f"{salt}${pwd_hash.hex()}"
-    
-    def verify_password(self, password: str, hashed: str) -> bool:
-        """Verify password against hash"""
-        if '$' not in hashed:
-            return False
-        
-        salt, stored_hash = hashed.split('$')
-        pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
-        return pwd_hash.hex() == stored_hash
-    
     def validate_url(self, url: str) -> tuple[bool, str]:
         """Validate URL format"""
         if not url:
@@ -119,20 +90,26 @@ class SecurityUtils:
         if len(url) > 500:
             return False, "URL too long"
         
-        url_pattern = re.compile(
-            r'^https?://'  # http:// or https://
-            r'(?:www\.)?'  # optional www.
-            r'[a-zA-Z0-9.-]+'  # domain
-            r'\.[a-zA-Z]{2,}'  # TLD
-            r'(?:/[^\s]*)?$',  # optional path
-            re.IGNORECASE
-        )
-        
-        if not url_pattern.match(url):
+        if not self.url_pattern.match(url):
             return False, "Invalid URL format"
         
         return True, "Valid URL"
-
+    
+    def validate_csrf_token(self, token: str) -> bool:
+        """Validate CSRF token"""
+        if not token:
+            return False
+        stored_token = session.get('_csrf_token')
+        if not stored_token:
+            return False
+        return token == stored_token
+    
+    def generate_csrf_token(self) -> str:
+        """Generate CSRF token"""
+        import secrets
+        token = secrets.token_hex(32)
+        session['_csrf_token'] = token
+        return token
 
 def rate_limit(max_attempts: int = 5, window: int = 300):
     """Rate limiting decorator to prevent brute force attacks"""
@@ -235,4 +212,4 @@ def sanitize_tournament_data(data: dict) -> dict:
     sanitized['status'] = data.get('status')
     sanitized['fide_id'] = data.get('fide_id')
     
-    return sanitized
+    return sanitized    sanitized['name'] = security_utils.sanitize_input(data.get('name', ''), max_length=200)
