@@ -23,7 +23,15 @@ class QuickActions {
                     position: fixed;
                     bottom: 30px;
                     right: 30px;
-                    z-index: 1000;
+                    z-index: 999;
+                }
+                
+                /* Adjust for mobile bottom nav */
+                @media (max-width: 576px) {
+                    #quickActionsFAB {
+                        bottom: 90px;
+                        right: 15px;
+                    }
                 }
                 
                 .fab-button {
@@ -112,8 +120,7 @@ class QuickActions {
                 
                 @media (max-width: 768px) {
                     #quickActionsFAB {
-                        bottom: 80px;
-                        right: 20px;
+                        right: 15px;
                     }
                     
                     .fab-button {

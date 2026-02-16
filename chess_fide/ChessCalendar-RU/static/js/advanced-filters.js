@@ -418,7 +418,8 @@ class AdvancedFilters {
     }
 }
 
-// Initialize on tournament list pages
-if (window.location.pathname === '/' || window.location.pathname.includes('/tournaments')) {
-    const advancedFilters = new AdvancedFilters();
-}
+// DISABLED: This feature is redundant with the main filter form in index.html
+// To re-enable, uncomment the line below:
+// if (window.location.pathname === '/' || window.location.pathname.includes('/tournaments')) {
+//     const advancedFilters = new AdvancedFilters();
+// }
