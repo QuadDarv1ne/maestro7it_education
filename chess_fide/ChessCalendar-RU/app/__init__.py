@@ -24,7 +24,10 @@ def create_app(config_name='default'):
     
     logger.info("Starting application initialization")
     
-    app = Flask(__name__, template_folder='../templates')
+    app = Flask(__name__, 
+                template_folder='../templates',
+                static_folder='../static',
+                static_url_path='/static')
     
     # Initialize rate limiter
     limiter = Limiter(
@@ -83,11 +86,6 @@ def create_app(config_name='default'):
     # Создание таблиц
     with app.app_context():
         db.create_all()
-    
-    # Статические файлы
-    @app.route('/static/<path:filename>')
-    def static_files(filename):
-        return send_from_directory('static', filename)
     
     # Дополнительные статические маршруты для PWA
     @app.route('/favicon.ico')

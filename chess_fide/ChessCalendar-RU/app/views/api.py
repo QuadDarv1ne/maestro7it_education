@@ -140,21 +140,6 @@ def get_upcoming_tournaments():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@api_bp.route('/tournaments/popular', methods=['GET'])
-def get_popular_tournaments():
-    """Get popular tournaments"""
-    try:
-        limit = request.args.get('limit', 10, type=int)
-        tournaments = TournamentCache.get_popular_tournaments(limit=limit)
-        
-        return jsonify({
-            'tournaments': [t.to_dict() for t in tournaments],
-            'total': len(tournaments)
-        }), 200
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @api_bp.route('/metrics/performance', methods=['GET'])
 @track_performance()
 def get_performance_metrics():
@@ -981,7 +966,8 @@ def get_popular_tournaments():
         }), 200
         
     except Exception as e:
-        from app.utils.logger import logger
+        import logging
+        logger = logging.getLogger(__name__)
         logger.error(f"Popular tournaments error: {str(e)}")
         return jsonify({'error': 'Failed to get popular tournaments'}), 500
 

@@ -91,6 +91,23 @@ def index():
                              'page': page,
                              'per_page': per_page
                          })
+
+@main_bp.route('/test')
+def test_simple():
+    """Простая тестовая страница"""
+    tournaments = Tournament.query.paginate(page=1, per_page=20, error_out=False)
+    return render_template('test_simple.html', tournaments=tournaments)
+
+@main_bp.route('/simple')
+def index_simple():
+    """Упрощенная версия главной страницы со встроенными стилями"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    tournaments = Tournament.query.order_by(Tournament.start_date).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    return render_template('index_simple.html', tournaments=tournaments)
+
 @main_bp.route('/tournament/<int:tournament_id>')
 @track_performance()
 def tournament_detail(tournament_id):

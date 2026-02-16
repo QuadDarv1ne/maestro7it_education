@@ -1,0 +1,107 @@
+{% extends "base_inline.html" %}
+
+{% block title %}Шахматный календарь - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <h1>ChessCalendar-RU</h1>
+        <p style="font-size: 1.2rem;">Календарь шахматных турниров России и мира</p>
+        <p>Следите за предстоящими турнирами, находите интересующие вас события и будьте в курсе последних новостей шахматного мира</p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-12 mb-3">
+            <div class="card text-center">
+                <h3 class="text-primary">{{ tournaments.total }}</h3>
+                <p class="text-muted mb-0">Всего турниров</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-12 mb-3">
+            <div class="card text-center">
+                <h3 class="text-success">{{ tournaments.items|selectattr('status', 'equalto', 'Ongoing')|list|length }}</h3>
+                <p class="text-muted mb-0">Активных</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-12 mb-3">
+            <div class="card text-center">
+                <h3 class="text-warning">{{ tournaments.items|selectattr('status', 'equalto', 'Scheduled')|list|length }}</h3>
+                <p class="text-muted mb-0">Предстоящих</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-12 mb-3">
+            <div class="card text-center">
+                <h3 class="text-info">{{ tournaments.items|selectattr('category', 'equalto', 'International')|list|length }}</h3>
+                <p class="text-muted mb-0">Международных</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tournament List -->
+    <h2 class="mb-4">Турниры</h2>
+    
+    {% if tournaments.items %}
+        <div class="row">
+            {% for tournament in tournaments.items %}
+            <div class="col-md-4 col-12 mb-3">
+                <div class="card">
+                    <div class="mb-3">
+                        <span class="badge bg-primary">{{ tournament.category }}</span>
+                        <span class="badge bg-success">{{ tournament.status }}</span>
+                    </div>
+                    
+                    <h5 class="card-title">{{ tournament.name }}</h5>
+                    
+                    <p class="mb-2">
+                        📅 <strong>{{ tournament.start_date.strftime('%d.%m.%Y') }}</strong> - 
+                        <strong>{{ tournament.end_date.strftime('%d.%m.%Y') }}</strong>
+                    </p>
+                    
+                    <p class="mb-2">
+                        📍 {{ tournament.location }}
+                    </p>
+                    
+                    {% if tournament.description %}
+                    <p class="text-muted" style="font-size: 0.9rem;">
+                        {{ tournament.description[:100] }}{% if tournament.description|length > 100 %}...{% endif %}
+                    </p>
+                    {% endif %}
+                    
+                    {% if tournament.prize_fund %}
+                    <p class="mb-2">
+                        💰 <strong>Призовой фонд:</strong> 
+                        <span class="text-success">{{ tournament.prize_fund }}</span>
+                    </p>
+                    {% endif %}
+                    
+                    <a href="/tournament/{{ tournament.id }}" class="btn btn-primary">
+                        Подробнее →
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if tournaments.pages > 1 %}
+        <div class="mt-4" style="text-align: center;">
+            <p>Страница {{ tournaments.page }} из {{ tournaments.pages }}</p>
+            <div>
+                {% if tournaments.has_prev %}
+                <a href="?page={{ tournaments.prev_num }}" class="btn btn-primary">← Предыдущая</a>
+                {% endif %}
+                
+                {% if tournaments.has_next %}
+                <a href="?page={{ tournaments.next_num }}" class="btn btn-primary">Следующая →</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-warning">
+            <strong>Турниры не найдены</strong>
+            <p>В данный момент нет доступных турниров.</p>
+        </div>
+    {% endif %}
+{% endblock %}
