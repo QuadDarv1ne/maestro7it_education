@@ -1,0 +1,636 @@
+{% extends "base_modern.html" %}
+{% import "components/tournament_cards.html" as cards %}
+
+{% block title %}Турниры - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+<style>
+  .filters-sidebar {
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+  }
+  
+  .view-toggle {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--color-gray-100);
+    border-radius: var(--radius-lg);
+  }
+  
+  .view-toggle button {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .view-toggle button.active {
+    background: var(--color-white);
+    box-shadow: var(--shadow-sm);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-6">
+  <!-- Заголовок и действия -->
+  <div class="d-flex justify-between items-center mb-6">
+    <div>
+      <h1 class="display-5 font-bold mb-2">
+        <i class="bi bi-trophy text-primary"></i> Турниры
+      </h1>
+      <p class="text-muted">Найдите идеальный турнир для участия</p>
+    </div>
+    
+    <div class="d-flex gap-3">
+      <button class="btn btn-outline" onclick="exportTournaments()">
+        <i class="bi bi-download"></i> Экспорт
+      </button>
+      <button class="btn btn-primary" onclick="showSubscribeModal()">
+        <i class="bi bi-bell"></i> Подписаться на уведомления
+      </button>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Боковая панель фильтров -->
+    <div class="col-lg-3">
+      <div class="filters-sidebar card">
+        <div class="card-body">
+          <h5 class="font-semibold mb-4">
+            <i class="bi bi-funnel"></i> Фильтры
+          </h5>
+          
+          <!-- Поиск -->
+          <div class="mb-4">
+            <label class="form-label text-sm font-medium">Поиск</label>
+            <div class="input-group">
+              <input type="text" 
+                     class="form-control" 
+                     id="searchInput" 
+                     placeholder="Название турнира...">
+              <button class="btn btn-primary" onclick="applyFilters()">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Статус -->
+          <div class="mb-4">
+            <label class="form-label text-sm font-medium">Статус</label>
+            <select class="form-select" id="statusFilter" onchange="applyFilters()">
+              <option value="">Все статусы</option>
+              <option value="Scheduled">Запланирован</option>
+              <option value="Ongoing">Идет сейчас</option>
+              <option value="Completed">Завершен</option>
+            </select>
+          </div>
+          
+          <!-- Категория -->
+          <div class="mb-4">
+            <label class="form-label text-sm font-medium">Категория</label>
+            <select class="form-select" id="categoryFilter" onchange="applyFilters()">
+              <option value="">Все категории</option>
+              <option value="National Championship">Чемпионаты</option>
+              <option value="Open Tournament">Открытые турниры</option>
+              <option value="Rapid Chess">Быстрые шахматы</option>
+              <option value="Blitz">Блиц</option>
+              <option value="Youth Championship">Юношеские</option>
+              <option value="Women Championship">Женские</option>
+            </select>
+          </div>
+          
+          <!-- Город -->
+          <div class="mb-4">
+            <label class="form-label text-sm font-medium">Город</label>
+            <select class="form-select" id="locationFilter" onchange="applyFilters()">
+              <option value="">Все города</option>
+              <option value="Москва">Москва</option>
+              <option value="Санкт-Петербург">Санкт-Петербург</option>
+              <option value="Сочи">Сочи</option>
+              <option value="Екатеринбург">Екатеринбург</option>
+              <option value="Новосибирск">Новосибирск</option>
+            </select>
+          </div>
+          
+          <!-- Диапазон дат -->
+          <div class="mb-4">
+            <label class="form-label text-sm font-medium">Период</label>
+            <div class="d-flex gap-2">
+              <input type="date" class="form-control" id="dateFrom" onchange="applyFilters()">
+              <input type="date" class="form-control" id="dateTo" onchange="applyFilters()">
+            </div>
+          </div>
+          
+          <!-- Кнопки действий -->
+          <div class="d-flex flex-column gap-2">
+            <button class="btn btn-primary w-100" onclick="applyFilters()">
+              <i class="bi bi-check2"></i> Применить
+            </button>
+            <button class="btn btn-ghost w-100" onclick="resetFilters()">
+              <i class="bi bi-arrow-clockwise"></i> Сбросить
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Основной контент -->
+    <div class="col-lg-9">
+      <!-- Панель управления -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-between items-center flex-wrap gap-3">
+            <!-- Результаты -->
+            <div class="text-sm text-muted">
+              Найдено турниров: <span id="resultsCount" class="font-semibold text-primary">0</span>
+            </div>
+            
+            <!-- Переключатель вида -->
+            <div class="view-toggle">
+              <button id="viewGrid" class="active" onclick="switchView('grid')">
+                <i class="bi bi-grid-3x3"></i> Сетка
+              </button>
+              <button id="viewList" onclick="switchView('list')">
+                <i class="bi bi-list"></i> Список
+              </button>
+            </div>
+            
+            <!-- Сортировка -->
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm" id="sortBy" onchange="applySorting()">
+                <option value="date">По дате</option>
+                <option value="name">По названию</option>
+                <option value="location">По городу</option>
+                <option value="prize">По призовому фонду</option>
+              </select>
+              <button class="btn btn-ghost btn-sm btn-icon" id="sortOrder" onclick="toggleSortOrder()">
+                <i class="bi bi-sort-down"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Контейнер турниров -->
+      <div id="tournamentsContainer">
+        <!-- Скелетоны загрузки -->
+        <div id="loadingSkeletons" class="row g-4">
+          <div class="col-12 col-md-6 col-lg-4">
+            {{ cards.tournament_card_skeleton() }}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            {{ cards.tournament_card_skeleton() }}
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            {{ cards.tournament_card_skeleton() }}
+          </div>
+        </div>
+        
+        <!-- Турниры будут загружены сюда -->
+        <div id="tournamentsGrid" class="d-none"></div>
+        <div id="tournamentsList" class="d-none"></div>
+      </div>
+      
+      <!-- Пагинация -->
+      <nav class="mt-6" id="paginationContainer">
+        <ul class="pagination justify-content-center" id="pagination"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Глобальные переменные
+let allTournaments = [];
+let filteredTournaments = [];
+let currentView = 'grid';
+let currentPage = 1;
+let itemsPerPage = 9;
+let sortBy = 'date';
+let sortOrder = 'asc';
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', async function() {
+  await loadTournaments();
+  setupEventListeners();
+});
+
+// Загрузка турниров
+async function loadTournaments() {
+  try {
+    const response = await fetch('/api/tournaments');
+    allTournaments = await response.json();
+    filteredTournaments = [...allTournaments];
+    
+    document.getElementById('loadingSkeletons').classList.add('d-none');
+    renderTournaments();
+    updateResultsCount();
+  } catch (error) {
+    console.error('Ошибка загрузки турниров:', error);
+    showError('Не удалось загрузить турниры');
+  }
+}
+
+// Настройка обработчиков
+function setupEventListeners() {
+  document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+}
+
+// Применение фильтров
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  const category = document.getElementById('categoryFilter').value;
+  const location = document.getElementById('locationFilter').value;
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+  
+  filteredTournaments = allTournaments.filter(tournament => {
+    const matchesSearch = !search || 
+      tournament.name.toLowerCase().includes(search) ||
+      tournament.description?.toLowerCase().includes(search);
+    
+    const matchesStatus = !status || tournament.status === status;
+    const matchesCategory = !category || tournament.category === category;
+    const matchesLocation = !location || tournament.location === location;
+    
+    const matchesDateFrom = !dateFrom || tournament.start_date >= dateFrom;
+    const matchesDateTo = !dateTo || tournament.end_date <= dateTo;
+    
+    return matchesSearch && matchesStatus && matchesCategory && 
+           matchesLocation && matchesDateFrom && matchesDateTo;
+  });
+  
+  currentPage = 1;
+  applySorting();
+  renderTournaments();
+  updateResultsCount();
+}
+
+// Сброс фильтров
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('statusFilter').value = '';
+  document.getElementById('categoryFilter').value = '';
+  document.getElementById('locationFilter').value = '';
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
+  
+  filteredTournaments = [...allTournaments];
+  currentPage = 1;
+  renderTournaments();
+  updateResultsCount();
+}
+
+// Применение сортировки
+function applySorting() {
+  const sortField = document.getElementById('sortBy').value;
+  
+  filteredTournaments.sort((a, b) => {
+    let comparison = 0;
+    
+    switch(sortField) {
+      case 'date':
+        comparison = new Date(a.start_date) - new Date(b.start_date);
+        break;
+      case 'name':
+        comparison = a.name.localeCompare(b.name);
+        break;
+      case 'location':
+        comparison = a.location.localeCompare(b.location);
+        break;
+      case 'prize':
+        const prizeA = parsePrize(a.prize_fund);
+        const prizeB = parsePrize(b.prize_fund);
+        comparison = prizeA - prizeB;
+        break;
+    }
+    
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+  
+  renderTournaments();
+}
+
+// Переключение порядка сортировки
+function toggleSortOrder() {
+  sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+  const icon = document.querySelector('#sortOrder i');
+  icon.className = sortOrder === 'asc' ? 'bi bi-sort-down' : 'bi bi-sort-up';
+  applySorting();
+}
+
+// Парсинг призового фонда
+function parsePrize(prizeStr) {
+  if (!prizeStr) return 0;
+  return parseInt(prizeStr.replace(/[^\d]/g, '')) || 0;
+}
+
+// Переключение вида
+function switchView(view) {
+  currentView = view;
+  
+  document.getElementById('viewGrid').classList.toggle('active', view === 'grid');
+  document.getElementById('viewList').classList.toggle('active', view === 'list');
+  
+  renderTournaments();
+}
+
+// Отображение турниров
+function renderTournaments() {
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const pageTournaments = filteredTournaments.slice(startIndex, endIndex);
+  
+  if (currentView === 'grid') {
+    renderGrid(pageTournaments);
+  } else {
+    renderList(pageTournaments);
+  }
+  
+  renderPagination();
+}
+
+// Отображение сетки
+function renderGrid(tournaments) {
+  const container = document.getElementById('tournamentsGrid');
+  const listContainer = document.getElementById('tournamentsList');
+  
+  container.classList.remove('d-none');
+  listContainer.classList.add('d-none');
+  
+  if (tournaments.length === 0) {
+    container.innerHTML = `
+      <div class="col-12">
+        <div class="text-center py-12">
+          <i class="bi bi-calendar-x display-1 text-muted mb-4"></i>
+          <h3 class="text-xl font-semibold mb-2">Турниры не найдены</h3>
+          <p class="text-muted mb-4">Попробуйте изменить параметры поиска</p>
+          <button class="btn btn-primary" onclick="resetFilters()">
+            <i class="bi bi-arrow-clockwise"></i> Сбросить фильтры
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="row g-4">
+      ${tournaments.map(tournament => `
+        <div class="col-12 col-md-6 col-lg-4">
+          ${renderTournamentCard(tournament)}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Отображение списка
+function renderList(tournaments) {
+  const container = document.getElementById('tournamentsList');
+  const gridContainer = document.getElementById('tournamentsGrid');
+  
+  container.classList.remove('d-none');
+  gridContainer.classList.add('d-none');
+  
+  if (tournaments.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12">
+        <i class="bi bi-calendar-x display-1 text-muted mb-4"></i>
+        <h3 class="text-xl font-semibold mb-2">Турниры не найдены</h3>
+        <p class="text-muted mb-4">Попробуйте изменить параметры поиска</p>
+        <button class="btn btn-primary" onclick="resetFilters()">
+          <i class="bi bi-arrow-clockwise"></i> Сбросить фильтры
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = tournaments.map(tournament => renderTournamentListItem(tournament)).join('');
+}
+
+// Рендер карточки турнира
+function renderTournamentCard(tournament) {
+  const statusClass = {
+    'Scheduled': 'scheduled',
+    'Ongoing': 'ongoing',
+    'Completed': 'completed'
+  }[tournament.status] || 'scheduled';
+  
+  const statusText = {
+    'Scheduled': 'Запланирован',
+    'Ongoing': 'Идет сейчас',
+    'Completed': 'Завершен'
+  }[tournament.status] || tournament.status;
+  
+  return `
+    <div class="tournament-card animate-fade-in-up">
+      <div class="tournament-card-header">
+        <div>
+          <h3 class="tournament-card-title">${tournament.name}</h3>
+          <p class="tournament-card-subtitle">${tournament.organizer || 'Организатор не указан'}</p>
+        </div>
+        <span class="tournament-card-badge status-${statusClass}">${statusText}</span>
+      </div>
+      
+      <div class="tournament-card-body">
+        <div class="tournament-card-meta">
+          <div class="tournament-card-meta-item">
+            <i class="bi bi-geo-alt"></i>
+            <span>${tournament.location}</span>
+          </div>
+          <div class="tournament-card-meta-item">
+            <i class="bi bi-calendar"></i>
+            <span>${formatDate(tournament.start_date)} - ${formatDate(tournament.end_date)}</span>
+          </div>
+          ${tournament.prize_fund ? `
+          <div class="tournament-card-meta-item">
+            <i class="bi bi-currency-dollar"></i>
+            <span>${tournament.prize_fund}</span>
+          </div>
+          ` : ''}
+        </div>
+        
+        ${tournament.description ? `
+        <p class="tournament-card-description">
+          ${tournament.description.substring(0, 150)}${tournament.description.length > 150 ? '...' : ''}
+        </p>
+        ` : ''}
+      </div>
+      
+      <div class="tournament-card-footer">
+        <div class="tournament-card-tags">
+          <span class="tournament-card-tag">${tournament.category}</span>
+        </div>
+        <div class="tournament-card-actions">
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="addToFavorites(${tournament.id})" title="В избранное">
+            <i class="bi bi-heart"></i>
+          </button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="shareTournament(${tournament.id})" title="Поделиться">
+            <i class="bi bi-share"></i>
+          </button>
+          <a href="/tournament/${tournament.id}" class="btn btn-primary btn-sm">
+            <i class="bi bi-eye"></i> Подробнее
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Рендер элемента списка
+function renderTournamentListItem(tournament) {
+  const statusBadge = {
+    'Scheduled': 'success',
+    'Ongoing': 'info',
+    'Completed': 'secondary'
+  }[tournament.status] || 'secondary';
+  
+  return `
+    <div class="d-flex align-items-center justify-between p-4 bg-white rounded-lg shadow-sm mb-3" style="transition: all 0.2s;">
+      <div class="flex-1">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <h4 class="font-semibold text-lg mb-0">
+            <a href="/tournament/${tournament.id}" class="text-gray-900">${tournament.name}</a>
+          </h4>
+          <span class="badge badge-${statusBadge}">${tournament.status}</span>
+        </div>
+        
+        <div class="d-flex gap-4 text-sm text-muted">
+          <span><i class="bi bi-geo-alt"></i> ${tournament.location}</span>
+          <span><i class="bi bi-calendar"></i> ${formatDate(tournament.start_date)}</span>
+          <span><i class="bi bi-tag"></i> ${tournament.category}</span>
+        </div>
+      </div>
+      
+      <div class="d-flex gap-2">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="addToFavorites(${tournament.id})">
+          <i class="bi bi-heart"></i>
+        </button>
+        <a href="/tournament/${tournament.id}" class="btn btn-outline btn-sm">Подробнее</a>
+      </div>
+    </div>
+  `;
+}
+
+// Пагинация
+function renderPagination() {
+  const totalPages = Math.ceil(filteredTournaments.length / itemsPerPage);
+  const container = document.getElementById('pagination');
+  
+  if (totalPages <= 1) {
+    document.getElementById('paginationContainer').classList.add('d-none');
+    return;
+  }
+  
+  document.getElementById('paginationContainer').classList.remove('d-none');
+  
+  let html = '';
+  
+  // Предыдущая
+  html += `
+    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+  `;
+  
+  // Страницы
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+      html += `
+        <li class="page-item ${i === currentPage ? 'active' : ''}">
+          <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        </li>
+      `;
+    } else if (i === currentPage - 3 || i === currentPage + 3) {
+      html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+  }
+  
+  // Следующая
+  html += `
+    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+  `;
+  
+  container.innerHTML = html;
+}
+
+// Изменение страницы
+function changePage(page) {
+  const totalPages = Math.ceil(filteredTournaments.length / itemsPerPage);
+  if (page < 1 || page > totalPages) return;
+  
+  currentPage = page;
+  renderTournaments();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Обновление счетчика результатов
+function updateResultsCount() {
+  document.getElementById('resultsCount').textContent = filteredTournaments.length;
+}
+
+// Форматирование даты
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+// Debounce
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+// Действия с турнирами
+function addToFavorites(tournamentId) {
+  console.log('Добавление в избранное:', tournamentId);
+  // TODO: Реализовать добавление в избранное
+}
+
+function shareTournament(tournamentId) {
+  console.log('Поделиться турниром:', tournamentId);
+  // TODO: Реализовать функцию поделиться
+}
+
+function exportTournaments() {
+  console.log('Экспорт турниров');
+  // TODO: Реализовать экспорт
+}
+
+function showSubscribeModal() {
+  console.log('Показать модальное окно подписки');
+  // TODO: Реализовать модальное окно
+}
+
+function showError(message) {
+  alert(message);
+  // TODO: Реализовать красивое отображение ошибок
+}
+</script>
+{% endblock %}

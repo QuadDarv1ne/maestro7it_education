@@ -1,9 +1,29 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import re
 import bleach
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Попытка импорта Argon2, fallback на werkzeug
+try:
+    from argon2 import PasswordHasher
+    from argon2.exceptions import VerifyMismatchError, InvalidHash
+    ph = PasswordHasher(
+        time_cost=2,
+        memory_cost=65536,
+        parallelism=2,
+        hash_len=32,
+        salt_len=16
+    )
+    USE_ARGON2 = True
+    logger.info("Using Argon2 for password hashing")
+except ImportError:
+    USE_ARGON2 = False
+    logger.warning("Argon2 not available, using werkzeug password hashing")
 
 
 class User(db.Model):
@@ -14,7 +34,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    is_regular_user = db.Column(db.Boolean, default=True)  # Regular users who can subscribe to notifications
+    is_regular_user = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime, index=True)
@@ -24,6 +44,10 @@ class User(db.Model):
     locked_until = db.Column(db.DateTime)
     password_reset_token = db.Column(db.String(100), unique=True)
     password_reset_expires = db.Column(db.DateTime)
+    # Новые поля для безопасности
+    two_factor_secret = db.Column(db.String(64), nullable=True)
+    two_factor_enabled = db.Column(db.Boolean, default=False)
+    password_changed_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Composite indexes for common query patterns
     __table_args__ = (
@@ -42,31 +66,72 @@ class User(db.Model):
         self.generate_api_key()
 
     def set_password(self, password):
-        """Установить хэш пароля"""
+        """Установить хэш пароля с использованием Argon2 или werkzeug"""
         # Validate password strength
-        if not self.validate_password_strength(password):
-            raise ValueError("Password does not meet security requirements")
-        self.password_hash = generate_password_hash(password)
+        is_valid, error_msg = self.validate_password_strength(password)
+        if not is_valid:
+            raise ValueError(error_msg)
+        
+        if USE_ARGON2:
+            try:
+                self.password_hash = ph.hash(password)
+                logger.info(f"Password hashed with Argon2 for user {self.username}")
+            except Exception as e:
+                logger.error(f"Argon2 hashing failed: {e}, falling back to werkzeug")
+                self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        else:
+            self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        
+        self.password_changed_at = datetime.utcnow()
 
     def check_password(self, password):
-        """Проверить пароль"""
+        """Проверить пароль с автоматической миграцией на Argon2"""
         # Check if account is locked
         if self.is_locked():
+            logger.warning(f"Login attempt for locked account: {self.username}")
             return False
         
-        is_valid = check_password_hash(self.password_hash, password)
+        is_valid = False
+        
+        # Попытка проверки с Argon2
+        if USE_ARGON2 and self.password_hash.startswith('$argon2'):
+            try:
+                ph.verify(self.password_hash, password)
+                is_valid = True
+                
+                # Проверка, нужно ли обновить хеш
+                if ph.check_needs_rehash(self.password_hash):
+                    logger.info(f"Rehashing password for user {self.username}")
+                    self.password_hash = ph.hash(password)
+                    self.password_changed_at = datetime.utcnow()
+                    
+            except (VerifyMismatchError, InvalidHash):
+                is_valid = False
+        else:
+            # Fallback на werkzeug или миграция со старого хеша
+            is_valid = check_password_hash(self.password_hash, password)
+            
+            # Автоматическая миграция на Argon2
+            if is_valid and USE_ARGON2 and not self.password_hash.startswith('$argon2'):
+                logger.info(f"Migrating password hash to Argon2 for user {self.username}")
+                self.password_hash = ph.hash(password)
+                self.password_changed_at = datetime.utcnow()
         
         if is_valid:
             # Reset failed attempts on successful login
             self.failed_login_attempts = 0
             self.locked_until = None
+            self.last_login = datetime.utcnow()
+            logger.info(f"Successful login for user {self.username}")
         else:
             # Increment failed attempts
             self.failed_login_attempts += 1
+            logger.warning(f"Failed login attempt {self.failed_login_attempts} for user {self.username}")
+            
             # Lock account after 5 failed attempts
             if self.failed_login_attempts >= 5:
-                from datetime import datetime, timedelta
                 self.locked_until = datetime.utcnow() + timedelta(minutes=30)
+                logger.warning(f"Account locked for user {self.username} until {self.locked_until}")
         
         return is_valid
     
@@ -84,16 +149,24 @@ class User(db.Model):
     def validate_password_strength(self, password):
         """Validate password meets security requirements"""
         if len(password) < 8:
-            return False
-        if not re.search(r'[A-Z]', password):  # Has uppercase
-            return False
-        if not re.search(r'[a-z]', password):  # Has lowercase
-            return False
-        if not re.search(r'\d', password):  # Has digit
-            return False
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):  # Has special char
-            return False
-        return True
+            return False, "Пароль должен содержать минимум 8 символов"
+        if len(password) > 128:
+            return False, "Пароль слишком длинный (максимум 128 символов)"
+        if not re.search(r'[A-Z]', password):
+            return False, "Пароль должен содержать хотя бы одну заглавную букву"
+        if not re.search(r'[a-z]', password):
+            return False, "Пароль должен содержать хотя бы одну строчную букву"
+        if not re.search(r'\d', password):
+            return False, "Пароль должен содержать хотя бы одну цифру"
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            return False, "Пароль должен содержать хотя бы один специальный символ"
+        
+        # Проверка на распространенные пароли
+        common_passwords = ['password', '12345678', 'qwerty', 'admin', 'letmein', 'password123']
+        if password.lower() in common_passwords:
+            return False, "Пароль слишком простой, используйте более сложный"
+        
+        return True, ""
 
     def generate_api_key(self):
         """Сгенерировать API ключ"""

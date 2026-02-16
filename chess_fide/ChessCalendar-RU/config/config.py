@@ -1,3 +1,6 @@
+import os
+import secrets
+
 class Config:
     # Генерируем случайный SECRET_KEY если не задан через переменную окружения
     SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
@@ -30,3 +33,13 @@ class Config:
     
     # Настройки CORS для API
     CORS_HEADERS = 'Content-Type'
+    
+    # Email уведомления
+    EMAIL_NOTIFICATIONS_ENABLED = os.environ.get('EMAIL_NOTIFICATIONS_ENABLED', 'False').lower() == 'true'
+    EMAIL_FROM = os.environ.get('EMAIL_FROM', 'noreply@chesscalendar.ru')
+    
+    # SMTP настройки (опционально)
+    SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+    SMTP_USER = os.environ.get('SMTP_USER', '')
+    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')

@@ -1,0 +1,290 @@
+<!-- 
+  Компоненты карточек турниров
+  Переиспользуемые шаблоны для отображения турниров
+-->
+
+<!-- Стандартная карточка турнира -->
+{% macro tournament_card(tournament) %}
+<div class="tournament-card animate-fade-in-up">
+  <div class="tournament-card-header">
+    <div>
+      <h3 class="tournament-card-title">{{ tournament.name }}</h3>
+      <p class="tournament-card-subtitle">{{ tournament.organizer or 'Организатор не указан' }}</p>
+    </div>
+    <span class="tournament-card-badge status-{{ tournament.status|lower }}">
+      {% if tournament.status == 'Scheduled' %}
+        Запланирован
+      {% elif tournament.status == 'Ongoing' %}
+        Идет сейчас
+      {% elif tournament.status == 'Completed' %}
+        Завершен
+      {% else %}
+        {{ tournament.status }}
+      {% endif %}
+    </span>
+  </div>
+  
+  <div class="tournament-card-body">
+    <div class="tournament-card-meta">
+      <div class="tournament-card-meta-item">
+        <i class="bi bi-geo-alt"></i>
+        <span>{{ tournament.location }}</span>
+      </div>
+      <div class="tournament-card-meta-item">
+        <i class="bi bi-calendar"></i>
+        <span>{{ tournament.start_date|format_date }} - {{ tournament.end_date|format_date }}</span>
+      </div>
+      {% if tournament.prize_fund %}
+      <div class="tournament-card-meta-item">
+        <i class="bi bi-currency-dollar"></i>
+        <span>{{ tournament.prize_fund }}</span>
+      </div>
+      {% endif %}
+    </div>
+    
+    {% if tournament.description %}
+    <p class="tournament-card-description">
+      {{ tournament.description[:150] }}{% if tournament.description|length > 150 %}...{% endif %}
+    </p>
+    {% endif %}
+  </div>
+  
+  <div class="tournament-card-footer">
+    <div class="tournament-card-tags">
+      <span class="tournament-card-tag">{{ tournament.category }}</span>
+      {% if tournament.rating_type %}
+      <span class="tournament-card-tag">{{ tournament.rating_type }}</span>
+      {% endif %}
+    </div>
+    <div class="tournament-card-actions">
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="addToFavorites({{ tournament.id }})" title="В избранное">
+        <i class="bi bi-heart"></i>
+      </button>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="shareTournament({{ tournament.id }})" title="Поделиться">
+        <i class="bi bi-share"></i>
+      </button>
+      <a href="/tournament/{{ tournament.id }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-eye"></i>
+        Подробнее
+      </a>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+<!-- Компактная карточка турнира -->
+{% macro tournament_card_compact(tournament) %}
+<div class="tournament-card-compact animate-slide-in-right">
+  <div class="tournament-card-compact-date">
+    <span class="tournament-card-compact-date-day">{{ tournament.start_date|format_day }}</span>
+    <span class="tournament-card-compact-date-month">{{ tournament.start_date|format_month }}</span>
+  </div>
+  
+  <div class="tournament-card-compact-content">
+    <h4 class="tournament-card-compact-title">
+      <a href="/tournament/{{ tournament.id }}">{{ tournament.name }}</a>
+    </h4>
+    <div class="tournament-card-compact-meta">
+      <span><i class="bi bi-geo-alt"></i> {{ tournament.location }}</span>
+      <span><i class="bi bi-tag"></i> {{ tournament.category }}</span>
+      {% if tournament.status == 'Ongoing' %}
+      <span class="badge badge-info">Идет сейчас</span>
+      {% endif %}
+    </div>
+  </div>
+  
+  <div class="tournament-card-actions">
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="addToFavorites({{ tournament.id }})">
+      <i class="bi bi-heart"></i>
+    </button>
+  </div>
+</div>
+{% endmacro %}
+
+<!-- Карточка с изображением (featured) -->
+{% macro tournament_card_featured(tournament, image_url) %}
+<div class="tournament-card-featured">
+  <img src="{{ image_url or '/static/images/default-tournament.jpg' }}" 
+       alt="{{ tournament.name }}" 
+       class="tournament-card-featured-image">
+  
+  <div class="tournament-card-featured-overlay">
+    <span class="tournament-card-badge status-{{ tournament.status|lower }}">
+      {% if tournament.status == 'Scheduled' %}
+        Запланирован
+      {% elif tournament.status == 'Ongoing' %}
+        Идет сейчас
+      {% elif tournament.status == 'Completed' %}
+        Завершен
+      {% endif %}
+    </span>
+    
+    <h3 class="tournament-card-featured-title">{{ tournament.name }}</h3>
+    
+    <div class="tournament-card-featured-meta">
+      <span><i class="bi bi-geo-alt"></i> {{ tournament.location }}</span>
+      <span><i class="bi bi-calendar"></i> {{ tournament.start_date|format_date }}</span>
+      {% if tournament.prize_fund %}
+      <span><i class="bi bi-currency-dollar"></i> {{ tournament.prize_fund }}</span>
+      {% endif %}
+    </div>
+    
+    <div class="mt-4">
+      <a href="/tournament/{{ tournament.id }}" class="btn btn-primary">
+        <i class="bi bi-eye"></i>
+        Подробнее
+      </a>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+<!-- Карточка для списка (минималистичная) -->
+{% macro tournament_list_item(tournament) %}
+<div class="d-flex align-items-center justify-between p-4 bg-white rounded-lg shadow-sm mb-3 hover:shadow-md transition-all">
+  <div class="flex-1">
+    <div class="d-flex align-items-center gap-3 mb-2">
+      <h4 class="font-semibold text-lg mb-0">
+        <a href="/tournament/{{ tournament.id }}" class="text-gray-900">{{ tournament.name }}</a>
+      </h4>
+      <span class="badge badge-{{ 'success' if tournament.status == 'Scheduled' else 'info' if tournament.status == 'Ongoing' else 'secondary' }}">
+        {{ tournament.status }}
+      </span>
+    </div>
+    
+    <div class="d-flex gap-4 text-sm text-muted">
+      <span><i class="bi bi-geo-alt"></i> {{ tournament.location }}</span>
+      <span><i class="bi bi-calendar"></i> {{ tournament.start_date|format_date }}</span>
+      <span><i class="bi bi-tag"></i> {{ tournament.category }}</span>
+    </div>
+  </div>
+  
+  <div class="d-flex gap-2">
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="addToFavorites({{ tournament.id }})">
+      <i class="bi bi-heart"></i>
+    </button>
+    <a href="/tournament/{{ tournament.id }}" class="btn btn-outline btn-sm">
+      Подробнее
+    </a>
+  </div>
+</div>
+{% endmacro %}
+
+<!-- Карточка для календаря -->
+{% macro tournament_calendar_item(tournament) %}
+<div class="tournament-calendar-item p-2 mb-2 rounded-md bg-primary-light text-white text-xs cursor-pointer hover:bg-primary transition-all"
+     onclick="showTournamentDetails({{ tournament.id }})">
+  <div class="font-semibold truncate">{{ tournament.name }}</div>
+  <div class="opacity-90">
+    <i class="bi bi-geo-alt"></i> {{ tournament.location }}
+  </div>
+</div>
+{% endmacro %}
+
+<!-- Скелетон для загрузки -->
+{% macro tournament_card_skeleton() %}
+<div class="tournament-card">
+  <div class="tournament-card-header">
+    <div class="w-100">
+      <div class="skeleton skeleton-text mb-2" style="width: 70%;"></div>
+      <div class="skeleton skeleton-text" style="width: 40%;"></div>
+    </div>
+    <div class="skeleton skeleton-badge"></div>
+  </div>
+  
+  <div class="tournament-card-body">
+    <div class="tournament-card-meta">
+      <div class="skeleton skeleton-text" style="width: 30%;"></div>
+      <div class="skeleton skeleton-text" style="width: 40%;"></div>
+      <div class="skeleton skeleton-text" style="width: 25%;"></div>
+    </div>
+    
+    <div class="skeleton skeleton-text mb-2"></div>
+    <div class="skeleton skeleton-text" style="width: 80%;"></div>
+  </div>
+  
+  <div class="tournament-card-footer">
+    <div class="d-flex gap-2">
+      <div class="skeleton skeleton-badge"></div>
+      <div class="skeleton skeleton-badge"></div>
+    </div>
+    <div class="skeleton skeleton-button"></div>
+  </div>
+</div>
+
+<style>
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeleton-badge {
+  width: 80px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+.skeleton-button {
+  width: 120px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+</style>
+{% endmacro %}
+
+<!-- Пустое состояние -->
+{% macro tournament_empty_state(message="Турниры не найдены", icon="calendar-x") %}
+<div class="text-center py-12">
+  <i class="bi bi-{{ icon }} display-1 text-muted mb-4"></i>
+  <h3 class="text-xl font-semibold mb-2">{{ message }}</h3>
+  <p class="text-muted mb-4">Попробуйте изменить параметры поиска или фильтры</p>
+  <button class="btn btn-primary" onclick="resetFilters()">
+    <i class="bi bi-arrow-clockwise"></i>
+    Сбросить фильтры
+  </button>
+</div>
+{% endmacro %}
+
+<!-- Сетка карточек -->
+{% macro tournament_grid(tournaments, card_type='standard') %}
+<div class="row g-4">
+  {% for tournament in tournaments %}
+  <div class="col-12 col-md-6 col-lg-4">
+    {% if card_type == 'compact' %}
+      {{ tournament_card_compact(tournament) }}
+    {% elif card_type == 'featured' %}
+      {{ tournament_card_featured(tournament, tournament.image_url) }}
+    {% else %}
+      {{ tournament_card(tournament) }}
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="col-12">
+    {{ tournament_empty_state() }}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+<!-- Список карточек -->
+{% macro tournament_list(tournaments) %}
+<div class="tournament-list">
+  {% for tournament in tournaments %}
+    {{ tournament_list_item(tournament) }}
+  {% else %}
+    {{ tournament_empty_state() }}
+  {% endfor %}
+</div>
+{% endmacro %}

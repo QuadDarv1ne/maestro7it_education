@@ -1,481 +1,760 @@
 /**
- * Chess Calendar RU - Design System
- * Единая система дизайна с токенами, компонентами и утилитами
- * Version: 3.0.0
+ * ChessCalendar-RU Design System
+ * Современная дизайн-система для шахматного календаря
+ * Версия: 1.0.0
  */
 
 /* ============================================
-   DESIGN TOKENS
+   1. ЦВЕТОВАЯ ПАЛИТРА
    ============================================ */
 
 :root {
-    /* === Color Palette === */
-    
-    /* Primary Colors */
-    --color-primary-50: #eff6ff;
-    --color-primary-100: #dbeafe;
-    --color-primary-200: #bfdbfe;
-    --color-primary-300: #93c5fd;
-    --color-primary-400: #60a5fa;
-    --color-primary-500: #3b82f6;
-    --color-primary-600: #2563eb;
-    --color-primary-700: #1d4ed8;
-    --color-primary-800: #1e40af;
-    --color-primary-900: #1e3a8a;
-    
-    /* Secondary Colors */
-    --color-secondary-50: #f8fafc;
-    --color-secondary-100: #f1f5f9;
-    --color-secondary-200: #e2e8f0;
-    --color-secondary-300: #cbd5e1;
-    --color-secondary-400: #94a3b8;
-    --color-secondary-500: #64748b;
-    --color-secondary-600: #475569;
-    --color-secondary-700: #334155;
-    --color-secondary-800: #1e293b;
-    --color-secondary-900: #0f172a;
-    
-    /* Success Colors */
-    --color-success-50: #f0fdf4;
-    --color-success-100: #dcfce7;
-    --color-success-500: #22c55e;
-    --color-success-600: #16a34a;
-    --color-success-700: #15803d;
-    
-    /* Warning Colors */
-    --color-warning-50: #fffbeb;
-    --color-warning-100: #fef3c7;
-    --color-warning-500: #f59e0b;
-    --color-warning-600: #d97706;
-    --color-warning-700: #b45309;
-    
-    /* Danger Colors */
-    --color-danger-50: #fef2f2;
-    --color-danger-100: #fee2e2;
-    --color-danger-500: #ef4444;
-    --color-danger-600: #dc2626;
-    --color-danger-700: #b91c1c;
-    
-    /* Info Colors */
-    --color-info-50: #f0f9ff;
-    --color-info-100: #e0f2fe;
-    --color-info-500: #06b6d4;
-    --color-info-600: #0891b2;
-    --color-info-700: #0e7490;
-    
-    /* Neutral Colors */
-    --color-white: #ffffff;
-    --color-black: #000000;
-    --color-gray-50: #f9fafb;
-    --color-gray-100: #f3f4f6;
-    --color-gray-200: #e5e7eb;
-    --color-gray-300: #d1d5db;
-    --color-gray-400: #9ca3af;
-    --color-gray-500: #6b7280;
-    --color-gray-600: #4b5563;
-    --color-gray-700: #374151;
-    --color-gray-800: #1f2937;
-    --color-gray-900: #111827;
-    
-    /* === Typography === */
-    
-    /* Font Families */
-    --font-heading: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-    
-    /* Font Sizes */
-    --font-size-xs: 0.75rem;      /* 12px */
-    --font-size-sm: 0.875rem;     /* 14px */
-    --font-size-base: 1rem;       /* 16px */
-    --font-size-lg: 1.125rem;     /* 18px */
-    --font-size-xl: 1.25rem;      /* 20px */
-    --font-size-2xl: 1.5rem;      /* 24px */
-    --font-size-3xl: 1.875rem;    /* 30px */
-    --font-size-4xl: 2.25rem;     /* 36px */
-    --font-size-5xl: 3rem;        /* 48px */
-    --font-size-6xl: 3.75rem;     /* 60px */
-    
-    /* Font Weights */
-    --font-weight-light: 300;
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
-    --font-weight-extrabold: 800;
-    
-    /* Line Heights */
-    --line-height-tight: 1.25;
-    --line-height-snug: 1.375;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.625;
-    --line-height-loose: 2;
-    
-    /* Letter Spacing */
-    --letter-spacing-tight: -0.025em;
-    --letter-spacing-normal: 0;
-    --letter-spacing-wide: 0.025em;
-    --letter-spacing-wider: 0.05em;
-    --letter-spacing-widest: 0.1em;
-    
-    /* === Spacing === */
-    --space-0: 0;
-    --space-1: 0.25rem;   /* 4px */
-    --space-2: 0.5rem;    /* 8px */
-    --space-3: 0.75rem;   /* 12px */
-    --space-4: 1rem;      /* 16px */
-    --space-5: 1.25rem;   /* 20px */
-    --space-6: 1.5rem;    /* 24px */
-    --space-8: 2rem;      /* 32px */
-    --space-10: 2.5rem;   /* 40px */
-    --space-12: 3rem;     /* 48px */
-    --space-16: 4rem;     /* 64px */
-    --space-20: 5rem;     /* 80px */
-    --space-24: 6rem;     /* 96px */
-    
-    /* === Border Radius === */
-    --radius-none: 0;
-    --radius-sm: 0.25rem;    /* 4px */
-    --radius-base: 0.5rem;   /* 8px */
-    --radius-md: 0.75rem;    /* 12px */
-    --radius-lg: 1rem;       /* 16px */
-    --radius-xl: 1.5rem;     /* 24px */
-    --radius-2xl: 2rem;      /* 32px */
-    --radius-full: 9999px;
-    
-    /* === Shadows === */
-    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    --shadow-2xl: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
-    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
-    
-    /* Colored Shadows */
-    --shadow-primary: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
-    --shadow-success: 0 10px 25px -5px rgba(34, 197, 94, 0.3);
-    --shadow-warning: 0 10px 25px -5px rgba(245, 158, 11, 0.3);
-    --shadow-danger: 0 10px 25px -5px rgba(239, 68, 68, 0.3);
-    
-    /* === Transitions === */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    
-    /* === Z-Index === */
-    --z-dropdown: 1000;
-    --z-sticky: 1020;
-    --z-fixed: 1030;
-    --z-modal-backdrop: 1040;
-    --z-modal: 1050;
-    --z-popover: 1060;
-    --z-tooltip: 1070;
-    
-    /* === Breakpoints === */
-    --breakpoint-xs: 0;
-    --breakpoint-sm: 576px;
-    --breakpoint-md: 768px;
-    --breakpoint-lg: 992px;
-    --breakpoint-xl: 1200px;
-    --breakpoint-xxl: 1400px;
+  /* Основные цвета */
+  --color-primary: #8B4513;
+  --color-primary-light: #A0522D;
+  --color-primary-dark: #654321;
+  --color-secondary: #D2691E;
+  --color-accent: #FFD700;
+  
+  /* Семантические цвета */
+  --color-success: #28a745;
+  --color-warning: #ffc107;
+  --color-danger: #dc3545;
+  --color-info: #17a2b8;
+  
+  /* Нейтральные цвета */
+  --color-white: #FFFFFF;
+  --color-gray-50: #F8F9FA;
+  --color-gray-100: #F1F3F5;
+  --color-gray-200: #E9ECEF;
+  --color-gray-300: #DEE2E6;
+  --color-gray-400: #CED4DA;
+  --color-gray-500: #ADB5BD;
+  --color-gray-600: #6C757D;
+  --color-gray-700: #495057;
+  --color-gray-800: #343A40;
+  --color-gray-900: #212529;
+  --color-black: #000000;
+  
+  /* Градиенты */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--color-accent) 0%, #FFA500 100%);
+  --gradient-dark: linear-gradient(135deg, var(--color-gray-800) 0%, var(--color-gray-900) 100%);
+  
+  /* Тени */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.2);
+  
+  /* Типографика */
+  --font-family-base: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-heading: 'Roboto', sans-serif;
+  --font-family-mono: 'Roboto Mono', 'Courier New', monospace;
+  
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+  --font-size-5xl: 3rem;      /* 48px */
+  
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* Spacing */
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;   /* 4px */
+  --spacing-2: 0.5rem;    /* 8px */
+  --spacing-3: 0.75rem;   /* 12px */
+  --spacing-4: 1rem;      /* 16px */
+  --spacing-5: 1.25rem;   /* 20px */
+  --spacing-6: 1.5rem;    /* 24px */
+  --spacing-8: 2rem;      /* 32px */
+  --spacing-10: 2.5rem;   /* 40px */
+  --spacing-12: 3rem;     /* 48px */
+  --spacing-16: 4rem;     /* 64px */
+  --spacing-20: 5rem;     /* 80px */
+  
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+  
+  /* Z-index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+}
+
+/* Темная тема */
+[data-bs-theme="dark"] {
+  --color-gray-50: #1E1E1E;
+  --color-gray-100: #2D2D2D;
+  --color-gray-200: #3D3D3D;
+  --color-gray-300: #4D4D4D;
+  --color-gray-400: #5D5D5D;
+  --color-gray-500: #7D7D7D;
+  --color-gray-600: #9D9D9D;
+  --color-gray-700: #BDBDBD;
+  --color-gray-800: #DDDDDD;
+  --color-gray-900: #F0F0F0;
+  
+  --shadow-xs: 0 1px 2px rgba(255, 255, 255, 0.05);
+  --shadow-sm: 0 2px 4px rgba(255, 255, 255, 0.08);
+  --shadow-md: 0 4px 8px rgba(255, 255, 255, 0.1);
+  --shadow-lg: 0 8px 16px rgba(255, 255, 255, 0.12);
+  --shadow-xl: 0 12px 24px rgba(255, 255, 255, 0.15);
 }
 
 /* ============================================
-   DARK THEME TOKENS
+   2. БАЗОВЫЕ СТИЛИ
    ============================================ */
 
-[data-theme="dark"] {
-    /* Primary Colors (slightly brighter) */
-    --color-primary-500: #60a5fa;
-    --color-primary-600: #3b82f6;
-    --color-primary-700: #2563eb;
-    
-    /* Background Colors */
-    --color-bg-primary: #0f172a;
-    --color-bg-secondary: #1e293b;
-    --color-bg-tertiary: #334155;
-    --color-bg-elevated: #1e293b;
-    
-    /* Text Colors */
-    --color-text-primary: #f8fafc;
-    --color-text-secondary: #cbd5e1;
-    --color-text-tertiary: #94a3b8;
-    --color-text-muted: #64748b;
-    
-    /* Border Colors */
-    --color-border-primary: #334155;
-    --color-border-secondary: #475569;
-    
-    /* Shadows (darker) */
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
-    --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+* {
+  box-sizing: border-box;
 }
 
-/* Light theme tokens (default) */
-:root:not([data-theme="dark"]) {
-    --color-bg-primary: #ffffff;
-    --color-bg-secondary: #f8fafc;
-    --color-bg-tertiary: #f1f5f9;
-    --color-bg-elevated: #ffffff;
-    
-    --color-text-primary: #0f172a;
-    --color-text-secondary: #475569;
-    --color-text-tertiary: #64748b;
-    --color-text-muted: #94a3b8;
-    
-    --color-border-primary: #e2e8f0;
-    --color-border-secondary: #cbd5e1;
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-gray-900);
+  background-color: var(--color-gray-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  margin-top: 0;
+  margin-bottom: var(--spacing-4);
+}
+
+h1 { font-size: var(--font-size-4xl); }
+h2 { font-size: var(--font-size-3xl); }
+h3 { font-size: var(--font-size-2xl); }
+h4 { font-size: var(--font-size-xl); }
+h5 { font-size: var(--font-size-lg); }
+h6 { font-size: var(--font-size-base); }
+
+p {
+  margin-top: 0;
+  margin-bottom: var(--spacing-4);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
 }
 
 /* ============================================
-   TYPOGRAPHY SYSTEM
+   3. КОМПОНЕНТЫ - КАРТОЧКИ
    ============================================ */
 
-/* Fluid Typography */
-h1, .h1 {
-    font-family: var(--font-heading);
-    font-size: clamp(2rem, 5vw + 1rem, 3.75rem);
-    font-weight: var(--font-weight-extrabold);
-    line-height: var(--line-height-tight);
-    letter-spacing: var(--letter-spacing-tight);
-    color: var(--color-text-primary);
+/* Базовая карточка */
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: all var(--transition-base);
 }
 
-h2, .h2 {
-    font-family: var(--font-heading);
-    font-size: clamp(1.5rem, 4vw + 0.5rem, 3rem);
-    font-weight: var(--font-weight-bold);
-    line-height: var(--line-height-tight);
-    letter-spacing: var(--letter-spacing-tight);
-    color: var(--color-text-primary);
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
-h3, .h3 {
-    font-family: var(--font-heading);
-    font-size: clamp(1.25rem, 3vw + 0.5rem, 2.25rem);
-    font-weight: var(--font-weight-bold);
-    line-height: var(--line-height-snug);
-    color: var(--color-text-primary);
+.card-header {
+  padding: var(--spacing-4) var(--spacing-6);
+  border-bottom: 1px solid var(--color-gray-200);
+  background: var(--color-gray-50);
 }
 
-h4, .h4 {
-    font-family: var(--font-heading);
-    font-size: clamp(1.125rem, 2vw + 0.5rem, 1.875rem);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-snug);
-    color: var(--color-text-primary);
+.card-body {
+  padding: var(--spacing-6);
 }
 
-h5, .h5 {
-    font-family: var(--font-heading);
-    font-size: clamp(1rem, 1.5vw + 0.5rem, 1.5rem);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-normal);
-    color: var(--color-text-primary);
+.card-footer {
+  padding: var(--spacing-4) var(--spacing-6);
+  border-top: 1px solid var(--color-gray-200);
+  background: var(--color-gray-50);
 }
 
-h6, .h6 {
-    font-family: var(--font-heading);
-    font-size: clamp(0.875rem, 1vw + 0.5rem, 1.25rem);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--line-height-normal);
-    color: var(--color-text-primary);
+/* Карточка турнира */
+.tournament-card {
+  position: relative;
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition: all var(--transition-base);
+  margin-bottom: var(--spacing-6);
 }
 
-body, p, .body-text {
-    font-family: var(--font-body);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-normal);
-    line-height: var(--line-height-relaxed);
-    color: var(--color-text-secondary);
+.tournament-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--gradient-primary);
 }
 
-.text-small {
-    font-size: var(--font-size-sm);
-    line-height: var(--line-height-normal);
+.tournament-card:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-4px);
 }
 
-.text-xs {
-    font-size: var(--font-size-xs);
-    line-height: var(--line-height-normal);
+.tournament-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-6);
+  gap: var(--spacing-4);
 }
 
-.text-large {
-    font-size: var(--font-size-lg);
-    line-height: var(--line-height-relaxed);
+.tournament-card-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  margin: 0 0 var(--spacing-2) 0;
+  line-height: var(--line-height-tight);
+}
+
+.tournament-card-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+  margin: 0;
+}
+
+.tournament-card-badge {
+  flex-shrink: 0;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tournament-card-badge.status-scheduled {
+  background: rgba(40, 167, 69, 0.1);
+  color: var(--color-success);
+}
+
+.tournament-card-badge.status-ongoing {
+  background: rgba(23, 162, 184, 0.1);
+  color: var(--color-info);
+}
+
+.tournament-card-badge.status-completed {
+  background: rgba(108, 117, 125, 0.1);
+  color: var(--color-gray-600);
+}
+
+.tournament-card-body {
+  padding: 0 var(--spacing-6) var(--spacing-6);
+}
+
+.tournament-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+.tournament-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-700);
+}
+
+.tournament-card-meta-item i {
+  color: var(--color-primary);
+  font-size: var(--font-size-base);
+}
+
+.tournament-card-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--spacing-4);
+}
+
+.tournament-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-4) var(--spacing-6);
+  background: var(--color-gray-50);
+  border-top: 1px solid var(--color-gray-200);
+}
+
+.tournament-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.tournament-card-tag {
+  padding: var(--spacing-1) var(--spacing-3);
+  background: var(--color-gray-100);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-700);
+  transition: all var(--transition-fast);
+}
+
+.tournament-card-tag:hover {
+  background: var(--color-gray-200);
+}
+
+.tournament-card-actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+/* Компактная карточка турнира */
+.tournament-card-compact {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+
+.tournament-card-compact:hover {
+  box-shadow: var(--shadow-md);
+  border-left-color: var(--color-secondary);
+}
+
+.tournament-card-compact-date {
+  flex-shrink: 0;
+  width: 60px;
+  text-align: center;
+  padding: var(--spacing-2);
+  background: var(--gradient-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-white);
+}
+
+.tournament-card-compact-date-day {
+  display: block;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.tournament-card-compact-date-month {
+  display: block;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  margin-top: var(--spacing-1);
+}
+
+.tournament-card-compact-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tournament-card-compact-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  margin: 0 0 var(--spacing-1) 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tournament-card-compact-meta {
+  display: flex;
+  gap: var(--spacing-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-600);
+}
+
+/* Карточка с изображением */
+.tournament-card-featured {
+  position: relative;
+  height: 400px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.tournament-card-featured-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tournament-card-featured-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-8) var(--spacing-6) var(--spacing-6);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  color: var(--color-white);
+}
+
+.tournament-card-featured-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.tournament-card-featured-meta {
+  display: flex;
+  gap: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  opacity: 0.9;
 }
 
 /* ============================================
-   ANIMATION SYSTEM
+   4. КОМПОНЕНТЫ - КНОПКИ
    ============================================ */
 
-/* Keyframes */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-5);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-@keyframes scaleIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+.btn:active {
+  transform: translateY(0);
 }
 
-@keyframes shimmer {
-    0% {
-        background-position: -1000px 0;
-    }
-    100% {
-        background-position: 1000px 0;
-    }
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
+/* Варианты кнопок */
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--color-white);
+  border: none;
 }
 
-@keyframes bounce {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-10px);
-    }
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  color: var(--color-white);
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.btn-secondary {
+  background: var(--color-gray-200);
+  color: var(--color-gray-900);
 }
 
-/* Animation Classes */
-.animate-fade-in {
-    animation: fadeIn var(--transition-base) ease-out;
+.btn-secondary:hover {
+  background: var(--color-gray-300);
 }
 
-.animate-slide-up {
-    animation: slideUp var(--transition-base) ease-out;
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
 }
 
-.animate-scale-in {
-    animation: scaleIn var(--transition-base) ease-out;
+.btn-outline:hover {
+  background: var(--color-primary);
+  color: var(--color-white);
 }
 
-.animate-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.btn-ghost {
+  background: transparent;
+  color: var(--color-gray-700);
 }
 
-.animate-bounce {
-    animation: bounce 1s infinite;
+.btn-ghost:hover {
+  background: var(--color-gray-100);
 }
 
-.animate-spin {
-    animation: spin 1s linear infinite;
+/* Размеры кнопок */
+.btn-sm {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+}
+
+.btn-lg {
+  padding: var(--spacing-4) var(--spacing-8);
+  font-size: var(--font-size-lg);
+}
+
+.btn-icon {
+  padding: var(--spacing-3);
+  aspect-ratio: 1;
 }
 
 /* ============================================
-   UTILITY CLASSES
+   5. КОМПОНЕНТЫ - БЕЙДЖИ
    ============================================ */
 
-/* Spacing Utilities */
-.m-0 { margin: var(--space-0); }
-.m-1 { margin: var(--space-1); }
-.m-2 { margin: var(--space-2); }
-.m-3 { margin: var(--space-3); }
-.m-4 { margin: var(--space-4); }
-.m-5 { margin: var(--space-5); }
-.m-6 { margin: var(--space-6); }
-.m-8 { margin: var(--space-8); }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  border-radius: var(--radius-full);
+}
 
-.p-0 { padding: var(--space-0); }
-.p-1 { padding: var(--space-1); }
-.p-2 { padding: var(--space-2); }
-.p-3 { padding: var(--space-3); }
-.p-4 { padding: var(--space-4); }
-.p-5 { padding: var(--space-5); }
-.p-6 { padding: var(--space-6); }
-.p-8 { padding: var(--space-8); }
+.badge-primary {
+  background: rgba(139, 69, 19, 0.1);
+  color: var(--color-primary);
+}
 
-/* Border Radius Utilities */
-.rounded-none { border-radius: var(--radius-none); }
-.rounded-sm { border-radius: var(--radius-sm); }
-.rounded { border-radius: var(--radius-base); }
-.rounded-md { border-radius: var(--radius-md); }
-.rounded-lg { border-radius: var(--radius-lg); }
-.rounded-xl { border-radius: var(--radius-xl); }
-.rounded-2xl { border-radius: var(--radius-2xl); }
-.rounded-full { border-radius: var(--radius-full); }
+.badge-success {
+  background: rgba(40, 167, 69, 0.1);
+  color: var(--color-success);
+}
 
-/* Shadow Utilities */
-.shadow-xs { box-shadow: var(--shadow-xs); }
+.badge-warning {
+  background: rgba(255, 193, 7, 0.1);
+  color: var(--color-warning);
+}
+
+.badge-danger {
+  background: rgba(220, 53, 69, 0.1);
+  color: var(--color-danger);
+}
+
+.badge-info {
+  background: rgba(23, 162, 184, 0.1);
+  color: var(--color-info);
+}
+
+/* ============================================
+   6. УТИЛИТЫ
+   ============================================ */
+
+/* Spacing */
+.m-0 { margin: var(--spacing-0); }
+.m-1 { margin: var(--spacing-1); }
+.m-2 { margin: var(--spacing-2); }
+.m-3 { margin: var(--spacing-3); }
+.m-4 { margin: var(--spacing-4); }
+.m-5 { margin: var(--spacing-5); }
+.m-6 { margin: var(--spacing-6); }
+
+.mt-0 { margin-top: var(--spacing-0); }
+.mt-1 { margin-top: var(--spacing-1); }
+.mt-2 { margin-top: var(--spacing-2); }
+.mt-3 { margin-top: var(--spacing-3); }
+.mt-4 { margin-top: var(--spacing-4); }
+.mt-5 { margin-top: var(--spacing-5); }
+.mt-6 { margin-top: var(--spacing-6); }
+
+.mb-0 { margin-bottom: var(--spacing-0); }
+.mb-1 { margin-bottom: var(--spacing-1); }
+.mb-2 { margin-bottom: var(--spacing-2); }
+.mb-3 { margin-bottom: var(--spacing-3); }
+.mb-4 { margin-bottom: var(--spacing-4); }
+.mb-5 { margin-bottom: var(--spacing-5); }
+.mb-6 { margin-bottom: var(--spacing-6); }
+
+.p-0 { padding: var(--spacing-0); }
+.p-1 { padding: var(--spacing-1); }
+.p-2 { padding: var(--spacing-2); }
+.p-3 { padding: var(--spacing-3); }
+.p-4 { padding: var(--spacing-4); }
+.p-5 { padding: var(--spacing-5); }
+.p-6 { padding: var(--spacing-6); }
+
+/* Text */
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-base { font-size: var(--font-size-base); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+/* Colors */
+.text-primary { color: var(--color-primary); }
+.text-secondary { color: var(--color-secondary); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-danger { color: var(--color-danger); }
+.text-info { color: var(--color-info); }
+.text-muted { color: var(--color-gray-600); }
+
+/* Display */
+.d-none { display: none; }
+.d-block { display: block; }
+.d-flex { display: flex; }
+.d-grid { display: grid; }
+
+/* Flex */
+.flex-row { flex-direction: row; }
+.flex-column { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.gap-1 { gap: var(--spacing-1); }
+.gap-2 { gap: var(--spacing-2); }
+.gap-3 { gap: var(--spacing-3); }
+.gap-4 { gap: var(--spacing-4); }
+
+/* Shadows */
 .shadow-sm { box-shadow: var(--shadow-sm); }
-.shadow { box-shadow: var(--shadow-base); }
 .shadow-md { box-shadow: var(--shadow-md); }
 .shadow-lg { box-shadow: var(--shadow-lg); }
 .shadow-xl { box-shadow: var(--shadow-xl); }
-.shadow-2xl { box-shadow: var(--shadow-2xl); }
-.shadow-inner { box-shadow: var(--shadow-inner); }
-.shadow-none { box-shadow: none; }
 
-/* Transition Utilities */
-.transition-fast { transition: all var(--transition-fast); }
-.transition { transition: all var(--transition-base); }
-.transition-slow { transition: all var(--transition-slow); }
-.transition-spring { transition: all var(--transition-spring); }
+/* Border Radius */
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-full { border-radius: var(--radius-full); }
 
-/* ============================================
-   RESPONSIVE UTILITIES
-   ============================================ */
-
-@media (max-width: 767px) {
-    :root {
-        --font-size-base: 0.9375rem; /* 15px on mobile */
-    }
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Reduce motion for accessibility */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  :root {
+    --font-size-4xl: 1.875rem;
+    --font-size-3xl: 1.5rem;
+    --font-size-2xl: 1.25rem;
+  }
+  
+  .tournament-card-header {
+    flex-direction: column;
+  }
+  
+  .tournament-card-meta {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+  
+  .tournament-card-footer {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
 }

@@ -49,6 +49,40 @@ def create_app(config_name='default'):
     # Инициализация расширений
     db.init_app(app)
     
+    # Initialize monitoring middleware (v4.0)
+    try:
+        from app.middleware.monitoring_middleware import monitoring_middleware
+        monitoring_middleware.init_app(app)
+        logger.info("Monitoring middleware initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize monitoring middleware: {e}")
+    
+    # Initialize predictive cache (v4.0)
+    try:
+        from app.utils.predictive_cache import create_predictive_cache
+        global predictive_cache
+        predictive_cache = create_predictive_cache()
+        logger.info("Predictive cache initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize predictive cache: {e}")
+
+    
+    # Initialize security middleware
+    try:
+        from app.middleware.security_middleware import security_middleware
+        security_middleware.init_app(app)
+        logger.info("Security middleware initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize security middleware: {e}")
+    
+    # Initialize email notification service
+    try:
+        from app.utils.email_notifications import email_service
+        email_service.init_app(app)
+        logger.info("Email notification service initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize email service: {e}")
+    
     # Initialize metrics middleware
     try:
         from app.utils.metrics import MetricsMiddleware
@@ -113,7 +147,9 @@ def create_app(config_name='default'):
     
     @app.route('/manifest.json')
     def manifest():
-        return send_from_directory('static', 'manifest.json')
+        import os
+        static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+        return send_from_directory(static_dir, 'manifest.json', mimetype='application/json')
     
     # Template globals
     @app.template_global()
@@ -130,6 +166,48 @@ def create_app(config_name='default'):
     def csrf_token():
         """Generate CSRF token for templates"""
         return generate_csrf()
+    
+    # Jinja2 filters
+    @app.template_filter('format_date')
+    def format_date_filter(date_obj):
+        """Format date object to string"""
+        if not date_obj:
+            return ''
+        if isinstance(date_obj, str):
+            from datetime import datetime
+            try:
+                date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
+            except:
+                return date_obj
+        return date_obj.strftime('%d.%m.%Y')
+    
+    @app.template_filter('format_day')
+    def format_day_filter(date_obj):
+        """Format date to day number"""
+        if not date_obj:
+            return ''
+        if isinstance(date_obj, str):
+            from datetime import datetime
+            try:
+                date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
+            except:
+                return ''
+        return date_obj.strftime('%d')
+    
+    @app.template_filter('format_month')
+    def format_month_filter(date_obj):
+        """Format date to month name"""
+        if not date_obj:
+            return ''
+        if isinstance(date_obj, str):
+            from datetime import datetime
+            try:
+                date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
+            except:
+                return ''
+        months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 
+                  'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+        return months[date_obj.month - 1]
     
     # Security headers
     @app.after_request
@@ -156,6 +234,22 @@ def create_app(config_name='default'):
     app.register_blueprint(api_bp)
     app.register_blueprint(forum_bp)
     app.register_blueprint(api_docs_bp)
+    
+    # Register monitoring API (v4.0)
+    try:
+        from app.views.monitoring import monitoring_bp
+        app.register_blueprint(monitoring_bp)
+        logger.info("Monitoring API registered")
+    except Exception as e:
+        logger.warning(f"Failed to register monitoring API: {e}")
+    
+    # Register new API blueprints
+    try:
+        from app.api.users import users_api
+        app.register_blueprint(users_api)
+        logger.info("Users API registered")
+    except Exception as e:
+        logger.warning(f"Failed to register users API: {e}")
     
     # Prometheus metrics endpoint
     @app.route('/metrics')

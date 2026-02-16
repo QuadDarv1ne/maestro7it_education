@@ -1,0 +1,443 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Демонстрация дизайн-системы - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+<style>
+  .demo-section {
+    margin-bottom: var(--spacing-12);
+    padding: var(--spacing-6);
+    background: var(--color-white);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .demo-section-title {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--spacing-6);
+    padding-bottom: var(--spacing-4);
+    border-bottom: 2px solid var(--color-gray-200);
+  }
+  
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-4);
+  }
+  
+  .color-swatch {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-md);
+    text-align: center;
+    color: white;
+    font-weight: var(--font-weight-medium);
+  }
+  
+  .code-block {
+    background: var(--color-gray-900);
+    color: var(--color-gray-100);
+    padding: var(--spacing-4);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-6">
+  <!-- Заголовок -->
+  <div class="text-center mb-12">
+    <h1 class="display-4 font-bold mb-4">
+      <i class="bi bi-palette"></i> Дизайн-система ChessCalendar-RU
+    </h1>
+    <p class="text-lg text-muted">
+      Полная демонстрация компонентов и стилей
+    </p>
+  </div>
+
+  <!-- Цвета -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-palette-fill"></i> Цветовая палитра
+    </h2>
+    
+    <h3 class="mb-4">Основные цвета</h3>
+    <div class="demo-grid mb-6">
+      <div class="color-swatch" style="background: var(--color-primary);">
+        Primary<br>#8B4513
+      </div>
+      <div class="color-swatch" style="background: var(--color-secondary);">
+        Secondary<br>#D2691E
+      </div>
+      <div class="color-swatch" style="background: var(--color-accent); color: black;">
+        Accent<br>#FFD700
+      </div>
+    </div>
+    
+    <h3 class="mb-4">Семантические цвета</h3>
+    <div class="demo-grid mb-6">
+      <div class="color-swatch" style="background: var(--color-success);">
+        Success<br>#28a745
+      </div>
+      <div class="color-swatch" style="background: var(--color-warning); color: black;">
+        Warning<br>#ffc107
+      </div>
+      <div class="color-swatch" style="background: var(--color-danger);">
+        Danger<br>#dc3545
+      </div>
+      <div class="color-swatch" style="background: var(--color-info);">
+        Info<br>#17a2b8
+      </div>
+    </div>
+  </div>
+
+  <!-- Типографика -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-fonts"></i> Типографика
+    </h2>
+    
+    <div class="mb-6">
+      <h1>Заголовок H1 - 36px</h1>
+      <h2>Заголовок H2 - 30px</h2>
+      <h3>Заголовок H3 - 24px</h3>
+      <h4>Заголовок H4 - 20px</h4>
+      <h5>Заголовок H5 - 18px</h5>
+      <h6>Заголовок H6 - 16px</h6>
+    </div>
+    
+    <div class="mb-6">
+      <p class="text-xs">Очень мелкий текст (12px)</p>
+      <p class="text-sm">Мелкий текст (14px)</p>
+      <p class="text-base">Обычный текст (16px)</p>
+      <p class="text-lg">Крупный текст (18px)</p>
+      <p class="text-xl">Очень крупный текст (20px)</p>
+    </div>
+    
+    <div>
+      <p class="font-light">Легкий шрифт (300)</p>
+      <p class="font-normal">Обычный шрифт (400)</p>
+      <p class="font-medium">Средний шрифт (500)</p>
+      <p class="font-semibold">Полужирный шрифт (600)</p>
+      <p class="font-bold">Жирный шрифт (700)</p>
+    </div>
+  </div>
+
+  <!-- Кнопки -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-cursor"></i> Кнопки
+    </h2>
+    
+    <h3 class="mb-4">Варианты</h3>
+    <div class="d-flex flex-wrap gap-3 mb-6">
+      <button class="btn btn-primary">
+        <i class="bi bi-check"></i> Primary
+      </button>
+      <button class="btn btn-secondary">Secondary</button>
+      <button class="btn btn-outline">Outline</button>
+      <button class="btn btn-ghost">Ghost</button>
+      <button class="btn btn-primary" disabled>Disabled</button>
+    </div>
+    
+    <h3 class="mb-4">Размеры</h3>
+    <div class="d-flex flex-wrap items-center gap-3 mb-6">
+      <button class="btn btn-primary btn-sm">Маленькая</button>
+      <button class="btn btn-primary">Обычная</button>
+      <button class="btn btn-primary btn-lg">Большая</button>
+      <button class="btn btn-primary btn-icon">
+        <i class="bi bi-heart"></i>
+      </button>
+    </div>
+    
+    <h3 class="mb-4">С иконками</h3>
+    <div class="d-flex flex-wrap gap-3">
+      <button class="btn btn-primary">
+        <i class="bi bi-download"></i> Скачать
+      </button>
+      <button class="btn btn-outline">
+        <i class="bi bi-share"></i> Поделиться
+      </button>
+      <button class="btn btn-ghost">
+        <i class="bi bi-heart"></i> В избранное
+      </button>
+    </div>
+  </div>
+
+  <!-- Бейджи -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-tag"></i> Бейджи
+    </h2>
+    
+    <div class="d-flex flex-wrap gap-3 mb-6">
+      <span class="badge badge-primary">Primary</span>
+      <span class="badge badge-success">Success</span>
+      <span class="badge badge-warning">Warning</span>
+      <span class="badge badge-danger">Danger</span>
+      <span class="badge badge-info">Info</span>
+    </div>
+    
+    <h3 class="mb-4">Статусы турниров</h3>
+    <div class="d-flex flex-wrap gap-3">
+      <span class="tournament-card-badge status-scheduled">Запланирован</span>
+      <span class="tournament-card-badge status-ongoing">Идет сейчас</span>
+      <span class="tournament-card-badge status-completed">Завершен</span>
+    </div>
+  </div>
+
+  <!-- Карточки турниров -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-card-heading"></i> Карточки турниров
+    </h2>
+    
+    <h3 class="mb-4">Стандартная карточка</h3>
+    <div class="row g-4 mb-6">
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="tournament-card">
+          <div class="tournament-card-header">
+            <div>
+              <h3 class="tournament-card-title">Чемпионат России 2026</h3>
+              <p class="tournament-card-subtitle">Федерация шахмат России</p>
+            </div>
+            <span class="tournament-card-badge status-scheduled">Запланирован</span>
+          </div>
+          
+          <div class="tournament-card-body">
+            <div class="tournament-card-meta">
+              <div class="tournament-card-meta-item">
+                <i class="bi bi-geo-alt"></i>
+                <span>Москва</span>
+              </div>
+              <div class="tournament-card-meta-item">
+                <i class="bi bi-calendar"></i>
+                <span>15.03.2026 - 25.03.2026</span>
+              </div>
+              <div class="tournament-card-meta-item">
+                <i class="bi bi-currency-dollar"></i>
+                <span>2 000 000 руб.</span>
+              </div>
+            </div>
+            
+            <p class="tournament-card-description">
+              Ежегодный чемпионат России по классическим шахматам с участием лучших игроков страны.
+            </p>
+          </div>
+          
+          <div class="tournament-card-footer">
+            <div class="tournament-card-tags">
+              <span class="tournament-card-tag">Чемпионат</span>
+              <span class="tournament-card-tag">Классика</span>
+            </div>
+            <div class="tournament-card-actions">
+              <button class="btn btn-ghost btn-sm btn-icon">
+                <i class="bi bi-heart"></i>
+              </button>
+              <button class="btn btn-ghost btn-sm btn-icon">
+                <i class="bi bi-share"></i>
+              </button>
+              <button class="btn btn-primary btn-sm">
+                <i class="bi bi-eye"></i> Подробнее
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <h3 class="mb-4">Компактная карточка</h3>
+    <div class="mb-6">
+      <div class="tournament-card-compact">
+        <div class="tournament-card-compact-date">
+          <span class="tournament-card-compact-date-day">15</span>
+          <span class="tournament-card-compact-date-month">МАР</span>
+        </div>
+        
+        <div class="tournament-card-compact-content">
+          <h4 class="tournament-card-compact-title">
+            Чемпионат России по шахматам 2026
+          </h4>
+          <div class="tournament-card-compact-meta">
+            <span><i class="bi bi-geo-alt"></i> Москва</span>
+            <span><i class="bi bi-tag"></i> Чемпионат</span>
+            <span class="badge badge-success">Запланирован</span>
+          </div>
+        </div>
+        
+        <div class="tournament-card-actions">
+          <button class="btn btn-ghost btn-sm btn-icon">
+            <i class="bi bi-heart"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Тени -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-box"></i> Тени
+    </h2>
+    
+    <div class="demo-grid">
+      <div class="p-4 bg-white shadow-sm rounded-lg text-center">
+        shadow-sm
+      </div>
+      <div class="p-4 bg-white shadow-md rounded-lg text-center">
+        shadow-md
+      </div>
+      <div class="p-4 bg-white shadow-lg rounded-lg text-center">
+        shadow-lg
+      </div>
+      <div class="p-4 bg-white shadow-xl rounded-lg text-center">
+        shadow-xl
+      </div>
+    </div>
+  </div>
+
+  <!-- Скругление -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-circle"></i> Скругление углов
+    </h2>
+    
+    <div class="demo-grid">
+      <div class="p-4 bg-primary text-white rounded-sm text-center">
+        rounded-sm (4px)
+      </div>
+      <div class="p-4 bg-primary text-white rounded-md text-center">
+        rounded-md (8px)
+      </div>
+      <div class="p-4 bg-primary text-white rounded-lg text-center">
+        rounded-lg (12px)
+      </div>
+      <div class="p-4 bg-primary text-white rounded-xl text-center">
+        rounded-xl (16px)
+      </div>
+      <div class="p-4 bg-primary text-white rounded-full text-center">
+        rounded-full
+      </div>
+    </div>
+  </div>
+
+  <!-- Анимации -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-play-circle"></i> Анимации
+    </h2>
+    
+    <div class="row g-4">
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="p-4 bg-primary text-white rounded-lg text-center animate-fade-in">
+          fade-in
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="p-4 bg-primary text-white rounded-lg text-center animate-fade-in-up">
+          fade-in-up
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="p-4 bg-primary text-white rounded-lg text-center animate-slide-in-right">
+          slide-in-right
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="p-4 bg-primary text-white rounded-lg text-center animate-pulse">
+          pulse
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spacing -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-arrows-expand"></i> Spacing (отступы)
+    </h2>
+    
+    <div class="code-block mb-4">
+m-0, m-1, m-2, m-3, m-4, m-5, m-6  /* margin */
+mt-*, mb-*, ml-*, mr-*             /* margin-top, bottom, left, right */
+p-0, p-1, p-2, p-3, p-4, p-5, p-6  /* padding */
+pt-*, pb-*, pl-*, pr-*             /* padding-top, bottom, left, right */
+
+Значения: 0, 4px, 8px, 12px, 16px, 20px, 24px
+    </div>
+    
+    <div class="d-flex gap-4">
+      <div class="p-4 bg-primary text-white rounded-lg">p-4</div>
+      <div class="p-6 bg-secondary text-white rounded-lg">p-6</div>
+    </div>
+  </div>
+
+  <!-- Утилиты -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-tools"></i> Утилиты
+    </h2>
+    
+    <h3 class="mb-4">Flexbox</h3>
+    <div class="code-block mb-4">
+d-flex                    /* display: flex */
+flex-row, flex-column     /* направление */
+justify-start, justify-center, justify-end, justify-between
+items-start, items-center, items-end
+gap-1, gap-2, gap-3, gap-4
+    </div>
+    
+    <div class="d-flex justify-between items-center p-4 bg-gray-100 rounded-lg mb-6">
+      <div class="p-3 bg-primary text-white rounded-md">Элемент 1</div>
+      <div class="p-3 bg-secondary text-white rounded-md">Элемент 2</div>
+      <div class="p-3 bg-accent rounded-md">Элемент 3</div>
+    </div>
+    
+    <h3 class="mb-4">Текст</h3>
+    <div class="code-block">
+text-left, text-center, text-right
+text-primary, text-secondary, text-success, text-warning, text-danger, text-muted
+font-light, font-normal, font-medium, font-semibold, font-bold
+    </div>
+  </div>
+
+  <!-- Код примеров -->
+  <div class="demo-section">
+    <h2 class="demo-section-title">
+      <i class="bi bi-code-slash"></i> Примеры кода
+    </h2>
+    
+    <h3 class="mb-4">Использование карточки турнира</h3>
+    <div class="code-block mb-6">
+{% raw %}{% import "components/tournament_cards.html" as cards %}
+
+<!-- Стандартная карточка -->
+{{ cards.tournament_card(tournament) }}
+
+<!-- Компактная карточка -->
+{{ cards.tournament_card_compact(tournament) }}
+
+<!-- Featured карточка -->
+{{ cards.tournament_card_featured(tournament, image_url) }}
+
+<!-- Сетка карточек -->
+{{ cards.tournament_grid(tournaments, 'standard') }}{% endraw %}
+    </div>
+    
+    <h3 class="mb-4">Использование кнопок</h3>
+    <div class="code-block">
+&lt;button class="btn btn-primary"&gt;
+  &lt;i class="bi bi-check"&gt;&lt;/i&gt; Применить
+&lt;/button&gt;
+
+&lt;button class="btn btn-outline btn-sm"&gt;
+  Подробнее
+&lt;/button&gt;
+    </div>
+  </div>
+</div>
+{% endblock %}
