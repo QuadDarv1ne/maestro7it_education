@@ -248,6 +248,215 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Mobile UI enhancements
+document.addEventListener('DOMContentLoaded', function() {
+    // Mobile filter panel functionality
+    const mobileFiltersBtn = document.querySelector('.mobile-filters-btn');
+    const mobileFiltersPanel = document.querySelector('.mobile-filters');
+    const closeFilterBtn = document.querySelector('.mobile-filters .close-btn');
+    
+    if (mobileFiltersBtn && mobileFiltersPanel) {
+        mobileFiltersBtn.addEventListener('click', function() {
+            mobileFiltersPanel.classList.add('active');
+        });
+        
+        closeFilterBtn.addEventListener('click', function() {
+            mobileFiltersPanel.classList.remove('active');
+        });
+        
+        // Close panel when clicking outside
+        mobileFiltersPanel.addEventListener('click', function(e) {
+            if (e.target === mobileFiltersPanel) {
+                mobileFiltersPanel.classList.remove('active');
+            }
+        });
+    }
+    
+    // Mobile search overlay functionality
+    const searchOverlay = document.querySelector('.search-overlay');
+    const searchToggle = document.querySelector('.search-toggle');
+    
+    if (searchToggle && searchOverlay) {
+        searchToggle.addEventListener('click', function() {
+            searchOverlay.classList.add('active');
+            document.querySelector('.search-overlay input[type="search"]').focus();
+        });
+        
+        // Close search overlay
+        searchOverlay.addEventListener('click', function(e) {
+            if (e.target === searchOverlay) {
+                searchOverlay.classList.remove('active');
+            }
+        });
+    }
+    
+    // Hamburger menu animation
+    const hamburger = document.querySelector('.hamburger');
+    const navbarCollapse = document.querySelector('.navbar-collapse');
+    
+    if (hamburger) {
+        hamburger.addEventListener('click', function() {
+            hamburger.classList.toggle('active');
+            
+            // Toggle navbar collapse
+            if (navbarCollapse) {
+                navbarCollapse.classList.toggle('show');
+            }
+        });
+    }
+    
+    // Mobile tab navigation
+    const mobileTabs = document.querySelectorAll('.mobile-tab');
+    
+    mobileTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active class from all tabs
+            mobileTabs.forEach(t => t.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Show corresponding content (if applicable)
+            const tabContent = document.getElementById(this.dataset.tab);
+            if (tabContent) {
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Show clicked tab content
+                tabContent.classList.add('active');
+            }
+        });
+    });
+    
+    // Quick actions floating button
+    const quickActionBtn = document.querySelector('.quick-action-btn');
+    const quickActionMenu = document.querySelector('.quick-action-menu');
+    
+    if (quickActionBtn && quickActionMenu) {
+        quickActionBtn.addEventListener('click', function() {
+            quickActionMenu.classList.toggle('active');
+        });
+    }
+    
+    // Touch swipe gestures for tournament cards
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    const tournamentCards = document.querySelectorAll('.tournament-card');
+    
+    tournamentCards.forEach(card => {
+        card.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        
+        card.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe(card);
+        });
+    });
+    
+    function handleSwipe(element) {
+        const threshold = 50; // Minimum distance for swipe
+        const diff = touchStartX - touchEndX;
+        
+        if (Math.abs(diff) > threshold) {
+            if (diff > 0) {
+                // Swipe left - next item
+                console.log('Swiped left on', element);
+            } else {
+                // Swipe right - previous item
+                console.log('Swiped right on', element);
+            }
+        }
+    }
+    
+    // Pull to refresh functionality
+    let startY = 0;
+    let currentY = 0;
+    let pullDistance = 0;
+    const pullToRefreshElement = document.querySelector('.pull-to-refresh');
+    
+    if (pullToRefreshElement) {
+        document.addEventListener('touchstart', e => {
+            if (window.scrollY === 0) {
+                startY = e.touches[0].pageY;
+            }
+        });
+        
+        document.addEventListener('touchmove', e => {
+            if (startY > 0) {
+                currentY = e.touches[0].pageY;
+                pullDistance = currentY - startY;
+                
+                if (pullDistance > 0) {
+                    e.preventDefault();
+                    pullToRefreshElement.style.transform = `translateY(${Math.min(pullDistance / 2, 60)}px)`;
+                }
+            }
+        });
+        
+        document.addEventListener('touchend', () => {
+            if (pullDistance > 60) {
+                // Trigger refresh
+                pullToRefreshElement.classList.add('active');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                // Reset
+                pullToRefreshElement.style.transform = 'translateY(-100%)';
+            }
+            
+            startY = 0;
+            currentY = 0;
+            pullDistance = 0;
+        });
+    }
+    
+    // Optimize for mobile performance
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('SW registered: ', registration);
+            })
+            .catch(registrationError => {
+                console.log('SW registration failed: ', registrationError);
+            });
+    }
+});
+
+// Debounce function for performance optimization
+function debounce(func, wait, immediate) {
+    let timeout;
+    return function() {
+        const context = this, args = arguments;
+        const later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+}
+
+// Throttle function for scroll and resize events
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
+
 // Export functions for global use
 window.ChessCalendar = {
     showLoader,

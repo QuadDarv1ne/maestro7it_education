@@ -65,6 +65,13 @@ def create_app(config_name='default'):
     except ImportError:
         logger.warning("Scheduler module not available")
     
+    # Initialize i18n
+    try:
+        from app.utils.i18n import translation_manager
+        logger.info("Internationalization initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize i18n: {e}")
+    
     # Initialize WebSocket handlers
     try:
         from app.websocket_handlers import init_websocket_handlers
