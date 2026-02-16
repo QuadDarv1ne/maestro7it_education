@@ -76,3 +76,4 @@ argon2-cffi==23.1.0
 # Производительность
 orjson==3.9.10
 msgpack==1.0.7
+Flask-SocketIO==5.3.6
