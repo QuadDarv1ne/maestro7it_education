@@ -1,0 +1,39 @@
+{
+  "name": "chesscalendar-ru",
+  "version": "2.5.0",
+  "description": "Chess tournament calendar application with performance optimizations",
+  "main": "run.py",
+  "scripts": {
+    "build": "npm run build:js && npm run build:css",
+    "build:js": "rollup -c rollup.config.js",
+    "build:css": "sass static/scss/:static/css/ --style compressed",
+    "optimize-js": "node scripts/optimize-js.js",
+    "analyze-bundles": "webpack-bundle-analyzer dist/stats.json",
+    "dev": "nodemon --watch static/js --exec \"npm run build:js\"",
+    "minify": "terser --compress --mangle --module -o dist/bundle.min.js dist/bundle.js",
+    "bundle-analyze": "npx webpack-bundle-analyzer dist/stats.json"
+  },
+  "keywords": [
+    "chess",
+    "tournament",
+    "calendar",
+    "flask",
+    "python"
+  ],
+  "author": "maestro7it",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "rollup": "^4.9.4",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "sass": "^1.69.7",
+    "terser": "^5.26.0",
+    "webpack-bundle-analyzer": "^4.10.1"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.2",
+    "chart.js": "^4.4.0"
+  }
+}

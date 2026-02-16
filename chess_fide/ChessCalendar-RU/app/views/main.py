@@ -1,849 +1,523 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
+from flask import render_template, request, jsonify, session, redirect, url_for
 from app import db
 from app.models.tournament import Tournament
 from app.models.user import User
-from app.models.tournament_subscription import TournamentSubscription
-from app.utils.fide_parser import FIDEParses
-from app.utils.cfr_parser import CFRParser
-from app.utils.updater import updater
-from datetime import datetime, date
-import re
-from sqlalchemy.orm import joinedload
-
-# Import performance monitoring
+from app.models.rating import TournamentRating
+from app.models.favorite import FavoriteTournament
+from app.models.report import Report
+from app.models.audit_log import AuditLog
+from app.utils.cache import TournamentCache
 from app.utils.performance_monitor import track_performance
+from app.utils.validators import validate_tournament_data
+from app.utils.security import log_security_event, SecurityLevel
+from app.utils.notifications import create_notification
+from app.utils.analytics import log_user_action
+from app.utils.recommendations import RecommendationEngine
+from app.utils.achievements import AchievementSystem
+from app.utils.http_cache import set_cache_headers
+from datetime import datetime, timedelta
+import bleach
+import logging
 
-main_bp = Blueprint('main', __name__)
+logger = logging.getLogger(__name__)
 
-@main_bp.route('/')
-@track_performance()
-def index():
-    """Главная страница с календарем турниров"""
-    # Получаем параметры фильтрации
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    # Ограничиваем количество элементов на странице
-    per_page = min(max(per_page, 5), 100)  # от 5 до 100 турниров на странице
-    
-    category = request.args.get('category', '')
-    status = request.args.get('status', '')
-    location = request.args.get('location', '')
-    sort_by = request.args.get('sort_by', 'start_date')
-    search_query = request.args.get('search', '').strip()
-    
-    # Базовый запрос с joinedload для оптимизации
-    query = Tournament.query.options(
-        joinedload(Tournament.ratings)
-    )
-    
-    # Применяем фильтры
-    if category:
-        query = query.filter(Tournament.category == category)
-    if status:
-        query = query.filter(Tournament.status == status)
-    if location:
-        query = query.filter(Tournament.location.contains(location))
-    
-    # Применяем глобальный поиск если есть
-    if search_query:
-        search_filter = db.or_(
-            Tournament.name.contains(search_query),
-            Tournament.location.contains(search_query),
-            Tournament.description.contains(search_query),
-            Tournament.organizer.contains(search_query)
-        )
-        query = query.filter(search_filter)
-    
-    # Применяем сортировку
-    if sort_by == 'name':
-        query = query.order_by(Tournament.name)
-    elif sort_by == 'location':
-        query = query.order_by(Tournament.location)
-    elif sort_by == 'category':
-        query = query.order_by(Tournament.category)
-    elif sort_by == 'status':
-        query = query.order_by(Tournament.status)
-    else:  # start_date
-        query = query.order_by(Tournament.start_date)
-    
-    # Пагинация
-    tournaments = query.paginate(
-        page=page, per_page=per_page, error_out=False
-    )
-    
-    # Получаем уникальные значения для фильтров из кэша
-    from app.utils.cache import TournamentCache
-    categories = [(cat,) for cat in TournamentCache.get_categories_list()]
-    statuses = [(stat,) for stat in TournamentCache.get_statuses_list()]
-    locations = [(loc,) for loc in TournamentCache.get_locations_list()]
-    
-    return render_template('index.html', 
-                         tournaments=tournaments,
-                         categories=[c[0] for c in categories],
-                         statuses=[s[0] for s in statuses],
-                         locations=[l[0] for l in locations],
-                         filters={
-                             'category': category,
-                             'status': status,
-                             'location': location,
-                             'sort_by': sort_by,
-                             'search': search_query,
-                             'page': page,
-                             'per_page': per_page
-                         })
-
-@main_bp.route('/test')
-def test_simple():
-    """Простая тестовая страница"""
-    tournaments = Tournament.query.paginate(page=1, per_page=20, error_out=False)
-    return render_template('test_simple.html', tournaments=tournaments)
-
-@main_bp.route('/simple')
-def index_simple():
-    """Упрощенная версия главной страницы со встроенными стилями"""
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-    tournaments = Tournament.query.order_by(Tournament.start_date).paginate(
-        page=page, per_page=per_page, error_out=False
-    )
-    return render_template('index_simple.html', tournaments=tournaments)
-
-@main_bp.route('/api-docs')
-def api_documentation():
-    """API Documentation page"""
-    with open('static/api-docs.html', 'r', encoding='utf-8') as f:
-        return f.read()
-
-@main_bp.route('/tournament/<int:tournament_id>')
-@track_performance()
-def tournament_detail(tournament_id):
-    """Страница деталей турнира"""
-    tournament = Tournament.query.get_or_404(tournament_id)
-    
-    # Get user subscription status if logged in
-    is_subscribed = False
-    if 'user_id' in session:
-        is_subscribed = TournamentSubscription.is_subscribed(session['user_id'], tournament_id)
-        from app.utils.recommendations import RecommendationEngine
-        user_id = session['user_id']
-        RecommendationEngine.record_interaction(user_id, tournament_id, 'view', 1)
-    
-    return render_template('tournament_detail.html', 
-                         tournament=tournament, 
-                         is_subscribed=is_subscribed)
-
-@main_bp.route('/api/tournaments')
-def api_tournaments():
-    """API для получения турниров"""
-    # Get query parameters
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    category = request.args.get('category', '')
-    status = request.args.get('status', '')
-    location = request.args.get('location', '')
-    sort_by = request.args.get('sort_by', 'start_date')
-    
-    # Limit per_page to reasonable values
-    per_page = min(max(per_page, 1), 100)
-    
-    # Base query
-    query = Tournament.query
-    
-    # Apply filters
-    if category:
-        query = query.filter(Tournament.category == category)
-    if status:
-        query = query.filter(Tournament.status == status)
-    if location:
-        query = query.filter(Tournament.location.contains(location))
-    
-    # Apply sorting
-    if sort_by == 'name':
-        query = query.order_by(Tournament.name)
-    elif sort_by == 'location':
-        query = query.order_by(Tournament.location)
-    elif sort_by == 'category':
-        query = query.order_by(Tournament.category)
-    elif sort_by == 'status':
-        query = query.order_by(Tournament.status)
-    else:  # start_date
-        query = query.order_by(Tournament.start_date)
-    
-    # Paginate results
-    tournaments = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    return jsonify({
-        'tournaments': [t.to_dict() for t in tournaments.items],
-        'pagination': {
-            'page': page,
-            'pages': tournaments.pages,
-            'per_page': per_page,
-            'total': tournaments.total,
-            'has_next': tournaments.has_next,
-            'has_prev': tournaments.has_prev
-        }
-    })
-
-@main_bp.route('/api/tournaments/latest')
-def api_latest_tournaments():
-    """API для получения последних турниров"""
-    try:
-        limit = request.args.get('limit', 10, type=int)
-        limit = min(max(limit, 1), 50)  # Between 1 and 50
-        
-        tournaments = Tournament.query.order_by(Tournament.created_at.desc()).limit(limit).all()
-        return jsonify([t.to_dict() for t in tournaments])
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@main_bp.route('/api/tournaments/<int:tournament_id>')
-def api_tournament_detail(tournament_id):
-    """API для получения деталей турнира"""
-    tournament = Tournament.query.get_or_404(tournament_id)
-    return jsonify(tournament.to_dict())
-
-@main_bp.route('/api/tournaments/search')
-def api_tournament_search():
-    """API для поиска турниров"""
-    query = request.args.get('q', '').strip()
-    category = request.args.get('category', '')
-    status = request.args.get('status', '')
-    location = request.args.get('location', '')
-    limit = request.args.get('limit', 20, type=int)
-    
-    if not query and not category and not status and not location:
-        return jsonify([])
-    
-    # Limit the number of results
-    limit = min(max(limit, 1), 100)  # Between 1 and 100
-    
-    # Start with base query
-    db_query = Tournament.query
-    
-    # Apply filters
-    if query:
-        # Use ilike for case-insensitive search
-        db_query = db_query.filter(
-            db.or_(
-                Tournament.name.ilike(f'%{query}%'),
-                Tournament.location.ilike(f'%{query}%'),
-                Tournament.description.ilike(f'%{query}%'),
-                Tournament.organizer.ilike(f'%{query}%')
+def register_main_routes(app):
+    @app.route('/')
+    @track_performance()
+    def index():
+        """Главная страница с турнирами"""
+        try:
+            page = request.args.get('page', 1, type=int)
+            per_page = min(request.args.get('per_page', 12, type=int), 50)
+            category = request.args.get('category', '')
+            status = request.args.get('status', '')
+            location = request.args.get('location', '')
+            search_query = request.args.get('search', '').strip()
+            
+            # Получаем турниры с фильтрацией
+            tournaments = Tournament.query
+            
+            if category:
+                tournaments = tournaments.filter(Tournament.category == category)
+            if status:
+                tournaments = tournaments.filter(Tournament.status == status)
+            if location:
+                tournaments = tournaments.filter(Tournament.location.contains(location))
+            if search_query:
+                tournaments = tournaments.filter(
+                    db.or_(
+                        Tournament.name.contains(search_query),
+                        Tournament.location.contains(search_query),
+                        Tournament.description.contains(search_query)
+                    )
+                )
+            
+            tournaments = tournaments.order_by(Tournament.start_date.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
             )
-        )
-    
-    if category:
-        db_query = db_query.filter(Tournament.category == category)
-    
-    if status:
-        db_query = db_query.filter(Tournament.status == status)
-    
-    if location:
-        db_query = db_query.filter(Tournament.location.ilike(f'%{location}%'))
-    
-    tournaments = db_query.limit(limit).all()
-    return jsonify([t.to_dict() for t in tournaments])
+            
+            # Статистика для отображения
+            stats = {
+                'total_tournaments': TournamentCache.get_tournaments_stats()['total'],
+                'categories': TournamentCache.get_categories_list()[:5],  # Топ-5 категорий
+                'locations': TournamentCache.get_locations_list()[:5]     # Топ-5 локаций
+            }
+            
+            # Логирование просмотра главной страницы
+            if 'user_id' in session:
+                log_user_action(session['user_id'], 'view_homepage', {})
+            
+            return render_template('index.html', 
+                                 tournaments=tournaments, 
+                                 stats=stats,
+                                 current_filters={
+                                     'category': category,
+                                     'status': status,
+                                     'location': location,
+                                     'search': search_query
+                                 }), set_cache_headers(300)  # Кэшируем на 5 минут
+            
+        except Exception as e:
+            logger.error(f"Error in index route: {str(e)}")
+            return render_template('error/500.html'), 500
 
-@main_bp.route('/update')
-def update_tournaments():
-    """Ручное обновление турниров из источников"""
-    try:
-        updater.update_all_sources()
-        # Clear cache after update
-        from app.utils.cache import TournamentCache
-        TournamentCache.clear_all()
-        return jsonify({
-            'status': 'success',
-            'message': 'Данные успешно обновлены',
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
+    @app.route('/offline')
+    def offline():
+        """Оффлайн страница для PWA"""
+        return render_template('offline.html')
 
-@main_bp.route('/export/csv')
-def export_csv():
-    """Экспорт турниров в CSV"""
-    import csv
-    from io import StringIO
-    
-    tournaments = Tournament.query.all()
-    
-    output = StringIO()
-    writer = csv.writer(output)
-    
-    # Заголовки
-    writer.writerow(['ID', 'Название', 'Дата начала', 'Дата окончания', 
-                    'Место', 'Категория', 'Статус', 'Описание', 'Призовой фонд', 'Организатор', 'FIDE ID'])
-    
-    # Данные
-    for t in tournaments:
-        writer.writerow([
-            t.id,
-            t.name,
-            t.start_date,
-            t.end_date,
-            t.location,
-            t.category,
-            t.status,
-            t.description,
-            t.prize_fund,
-            t.organizer,
-            t.fide_id
-        ])
-    
-    output.seek(0)
-    return output.getvalue(), 200, {
-        'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename=tournaments.csv'
-    }
-
-@main_bp.route('/export/json')
-def export_json():
-    """Экспорт турниров в JSON"""
-    tournaments = Tournament.query.all()
-    data = [t.to_dict() for t in tournaments]
-    
-    return jsonify(data), 200, {
-        'Content-Disposition': 'attachment; filename=tournaments.json'
-    }
-
-@main_bp.route('/notifications')
-def notifications():
-    """Страница уведомлений пользователя"""
-    from app.models.notification import Notification
-    from app.models.notification import Subscription
-    
-    # Получаем непрочитанные уведомления (или последние 20)
-    user_notifications = Notification.query.order_by(Notification.created_at.desc()).limit(20).all()
-    
-    # Проверяем подписку пользователя
-    user_email = request.args.get('email', '')
-    user_subscription = None
-    if user_email:
-        user_subscription = Subscription.query.filter_by(email=user_email, active=True).first()
-    
-    return render_template('notifications.html', 
-                         notifications=user_notifications,
-                         subscription=user_subscription,
-                         user_email=user_email)
-
-@main_bp.route('/notifications/subscribe', methods=['POST'])
-def subscribe_notifications():
-    """Подписка на уведомления"""
-    from app.utils.notifications import notification_service
-    
-    try:
-        email = request.form['email']
-        preferences = {
-            'new_tournaments': request.form.get('new_tournaments') == 'on',
-            'updates': request.form.get('updates') == 'on',
-            'daily_summary': request.form.get('daily_summary') == 'on'
-        }
-        
-        notification_service.add_subscriber(email, preferences)
-        flash(f'Подписка на уведомления для {email} успешно оформлена', 'success')
-    except Exception as e:
-        flash(f'Ошибка при оформлении подписки: {e}', 'error')
-    
-    return redirect(url_for('main.notifications'))
-
-@main_bp.route('/notifications/unsubscribe', methods=['POST'])
-def unsubscribe_notifications():
-    """Отмена подписки на уведомления"""
-    from app.utils.notifications import notification_service
-    
-    try:
-        email = request.form['email']
-        
-        notification_service.remove_subscriber(email)
-        flash(f'Подписка для {email} успешно отменена', 'success')
-    except Exception as e:
-        flash(f'Ошибка при отмене подписки: {e}', 'error')
-    
-    return redirect(url_for('main.notifications'))
-
-@main_bp.route('/calendar')
-@track_performance()
-def calendar():
-    """Календарь турниров"""
-    from datetime import date, timedelta
-    import calendar
-    
-    # Получаем текущий месяц или указанный
-    year = request.args.get('year', date.today().year, type=int)
-    month = request.args.get('month', date.today().month, type=int)
-    
-    # Получаем турниры для указанного месяца
-    try:
-        tournaments = Tournament.query.filter(
-            db.and_(
-                db.extract('year', Tournament.start_date) == year,
-                db.extract('month', Tournament.start_date) == month
-            )
-        ).all()
-    except Exception as e:
-        from app.utils.logging_config import get_logger
-        logger = get_logger('app.calendar')
-        logger.error(f"Error fetching tournaments for {year}-{month}: {e}")
-        tournaments = []
-    
-    # Создаем структуру календаря
-    cal = calendar.monthcalendar(year, month)
-    month_name = calendar.month_name[month]
-    
-    # Группируем турниры по дням
-    tournaments_by_day = {}
-    for t in tournaments:
-        day = t.start_date.day
-        if day not in tournaments_by_day:
-            tournaments_by_day[day] = []
-        tournaments_by_day[day].append(t)
-    
-    # Получаем информацию о предыдущем и следующем месяце
-    prev_month = month - 1 if month > 1 else 12
-    prev_year = year if month > 1 else year - 1
-    next_month = month + 1 if month < 12 else 1
-    next_year = year if month < 12 else year + 1
-    
-    today = date.today()
-    
-    # Создаем структуру для шаблона
-    months_data = []
-    for week in cal:
-        week_data = []
-        for day in week:
-            if day == 0:
-                week_data.append(None)
-            else:
-                day_tournaments = tournaments_by_day.get(day, [])
-                is_today = (year == today.year and month == today.month and day == today.day)
-                week_data.append({
-                    'day': day,
-                    'tournaments': day_tournaments,
-                    'is_today': is_today
+    @app.route('/calendar')
+    @track_performance()
+    def calendar():
+        """Календарь турниров"""
+        try:
+            # Получаем турниры для календаря
+            start_date = request.args.get('start_date', '')
+            end_date = request.args.get('end_date', '')
+            
+            tournaments = Tournament.query
+            if start_date:
+                tournaments = tournaments.filter(Tournament.start_date >= start_date)
+            if end_date:
+                tournaments = tournaments.filter(Tournament.end_date <= end_date)
+            
+            tournaments = tournaments.order_by(Tournament.start_date).all()
+            
+            # Подготовка данных для календаря
+            calendar_data = []
+            for tournament in tournaments:
+                calendar_data.append({
+                    'id': tournament.id,
+                    'title': tournament.name,
+                    'start': tournament.start_date.isoformat() if tournament.start_date else None,
+                    'end': tournament.end_date.isoformat() if tournament.end_date else None,
+                    'category': tournament.category,
+                    'location': tournament.location,
+                    'status': tournament.status
                 })
-        months_data.append(week_data)
-    
-    return render_template('calendar.html', 
-                         months_data=months_data, 
-                         month_name=month_name, 
-                         year=year,
-                         current_month=month,
-                         prev_month=prev_month,
-                         prev_year=prev_year,
-                         next_month=next_month,
-                         next_year=next_year,
-                         today=today)
-
-@main_bp.route('/calendar/enhanced')
-@track_performance()
-def enhanced_calendar():
-    """Улучшенный календарь турниров"""
-    return render_template('calendar_enhanced.html')
-
-@main_bp.route('/recommendations')
-def recommendations():
-    """Show tournament recommendations for the user"""
-    if 'user_id' not in session:
-        flash('Пожалуйста, войдите в систему для получения персональных рекомендаций', 'info')
-        return redirect(url_for('main.index'))
-    
-    from app.utils.recommendations import RecommendationEngine
-    user_id = session['user_id']
-    recommended_tournaments = RecommendationEngine.get_user_recommendations(user_id)
-    
-    return render_template('recommendations.html', 
-                           recommended_tournaments=recommended_tournaments)
-
-@main_bp.route('/tournament/<int:tournament_id>/subscribe', methods=['POST'])
-def toggle_tournament_subscription(tournament_id):
-    """Toggle subscription to a specific tournament"""
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Необходимо войти в систему'})
-    
-    user_id = session['user_id']
-    tournament = Tournament.query.get_or_404(tournament_id)
-    
-    # Check if already subscribed
-    is_subscribed = TournamentSubscription.is_subscribed(user_id, tournament_id)
-    
-    if is_subscribed:
-        # Unsubscribe
-        success = TournamentSubscription.unsubscribe(user_id, tournament_id)
-        if success:
-            return jsonify({'success': True, 'subscribed': False, 'message': 'Отписка прошла успешно'})
-        else:
-            return jsonify({'success': False, 'message': 'Ошибка при отписке'})
-    else:
-        # Subscribe
-        success = TournamentSubscription.subscribe(user_id, tournament_id)
-        if success:
-            return jsonify({'success': True, 'subscribed': True, 'message': 'Подписка оформлена успешно'})
-        else:
-            return jsonify({'success': False, 'message': 'Ошибка при подписке'})
-
-
-@main_bp.route('/api/recommendations/user/<int:user_id>')
-def api_user_recommendations(user_id):
-    """API endpoint for getting user recommendations"""
-    from app.utils.recommendations import RecommendationEngine
-    from app.models.user import User
-    
-    # Check if user exists
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    try:
-        recommended_tournaments = RecommendationEngine.get_user_recommendations(user_id)
-        return jsonify([t.to_dict() for t in recommended_tournaments])
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@main_bp.route('/api/analytics/report')
-def api_analytics_report():
-    """API endpoint for getting comprehensive analytics report"""
-    from app.utils.analytics import analytics_service
-    
-    try:
-        analytics_report = analytics_service.get_comprehensive_report()
-        return jsonify(analytics_report)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@main_bp.route('/api/analytics/tournament/<int:tournament_id>')
-def api_tournament_analytics(tournament_id):
-    """API endpoint for getting tournament-specific analytics"""
-    from app.utils.analytics import analytics_service
-    from app.models.tournament import Tournament
-    
-    # Check if tournament exists
-    tournament = Tournament.query.get(tournament_id)
-    if not tournament:
-        return jsonify({'error': 'Tournament not found'}), 404
-    
-    try:
-        tournament_analytics = analytics_service.get_tournament_performance(tournament_id)
-        return jsonify(tournament_analytics)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@main_bp.route('/api/export/ics', methods=['POST'])
-def export_ics():
-    """API endpoint for exporting tournaments to ICS format"""
-    from datetime import datetime
-    import uuid
-    
-    try:
-        data = request.get_json()
-        tournaments = data.get('tournaments', [])
-        
-        ics_content = "BEGIN:VCALENDAR\\n"
-        ics_content += "VERSION:2.0\\n"
-        ics_content += "PRODID:-//ChessCalendar-RU//NONSGML v1.0//EN\\n"
-        ics_content += "CALSCALE:GREGORIAN\\n"
-        ics_content += "METHOD:PUBLISH\\n"
-        
-        for tournament in tournaments:
-            start_date = datetime.strptime(tournament['start_date'], '%Y-%m-%d')
-            end_date = datetime.strptime(tournament['end_date'], '%Y-%m-%d')
             
-            event_uid = str(uuid.uuid4())
-            ics_content += f"BEGIN:VEVENT\\n"
-            ics_content += f"UID:{event_uid}@chesscalendar-ru.ru\\n"
-            ics_content += f"DTSTART;VALUE=DATE:{start_date.strftime('%Y%m%d')}\\n"
-            ics_content += f"DTEND;VALUE=DATE:{(end_date.replace(day=end_date.day + 1)).strftime('%Y%m%d')}\\n"
+            return render_template('calendar.html', calendar_data=calendar_data)
             
-            ics_content += f"SUMMARY:{tournament['name']}\\n"
-            ics_content += f"LOCATION:{tournament['location']}\\n"
-            if tournament.get('description'):
-                ics_content += f"DESCRIPTION:{tournament['description']}\\n"
-            ics_content += f"CATEGORIES:Chess Tournament,{tournament['category']}\\n"
-            ics_content += f"STATUS:{tournament['status']}\\n"
-            ics_content += f"END:VEVENT\\n"
+        except Exception as e:
+            logger.error(f"Error in calendar route: {str(e)}")
+            return render_template('error/500.html'), 500
+
+    @app.route('/tournament/<int:tournament_id>')
+    @track_performance()
+    def tournament_detail(tournament_id):
+        """Детали турнира"""
+        try:
+            tournament = TournamentCache.get_tournament_by_id(tournament_id)
+            if not tournament:
+                return render_template('error/404.html'), 404
+            
+            # Получаем рейтинги для этого турнира
+            ratings = TournamentRating.query.filter_by(tournament_id=tournament_id).all()
+            avg_rating = sum(r.rating for r in ratings) / len(ratings) if ratings else 0
+            
+            # Проверяем, является ли турнир избранным для текущего пользователя
+            is_favorite = False
+            if 'user_id' in session:
+                user_id = session['user_id']
+                favorite = FavoriteTournament.query.filter_by(
+                    user_id=user_id, 
+                    tournament_id=tournament_id
+                ).first()
+                is_favorite = favorite is not None
+            
+            # Логируем просмотр турнира
+            if 'user_id' in session:
+                log_user_action(session['user_id'], 'view_tournament', {
+                    'tournament_id': tournament_id,
+                    'tournament_name': tournament.name
+                })
+            
+            return render_template('tournament_detail.html',
+                                 tournament=tournament,
+                                 ratings=ratings,
+                                 avg_rating=avg_rating,
+                                 is_favorite=is_favorite)
+            
+        except Exception as e:
+            logger.error(f"Error in tournament_detail route: {str(e)}")
+            return render_template('error/500.html'), 500
+
+    @app.route('/add_tournament', methods=['GET', 'POST'])
+    @track_performance()
+    def add_tournament():
+        """Добавить турнир"""
+        if 'user_id' not in session:
+            return redirect(url_for('user.login'))
         
-        ics_content += "END:VCALENDAR"
+        if request.method == 'POST':
+            try:
+                # Валидация и очистка данных
+                name = bleach.clean(request.form.get('name', '').strip())
+                start_date_str = request.form.get('start_date')
+                end_date_str = request.form.get('end_date')
+                location = bleach.clean(request.form.get('location', '').strip())
+                category = bleach.clean(request.form.get('category', '').strip())
+                description = bleach.clean(request.form.get('description', '').strip())
+                prize_fund = bleach.clean(request.form.get('prize_fund', '').strip())
+                organizer = bleach.clean(request.form.get('organizer', '').strip())
+                
+                # Преобразование дат
+                from datetime import datetime
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+                
+                # Создание нового турнира
+                tournament = Tournament(
+                    name=name,
+                    start_date=start_date,
+                    end_date=end_date,
+                    location=location,
+                    category=category,
+                    description=description,
+                    prize_fund=prize_fund,
+                    organizer=organizer,
+                    fide_id=request.form.get('fide_id', ''),
+                    source_url=request.form.get('source_url', '')
+                )
+                
+                # Валидация данных турнира
+                errors = tournament.validate()
+                if errors:
+                    return render_template('rating_form.html', errors=errors, tournament=tournament), 400
+                
+                # Сохранение в базу данных
+                db.session.add(tournament)
+                db.session.commit()
+                
+                # Логирование аудита
+                AuditLog.log_activity(
+                    user_id=session['user_id'],
+                    action='create_tournament',
+                    details=f'Tournament {tournament.name} created with ID {tournament.id}'
+                )
+                
+                # Инвалидация кэша
+                from app.utils.cache_manager import TournamentCacheManager
+                TournamentCacheManager.invalidate_tournament_cache(tournament.id)
+                
+                # Создание уведомления для администраторов
+                create_notification(
+                    user_id=None,  # Для всех администраторов
+                    title='Новый турнир',
+                    message=f'Добавлен новый турнир: {tournament.name}',
+                    notification_type='info'
+                )
+                
+                return redirect(url_for('main.tournament_detail', tournament_id=tournament.id))
+                
+            except ValueError as ve:
+                return render_template('rating_form.html', 
+                                     errors=['Неверный формат даты']), 400
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error adding tournament: {str(e)}")
+                return render_template('error/500.html'), 500
         
-        from flask import Response
-        return Response(
-            ics_content,
-            mimetype='text/calendar',
-            headers={
-                'Content-Disposition': 'attachment; filename=chess_tournaments.ics'
-            }
+        return render_template('rating_form.html')
+
+    @app.route('/report_tournament/<int:tournament_id>', methods=['GET', 'POST'])
+    def report_tournament(tournament_id):
+        """Пожаловаться на турнир"""
+        if 'user_id' not in session:
+            return redirect(url_for('user.login'))
+        
+        tournament = Tournament.query.get_or_404(tournament_id)
+        
+        if request.method == 'POST':
+            reason = request.form.get('reason')
+            description = request.form.get('description', '')
+            
+            # Создаем жалобу
+            report = Report(
+                tournament_id=tournament_id,
+                user_id=session['user_id'],
+                reason=reason,
+                description=description
+            )
+            
+            db.session.add(report)
+            db.session.commit()
+            
+            # Логируем жалобу
+            log_security_event(
+                user_id=session['user_id'],
+                level=SecurityLevel.MEDIUM,
+                event_type='tournament_report',
+                details=f'Reported tournament {tournament_id} for reason: {reason}'
+            )
+            
+            return jsonify({'success': True, 'message': 'Жалоба успешно отправлена'})
+        
+        return render_template('report_modal.html', tournament=tournament)
+
+    @app.route('/search')
+    @track_performance()
+    def search():
+        """Поиск турниров"""
+        query = request.args.get('q', '').strip()
+        category = request.args.get('category', '')
+        location = request.args.get('location', '')
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 12, type=int), 50)
+        
+        tournaments = Tournament.query
+        
+        if query:
+            tournaments = tournaments.filter(
+                db.or_(
+                    Tournament.name.contains(query),
+                    Tournament.location.contains(query),
+                    Tournament.description.contains(query)
+                )
+            )
+        
+        if category:
+            tournaments = tournaments.filter(Tournament.category == category)
+        
+        if location:
+            tournaments = tournaments.filter(Tournament.location.contains(location))
+        
+        tournaments = tournaments.order_by(Tournament.start_date.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
         )
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@main_bp.route('/api/export/google', methods=['POST'])
-def export_google():
-    """API endpoint for generating Google Calendar URLs"""
-    from datetime import datetime
-    import urllib.parse
-    
-    try:
-        data = request.get_json()
-        tournaments = data.get('tournaments', [])
         
-        # If there's only one tournament, generate URL for that tournament
-        # If there are multiple tournaments, we'll generate URLs for all of them
-        calendar_urls = []
+        return render_template('index.html', tournaments=tournaments, search_query=query)
+
+    @app.route('/export/csv')
+    def export_csv():
+        """Экспорт турниров в CSV"""
+        from io import StringIO
+        import csv
+        from flask import Response
         
-        for tournament in tournaments:
-            start_date = datetime.strptime(tournament['start_date'], '%Y-%m-%d')
-            end_date = datetime.strptime(tournament['end_date'], '%Y-%m-%d')
-            
-            # Format dates for Google Calendar (YYYYMMDDTHHmmss)
-            start_formatted = start_date.strftime('%Y%m%dT%H%M%S')
-            end_formatted = end_date.strftime('%Y%m%dT%H%M%S')
-            
-            params = {
-                'action': 'TEMPLATE',
-                'text': tournament['name'],
-                'dates': f"{start_formatted}/{end_formatted}",
-                'details': tournament.get('description', 'Шахматный турнир'),
-                'location': tournament['location'],
-                'trp': 'false'
-            }
-            
-            query_string = urllib.parse.urlencode(params)
-            google_url = f"https://www.google.com/calendar/render?{query_string}"
-            
-            calendar_urls.append({
-                'tournament_id': tournament.get('id'),
-                'tournament_name': tournament['name'],
-                'google_calendar_url': google_url
+        tournaments = Tournament.query.limit(1000).all()  # Ограничение для производительности
+        
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Заголовки
+        writer.writerow(['ID', 'Name', 'Start Date', 'End Date', 'Location', 'Category', 'Status'])
+        
+        # Данные
+        for t in tournaments:
+            writer.writerow([
+                t.id, t.name, t.start_date, t.end_date, 
+                t.location, t.category, t.status
+            ])
+        
+        output.seek(0)
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=tournaments.csv'}
+        )
+
+    @app.route('/export/json')
+    def export_json():
+        """Экспорт турниров в JSON"""
+        tournaments = Tournament.query.limit(1000).all()
+        
+        data = []
+        for t in tournaments:
+            data.append({
+                'id': t.id,
+                'name': t.name,
+                'start_date': t.start_date.isoformat() if t.start_date else None,
+                'end_date': t.end_date.isoformat() if t.end_date else None,
+                'location': t.location,
+                'category': t.category,
+                'status': t.status,
+                'description': t.description,
+                'prize_fund': t.prize_fund,
+                'organizer': t.organizer
             })
         
+        from flask import jsonify
         return jsonify({
-            'google_calendar_urls': calendar_urls,
-            'timestamp': datetime.utcnow().isoformat()
+            'tournaments': data,
+            'count': len(data),
+            'exported_at': datetime.utcnow().isoformat()
         })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
+    @app.route('/widget')
+    def widget():
+        """Виджет для встраивания на другие сайты"""
+        # Простой виджет с последними турнирами
+        recent_tournaments = Tournament.query.order_by(
+            Tournament.start_date.desc()
+        ).limit(5).all()
+        
+        return render_template('widget_docs.html', tournaments=recent_tournaments)
 
-@main_bp.route('/api/export/outlook', methods=['POST'])
-def export_outlook():
-    """API endpoint for generating Outlook Calendar URLs"""
-    from datetime import datetime
-    import urllib.parse
-    
-    try:
-        data = request.get_json()
-        tournaments = data.get('tournaments', [])
-        
-        calendar_urls = []
-        
-        for tournament in tournaments:
-            start_date = datetime.strptime(tournament['start_date'], '%Y-%m-%d')
-            end_date = datetime.strptime(tournament['end_date'], '%Y-%m-%d')
+    @app.route('/widget/documentation')
+    def widget_docs():
+        """Документация по виджету"""
+        return render_template('widget_documentation.html')
+
+    @app.route('/statistics')
+    def statistics_dashboard():
+        """Страница статистики"""
+        try:
+            from app.utils.analytics import analytics_service
             
-            params = {
-                'path': '/calendar/action/compose',
-                'rru': 'addevent',
-                'subject': tournament['name'],
-                'startdt': start_date.strftime('%Y-%m-%d'),
-                'enddt': end_date.strftime('%Y-%m-%d'),
-                'location': tournament['location'],
-                'body': tournament.get('description', 'Шахматный турнир')
+            # Получаем аналитику
+            stats = analytics_service.get_tournament_analytics()
+            
+            # Добавляем дополнительные метрики
+            stats['user_engagement'] = {
+                'total_users': User.query.count(),
+                'active_users_monthly': User.query.filter(
+                    User.last_login >= datetime.utcnow() - timedelta(days=30)
+                ).count(),
+                'total_ratings': TournamentRating.query.count(),
+                'total_favorites': FavoriteTournament.query.count()
             }
             
-            query_string = urllib.parse.urlencode(params)
-            outlook_url = f"https://outlook.live.com/calendar/0/deeplink/compose?{query_string}"
+            return render_template('statistics_dashboard.html', stats=stats)
             
-            calendar_urls.append({
-                'tournament_id': tournament.get('id'),
-                'tournament_name': tournament['name'],
-                'outlook_calendar_url': outlook_url
-            })
+        except Exception as e:
+            logger.error(f"Error in statistics dashboard: {str(e)}")
+            return render_template('error/500.html'), 500
+
+    @app.route('/achievements')
+    def achievements():
+        """Страница достижений пользователей"""
+        if 'user_id' not in session:
+            return redirect(url_for('user.login'))
         
-        return jsonify({
-            'outlook_calendar_urls': calendar_urls,
-            'timestamp': datetime.utcnow().isoformat()
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        try:
+            from app.utils.achievements import AchievementSystem
+            
+            user_id = session['user_id']
+            user_achievements = AchievementSystem.get_user_achievements(user_id)
+            user_stats = AchievementSystem.get_user_stats(user_id)
+            
+            # Получаем топ пользователей по достижениям
+            leaderboard = AchievementSystem.get_leaderboard(10)
+            
+            return render_template('user/achievements.html',
+                                 user_achievements=user_achievements,
+                                 user_stats=user_stats,
+                                 leaderboard=leaderboard)
+                                 
+        except Exception as e:
+            logger.error(f"Error in achievements route: {str(e)}")
+            return render_template('error/500.html'), 500
 
-
-@main_bp.route('/health')
-def health_check():
-    """Health check endpoint for the application"""
-    from app.utils.monitoring import health_checker
-    
-    try:
-        health_status = health_checker.get_health_status()
-        health_details = health_checker.run_health_checks()
+    @app.route('/recommendations')
+    def recommendations():
+        """Рекомендации турниров для пользователя"""
+        if 'user_id' not in session:
+            return redirect(url_for('user.login'))
         
-        return jsonify({
-            'status': 'ok',
-            'health_status': health_status,
-            'timestamp': datetime.now().isoformat(),
-            'checks': health_details
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
+        try:
+            user_id = session['user_id']
+            engine = RecommendationEngine()
+            
+            # Получаем рекомендации разными методами
+            collaborative_recs = engine.get_collaborative_recommendations(user_id, limit=5)
+            content_based_recs = engine.get_content_based_recommendations(user_id, limit=5)
+            popularity_recs = engine.get_popular_tournaments(limit=5)
+            
+            # Объединяем и убираем дубликаты
+            all_recs = list(set(collaborative_recs + content_based_recs + popularity_recs))
+            
+            return render_template('recommendations.html',
+                                 recommendations=all_recs[:10],  # Ограничиваем до 10
+                                 collaborative=collaborative_recs,
+                                 content_based=content_based_recs,
+                                 popular=popularity_recs)
+                                 
+        except Exception as e:
+            logger.error(f"Error in recommendations route: {str(e)}")
+            return render_template('error/500.html'), 500
 
+    @app.route('/tournament-map')
+    def tournament_map():
+        """Карта турниров"""
+        try:
+            # Получаем турниры с геоданными (упрощенная версия)
+            tournaments = Tournament.query.filter(
+                Tournament.location.isnot(None)
+            ).limit(100).all()
+            
+            # Форматируем данные для карты (в реальной реализации здесь будет геокодирование)
+            map_data = []
+            for t in tournaments:
+                # В реальной реализации здесь будет геокодирование адреса в координаты
+                map_data.append({
+                    'id': t.id,
+                    'name': t.name,
+                    'location': t.location,
+                    'start_date': t.start_date.isoformat() if t.start_date else None,
+                    'end_date': t.end_date.isoformat() if t.end_date else None,
+                    'category': t.category
+                })
+            
+            return render_template('tournament_map.html', tournaments=map_data)
+            
+        except Exception as e:
+            logger.error(f"Error in tournament_map route: {str(e)}")
+            return render_template('error/500.html'), 500
 
-@main_bp.route('/statistics')
-@track_performance()
-def statistics_dashboard():
-    """Statistics dashboard page"""
-    from sqlalchemy import func, extract
-    from datetime import datetime, timedelta
-    
-    # Total tournaments
-    total_tournaments = Tournament.query.count()
-    
-    # Active tournaments (ongoing)
-    today = datetime.now().date()
-    active_tournaments = Tournament.query.filter(
-        Tournament.start_date <= today,
-        Tournament.end_date >= today
-    ).count()
-    
-    # Upcoming tournaments
-    upcoming_tournaments = Tournament.query.filter(
-        Tournament.start_date > today
-    ).count()
-    
-    # Total locations
-    total_locations = db.session.query(func.count(func.distinct(Tournament.location))).scalar()
-    
-    # Top locations
-    top_locations = db.session.query(
-        Tournament.location,
-        func.count(Tournament.id).label('count')
-    ).group_by(Tournament.location).order_by(func.count(Tournament.id).desc()).limit(10).all()
-    
-    # Top categories
-    top_categories = db.session.query(
-        Tournament.category,
-        func.count(Tournament.id).label('count')
-    ).group_by(Tournament.category).order_by(func.count(Tournament.id).desc()).limit(10).all()
-    
-    # Monthly data for current year
-    current_year = datetime.now().year
-    monthly_data = []
-    for month in range(1, 13):
-        count = Tournament.query.filter(
-            extract('year', Tournament.start_date) == current_year,
-            extract('month', Tournament.start_date) == month
-        ).count()
-        monthly_data.append(count)
-    
-    # Category data for pie chart
-    category_labels = [cat[0] for cat in top_categories[:5]]
-    category_data = [cat[1] for cat in top_categories[:5]]
-    
-    return render_template('statistics_dashboard.html',
-                         total_tournaments=total_tournaments,
-                         active_tournaments=active_tournaments,
-                         upcoming_tournaments=upcoming_tournaments,
-                         total_locations=total_locations,
-                         top_locations=top_locations,
-                         top_categories=top_categories,
-                         monthly_data=monthly_data,
-                         category_labels=category_labels,
-                         category_data=category_data)
-
-
-
-
-
-@main_bp.errorhandler(404)
-def not_found_error(error):
-    """Handle 404 errors"""
-    return render_template('error/404.html'), 404
-
-
-@main_bp.errorhandler(500)
-def internal_error(error):
-    """Handle 500 errors"""
-    from app.utils.logging_config import get_logger
-    logger = get_logger('app.errors')
-    logger.error(f'Server Error: {error}', exc_info=True)
-    return render_template('error/500.html'), 500
-
-
-@main_bp.route('/widget')
-def widget_docs():
-    """Widget documentation page"""
-    return render_template('widget_docs.html')
-
-
-@main_bp.route('/achievements')
-def achievements():
-    """User achievements page"""
-    if 'user_id' not in session:
-        flash('Пожалуйста, войдите в систему', 'warning')
-        return redirect(url_for('user.login'))
-    
-    return render_template('user/achievements.html')
-
-
-@main_bp.route('/offline')
-def offline():
-    """Offline page for PWA"""
-    return render_template('offline.html')
-
-
-@main_bp.route('/widget')
-def widget_documentation():
-    """Widget documentation page"""
-    return render_template('widget_documentation.html')
-
-
-@main_bp.route('/map')
-@track_performance()
-def tournament_map():
-    """Tournament map page with geographical visualization"""
-    from datetime import datetime
-    import json
-    
-    # Get all tournaments
-    tournaments = Tournament.query.all()
-    
-    # Calculate stats
-    total_tournaments = len(tournaments)
-    total_cities = len(set(t.location for t in tournaments))
-    
-    today = datetime.now().date()
-    upcoming_count = sum(1 for t in tournaments if t.start_date > today)
-    ongoing_count = sum(1 for t in tournaments if t.start_date <= today <= t.end_date)
-    
-    # Get unique categories
-    categories = list(set(t.category for t in tournaments if t.category))
-    
-    # Prepare tournament data for JSON
-    tournaments_data = []
-    for t in tournaments:
-        tournaments_data.append({
-            'id': t.id,
-            'name': t.name,
-            'location': t.location,
-            'start_date': t.start_date.isoformat() if t.start_date else None,
-            'end_date': t.end_date.isoformat() if t.end_date else None,
-            'category': t.category,
-            'status': t.status
-        })
-    
-    return render_template('tournament_map.html',
-                         total_tournaments=total_tournaments,
-                         total_cities=total_cities,
-                         upcoming_count=upcoming_count,
-                         ongoing_count=ongoing_count,
-                         categories=categories,
-                         tournaments_json=json.dumps(tournaments_data))
+    @app.route('/notifications')
+    def notifications():
+        """Страница уведомлений"""
+        if 'user_id' not in session:
+            return redirect(url_for('user.login'))
+        
+        try:
+            from app.models.notification import Notification
+            user_id = session['user_id']
+            
+            # Получаем уведомления пользователя
+            notifications = Notification.query.filter_by(
+                user_id=user_id
+            ).order_by(Notification.created_at.desc()).limit(50).all()
+            
+            # Помечаем как прочитанные
+            unread_count = Notification.query.filter_by(
+                user_id=user_id, 
+                is_read=False
+            ).count()
+            
+            if unread_count > 0:
+                Notification.query.filter_by(
+                    user_id=user_id, 
+                    is_read=False
+                ).update({Notification.is_read: True})
+                db.session.commit()
+            
+            return render_template('notifications.html',
+                                 notifications=notifications,
+                                 unread_count=unread_count)
+                                 
+        except Exception as e:
+            logger.error(f"Error in notifications route: {str(e)}")
+            return render_template('error/500.html'), 500

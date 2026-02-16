@@ -1,97 +1,242 @@
-{% extends "base.html" %}
-
-{% block title %}Офлайн - ChessCalendar-RU{% endblock %}
-
-{% block content %}
-<div class="container">
-    <div class="row justify-content-center align-items-center" style="min-height: 60vh;">
-        <div class="col-md-6 text-center">
-            <div class="offline-icon mb-4">
-                <i class="bi bi-wifi-off" style="font-size: 6rem; color: var(--text-muted);"></i>
-            </div>
-            
-            <h1 class="display-4 mb-3">Нет подключения</h1>
-            <p class="lead text-muted mb-4">
-                Похоже, вы находитесь в офлайн режиме. Проверьте подключение к интернету.
-            </p>
-            
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-info-circle text-primary"></i> Что можно сделать?
-                    </h5>
-                    <ul class="list-unstyled text-start mt-3">
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success"></i> 
-                            Просматривать ранее загруженные турниры
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success"></i> 
-                            Использовать кэшированные данные
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success"></i> 
-                            Добавлять турниры в избранное (синхронизируется позже)
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="d-flex gap-3 justify-content-center">
-                <button class="btn btn-primary" onclick="window.location.reload()">
-                    <i class="bi bi-arrow-clockwise"></i> Попробовать снова
-                </button>
-                <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-house"></i> На главную
-                </a>
-            </div>
-            
-            <div class="mt-4">
-                <small class="text-muted">
-                    <i class="bi bi-shield-check"></i> 
-                    Ваши данные сохранены локально и будут синхронизированы при восстановлении соединения
-                </small>
-            </div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оффлайн - ChessCalendar-RU</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .offline-container {
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .offline-icon {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+            color: #94a3b8;
+        }
+        
+        .offline-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: white;
+        }
+        
+        .offline-message {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .offline-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+        
+        .btn-refresh {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 12px;
+        }
+        
+        .btn-home {
+            background: transparent;
+            border: 2px solid #2563eb;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 12px;
+        }
+        
+        .offline-favorites {
+            margin-top: 2rem;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .offline-favorites h3 {
+            color: white;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .offline-favorites ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .offline-favorites li {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+        }
+        
+        .offline-favorites li:last-child {
+            border-bottom: none;
+        }
+        
+        .connection-status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: rgba(220, 38, 38, 0.2);
+            color: #fca5a5;
+            display: inline-block;
+        }
+        
+        .connection-status.online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            <i class="bi bi-wifi-off"></i>
+        </div>
+        
+        <h1 class="offline-title">Вы в оффлайн-режиме</h1>
+        
+        <p class="offline-message">
+            Похоже, вы не подключены к интернету. Но не волнуйтесь! 
+            Вы можете продолжать использовать приложение. Сохраненные данные будут 
+            синхронизированы, когда соединение восстановится.
+        </p>
+        
+        <div class="connection-status" id="connectionStatus">
+            <i class="bi bi-wifi-off"></i> Оффлайн
+        </div>
+        
+        <div class="offline-actions">
+            <button class="btn btn-refresh" onclick="checkConnection()">
+                <i class="bi bi-arrow-repeat"></i> Проверить соединение
+            </button>
+            <a href="/" class="btn btn-home">
+                <i class="bi bi-house-door"></i> На главную
+            </a>
+        </div>
+        
+        <div class="offline-favorites">
+            <h3><i class="bi bi-heart"></i> Ваши избранные турниры</h3>
+            <ul id="offlineFavoritesList">
+                <li class="text-muted">Нет сохраненных избранных турниров</li>
+            </ul>
+        </div>
+        
+        <div class="mt-4">
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i> При восстановлении соединения 
+                все ваши действия будут синхронизированы
+            </small>
         </div>
     </div>
-</div>
 
-<style>
-    .offline-icon i {
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-            transform: scale(1);
+    <script>
+        // Check connection status
+        function checkConnection() {
+            if (navigator.onLine) {
+                // Try to fetch the main page to confirm connectivity
+                fetch('/')
+                    .then(response => {
+                        if (response.ok) {
+                            // Connection restored, redirect to main page
+                            window.location.href = '/';
+                        } else {
+                            // Server not responding
+                            showConnectionMessage(false);
+                        }
+                    })
+                    .catch(() => {
+                        showConnectionMessage(false);
+                    });
+            } else {
+                showConnectionMessage(false);
+            }
         }
-        50% {
-            opacity: 0.7;
-            transform: scale(0.95);
+        
+        function showConnectionMessage(isOnline) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (isOnline) {
+                statusEl.innerHTML = '<i class="bi bi-wifi"></i> Онлайн';
+                statusEl.className = 'connection-status online';
+            } else {
+                statusEl.innerHTML = '<i class="bi bi-wifi-off"></i> Оффлайн';
+                statusEl.className = 'connection-status';
+            }
         }
-    }
-</style>
-
-<script>
-    // Check connection status
-    function checkConnection() {
-        if (navigator.onLine) {
-            window.location.reload();
+        
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            showConnectionMessage(true);
+            // Attempt to redirect after a short delay
+            setTimeout(() => {
+                if (navigator.onLine) {
+                    window.location.href = '/';
+                }
+            }, 1000);
+        });
+        
+        window.addEventListener('offline', () => {
+            showConnectionMessage(false);
+        });
+        
+        // Load offline favorites from localStorage
+        function loadOfflineFavorites() {
+            const favoritesList = document.getElementById('offlineFavoritesList');
+            const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+            
+            if (favorites.length > 0) {
+                favoritesList.innerHTML = '';
+                favorites.forEach(favId => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<i class="bi bi-chevron-right"></i> Турнир #${favId}`;
+                    favoritesList.appendChild(li);
+                });
+            } else {
+                favoritesList.innerHTML = '<li class="text-muted">Нет сохраненных избранных турниров</li>';
+            }
         }
-    }
-    
-    // Listen for online event
-    window.addEventListener('online', () => {
-        if (window.ChessCalendar) {
-            window.ChessCalendar.showToast('Соединение восстановлено!', 'success');
-        }
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
-    });
-    
-    // Check every 5 seconds
-    setInterval(checkConnection, 5000);
-</script>
-{% endblock %}
+        
+        // Load favorites when page loads
+        document.addEventListener('DOMContentLoaded', loadOfflineFavorites);
+        
+        // Initialize connection status
+        showConnectionMessage(navigator.onLine);
+    </script>
+</body>
+</html>

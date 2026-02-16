@@ -1,5 +1,5 @@
 // ChessCalendar-RU - Main JavaScript with Lazy Loading Support
-// Updated to work with lazy loading system
+// Updated to work with lazy loading system and PWA enhancements
 
 // Loading Spinner
 function showLoader() {
@@ -227,6 +227,128 @@ function shareContent(title, text, url) {
     }
 }
 
+// PWA Connection Status Indicator
+function initConnectionIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'connection-indicator';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 10000;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    `;
+    
+    function updateIndicator() {
+        if (navigator.onLine) {
+            indicator.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            indicator.style.color = 'white';
+            indicator.innerHTML = '<i class="bi bi-wifi me-1"></i> Онлайн';
+            indicator.style.display = 'none'; // Hide when online unless needed
+        } else {
+            indicator.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+            indicator.style.color = 'white';
+            indicator.innerHTML = '<i class="bi bi-wifi-off me-1"></i> Оффлайн';
+            indicator.style.display = 'block';
+        }
+    }
+    
+    document.body.appendChild(indicator);
+    updateIndicator();
+    
+    // Show indicator when offline
+    window.addEventListener('online', () => {
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 2000); // Hide after 2 seconds when back online
+    });
+    
+    window.addEventListener('offline', updateIndicator);
+}
+
+// PWA Offline Data Storage
+const OfflineStorage = {
+    async saveFavorite(tournamentId, userId, action = 'POST') {
+        if (!navigator.onLine) {
+            const pendingAction = {
+                id: Date.now(),
+                type: 'favorite',
+                tournament_id: tournamentId,
+                user_id: userId,
+                action: action,
+                timestamp: new Date().toISOString()
+            };
+            
+            const pendingActions = JSON.parse(localStorage.getItem('pendingActions') || '[]');
+            pendingActions.push(pendingAction);
+            localStorage.setItem('pendingActions', JSON.stringify(pendingActions));
+            
+            showToast('Действие сохранено. Будет выполнено при восстановлении соединения.', 'info');
+        }
+    },
+    
+    async saveRating(tournamentId, userId, rating, review = '') {
+        if (!navigator.onLine) {
+            const pendingAction = {
+                id: Date.now(),
+                type: 'rating',
+                tournament_id: tournamentId,
+                user_id: userId,
+                rating: rating,
+                review: review,
+                timestamp: new Date().toISOString()
+            };
+            
+            const pendingActions = JSON.parse(localStorage.getItem('pendingActions') || '[]');
+            pendingActions.push(pendingAction);
+            localStorage.setItem('pendingActions', JSON.stringify(pendingActions));
+            
+            showToast('Оценка сохранена. Будет отправлена при восстановлении соединения.', 'info');
+        }
+    },
+    
+    async syncPendingActions() {
+        if (!navigator.onLine) return;
+        
+        const pendingActions = JSON.parse(localStorage.getItem('pendingActions') || '[]');
+        if (pendingActions.length === 0) return;
+        
+        for (const action of pendingActions) {
+            try {
+                if (action.type === 'favorite') {
+                    await fetch(`/api/tournaments/${action.tournament_id}/favorite`, {
+                        method: action.action,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: action.user_id })
+                    });
+                } else if (action.type === 'rating') {
+                    await fetch(`/api/tournaments/${action.tournament_id}/rate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: action.user_id,
+                            rating: action.rating,
+                            review: action.review
+                        })
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to sync action:', error);
+                continue; // Continue with other actions
+            }
+        }
+        
+        // Clear synced actions
+        localStorage.removeItem('pendingActions');
+        showToast('Офлайн-действия синхронизированы!', 'success');
+    }
+};
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     initTooltips();
@@ -234,6 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initLazyLoading();
     enhanceFormValidation();
     createBackToTopButton();
+    initConnectionIndicator();
     
     // Add fade-in animation to cards
     const cards = document.querySelectorAll('.card, .tournament-card');
@@ -250,6 +373,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mark app as ready for lazy loading
     document.body.classList.add('app-ready');
+    
+    // Sync pending offline actions when coming online
+    window.addEventListener('online', () => {
+        OfflineStorage.syncPendingActions();
+    });
+    
+    // Initial sync if online
+    if (navigator.onLine) {
+        OfflineStorage.syncPendingActions();
+    }
 });
 
 // Mobile UI enhancements
@@ -423,7 +556,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
             .then(registration => {
-                console.log('SW registered: ', registration);
+                console.log('SW registered: ', registration.scope);
+                
+                // Register for periodic sync if supported
+                if ('periodicSync' in registration) {
+                    try {
+                        registration.periodicSync.register('refresh-tournaments', {
+                            minInterval: 24 * 60 * 60 * 1000 // 24 hours
+                        });
+                    } catch (error) {
+                        console.log('Periodic sync not supported:', error);
+                    }
+                }
+                
+                // Register for background sync if supported
+                if ('sync' in registration) {
+                    // Sync pending actions when service worker becomes active
+                    registration.active?.postMessage({ action: 'syncPendingActions' });
+                }
             })
             .catch(registrationError => {
                 console.log('SW registration failed: ', registrationError);
@@ -469,7 +619,8 @@ window.ChessCalendar = {
     copyToClipboard,
     shareContent,
     debounce,
-    throttle
+    throttle,
+    OfflineStorage
 };
 
 // Initialize lazy loading if available
