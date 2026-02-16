@@ -6,7 +6,7 @@
 
 ## Tasks
 
-- [ ] 1. Создать базовую структуру адаптивного CSS файла
+- [x] 1. Создать базовую структуру адаптивного CSS файла
   - Создать файл `static/css/tournament-cards-responsive.css`
   - Добавить CSS custom properties для breakpoints
   - Добавить базовые mobile-first стили для всех типов карточек
@@ -14,7 +14,7 @@
   - _Requirements: 1.1, 1.2, 2.1, 2.2, 2.3, 3.1, 3.3, 3.5_
 
 - [ ] 2. Реализовать адаптивные стили для Standard Card
-  - [ ] 2.1 Добавить адаптивные стили для заголовка карточки
+  - [x] 2.1 Добавить адаптивные стили для заголовка карточки
     - Реализовать mobile стили: padding 0.75rem, flex-direction column, gap 0.5rem
     - Реализовать desktop стили (>= 768px): padding 1rem, flex-direction row, space-between
     - Добавить адаптивную типографику для title и subtitle
@@ -24,7 +24,7 @@
     - **Property 7: Header layout responsiveness**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4, 4.5**
   
-  - [ ] 2.3 Добавить адаптивные стили для тела карточки
+  - [x] 2.3 Добавить адаптивные стили для тела карточки
     - Реализовать mobile стили: padding 1rem, gap 0.75rem
     - Реализовать desktop стили (>= 768px): padding 1.25rem, gap 1rem
     - Добавить адаптивные стили для meta items (column на mobile, row на desktop)
@@ -34,7 +34,7 @@
     - **Property 3: Standard card padding responsiveness**
     - **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 2.6**
   
-  - [ ] 2.5 Добавить адаптивные стили для футера карточки
+  - [x] 2.5 Добавить адаптивные стили для футера карточки
     - Реализовать mobile стили: padding 0.75rem, flex-direction column, 100% width buttons
     - Реализовать desktop стили (>= 768px): padding 1rem, flex-direction row, auto width buttons
     - Обеспечить минимальный размер touch target 44x44px для всех кнопок
@@ -44,7 +44,7 @@
     - **Property 9: Footer actions layout responsiveness**
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
   
-  - [ ] 2.7 Добавить адаптивные стили для border-radius и tags
+  - [x] 2.7 Добавить адаптивные стили для border-radius и tags
     - Реализовать mobile border-radius: 0.5rem
     - Реализовать desktop border-radius (>= 768px): 0.75rem
     - Добавить адаптивные стили для tags (font-size, padding, wrapping)
@@ -101,7 +101,7 @@
     - **Property 15: Featured card overlay padding**
     - **Validates: Requirements 7.3, 7.4**
   
-  - [ ] 5.5 Добавить обработку ошибок загрузки изображений
+  - [x] 5.5 Добавить обработку ошибок загрузки изображений
     - Реализовать JavaScript fallback для failed images
     - Использовать default-tournament.jpg как fallback
     - _Requirements: 13.5_
@@ -136,7 +136,7 @@
   - Задать вопросы пользователю, если возникли проблемы
 
 - [ ] 8. Реализовать адаптивную сетку и hover эффекты
-  - [ ] 8.1 Обновить tournament_grid макрос
+  - [x] 8.1 Обновить tournament_grid макрос
     - Обновить Bootstrap классы: col-12, col-md-6, col-lg-4
     - Использовать g-3 для mobile и g-4 для desktop gap
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 14.1, 14.2, 14.3, 14.4, 14.5, 14.6_
@@ -163,18 +163,18 @@
     - Добавить will-change только во время активных анимаций
     - _Requirements: 12.1, 12.2, 12.4_
   
-  - [ ] 9.2 Добавить feature detection для backdrop-filter
+  - [x] 9.2 Добавить feature detection для backdrop-filter
     - Проверить поддержку backdrop-filter
     - Использовать fallback для неподдерживаемых браузеров
     - _Requirements: 12.3_
   
-  - [ ] 9.3 Добавить viewport detection и resize handling
+  - [x] 9.3 Добавить viewport detection и resize handling
     - Реализовать getCurrentBreakpoint() функцию
     - Добавить debounced resize handler
     - Добавить data-breakpoint атрибут к body
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
   
-  - [ ] 9.4 Добавить touch device detection
+  - [x] 9.4 Добавить touch device detection
     - Определить touch устройства
     - Добавить touch-device или no-touch класс к body
     - _Requirements: 10.3, 10.4_
@@ -277,7 +277,7 @@
     - Добавить fallback для object-fit
     - _Requirements: Browser compatibility_
   
-  - [ ] 15.3 Обновить документацию
+  - [x] 15.3 Обновить документацию
     - Обновить RESPONSIVE_DESIGN.md с новыми стилями
     - Добавить примеры использования обновленных макросов
     - Документировать новые CSS классы и переменные

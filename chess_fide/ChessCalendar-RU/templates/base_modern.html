@@ -184,6 +184,11 @@
         }
     </style>
     
+    <!-- Tournament Cards Enhanced CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tournament-cards-enhanced.css') }}">
+    <!-- Tournament Cards Responsive CSS (Mobile-First) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tournament-cards-responsive.css') }}">
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -324,6 +329,58 @@
         
         window.addEventListener('scroll', animateOnScroll);
         window.addEventListener('load', animateOnScroll);
+        
+        // Viewport Detection and Breakpoint Tracking
+        function getCurrentBreakpoint() {
+            const width = window.innerWidth;
+            if (width < 576) return 'xs';
+            if (width < 768) return 'sm';
+            if (width < 992) return 'md';
+            if (width < 1200) return 'lg';
+            if (width < 1400) return 'xl';
+            return 'xxl';
+        }
+        
+        // Set initial breakpoint
+        document.body.setAttribute('data-breakpoint', getCurrentBreakpoint());
+        
+        // Handle resize with debouncing
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                const breakpoint = getCurrentBreakpoint();
+                document.body.setAttribute('data-breakpoint', breakpoint);
+            }, 250);
+        });
+        
+        // Touch Device Detection
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isTouchDevice) {
+            document.body.classList.add('touch-device');
+        } else {
+            document.body.classList.add('no-touch');
+        }
+        
+        // Backdrop Filter Support Detection
+        const supportsBackdropFilter = CSS.supports('backdrop-filter', 'blur(10px)') || 
+                                       CSS.supports('-webkit-backdrop-filter', 'blur(10px)');
+        if (supportsBackdropFilter) {
+            document.body.classList.add('supports-backdrop-filter');
+        } else {
+            document.body.classList.add('no-backdrop-filter');
+        }
+        
+        // Image Error Handling for Featured Cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const featuredImages = document.querySelectorAll('.tournament-card-featured-image');
+            featuredImages.forEach(img => {
+                img.addEventListener('error', function() {
+                    this.src = '/static/images/default-tournament.jpg';
+                    this.alt = 'Default tournament image';
+                });
+            });
+        });
     </script>
     
     {% block extra_js %}{% endblock %}

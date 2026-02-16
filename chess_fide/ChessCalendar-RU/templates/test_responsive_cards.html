@@ -1,0 +1,136 @@
+{% extends "base_modern.html" %}
+{% import "components/tournament_cards.html" as cards %}
+
+{% block title %}Тест адаптивных карточек - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">Тест адаптивных карточек турниров</h1>
+    
+    <div class="alert alert-info mb-4">
+        <strong>Текущий breakpoint:</strong> <span id="current-breakpoint"></span><br>
+        <strong>Ширина окна:</strong> <span id="window-width"></span>px<br>
+        <strong>Touch устройство:</strong> <span id="is-touch"></span>
+    </div>
+    
+    <h2 class="mb-3">Стандартные карточки (Standard Cards)</h2>
+    {{ cards.tournament_grid([
+        {
+            'id': 1,
+            'name': 'Чемпионат России по шахматам 2026',
+            'organizer': 'Федерация шахмат России',
+            'location': 'Москва',
+            'start_date': '2026-03-15',
+            'end_date': '2026-03-25',
+            'status': 'Scheduled',
+            'category': 'Национальный',
+            'rating_type': 'FIDE',
+            'prize_fund': '2 000 000 руб.',
+            'description': 'Ежегодный чемпионат России по классическим шахматам с участием лучших игроков страны. Турнир проводится по швейцарской системе в 9 туров.'
+        },
+        {
+            'id': 2,
+            'name': 'Кубок Санкт-Петербурга',
+            'organizer': 'Шахматная федерация СПб',
+            'location': 'Санкт-Петербург',
+            'start_date': '2026-04-10',
+            'end_date': '2026-04-15',
+            'status': 'Ongoing',
+            'category': 'Региональный',
+            'rating_type': 'Российский',
+            'prize_fund': '500 000 руб.',
+            'description': 'Традиционный турнир в культурной столице России.'
+        },
+        {
+            'id': 3,
+            'name': 'Мемориал Михаила Таля',
+            'organizer': 'Международная шахматная федерация',
+            'location': 'Рига, Латвия',
+            'start_date': '2026-05-01',
+            'end_date': '2026-05-10',
+            'status': 'Completed',
+            'category': 'Международный',
+            'rating_type': 'FIDE',
+            'description': 'Престижный международный турнир памяти великого шахматиста.'
+        }
+    ], 'standard') }}
+    
+    <h2 class="mb-3 mt-5">Компактные карточки (Compact Cards)</h2>
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-md-6">
+            {{ cards.tournament_card_compact({
+                'id': 4,
+                'name': 'Быстрые шахматы - Москва',
+                'location': 'Москва',
+                'start_date': '2026-06-15',
+                'category': 'Блиц',
+                'status': 'Scheduled'
+            }) }}
+        </div>
+        <div class="col-12 col-md-6">
+            {{ cards.tournament_card_compact({
+                'id': 5,
+                'name': 'Детский турнир до 12 лет',
+                'location': 'Казань',
+                'start_date': '2026-07-01',
+                'category': 'Детский',
+                'status': 'Ongoing'
+            }) }}
+        </div>
+    </div>
+    
+    <h2 class="mb-3 mt-5">Featured карточка (с изображением)</h2>
+    <div class="row">
+        <div class="col-12 col-md-8 mx-auto">
+            {{ cards.tournament_card_featured({
+                'id': 6,
+                'name': 'Гран-при FIDE 2026',
+                'location': 'Берлин, Германия',
+                'start_date': '2026-08-20',
+                'status': 'Scheduled',
+                'prize_fund': '€100,000'
+            }, '/static/images/default-tournament.jpg') }}
+        </div>
+    </div>
+    
+    <h2 class="mb-3 mt-5">Список карточек (List Items)</h2>
+    {{ cards.tournament_list([
+        {
+            'id': 7,
+            'name': 'Открытый турнир Екатеринбурга',
+            'location': 'Екатеринбург',
+            'start_date': '2026-09-10',
+            'category': 'Открытый',
+            'status': 'Scheduled'
+        },
+        {
+            'id': 8,
+            'name': 'Чемпионат Сибири',
+            'location': 'Новосибирск',
+            'start_date': '2026-10-05',
+            'category': 'Региональный',
+            'status': 'Scheduled'
+        }
+    ]) }}
+</div>
+
+<script>
+    // Update breakpoint info
+    function updateBreakpointInfo() {
+        const breakpoint = document.body.getAttribute('data-breakpoint');
+        const width = window.innerWidth;
+        const isTouch = document.body.classList.contains('touch-device');
+        
+        document.getElementById('current-breakpoint').textContent = breakpoint || 'не определен';
+        document.getElementById('window-width').textContent = width;
+        document.getElementById('is-touch').textContent = isTouch ? 'Да' : 'Нет';
+    }
+    
+    // Update on load and resize
+    window.addEventListener('load', updateBreakpointInfo);
+    window.addEventListener('resize', updateBreakpointInfo);
+    
+    // Update every 100ms to catch changes
+    setInterval(updateBreakpointInfo, 100);
+</script>
+{% endblock %}

@@ -22,6 +22,11 @@ def tournaments():
     # Пока используем главную страницу
     return render_template('index_modern.html')
 
+@app.route('/test-responsive-cards')
+def test_responsive_cards():
+    """Тестовая страница для проверки адаптивных карточек"""
+    return render_template('test_responsive_cards.html')
+
 @app.route('/about')
 def about():
     """Страница о проекте"""
