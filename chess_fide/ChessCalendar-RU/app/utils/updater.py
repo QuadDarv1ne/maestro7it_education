@@ -8,6 +8,9 @@ from app.models.tournament import Tournament
 from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser
 from app.utils.notifications import notification_service
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Initialize logging for this module
 logger = logging.getLogger('app.scheduler')
@@ -29,10 +32,48 @@ class TournamentUpdater:
         self.fide_parser = FIDEParses()
         self.cfr_parser = CFRParser()
         
+        # Add retry configuration
+        self.max_retries = 3
+        self.retry_delay = 5  # seconds
+
+    def _retry_operation(self, operation, *args, **kwargs):
+        """
+        Execute an operation with retry logic
+        """
+        last_exception = None
+        
+        for attempt in range(self.max_retries):
+            try:
+                return operation(*args, **kwargs)
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"Attempt {attempt + 1} failed: {e}")
+                
+                if attempt < self.max_retries - 1:  # Don't sleep on the last attempt
+                    import time
+                    time.sleep(self.retry_delay)
+                else:
+                    logger.error(f"All {self.max_retries} attempts failed. Last error: {e}")
+        
+        # If all attempts failed, raise the last exception
+        raise last_exception
+
+    def _update_from_fide_with_retry(self):
+        """Wrapper for _update_from_fide with retry mechanism"""
+        def operation():
+            return self._update_from_fide()
+        return self._retry_operation(operation)
+
+    def _update_from_cfr_with_retry(self):
+        """Wrapper for _update_from_cfr with retry mechanism"""
+        def operation():
+            return self._update_from_cfr()
+        return self._retry_operation(operation)
+
     def update_all_sources(self):
         """Обновить данные со всех источников"""
         logger.info("Начинаю обновление турниров...")
-        
+
         try:
             # Создаем бэкап перед обновлением
             logger.info("Создаю резервную копию перед обновлением...")
@@ -46,15 +87,21 @@ class TournamentUpdater:
                 logger.warning("Файл базы данных не найден, пропускаю создание резервной копии")
             except Exception as backup_error:
                 logger.error(f"Ошибка при создании резервной копии: {backup_error}")
-            
-            # Обновляем с FIDE
-            self._update_from_fide()
-            
-            # Обновляем с CFR
-            self._update_from_cfr()
-            
+
+            # Обновляем с FIDE (with retry)
+            try:
+                self._update_from_fide_with_retry()
+            except Exception as e:
+                logger.error(f"Не удалось обновить данные с FIDE после всех попыток: {e}")
+
+            # Обновляем с CFR (with retry)
+            try:
+                self._update_from_cfr_with_retry()
+            except Exception as e:
+                logger.error(f"Не удалось обновить данные с CFR после всех попыток: {e}")
+
             logger.info("Обновление завершено успешно")
-            
+
         except Exception as e:
             logger.error(f"Критическая ошибка при обновлении: {e}", exc_info=True)
             import traceback
@@ -64,21 +111,28 @@ class TournamentUpdater:
         """Обновить данные с FIDE"""
         logger.info("Обновление данных с FIDE...")
         try:
-            fide_tournaments = self.fide_parser.get_tournaments_russia(2026)
+            # Wrap the parser call in a try-catch for resilience
+            try:
+                fide_tournaments = self.fide_parser.get_tournaments_russia(2026)
+            except Exception as e:
+                logger.error(f"Failed to fetch FIDE tournaments: {e}")
+                fide_tournaments = []
+                return  # Exit early if we couldn't fetch data
+
             added_count = 0
             processed_count = 0
-            
+
             for tourney_data in fide_tournaments:
                 try:
                     existing = Tournament.query.filter_by(
                         name=tourney_data['name'],
                         start_date=tourney_data['start_date']
                     ).first()
-                    
+
                     if not existing:
                         # Validate and clean the data before adding
                         filtered_data = self._validate_and_clean_tournament_data(tourney_data)
-                        
+
                         if filtered_data:
                             tournament = Tournament(**filtered_data)
                             # Run validation before adding to session
@@ -94,14 +148,14 @@ class TournamentUpdater:
                 except Exception as te:
                     logger.error(f"Ошибка при добавлении турнира с FIDE: {te}")
                     continue
-            
+
             try:
                 db.session.commit()
                 logger.info(f"Обработано {processed_count} турниров с FIDE, добавлено {added_count} новых")
             except Exception as db_error:
                 logger.error(f"Ошибка при сохранении в базу: {db_error}")
                 db.session.rollback()
-                
+
         except Exception as e:
             logger.error(f"Ошибка при получении данных с FIDE: {e}", exc_info=True)
             import traceback
@@ -111,21 +165,28 @@ class TournamentUpdater:
         """Обновить данные с CFR"""
         logger.info("Обновление данных с CFR...")
         try:
-            cfr_tournaments = self.cfr_parser.get_tournaments(2026)
+            # Wrap the parser call in a try-catch for resilience
+            try:
+                cfr_tournaments = self.cfr_parser.get_tournaments(2026)
+            except Exception as e:
+                logger.error(f"Failed to fetch CFR tournaments: {e}")
+                cfr_tournaments = []
+                return  # Exit early if we couldn't fetch data
+
             added_count = 0
             processed_count = 0
-            
+
             for tourney_data in cfr_tournaments:
                 try:
                     existing = Tournament.query.filter_by(
                         name=tourney_data['name'],
                         start_date=tourney_data['start_date']
                     ).first()
-                    
+
                     if not existing:
                         # Validate and clean the data before adding
                         filtered_data = self._validate_and_clean_tournament_data(tourney_data)
-                        
+
                         if filtered_data:
                             tournament = Tournament(**filtered_data)
                             # Run validation before adding to session
@@ -141,14 +202,14 @@ class TournamentUpdater:
                 except Exception as te:
                     logger.error(f"Ошибка при добавлении турнира с CFR: {te}")
                     continue
-            
+
             try:
                 db.session.commit()
                 logger.info(f"Обработано {processed_count} турниров с CFR, добавлено {added_count} новых")
             except Exception as db_error:
                 logger.error(f"Ошибка при сохранении в базу: {db_error}")
                 db.session.rollback()
-                
+
         except Exception as e:
             logger.error(f"Ошибка при получении данных с CFR: {e}", exc_info=True)
             import traceback

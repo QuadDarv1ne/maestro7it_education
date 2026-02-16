@@ -8,6 +8,14 @@ import json
 from urllib.parse import urljoin
 from dateutil import parser as date_parser
 import time
+import random
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 logger = logging.getLogger('app.parsers')
 
@@ -16,9 +24,21 @@ class FIDEParses:
         self.base_url = "https://calendar.fide.com"
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
         })
         self.logger = logger  # Use centralized logger
+        
+        # Initialize Selenium for JavaScript-heavy pages
+        self.driver = None
+        
+    def __del__(self):
+        if self.driver:
+            self.driver.quit()
 
     def get_tournaments_russia(self, year=2026):
         """Получить турниры в России на указанный год"""
@@ -46,6 +66,12 @@ class FIDEParses:
         tournaments = self._try_year_view(year)
         if tournaments:
             logger.info(f"Successfully fetched {len(tournaments)} tournaments via year view")
+            return tournaments
+        
+        # Strategy 5: Try with Selenium for JavaScript-heavy pages
+        tournaments = self._try_with_selenium(year)
+        if tournaments:
+            logger.info(f"Successfully fetched {len(tournaments)} tournaments via Selenium")
             return tournaments
         
         logger.warning(f"No tournaments found from FIDE for year {year}")
@@ -492,48 +518,76 @@ class FIDEParses:
         match = re.search(r'id=(\d+)', href)
         return match.group(1) if match else None
     
-    def _parse_date_flexible(self, date_str):
-        """Flexible date parsing with multiple strategies"""
-        if not date_str:
-            return None
-        
-        # Remove any trailing time information
-        date_str = re.sub(r'\s+\d{1,2}:\d{2}(?:\s*[AP]M)?', '', date_str.strip())
-        
-        # Try different parsing strategies
-        strategies = [
-            lambda s: date_parser.parse(s).date(),  # dateutil parser
-            lambda s: datetime.strptime(s, '%Y-%m-%d').date(),  # ISO format
-            lambda s: datetime.strptime(s, '%d.%m.%Y').date(),  # DD.MM.YYYY
-            lambda s: datetime.strptime(s, '%m/%d/%Y').date(),  # MM/DD/YYYY
-        ]
-        
-        for strategy in strategies:
-            try:
-                return strategy(date_str)
-            except:
-                continue
-        
-        # If all strategies fail, try to extract date from string
-        try:
-            # Look for date patterns in the string
-            patterns = [
-                r'(\d{1,2}[./-]\d{1,2}[./-]\d{4})',  # DD/MM/YYYY, DD-MM-YYYY, etc.
-                r'(\d{4}[./-]\d{1,2}[./-]\d{1,2})',  # YYYY-MM-DD, YYYY/MM/DD
-            ]
+    def _init_driver(self):
+        """Initialize Selenium WebDriver with appropriate options"""
+        if self.driver is None:
+            chrome_options = Options()
+            chrome_options.add_argument('--headless')  # Run in background
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option('useAutomationExtension', False)
+            chrome_options.add_argument(f'--user-agent={random.choice(self.user_agents)}')
             
-            for pattern in patterns:
-                match = re.search(pattern, date_str)
-                if match:
-                    extracted_date = match.group(1)
-                    # Try to parse the extracted date
-                    for strategy in strategies[:2]:  # Try dateutil and ISO format
-                        try:
-                            return strategy(extracted_date)
-                        except:
-                            continue
-        except:
-            pass
-        
-        logger.error(f"Could not parse date string: {date_str}")
-        return None
+            try:
+                self.driver = webdriver.Chrome(options=chrome_options)
+                self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            except Exception as e:
+                logger.error(f"Failed to initialize Chrome driver: {e}")
+                raise
+    
+    def _get_page_with_selenium(self, url, timeout=15):
+        """Get page content using Selenium for JavaScript-heavy sites"""
+        try:
+            self._init_driver()
+            self.driver.get(url)
+            
+            # Wait for the main content to load
+            WebDriverWait(self.driver, timeout).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            
+            # Wait a bit more for dynamic content to load
+            time.sleep(3)
+            
+            # Get the page source after JavaScript execution
+            return self.driver.page_source
+        except TimeoutException:
+            logger.error(f"Timeout while loading page: {url}")
+            return None
+        except WebDriverException as e:
+            logger.error(f"WebDriver error for {url}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error getting page with Selenium {url}: {e}")
+            return None
+    
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1'
+    ]
+    
+    def _try_with_selenium(self, year):
+        """Try to get tournaments using Selenium for JavaScript-heavy pages"""
+        try:
+            logger.info("Attempting to fetch FIDE tournaments using Selenium...")
+            url = f"{self.base_url}/calendar.php?country=rus&from_date={year}-01-01&to_date={year}-12-31"
+            
+            page_content = self._get_page_with_selenium(url)
+            if not page_content:
+                return []
+            
+            # Check if the page loaded properly
+            if 'calendar' not in page_content.lower() and 'tournament' not in page_content.lower():
+                logger.warning("Page content doesn't seem to contain tournament data")
+                return []
+            
+            # Parse the page content
+            return self._parse_tournaments_page(page_content)
+        except Exception as e:
+            logger.error(f"Selenium approach failed: {e}")
+            return []

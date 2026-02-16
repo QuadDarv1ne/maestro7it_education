@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import re
 import bleach
+from app.utils.security import security_utils
 
 
 class User(db.Model):

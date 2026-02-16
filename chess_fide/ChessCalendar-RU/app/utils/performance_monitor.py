@@ -1,5 +1,7 @@
 import time
 import logging
+import psutil
+import os
 from functools import wraps
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
@@ -92,6 +94,47 @@ class PerformanceMonitor:
                             'max_time': stats['max_time']
                         })
             return sorted(slow_endpoints, key=lambda x: x['avg_time'], reverse=True)
+    
+    def get_system_resources(self):
+        """Get current system resource usage"""
+        try:
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory_info = psutil.virtual_memory()
+            disk_usage = psutil.disk_usage('/')
+            
+            return {
+                'cpu_percent': cpu_percent,
+                'memory_percent': memory_info.percent,
+                'memory_available_gb': memory_info.available / (1024**3),
+                'memory_total_gb': memory_info.total / (1024**3),
+                'disk_percent': disk_usage.percent,
+                'disk_free_gb': disk_usage.free / (1024**3),
+                'process_count': len(psutil.pids()),
+                'timestamp': datetime.utcnow()
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to get system resources: {e}")
+            return {}
+    
+    def log_system_health_check(self):
+        """Log a comprehensive system health check"""
+        resources = self.get_system_resources()
+        if resources:
+            self.logger.info(
+                f"System Health: CPU {resources['cpu_percent']:.1f}%, "
+                f"Memory {resources['memory_percent']:.1f}%, "
+                f"Disk {resources['disk_percent']:.1f}%",
+                extra=resources
+            )
+        
+        # Log performance summary
+        perf_summary = self.get_performance_summary()
+        self.logger.info(
+            f"Performance Summary: Avg Response Time {perf_summary['avg_response_time']:.3f}s, "
+            f"Total Requests {perf_summary['total_requests']}, "
+            f"Error Rate {perf_summary['error_rate']:.2%}",
+            extra=perf_summary
+        )
 
 
 # Global performance monitor instance

@@ -28,19 +28,21 @@ ns_favorites = api.namespace('favorites', description='Операции с из�
 # Define models
 tournament_model = api.model('Tournament', {
     'id': fields.Integer(required=True, description='ID турнира'),
-    'name': fields.String(required=True, description='Название турнира'),
-    'start_date': fields.Date(required=True, description='Дата начала турнира'),
-    'end_date': fields.Date(required=True, description='Дата окончания турнира'),
-    'location': fields.String(required=True, description='Место проведения'),
-    'category': fields.String(required=True, description='Категория турнира'),
-    'status': fields.String(required=True, description='Статус турнира'),
-    'description': fields.String(description='Описание турнира'),
-    'prize_fund': fields.String(description='Призовой фонд'),
-    'organizer': fields.String(description='Организатор'),
-    'fide_id': fields.String(description='FIDE ID турнира'),
-    'source_url': fields.String(description='URL источника'),
-    'average_rating': fields.Float(description='Средний рейтинг'),
-    'total_ratings': fields.Integer(description='Количество оценок')
+    'name': fields.String(required=True, description='Название турнира', min_length=1, max_length=200),
+    'start_date': fields.Date(required=True, description='Дата начала турнира (формат: YYYY-MM-DD)'),
+    'end_date': fields.Date(required=True, description='Дата окончания турнира (формат: YYYY-MM-DD)'),
+    'location': fields.String(required=True, description='Место проведения турнира', min_length=1, max_length=100),
+    'category': fields.String(required=True, description='Категория турнира', enum=['FIDE', 'National', 'Regional', 'Youth', 'Women', 'Senior', 'Online']),
+    'status': fields.String(required=True, description='Статус турнира', enum=['Scheduled', 'Ongoing', 'Completed', 'Cancelled']),
+    'description': fields.String(description='Описание турнира', max_length=2000),
+    'prize_fund': fields.String(description='Призовой фонд турнира', max_length=200),
+    'organizer': fields.String(description='Организатор турнира', max_length=200),
+    'fide_id': fields.String(description='FIDE ID турнира', max_length=20),
+    'source_url': fields.Url(description='URL источника информации о турнире'),
+    'created_at': fields.DateTime(description='Дата создания записи'),
+    'updated_at': fields.DateTime(description='Дата последнего обновления'),
+    'average_rating': fields.Float(description='Средняя оценка турнира'),
+    'total_ratings': fields.Integer(description='Количество оценок турнира')
 })
 
 user_model = api.model('User', {

@@ -32,6 +32,9 @@ class Tournament(db.Model):
         db.Index('idx_name_status', 'name', 'status'),
         db.Index('idx_organizer_status', 'organizer', 'status'),
         db.Index('idx_dates_range', 'start_date', 'end_date'),
+        db.Index('idx_location_start_date', 'location', 'start_date'),  # For location + date range queries
+        db.Index('idx_category_start_date', 'category', 'start_date'),  # For category + date range queries
+        db.Index('idx_status_updated_at', 'status', 'updated_at'),  # For status + updated queries
     )
 
     def __repr__(self):
@@ -185,3 +188,36 @@ class Tournament(db.Model):
             similar.extend(additional)
             
         return similar
+    
+    def is_upcoming(self):
+        """Check if the tournament is upcoming"""
+        from datetime import date
+        return self.start_date >= date.today()
+    
+    def is_ongoing(self):
+        """Check if the tournament is currently ongoing"""
+        from datetime import date
+        today = date.today()
+        return self.start_date <= today <= self.end_date
+    
+    def duration_days(self):
+        """Get tournament duration in days"""
+        return (self.end_date - self.start_date).days + 1
+    
+    @staticmethod
+    def get_upcoming_tournaments(limit=10):
+        """Get upcoming tournaments"""
+        from datetime import date
+        return Tournament.query.filter(
+            Tournament.start_date >= date.today()
+        ).order_by(Tournament.start_date).limit(limit).all()
+    
+    @staticmethod
+    def get_ongoing_tournaments():
+        """Get currently ongoing tournaments"""
+        from datetime import date
+        today = date.today()
+        return Tournament.query.filter(
+            Tournament.start_date <= today,
+            Tournament.end_date >= today
+        ).all()
