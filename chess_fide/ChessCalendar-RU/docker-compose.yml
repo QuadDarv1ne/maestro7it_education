@@ -54,6 +54,24 @@ services:
     networks:
       - chess-network
 
+  image-optimization-service:
+    build: ./services/image-optimization-service
+    ports:
+      - "5005:5005"
+    networks:
+      - chess-network
+
+  cdn-service:
+    build: ./services/cdn-service
+    ports:
+      - "5004:5004"
+    volumes:
+      - ./static:/app/static
+    networks:
+      - chess-network
+    environment:
+      - CDN_PROVIDER=cloudflare
+
   celery-worker:
     build: ./services/tournament-service
     command: celery -A app.celery worker --loglevel=info
