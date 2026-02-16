@@ -1,16 +1,56 @@
 version: '3.8'
 
 services:
+  # API Gateway - единая точка входа
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - REDIS_URL=redis://redis:6379/0
+      - TOURNAMENT_SERVICE_URL=http://tournament-service:5001
+      - USER_SERVICE_URL=http://user-service:5002
+      - PARSER_SERVICE_URL=http://parser-service:5003
+      - CDN_SERVICE_URL=http://cdn-service:5004
+      - IMAGE_SERVICE_URL=http://image-optimization-service:5005
+      - CALENDAR_SERVICE_URL=http://calendar-service:5006
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5007
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:5008
+      - FAVORITES_SERVICE_URL=http://favorites-service:5009
+    depends_on:
+      - redis
+      - tournament-service
+      - user-service
+    networks:
+      - chess-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   tournament-service:
     build: ./services/tournament-service
     ports:
       - "5001:5001"
     environment:
       - DATABASE_URL=sqlite:///tournaments.db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
       - ./data/tournaments:/app/instance
     networks:
       - chess-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   user-service:
     build: ./services/user-service
@@ -22,6 +62,12 @@ services:
       - ./data/users:/app/instance
     networks:
       - chess-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   parser-service:
     build: ./services/parser-service
@@ -29,6 +75,7 @@ services:
       - "5003:5003"
     networks:
       - chess-network
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
@@ -39,20 +86,26 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./static:/var/www/static
     depends_on:
-      - tournament-service
-      - user-service
-      - parser-service
+      - api-gateway
     networks:
       - chess-network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
-      - ./data/redis:/data
+      - redis-data:/data
     networks:
       - chess-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   favorites-service:
     build: ./services/favorites-service
@@ -122,3 +175,117 @@ volumes:
   tournaments-data:
   users-data:
   redis-data:
+
+  # Celery Worker для асинхронных задач
+  celery-worker:
+    build: .
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=sqlite:///chess_calendar.db
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  # Celery Beat для периодических задач
+  celery-beat:
+    build: .
+    command: celery -A app.celery_app beat --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=sqlite:///chess_calendar.db
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  # Flower для мониторинга Celery
+  celery-flower:
+    build: .
+    command: celery -A app.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  favorites-service:
+    build: ./services/favorites-service
+    ports:
+      - "5009:5009"
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  recommendation-service:
+    build: ./services/recommendation-service
+    ports:
+      - "5008:5008"
+    networks:
+      - chess-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  notification-service:
+    build: ./services/notification-service
+    ports:
+      - "5007:5007"
+    networks:
+      - chess-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  calendar-service:
+    build: ./services/calendar-service
+    ports:
+      - "5006:5006"
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  image-optimization-service:
+    build: ./services/image-optimization-service
+    ports:
+      - "5005:5005"
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  cdn-service:
+    build: ./services/cdn-service
+    ports:
+      - "5004:5004"
+    volumes:
+      - ./static:/app/static
+    networks:
+      - chess-network
+    environment:
+      - CDN_PROVIDER=cloudflare
+    restart: unless-stopped
+
+networks:
+  chess-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  tournaments-data:
+  users-data:

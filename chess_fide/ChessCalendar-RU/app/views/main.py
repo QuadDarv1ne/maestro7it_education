@@ -8,6 +8,7 @@ from app.utils.cfr_parser import CFRParser
 from app.utils.updater import updater
 from datetime import datetime, date
 import re
+from sqlalchemy.orm import joinedload
 
 # Import performance monitoring
 from app.utils.performance_monitor import track_performance
@@ -30,8 +31,10 @@ def index():
     sort_by = request.args.get('sort_by', 'start_date')
     search_query = request.args.get('search', '').strip()
     
-    # Базовый запрос
-    query = Tournament.query
+    # Базовый запрос с joinedload для оптимизации
+    query = Tournament.query.options(
+        joinedload(Tournament.ratings)
+    )
     
     # Применяем фильтры
     if category:
@@ -88,7 +91,6 @@ def index():
                              'page': page,
                              'per_page': per_page
                          })
-
 @main_bp.route('/tournament/<int:tournament_id>')
 @track_performance()
 def tournament_detail(tournament_id):

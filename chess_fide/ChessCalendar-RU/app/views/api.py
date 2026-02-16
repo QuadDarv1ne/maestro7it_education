@@ -9,6 +9,7 @@ from app.utils.cache import TournamentCache
 from app.utils.performance_monitor import track_performance
 from datetime import datetime, date
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -27,6 +28,7 @@ def check_csrf():
         stored_token = session.get('_csrf_token')
         if not stored_token or token != stored_token:
             return jsonify({'error': 'Invalid CSRF token'}), 403
+
 @api_bp.route('/tournaments', methods=['GET'])
 @track_performance()
 def get_tournaments():
@@ -42,8 +44,10 @@ def get_tournaments():
         search_query = request.args.get('search', '').strip()
         upcoming_only = request.args.get('upcoming_only', 'false').lower() == 'true'
         
-        # Base query
-        query = Tournament.query
+        # Base query with joinedload for ratings
+        query = Tournament.query.options(
+            joinedload(Tournament.ratings)
+        )
         
         # Apply filters
         if category:
@@ -96,8 +100,7 @@ def get_tournaments():
             },
             'filters_applied': {
                 'category': category,
-                'status': status,
-                'location': location,
+                'status': status,                'location': location,
                 'search': search_query,
                 'upcoming_only': upcoming_only
             }
