@@ -1,242 +1,126 @@
-# ChessCalendar-RU Design System
+# CSS Structure
 
-## Быстрый старт
+## Организация файлов
 
-### 1. Подключение дизайн-системы
+Все CSS файлы организованы по логическим папкам для удобства поддержки.
 
-```html
-<!-- В вашем шаблоне -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-```
-
-### 2. Использование компонентов
-
-```html
-{% import "components/tournament_cards.html" as cards %}
-
-<!-- Стандартная карточка -->
-{{ cards.tournament_card(tournament) }}
-
-<!-- Компактная карточка -->
-{{ cards.tournament_card_compact(tournament) }}
-
-<!-- Сетка карточек -->
-{{ cards.tournament_grid(tournaments) }}
-```
-
-### 3. Использование утилит
-
-```html
-<!-- Кнопки -->
-<button class="btn btn-primary">
-  <i class="bi bi-check"></i> Применить
-</button>
-
-<!-- Бейджи -->
-<span class="badge badge-success">Успех</span>
-
-<!-- Spacing -->
-<div class="p-4 mb-6">
-  Контент с отступами
-</div>
-
-<!-- Flexbox -->
-<div class="d-flex justify-between items-center gap-4">
-  <div>Элемент 1</div>
-  <div>Элемент 2</div>
-</div>
-```
-
-## Структура файлов
+### 📁 Структура папок
 
 ```
 static/css/
-├── design-system.css       # Основная дизайн-система
-└── README.md              # Эта документация
-
-templates/components/
-└── tournament_cards.html  # Компоненты карточек турниров
-
-docs/
-└── DESIGN_SYSTEM.md       # Полная документация
+├── components/          # Компоненты (карточки, кнопки, формы)
+│   ├── tournament-cards-enhanced.css
+│   └── tournament-cards-responsive.css
+│
+├── layout/             # Layout и структура страницы
+│   ├── layout-modern.css        # Хедер и футер
+│   └── content-spacing.css      # Отступы и spacing
+│
+├── pages/              # Стили для конкретных страниц
+│   ├── calendar.css
+│   └── favorites.css
+│
+├── themes/             # Темы и дизайн-системы
+│   ├── design-system.css
+│   └── dark-theme.css
+│
+└── utilities/          # Утилиты и вспомогательные стили
+    ├── animations-enhanced.css
+    ├── mobile.css
+    ├── mobile-enhanced.css
+    ├── responsive-enhanced.css
+    ├── spacing-utilities.css
+    ├── print-optimization.css
+    └── visual-enhancements.css
 ```
 
-## Основные компоненты
+## 📝 Описание папок
 
-### Карточки турниров
+### components/
+Переиспользуемые компоненты интерфейса:
+- Карточки турниров
+- Кнопки
+- Формы
+- Модальные окна
 
-- `tournament_card()` - Стандартная карточка
-- `tournament_card_compact()` - Компактная карточка
-- `tournament_card_featured()` - Featured карточка с изображением
-- `tournament_list_item()` - Элемент списка
-- `tournament_grid()` - Сетка карточек
-- `tournament_list()` - Список карточек
+### layout/
+Структура и расположение элементов:
+- Хедер и футер
+- Сетка и контейнеры
+- Отступы между секциями
 
-### Кнопки
+### pages/
+Стили для конкретных страниц:
+- Календарь
+- Избранное
+- Профиль
+- И т.д.
 
-- `.btn-primary` - Основная кнопка
-- `.btn-secondary` - Вторичная кнопка
-- `.btn-outline` - Контурная кнопка
-- `.btn-ghost` - Призрачная кнопка
-- `.btn-sm`, `.btn-lg` - Размеры
-- `.btn-icon` - Кнопка-иконка
+### themes/
+Темы оформления и дизайн-системы:
+- Цветовые схемы
+- Типографика
+- Темная/светлая тема
 
-### Бейджи
+### utilities/
+Вспомогательные утилиты:
+- Анимации
+- Адаптивность
+- Мобильные стили
+- Печать
+- Визуальные эффекты
 
-- `.badge-primary` - Основной
-- `.badge-success` - Успех
-- `.badge-warning` - Предупреждение
-- `.badge-danger` - Ошибка
-- `.badge-info` - Информация
+## 🎯 Использование
 
-## CSS Переменные
-
-### Цвета
-
-```css
---color-primary: #8B4513;
---color-secondary: #D2691E;
---color-accent: #FFD700;
---color-success: #28a745;
---color-warning: #ffc107;
---color-danger: #dc3545;
---color-info: #17a2b8;
-```
-
-### Spacing
-
-```css
---spacing-1: 0.25rem;  /* 4px */
---spacing-2: 0.5rem;   /* 8px */
---spacing-3: 0.75rem;  /* 12px */
---spacing-4: 1rem;     /* 16px */
---spacing-5: 1.25rem;  /* 20px */
---spacing-6: 1.5rem;   /* 24px */
-```
-
-### Тени
-
-```css
---shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
---shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
---shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12);
---shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.15);
-```
-
-## Примеры
-
-### Страница со списком турниров
-
+### В base_modern.html:
 ```html
-{% extends "base_modern.html" %}
-{% import "components/tournament_cards.html" as cards %}
+<!-- Компоненты -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/tournament-cards-enhanced.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/tournament-cards-responsive.css') }}">
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-{% endblock %}
-
-{% block content %}
-<div class="container py-6">
-  <h1 class="display-5 font-bold mb-6">
-    <i class="bi bi-trophy"></i> Турниры
-  </h1>
-  
-  <div class="row g-4">
-    {% for tournament in tournaments %}
-    <div class="col-12 col-md-6 col-lg-4">
-      {{ cards.tournament_card(tournament) }}
-    </div>
-    {% endfor %}
-  </div>
-</div>
-{% endblock %}
+<!-- Layout -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/layout/layout-modern.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/layout/content-spacing.css') }}">
 ```
 
-### Кастомная карточка
-
+### В других шаблонах:
 ```html
-<div class="tournament-card">
-  <div class="tournament-card-header">
-    <div>
-      <h3 class="tournament-card-title">Название турнира</h3>
-      <p class="tournament-card-subtitle">Организатор</p>
-    </div>
-    <span class="tournament-card-badge status-scheduled">
-      Запланирован
-    </span>
-  </div>
-  
-  <div class="tournament-card-body">
-    <div class="tournament-card-meta">
-      <div class="tournament-card-meta-item">
-        <i class="bi bi-geo-alt"></i>
-        <span>Москва</span>
-      </div>
-      <div class="tournament-card-meta-item">
-        <i class="bi bi-calendar"></i>
-        <span>15.03.2026 - 25.03.2026</span>
-      </div>
-    </div>
-    
-    <p class="tournament-card-description">
-      Описание турнира...
-    </p>
-  </div>
-  
-  <div class="tournament-card-footer">
-    <div class="tournament-card-tags">
-      <span class="tournament-card-tag">Чемпионат</span>
-    </div>
-    <div class="tournament-card-actions">
-      <button class="btn btn-primary btn-sm">
-        <i class="bi bi-eye"></i> Подробнее
-      </button>
-    </div>
-  </div>
-</div>
+<!-- Темы -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/themes/design-system.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/themes/dark-theme.css') }}">
+
+<!-- Утилиты -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/utilities/mobile-enhanced.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/utilities/responsive-enhanced.css') }}">
 ```
 
-## Темная тема
+## 🔍 Поиск файлов
 
-Дизайн-система автоматически поддерживает темную тему:
+Если не знаете, где находится нужный файл:
 
-```javascript
-// Переключение темы
-document.documentElement.setAttribute('data-bs-theme', 'dark');
+```bash
+# Поиск по имени
+find static/css -name "*.css" | grep "название"
 
-// Или
-document.documentElement.setAttribute('data-bs-theme', 'light');
+# Поиск по содержимому
+grep -r "класс-или-селектор" static/css/
 ```
 
-## Адаптивность
+## ✨ Преимущества структуры
 
-Все компоненты адаптивны по умолчанию:
+1. **Легко найти** - файлы сгруппированы по назначению
+2. **Легко поддерживать** - изменения локализованы
+3. **Легко масштабировать** - добавление новых файлов интуитивно
+4. **Избегаем конфликтов** - четкое разделение ответственности
 
-```html
-<!-- Адаптивная сетка -->
-<div class="row g-4">
-  <div class="col-12 col-md-6 col-lg-4">
-    <!-- 1 колонка на мобильных, 2 на планшетах, 3 на десктопе -->
-  </div>
-</div>
-```
+## 📚 Дополнительно
 
-## Демонстрация
+- Все файлы используют современный CSS3
+- Поддержка всех современных браузеров
+- Адаптивный дизайн (mobile-first)
+- Темная тема
+- Accessibility (WCAG 2.1)
 
-Посмотрите полную демонстрацию всех компонентов:
+---
 
-```
-/design-system
-```
-
-## Документация
-
-Полная документация доступна в:
-
-```
-docs/DESIGN_SYSTEM.md
-```
-
-## Поддержка
-
-По вопросам дизайн-системы обращайтесь к команде разработки.
+**Обновлено:** 16 февраля 2026

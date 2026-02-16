@@ -25,12 +25,12 @@ def tournaments():
 @app.route('/test-responsive-cards')
 def test_responsive_cards():
     """Тестовая страница для проверки адаптивных карточек"""
-    return render_template('test_responsive_cards.html')
+    return render_template('test/test_responsive_cards.html')
 
 @app.route('/test-layout')
 def test_layout():
     """Тестовая страница для проверки layout (хедер, футер, spacing)"""
-    return render_template('test_layout.html')
+    return render_template('test/test_layout.html')
 
 @app.route('/about')
 def about():
