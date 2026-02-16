@@ -1,0 +1,871 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Календарь турниров - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Заголовок страницы -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-calendar"></i> Календарь турниров
+            </h1>
+            <p class="lead text-muted">
+                Интерактивный календарь шахматных турниров в России
+            </p>
+        </div>
+    </div>
+    
+    <!-- Фильтры и элементы управления -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Панель фильтров -->
+                        <div class="col-lg-9">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Год</label>
+                                    <select class="form-select" id="yearFilter">
+                                        <option value="2026" selected>2026</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2024">2024</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Категория</label>
+                                    <select class="form-select" id="categoryFilter">
+                                        <option value="">Все категории</option>
+                                        <option value="National Championship">Чемпионаты</option>
+                                        <option value="Open Tournament">Открытые турниры</option>
+                                        <option value="Rapid Chess">Быстрые шахматы</option>
+                                        <option value="Blitz">Блиц</option>
+                                        <option value="Youth Championship">Юношеские</option>
+                                        <option value="Women Championship">Женские</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Город</label>
+                                    <select class="form-select" id="locationFilter">
+                                        <option value="">Все города</option>
+                                        <option value="Москва">Москва</option>
+                                        <option value="Санкт-Петербург">Санкт-Петербург</option>
+                                        <option value="Сочи">Сочи</option>
+                                        <option value="Екатеринбург">Екатеринбург</option>
+                                        <option value="Новосибирск">Новосибирск</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Кнопки управления -->
+                        <div class="col-lg-3">
+                            <div class="d-flex flex-column h-100 justify-content-end">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary" id="viewMonth">
+                                        <i class="bi bi-calendar-month"></i> Месяц
+                                    </button>
+                                    <button type="button" class="btn btn-primary active" id="viewList">
+                                        <i class="bi bi-list"></i> Список
+                                    </button>
+                                </div>
+                                <button class="btn btn-success mt-2" id="exportCalendar">
+                                    <i class="bi bi-download"></i> Экспорт
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Календарь -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" id="currentPeriod">Февраль 2026</h5>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-light" id="prevPeriod">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" id="nextPeriod">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" id="todayBtn">
+                                Сегодня
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Вид календаря (месяц) -->
+                    <div id="calendarView" class="d-none">
+                        <div class="calendar-grid">
+                            <!-- Заголовки дней недели -->
+                            <div class="calendar-header">
+                                <div class="calendar-day-header">Пн</div>
+                                <div class="calendar-day-header">Вт</div>
+                                <div class="calendar-day-header">Ср</div>
+                                <div class="calendar-day-header">Чт</div>
+                                <div class="calendar-day-header">Пт</div>
+                                <div class="calendar-day-header">Сб</div>
+                                <div class="calendar-day-header">Вс</div>
+                            </div>
+                            
+                            <!-- Дни месяца -->
+                            <div class="calendar-days" id="calendarDays">
+                                <!-- Дни будут сгенерированы через JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Вид списка -->
+                    <div id="listView">
+                        <div id="tournamentsList">
+                            <!-- Турниры будут загружены сюда -->
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-3">Загрузка турниров...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно турнира -->
+<div class="modal fade" id="tournamentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Детали турнира</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Содержимое будет загружено через JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-primary" id="addToFavorites">
+                    <i class="bi bi-heart"></i> В избранное
+                </button>
+                <button type="button" class="btn btn-success" id="exportToCalendar">
+                    <i class="bi bi-calendar-plus"></i> Добавить в календарь
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.calendar-grid {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 10px;
+    min-height: 500px;
+}
+
+.calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 600;
+    padding: 10px 0;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.calendar-day-header {
+    padding: 10px;
+    color: var(--text-light);
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 2px;
+    min-height: 400px;
+}
+
+.calendar-day {
+    border: 1px solid #dee2e6;
+    min-height: 80px;
+    padding: 5px;
+    position: relative;
+    background-color: white;
+    transition: all 0.2s ease;
+}
+
+.calendar-day:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.calendar-day.other-month {
+    background-color: #f8f9fa;
+    color: #adb5bd;
+}
+
+.calendar-day.today {
+    background-color: #fff3cd;
+    border: 2px solid #ffc107;
+}
+
+.calendar-day.has-tournaments {
+    background-color: #e3f2fd;
+    border: 2px solid #2196f3;
+}
+
+.day-number {
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.tournament-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    margin: 1px;
+    display: inline-block;
+}
+
+.tournament-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+    display: none;
+}
+
+.calendar-day:hover .tournament-tooltip {
+    display: block;
+}
+
+.tournament-item {
+    border-left: 3px solid var(--primary-color);
+    padding: 12px;
+    margin-bottom: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.tournament-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.tournament-date {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.tournament-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.tournament-location {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.tournament-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.tournament-badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.month-view-toggle .btn {
+    border-radius: 0;
+}
+
+.month-view-toggle .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+.month-view-toggle .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+@media (max-width: 768px) {
+    .calendar-days {
+        min-height: 300px;
+    }
+    
+    .calendar-day {
+        min-height: 60px;
+        padding: 3px;
+    }
+    
+    .day-number {
+        font-size: 0.8rem;
+    }
+    
+    .tournament-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Глобальные переменные
+let currentView = 'list'; // 'month' или 'list'
+let currentDate = new Date(2026, 1, 1); // Февраль 2026
+let tournamentsData = [];
+let filteredTournaments = [];
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCalendar();
+    loadTournaments();
+    setupEventListeners();
+});
+
+// Инициализация календаря
+function initializeCalendar() {
+    updatePeriodDisplay();
+    renderCalendar();
+}
+
+// Загрузка турниров
+async function loadTournaments() {
+    try {
+        // В реальном приложении здесь будет fetch к API
+        tournamentsData = await getCalendarTournaments();
+        filteredTournaments = [...tournamentsData];
+        renderTournamentsList();
+        updateCalendarDays();
+    } catch (error) {
+        console.error('Ошибка загрузки турниров:', error);
+    }
+}
+
+// Получение данных турниров для календаря
+async function getCalendarTournaments() {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve([
+                {
+                    id: 1,
+                    name: "Чемпионат России по шахматам 2026",
+                    start_date: "2026-03-15",
+                    end_date: "2026-03-25",
+                    location: "Москва",
+                    category: "National Championship",
+                    status: "Scheduled",
+                    description: "Ежегодный чемпионат России по классическим шахматам",
+                    prize_fund: "2 000 000 руб."
+                },
+                {
+                    id: 2,
+                    name: "Кубок Москвы по быстрым шахматам",
+                    start_date: "2026-02-20",
+                    end_date: "2026-02-25",
+                    location: "Москва",
+                    category: "Rapid Chess",
+                    status: "Ongoing",
+                    description: "Городской турнир по быстрым шахматам",
+                    prize_fund: "500 000 руб."
+                },
+                {
+                    id: 3,
+                    name: "Блиц-турнир в Новосибирске",
+                    start_date: "2026-02-10",
+                    end_date: "2026-02-12",
+                    location: "Новосибирск",
+                    category: "Blitz",
+                    status: "Completed",
+                    description: "Городской блиц-турнир",
+                    prize_fund: "200 000 руб."
+                },
+                {
+                    id: 4,
+                    name: "Открытый турнир памяти Александра Алехина",
+                    start_date: "2026-04-10",
+                    end_date: "2026-04-20",
+                    location: "Санкт-Петербург",
+                    category: "Open Tournament",
+                    status: "Scheduled",
+                    description: "Международный открытый турнир по классическим шахматам",
+                    prize_fund: "1 500 000 руб."
+                }
+            ]);
+        }, 800);
+    });
+}
+
+// Настройка обработчиков событий
+function setupEventListeners() {
+    // Фильтры
+    document.getElementById('yearFilter').addEventListener('change', applyFilters);
+    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+    document.getElementById('locationFilter').addEventListener('change', applyFilters);
+    
+    // Переключение видов
+    document.getElementById('viewMonth').addEventListener('click', () => switchView('month'));
+    document.getElementById('viewList').addEventListener('click', () => switchView('list'));
+    
+    // Навигация по календарю
+    document.getElementById('prevPeriod').addEventListener('click', prevPeriod);
+    document.getElementById('nextPeriod').addEventListener('click', nextPeriod);
+    document.getElementById('todayBtn').addEventListener('click', goToToday);
+    
+    // Экспорт
+    document.getElementById('exportCalendar').addEventListener('click', exportCalendar);
+    
+    // Модальное окно
+    document.getElementById('addToFavorites').addEventListener('click', addToFavorites);
+    document.getElementById('exportToCalendar').addEventListener('click', exportToCalendar);
+}
+
+// Применение фильтров
+function applyFilters() {
+    const year = document.getElementById('yearFilter').value;
+    const category = document.getElementById('categoryFilter').value;
+    const location = document.getElementById('locationFilter').value;
+    
+    filteredTournaments = tournamentsData.filter(tournament => {
+        const tournamentYear = new Date(tournament.start_date).getFullYear();
+        const matchesYear = tournamentYear == year;
+        const matchesCategory = !category || tournament.category === category;
+        const matchesLocation = !location || tournament.location === location;
+        
+        return matchesYear && matchesCategory && matchesLocation;
+    });
+    
+    if (currentView === 'list') {
+        renderTournamentsList();
+    } else {
+        updateCalendarDays();
+    }
+}
+
+// Переключение вида
+function switchView(view) {
+    currentView = view;
+    
+    // Обновление кнопок
+    document.getElementById('viewMonth').classList.toggle('active', view === 'month');
+    document.getElementById('viewList').classList.toggle('active', view === 'list');
+    
+    // Переключение видимости
+    document.getElementById('calendarView').classList.toggle('d-none', view !== 'month');
+    document.getElementById('listView').classList.toggle('d-none', view !== 'list');
+    
+    if (view === 'month') {
+        renderCalendar();
+        updateCalendarDays();
+    } else {
+        renderTournamentsList();
+    }
+}
+
+// Рендеринг календаря
+function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay() + 1); // Начинаем с понедельника
+    
+    const daysContainer = document.getElementById('calendarDays');
+    daysContainer.innerHTML = '';
+    
+    const totalDays = 42; // 6 недель
+    for (let i = 0; i < totalDays; i++) {
+        const currentDay = new Date(startDate);
+        currentDay.setDate(startDate.getDate() + i);
+        
+        const dayElement = createDayElement(currentDay);
+        daysContainer.appendChild(dayElement);
+    }
+}
+
+// Создание элемента дня
+function createDayElement(date) {
+    const dayElement = document.createElement('div');
+    dayElement.className = 'calendar-day';
+    
+    const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+    const isToday = date.toDateString() === new Date().toDateString();
+    
+    if (!isCurrentMonth) {
+        dayElement.classList.add('other-month');
+    }
+    
+    if (isToday) {
+        dayElement.classList.add('today');
+    }
+    
+    // Номер дня
+    const dayNumber = document.createElement('div');
+    dayNumber.className = 'day-number';
+    dayNumber.textContent = date.getDate();
+    dayElement.appendChild(dayNumber);
+    
+    // Проверка наличия турниров
+    const dayTournaments = getTournamentsForDate(date);
+    if (dayTournaments.length > 0) {
+        dayElement.classList.add('has-tournaments');
+        
+        // Индикаторы турниров
+        const indicators = document.createElement('div');
+        dayTournaments.slice(0, 3).forEach(tournament => {
+            const indicator = document.createElement('div');
+            indicator.className = 'tournament-indicator';
+            indicator.style.backgroundColor = getCategoryColor(tournament.category);
+            indicators.appendChild(indicator);
+        });
+        dayElement.appendChild(indicators);
+        
+        // Тултип
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tournament-tooltip';
+        tooltip.textContent = `${dayTournaments.length} турнир(ов)`;
+        dayElement.appendChild(tooltip);
+        
+        // Обработчик клика
+        dayElement.addEventListener('click', () => showDayTournaments(date));
+    }
+    
+    return dayElement;
+}
+
+// Получение турниров для конкретной даты
+function getTournamentsForDate(date) {
+    return filteredTournaments.filter(tournament => {
+        const startDate = new Date(tournament.start_date);
+        const endDate = new Date(tournament.end_date);
+        return date >= startDate && date <= endDate;
+    });
+}
+
+// Показ турниров дня
+function showDayTournaments(date) {
+    const dayTournaments = getTournamentsForDate(date);
+    if (dayTournaments.length === 0) return;
+    
+    // Переключаемся в список и фильтруем по дате
+    switchView('list');
+    
+    // Фильтрация по дате
+    const dateStr = date.toISOString().split('T')[0];
+    filteredTournaments = tournamentsData.filter(tournament => {
+        return tournament.start_date <= dateStr && tournament.end_date >= dateStr;
+    });
+    
+    renderTournamentsList();
+}
+
+// Обновление дней календаря
+function updateCalendarDays() {
+    const dayElements = document.querySelectorAll('.calendar-day:not(.other-month)');
+    dayElements.forEach(dayElement => {
+        const dayNumber = parseInt(dayElement.querySelector('.day-number').textContent);
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
+        const dayTournaments = getTournamentsForDate(date);
+        
+        dayElement.classList.toggle('has-tournaments', dayTournaments.length > 0);
+        
+        // Обновление индикаторов
+        const existingIndicators = dayElement.querySelector('div:not(.day-number):not(.tournament-tooltip)');
+        if (existingIndicators) {
+            existingIndicators.remove();
+        }
+        
+        if (dayTournaments.length > 0) {
+            const indicators = document.createElement('div');
+            dayTournaments.slice(0, 3).forEach(tournament => {
+                const indicator = document.createElement('div');
+                indicator.className = 'tournament-indicator';
+                indicator.style.backgroundColor = getCategoryColor(tournament.category);
+                indicators.appendChild(indicator);
+            });
+            dayElement.appendChild(indicators);
+        }
+    });
+}
+
+// Получение цвета категории
+function getCategoryColor(category) {
+    const colors = {
+        'National Championship': '#dc3545',
+        'Open Tournament': '#28a745',
+        'Rapid Chess': '#ffc107',
+        'Blitz': '#17a2b8',
+        'Youth Championship': '#6f42c1',
+        'Women Championship': '#e83e8c'
+    };
+    return colors[category] || '#6c757d';
+}
+
+// Рендеринг списка турниров
+function renderTournamentsList() {
+    const container = document.getElementById('tournamentsList');
+    
+    if (filteredTournaments.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x display-4 text-muted"></i>
+                <h4 class="mt-3">Турниры не найдены</h4>
+                <p class="text-muted">Попробуйте изменить параметры фильтрации</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Группировка по датам
+    const groupedTournaments = groupTournamentsByDate(filteredTournaments);
+    
+    let html = '';
+    for (const [date, tournaments] of Object.entries(groupedTournaments)) {
+        html += `
+            <div class="mb-4">
+                <h5 class="tournament-date border-bottom pb-2 mb-3">
+                    <i class="bi bi-calendar-event"></i> ${formatDateHeader(date)}
+                </h5>
+                ${tournaments.map(tournament => `
+                    <div class="tournament-item">
+                        <div class="tournament-title" onclick="showTournamentDetails(${tournament.id})">
+                            ${tournament.name}
+                        </div>
+                        <div class="tournament-location">
+                            <i class="bi bi-geo-alt"></i> ${tournament.location}
+                        </div>
+                        <div class="tournament-meta">
+                            <span class="tournament-badge" style="background-color: ${getCategoryColor(tournament.category)}">
+                                ${tournament.category}
+                            </span>
+                            <span><i class="bi bi-clock"></i> ${formatTimeRange(tournament.start_date, tournament.end_date)}</span>
+                            ${tournament.prize_fund ? `<span><i class="bi bi-currency-dollar"></i> ${tournament.prize_fund}</span>` : ''}
+                            <span class="badge bg-${getStatusClass(tournament.status)}">
+                                ${getStatusText(tournament.status)}
+                            </span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Группировка турниров по датам
+function groupTournamentsByDate(tournaments) {
+    const grouped = {};
+    tournaments.forEach(tournament => {
+        const startDate = new Date(tournament.start_date);
+        const dateKey = startDate.toISOString().split('T')[0];
+        
+        if (!grouped[dateKey]) {
+            grouped[dateKey] = [];
+        }
+        grouped[dateKey].push(tournament);
+    });
+    
+    // Сортировка по датам
+    return Object.keys(grouped).sort().reduce((obj, key) => {
+        obj[key] = grouped[key];
+        return obj;
+    }, {});
+}
+
+// Форматирование заголовка даты
+function formatDateHeader(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+}
+
+// Форматирование временного диапазона
+function formatTimeRange(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (start.toDateString() === end.toDateString()) {
+        return start.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'short'
+        });
+    } else {
+        return `${start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`;
+    }
+}
+
+// Навигация по календарю
+function prevPeriod() {
+    if (currentView === 'month') {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        updatePeriodDisplay();
+        renderCalendar();
+        updateCalendarDays();
+    }
+}
+
+function nextPeriod() {
+    if (currentView === 'month') {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        updatePeriodDisplay();
+        renderCalendar();
+        updateCalendarDays();
+    }
+}
+
+function goToToday() {
+    currentDate = new Date();
+    updatePeriodDisplay();
+    if (currentView === 'month') {
+        renderCalendar();
+        updateCalendarDays();
+    }
+}
+
+// Обновление отображения периода
+function updatePeriodDisplay() {
+    const periodElement = document.getElementById('currentPeriod');
+    if (currentView === 'month') {
+        periodElement.textContent = currentDate.toLocaleDateString('ru-RU', {
+            month: 'long',
+            year: 'numeric'
+        });
+    } else {
+        periodElement.textContent = 'Список турниров';
+    }
+}
+
+// Экспорт календаря
+function exportCalendar() {
+    alert('Функция экспорта календаря будет реализована в следующем обновлении');
+}
+
+// Показ деталей турнира
+function showTournamentDetails(tournamentId) {
+    const tournament = tournamentsData.find(t => t.id === tournamentId);
+    if (!tournament) return;
+    
+    const modal = new bootstrap.Modal(document.getElementById('tournamentDetailModal'));
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    
+    modalTitle.textContent = tournament.name;
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="bi bi-geo-alt"></i> Место проведения</h6>
+                <p>${tournament.location}</p>
+                
+                <h6><i class="bi bi-calendar"></i> Даты</h6>
+                <p>${formatDateRange(tournament.start_date, tournament.end_date)}</p>
+                
+                <h6><i class="bi bi-tag"></i> Категория</h6>
+                <p><span class="badge" style="background-color: ${getCategoryColor(tournament.category)}">${tournament.category}</span></p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="bi bi-info-circle"></i> Описание</h6>
+                <p>${tournament.description}</p>
+                
+                ${tournament.prize_fund ? `
+                <h6><i class="bi bi-currency-dollar"></i> Призовой фонд</h6>
+                <p>${tournament.prize_fund}</p>
+                ` : ''}
+                
+                <h6><i class="bi bi-flag"></i> Статус</h6>
+                <p><span class="badge bg-${getStatusClass(tournament.status)}">${getStatusText(tournament.status)}</span></p>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+}
+
+// Форматирование диапазона дат
+function formatDateRange(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (start.toDateString() === end.toDateString()) {
+        return start.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    } else {
+        return `${start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} - ${end.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    }
+}
+
+// Получение класса статуса
+function getStatusClass(status) {
+    const statusMap = {
+        'Scheduled': 'success',
+        'Ongoing': 'primary',
+        'Completed': 'secondary'
+    };
+    return statusMap[status] || 'secondary';
+}
+
+// Получение текста статуса
+function getStatusText(status) {
+    const statusMap = {
+        'Scheduled': 'Запланирован',
+        'Ongoing': 'Идет сейчас',
+        'Completed': 'Завершен'
+    };
+    return statusMap[status] || status;
+}
+
+// Функции для модального окна
+function addToFavorites() {
+    alert('Турнир добавлен в избранное!');
+}
+
+function exportToCalendar() {
+    alert('Турнир добавлен в календарь!');
+}
+</script>
+{% endblock %}

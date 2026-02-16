@@ -1,0 +1,620 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Профиль пользователя - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Заголовок профиля -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="position-relative d-inline-block">
+                        <div class="profile-avatar bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 120px; height: 120px; font-size: 3rem; color: white;">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary position-absolute bottom-0 end-0 rounded-circle" style="width: 40px; height: 40px;">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                    </div>
+                    <h2 class="mt-3 mb-1">Иван Петров</h2>
+                    <p class="text-muted">Шахматист 3 разряда</p>
+                    <div class="d-flex justify-content-center gap-3 mt-2">
+                        <span class="badge bg-success">Активен</span>
+                        <span class="badge bg-info">Участник с 2025</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статистика и навигация -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+                                <i class="bi bi-person-circle"></i> Обзор
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tournaments-tab" data-bs-toggle="tab" data-bs-target="#tournaments" type="button">
+                                <i class="bi bi-trophy"></i> Турниры
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites" type="button">
+                                <i class="bi bi-heart"></i> Избранное
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button">
+                                <i class="bi bi-gear"></i> Настройки
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Содержимое вкладок -->
+    <div class="tab-content" id="profileTabContent">
+        <!-- Обзор -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row">
+                <!-- Статистика -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Статистика</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span>Участие в турнирах</span>
+                                <span class="badge bg-primary">24</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span>Победы</span>
+                                <span class="badge bg-success">8</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span>Призовые места</span>
+                                <span class="badge bg-warning">15</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Рейтинг ФИДЕ</span>
+                                <span class="badge bg-info">1850</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ачивки -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-award"></i> Достижения</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="achievement-badge bg-warning text-dark p-2 rounded" title="Первый турнир">
+                                    <i class="bi bi-trophy"></i>
+                                </div>
+                                <div class="achievement-badge bg-success text-white p-2 rounded" title="5 побед">
+                                    <i class="bi bi-star"></i>
+                                </div>
+                                <div class="achievement-badge bg-primary text-white p-2 rounded" title="Регулярный участник">
+                                    <i class="bi bi-calendar-check"></i>
+                                </div>
+                                <div class="achievement-badge bg-info text-white p-2 rounded" title="Командный игрок">
+                                    <i class="bi bi-people"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Последние активности -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-activity"></i> Последние активности</h5>
+                            <button class="btn btn-sm btn-outline-primary">Все активности</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="activity-timeline">
+                                <div class="activity-item mb-3">
+                                    <div class="d-flex">
+                                        <div class="activity-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <i class="bi bi-calendar-check"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Зарегистрирован на турнир</h6>
+                                            <p class="mb-1">Открытый турнир памяти А. Алехина</p>
+                                            <small class="text-muted">2 часа назад</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="activity-item mb-3">
+                                    <div class="d-flex">
+                                        <div class="activity-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <i class="bi bi-heart"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Добавлен в избранное</h6>
+                                            <p class="mb-1">Чемпионат России по шахматам</p>
+                                            <small class="text-muted">1 день назад</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="activity-item mb-3">
+                                    <div class="d-flex">
+                                        <div class="activity-icon bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <i class="bi bi-trophy"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Получено достижение</h6>
+                                            <p class="mb-1">Регулярный участник</p>
+                                            <small class="text-muted">3 дня назад</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Турниры -->
+        <div class="tab-pane fade" id="tournaments" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-list-check"></i> Мои турниры</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="tournament-card border-start border-4 border-primary p-3">
+                                        <h6>Предстоящие турниры</h6>
+                                        <div class="tournament-item bg-light p-2 rounded mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Открытый турнир Алехина</span>
+                                                <span class="badge bg-warning">Скоро</span>
+                                            </div>
+                                            <small class="text-muted">10-20 апреля 2026</small>
+                                        </div>
+                                        <div class="tournament-item bg-light p-2 rounded">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Кубок Москвы</span>
+                                                <span class="badge bg-warning">Скоро</span>
+                                            </div>
+                                            <small class="text-muted">5-15 мая 2026</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <div class="tournament-card border-start border-4 border-success p-3">
+                                        <h6>Прошедшие турниры</h6>
+                                        <div class="tournament-item bg-light p-2 rounded mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Блиц-турнир Новосибирск</span>
+                                                <span class="badge bg-success">3 место</span>
+                                            </div>
+                                            <small class="text-muted">10-12 февраля 2026</small>
+                                        </div>
+                                        <div class="tournament-item bg-light p-2 rounded">
+                                            <div class="d-flex justify-content-between">
+                                                <span>Рапид турнир ЦСК</span>
+                                                <span class="badge bg-primary">Участие</span>
+                                            </div>
+                                            <small class="text-muted">20-25 января 2026</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Избранное -->
+        <div class="tab-pane fade" id="favorites" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-heart-fill"></i> Избранные турниры</h5>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-list"></i> Список
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-calendar"></i> Календарь
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="favoritesContainer">
+                                <!-- Избранные турниры будут загружены сюда -->
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100 tournament-favorite">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title">Чемпионат России по шахматам 2026</h6>
+                                                <button class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-heart-fill"></i>
+                                                </button>
+                                            </div>
+                                            <p class="card-text text-muted">Ежегодный чемпионат России по классическим шахматам</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="badge bg-primary">Москва</span>
+                                                <small class="text-muted">15-25 марта</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100 tournament-favorite">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title">Международный турнир в Сочи</h6>
+                                                <button class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-heart-fill"></i>
+                                                </button>
+                                            </div>
+                                            <p class="card-text text-muted">Международный турнир с участием гроссмейстеров</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="badge bg-success">Сочи</span>
+                                                <small class="text-muted">1-10 мая</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Настройки -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-sliders"></i> Настройки профиля</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="profileSettingsForm">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Имя</label>
+                                        <input type="text" class="form-control" value="Иван">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Фамилия</label>
+                                        <input type="text" class="form-control" value="Петров">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="ivan.petrov@example.com">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Разряд</label>
+                                    <select class="form-select">
+                                        <option>Без разряда</option>
+                                        <option>3 разряд</option>
+                                        <option>2 разряд</option>
+                                        <option>1 разряд</option>
+                                        <option>Кандидат в мастера</option>
+                                        <option>Мастер спорта</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Рейтинг ФИДЕ</label>
+                                    <input type="number" class="form-control" value="1850">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">О себе</label>
+                                    <textarea class="form-control" rows="3">Шахматист-любитель, участвую в турнирах по всей России. Люблю классические шахматы и быстрые партии.</textarea>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Сохранить изменения
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-bell"></i> Уведомления</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                                <label class="form-check-label" for="emailNotifications">
+                                    Email уведомления
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="pushNotifications" checked>
+                                <label class="form-check-label" for="pushNotifications">
+                                    Push уведомления
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="tournamentReminders" checked>
+                                <label class="form-check-label" for="tournamentReminders">
+                                    Напоминания о турнирах
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="newsletter" checked>
+                                <label class="form-check-label" for="newsletter">
+                                    Новости и обновления
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Безопасность</h5>
+                        </div>
+                        <div class="card-body">
+                            <button class="btn btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-key"></i> Изменить пароль
+                            </button>
+                            <button class="btn btn-outline-secondary w-100 mb-2">
+                                <i class="bi bi-phone"></i> Двухфакторная аутентификация
+                            </button>
+                            <button class="btn btn-outline-danger w-100">
+                                <i class="bi bi-trash"></i> Удалить аккаунт
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-avatar {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.achievement-badge {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.achievement-badge:hover {
+    transform: scale(1.1);
+}
+
+.activity-timeline .activity-item {
+    position: relative;
+    padding-left: 50px;
+}
+
+.activity-timeline .activity-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 19px;
+    top: 40px;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.tournament-favorite {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tournament-favorite:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.nav-tabs .nav-link {
+    font-weight: 500;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+}
+
+.nav-tabs .nav-link.active {
+    border-bottom-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.tournament-card {
+    border-radius: 8px;
+}
+
+.tournament-item {
+    transition: background-color 0.2s ease;
+}
+
+.tournament-item:hover {
+    background-color: #e9ecef !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    initializeProfile();
+    setupEventListeners();
+});
+
+// Инициализация профиля
+function initializeProfile() {
+    // Загрузка данных пользователя
+    loadUserProfile();
+    
+    // Загрузка избранных турниров
+    loadFavoriteTournaments();
+    
+    // Инициализация анимаций
+    initializeAnimations();
+}
+
+// Загрузка данных пользователя
+function loadUserProfile() {
+    // В реальном приложении здесь будет fetch к API
+    console.log('Загрузка данных профиля...');
+}
+
+// Загрузка избранных турниров
+function loadFavoriteTournaments() {
+    // В реальном приложении здесь будет fetch к API
+    console.log('Загрузка избранных турниров...');
+}
+
+// Настройка обработчиков событий
+function setupEventListeners() {
+    // Форма настроек
+    const settingsForm = document.getElementById('profileSettingsForm');
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveProfileSettings();
+        });
+    }
+    
+    // Переключатели уведомлений
+    const notificationToggles = document.querySelectorAll('input[type="checkbox"][id$="Notifications"]');
+    notificationToggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            updateNotificationSettings(this.id, this.checked);
+        });
+    });
+    
+    // Кнопки действий
+    document.querySelectorAll('.btn-outline-danger').forEach(button => {
+        if (button.querySelector('.bi-heart-fill')) {
+            button.addEventListener('click', function() {
+                removeFromFavorites(this);
+            });
+        }
+    });
+}
+
+// Сохранение настроек профиля
+function saveProfileSettings() {
+    const formData = new FormData(document.getElementById('profileSettingsForm'));
+    const settings = Object.fromEntries(formData);
+    
+    // В реальном приложении здесь будет fetch к API
+    console.log('Сохранение настроек:', settings);
+    
+    // Показ уведомления об успехе
+    showNotification('Настройки успешно сохранены!', 'success');
+}
+
+// Обновление настроек уведомлений
+function updateNotificationSettings(settingId, enabled) {
+    // В реальном приложении здесь будет fetch к API
+    console.log(`Настройка ${settingId}: ${enabled ? 'включена' : 'выключена'}`);
+    
+    showNotification(
+        `Уведомления ${enabled ? 'включены' : 'выключены'}`, 
+        enabled ? 'success' : 'warning'
+    );
+}
+
+// Удаление из избранного
+function removeFromFavorites(button) {
+    const card = button.closest('.card');
+    const tournamentName = card.querySelector('.card-title').textContent;
+    
+    // Анимация удаления
+    card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(-100px)';
+    
+    setTimeout(() => {
+        card.remove();
+        showNotification(`Турнир "${tournamentName}" удален из избранного`, 'info');
+    }, 300);
+}
+
+// Инициализация анимаций
+function initializeAnimations() {
+    // Анимация при прокрутке
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animation = 'fadeInUp 0.6s ease-out forwards';
+            }
+        });
+    });
+    
+    // Наблюдение за карточками
+    document.querySelectorAll('.card, .achievement-badge').forEach(element => {
+        observer.observe(element);
+    });
+}
+
+// Показ уведомления
+function showNotification(message, type = 'info') {
+    // Создание элемента уведомления
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style = 'top: 20px; right: 20px; z-index: 10000; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Автоматическое закрытие через 3 секунды
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Анимация для CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}
