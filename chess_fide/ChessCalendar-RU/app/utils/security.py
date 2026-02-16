@@ -212,4 +212,4 @@ def sanitize_tournament_data(data: dict) -> dict:
     sanitized['status'] = data.get('status')
     sanitized['fide_id'] = data.get('fide_id')
     
-    return sanitized    sanitized['name'] = security_utils.sanitize_input(data.get('name', ''), max_length=200)
+    return sanitized
