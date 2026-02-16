@@ -192,24 +192,33 @@
             top: calc(100% + 10px);
             left: 0;
             right: 0;
-            background: white;
+            background: var(--bg-primary);
             border-radius: var(--border-radius);
             box-shadow: var(--box-shadow-lg);
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
             z-index: 1000;
             display: none;
+            border: 1px solid var(--border-color);
+        }
+        
+        .search-header {
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+            z-index: 1;
         }
         
         .search-result-item {
             padding: 1rem;
             cursor: pointer;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--border-color);
             transition: all 0.2s ease;
         }
         
-        .search-result-item:hover {
-            background: var(--light-color);
+        .search-result-item:hover,
+        .search-result-item.active {
+            background: var(--bg-secondary);
             padding-left: 1.5rem;
         }
         
@@ -219,23 +228,60 @@
         
         .search-result-title {
             font-weight: 600;
-            color: var(--dark-color);
+            color: var(--text-primary);
             margin-bottom: 0.25rem;
+        }
+        
+        .search-result-title mark {
+            background: var(--warning-color);
+            color: var(--dark-color);
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
         }
         
         .search-result-location {
             font-size: 0.875rem;
-            color: var(--secondary-color);
+            color: var(--text-secondary);
             display: flex;
             align-items: center;
             gap: 0.25rem;
+            margin-bottom: 0.25rem;
         }
         
         .search-result-dates {
             font-size: 0.875rem;
             color: var(--success-color);
             font-weight: 500;
-            margin-top: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .search-no-results,
+        .search-error {
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        /* Search loading */
+        .search-loading {
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .search-loading::after {
+            content: '';
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         
         /* Cards */
@@ -628,6 +674,7 @@
     
     <!-- Custom App JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
     
     <!-- Theme Toggle Script -->
     <script>
