@@ -141,4 +141,20 @@ def create_app(config_name='default'):
     app.register_blueprint(forum_bp)
     app.register_blueprint(api_docs_bp)
     
+    # Prometheus metrics endpoint
+    @app.route('/metrics')
+    def metrics():
+        """Prometheus metrics endpoint"""
+        try:
+            from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+            from app.utils.metrics import update_business_metrics
+            
+            # Update business metrics before exposing
+            update_business_metrics()
+            
+            return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+        except Exception as e:
+            logger.error(f"Error generating metrics: {e}")
+            return 'Metrics unavailable', 500
+    
     return app

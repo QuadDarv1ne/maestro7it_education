@@ -6,12 +6,14 @@ from app import create_app, db
 from app.models.notification import Notification, Subscription
 from app.models.tournament import Tournament
 from app.models.user import User
+from app.utils.metrics import track_celery_task
 from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True, max_retries=3)
+@track_celery_task('send_notification')
 def send_notification(self, user_id, title, message, notification_type='info'):
     """
     Отправка уведомления пользователю
@@ -79,6 +81,7 @@ def send_pending_notifications():
             return {'status': 'error', 'message': str(e)}
 
 @celery_app.task
+@track_celery_task('notify_upcoming_tournaments')
 def notify_upcoming_tournaments():
     """
     Уведомление пользователей о предстоящих турнирах

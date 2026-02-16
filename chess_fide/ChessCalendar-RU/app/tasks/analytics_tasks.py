@@ -6,12 +6,14 @@ from app import create_app, db
 from app.models.tournament import Tournament
 from app.models.user import User
 from app.utils.cache_manager import cache_manager
+from app.utils.metrics import track_celery_task
 from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
 
 @celery_app.task
+@track_celery_task('generate_daily_report')
 def generate_daily_report():
     """
     Генерация ежедневного отчета
@@ -60,6 +62,7 @@ def generate_daily_report():
             return {'status': 'error', 'message': str(e)}
 
 @celery_app.task
+@track_celery_task('update_recommendations_cache')
 def update_recommendations_cache():
     """
     Обновление кэша рекомендаций для всех пользователей

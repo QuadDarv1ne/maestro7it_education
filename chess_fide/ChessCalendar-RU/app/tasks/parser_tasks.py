@@ -7,12 +7,14 @@ from app.models.tournament import Tournament
 from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 from app.utils.cache_manager import TournamentCacheManager
+from app.utils.metrics import track_celery_task
 from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=300)
+@track_celery_task('parse_fide_tournaments')
 def parse_fide_tournaments(self):
     """
     Асинхронный парсинг турниров с FIDE
@@ -68,6 +70,7 @@ def parse_fide_tournaments(self):
             raise self.retry(exc=e)
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=300)
+@track_celery_task('parse_cfr_tournaments')
 def parse_cfr_tournaments(self):
     """
     Асинхронный парсинг турниров с Российской Федерации Шахмат
@@ -122,6 +125,7 @@ def parse_cfr_tournaments(self):
             raise self.retry(exc=e)
 
 @celery_app.task
+@track_celery_task('parse_tournament_details')
 def parse_tournament_details(tournament_id):
     """
     Асинхронный парсинг детальной информации о турнире
