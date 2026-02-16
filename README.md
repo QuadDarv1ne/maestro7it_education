@@ -103,3 +103,5 @@ Python славится своей простотой и читаемостью,
 ※ Предложения по сотрудничеству можете присылать на почту ※
 📧 maksimqwe42@mail.ru
 ```
+
+[![maestro7it_education](https://api.star-history.com/svg?repos=QuadDarv1ne/maestro7it_education&type=Date)](https://star-history.com/#QuadDarv1ne/maestro7it_education&Date)
