@@ -1,0 +1,91 @@
+groups:
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+      # Low disk space
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value | humanizePercentage }} available"
+
+      # High disk I/O
+      - alert: HighDiskIO
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High disk I/O"
+          description: "Disk I/O time is {{ $value }}s"
+
+      # Redis down
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 2 minutes"
+
+      # High Redis memory usage
+      - alert: HighRedisMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      # Celery queue backlog
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: celery
+        annotations:
+          summary: "Celery queue backlog"
+          description: "Celery queue has {{ $value }} pending tasks"
+
+      # Celery worker down
+      - alert: CeleryWorkerDown
+        expr: celery_workers_online == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: celery
+        annotations:
+          summary: "No Celery workers online"
+          description: "All Celery workers are offline"

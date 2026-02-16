@@ -93,18 +93,32 @@ cp .env.example .env
 # Отредактируйте .env (минимум SECRET_KEY)
 
 # 3. Запустите все сервисы
-./start-all.sh  # Linux/Mac
+make start
 # или
-start-all.bat   # Windows
+./scripts/start-all.sh  # Linux/Mac
+scripts\start-all.bat   # Windows
 
 # 4. Создайте администратора
-docker-compose exec api-gateway python manage.py --action create-admin \
-  --username admin \
-  --email admin@example.com \
-  --password SecurePassword123
+make create-admin
 ```
 
 Приложение будет доступно по адресу: http://localhost:5000
+
+### Доступные команды (Makefile)
+
+```bash
+make help              # Показать все команды
+make start             # Запустить сервисы
+make stop              # Остановить сервисы
+make logs              # Показать логи
+make health            # Проверка здоровья
+make backup            # Создать backup
+make test              # Запустить тесты
+make deploy            # Развернуть в production
+make start-monitoring  # Запустить мониторинг
+```
+
+Полный список команд: `make help`
 
 ### Ручная установка
 

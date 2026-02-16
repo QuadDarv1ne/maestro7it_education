@@ -1,0 +1,114 @@
+# Docker Compose для мониторинга
+# Использование: docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+version: '3.8'
+
+services:
+  # Prometheus для сбора метрик
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: chess-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/alerts:/etc/prometheus/alerts
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  # Grafana для визуализации
+  grafana:
+    image: grafana/grafana:latest
+    container_name: chess-grafana
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    networks:
+      - chess-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Redis Exporter для метрик Redis
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: chess-redis-exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+    ports:
+      - "9121:9121"
+    networks:
+      - chess-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Node Exporter для системных метрик
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: chess-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "9100:9100"
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  # cAdvisor для метрик контейнеров
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: chess-cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+  # Alertmanager для алертов
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: chess-alertmanager
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+
+networks:
+  chess-network:
+    external: true

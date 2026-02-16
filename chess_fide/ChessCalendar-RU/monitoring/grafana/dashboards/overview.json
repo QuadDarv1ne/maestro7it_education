@@ -1,0 +1,102 @@
+{
+  "dashboard": {
+    "title": "Chess Calendar RU - Overview",
+    "tags": ["chess-calendar", "overview"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{job}} - {{method}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "API Response Time (95th percentile)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{job}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "{{job}} - {{status}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Cache Hit Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(cache_hits_total[5m]) / rate(cache_requests_total[5m])",
+            "legendFormat": "Hit Rate"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Celery Tasks",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "celery_active_tasks",
+            "legendFormat": "Active Tasks"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Redis Memory Usage",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes / redis_memory_max_bytes",
+            "legendFormat": "Memory Usage"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "{{instance}}"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes",
+            "legendFormat": "{{instance}}"
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}
