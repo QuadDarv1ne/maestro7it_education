@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}Достижения - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<style>
+    .achievement-card {
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .achievement-card.unlocked {
+        border-left: 4px solid var(--success-color);
+    }
+    
+    .achievement-card.locked {
+        opacity: 0.6;
+        filter: grayscale(50%);
+    }
+    
+    .achievement-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--box-shadow-lg);
+    }
+    
+    .achievement-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .achievement-card.unlocked .achievement-icon {
+        animation: bounce 1s ease;
+    }
+    
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .tier-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .tier-bronze { background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%); color: white; }
+    .tier-silver { background: linear-gradient(135deg, #c0c0c0 0%, #a8a8a8 100%); color: white; }
+    .tier-gold { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #333; }
+    .tier-platinum { background: linear-gradient(135deg, #e5e4e2 0%, #b9b9b9 100%); color: #333; }
+    
+    .progress-ring {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+    }
+    
+    .progress-ring-circle {
+        transition: stroke-dashoffset 0.5s ease;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+    
+    .level-badge {
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-box {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--box-shadow);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+    
+    .leaderboard-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .leaderboard-item:hover {
+        transform: translateX(5px);
+        box-shadow: var(--box-shadow);
+    }
+    
+    .leaderboard-rank {
+        font-size: 1.5rem;
+        font-weight: 700;
+        width: 50px;
+        text-align: center;
+    }
+    
+    .leaderboard-rank.gold { color: #ffd700; }
+    .leaderboard-rank.silver { color: #c0c0c0; }
+    .leaderboard-rank.bronze { color: #cd7f32; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">
+        <i class="bi bi-trophy-fill text-warning"></i> Достижения
+    </h1>
+    
+    <!-- User Stats -->
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="level-badge" id="userLevel">1</div>
+            <p class="text-muted mb-0">Уровень</p>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value" id="totalPoints">0</div>
+            <p class="text-muted mb-0">Очков</p>
+            <small class="text-muted" id="pointsToNext">До следующего уровня: 50</small>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value" id="unlockedCount">0</div>
+            <p class="text-muted mb-0">Разблокировано</p>
+        </div>
+        
+        <div class="stat-box">
+            <div class="stat-value" id="completionPercent">0%</div>
+            <p class="text-muted mb-0">Прогресс</p>
+        </div>
+    </div>
+    
+    <!-- Progress Ring -->
+    <div class="text-center mb-4">
+        <svg class="progress-ring" viewBox="0 0 120 120">
+            <circle class="progress-ring-circle" 
+                    stroke="var(--border-color)" 
+                    stroke-width="8" 
+                    fill="transparent" 
+                    r="52" 
+                    cx="60" 
+                    cy="60"/>
+            <circle id="progressCircle" 
+                    class="progress-ring-circle" 
+                    stroke="var(--primary-color)" 
+                    stroke-width="8" 
+                    fill="transparent" 
+                    r="52" 
+                    cx="60" 
+                    cy="60"
+                    stroke-dasharray="326.73"
+                    stroke-dashoffset="326.73"/>
+        </svg>
+    </div>
+    
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#all-achievements">
+                <i class="bi bi-grid-3x3"></i> Все достижения
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#unlocked">
+                <i class="bi bi-unlock-fill"></i> Разблокированные
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#locked">
+                <i class="bi bi-lock-fill"></i> Заблокированные
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#leaderboard">
+                <i class="bi bi-bar-chart-fill"></i> Таблица лидеров
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- All Achievements -->
+        <div class="tab-pane fade show active" id="all-achievements">
+            <div class="row" id="achievementsContainer">
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Unlocked -->
+        <div class="tab-pane fade" id="unlocked">
+            <div class="row" id="unlockedContainer"></div>
+        </div>
+        
+        <!-- Locked -->
+        <div class="tab-pane fade" id="locked">
+            <div class="row" id="lockedContainer"></div>
+        </div>
+        
+        <!-- Leaderboard -->
+        <div class="tab-pane fade" id="leaderboard">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="bi bi-trophy-fill text-warning"></i> Топ игроков
+                    </h5>
+                    <div id="leaderboardContainer">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    class AchievementsPage {
+        constructor(userId) {
+            this.userId = userId;
+            this.achievements = [];
+            this.stats = {};
+            
+            this.init();
+        }
+        
+        async init() {
+            await this.loadAchievements();
+            await this.loadLeaderboard();
+        }
+        
+        async loadAchievements() {
+            try {
+                const response = await fetch(`/api/users/${this.userId}/achievements`);
+                const data = await response.json();
+                
+                this.achievements = data.achievements;
+                this.stats = data.stats;
+                
+                this.updateStats();
+                this.renderAchievements();
+            } catch (error) {
+                console.error('Failed to load achievements:', error);
+            }
+        }
+        
+        updateStats() {
+            document.getElementById('userLevel').textContent = this.stats.level;
+            document.getElementById('totalPoints').textContent = this.stats.total_points;
+            document.getElementById('pointsToNext').textContent = 
+                `До следующего уровня: ${this.stats.points_to_next_level}`;
+            document.getElementById('unlockedCount').textContent = 
+                `${this.stats.unlocked_achievements}/${this.stats.total_achievements}`;
+            document.getElementById('completionPercent').textContent = 
+                `${this.stats.completion_percentage}%`;
+            
+            // Update progress ring
+            const circle = document.getElementById('progressCircle');
+            const circumference = 2 * Math.PI * 52;
+            const offset = circumference - (this.stats.completion_percentage / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+        
+        renderAchievements() {
+            const allContainer = document.getElementById('achievementsContainer');
+            const unlockedContainer = document.getElementById('unlockedContainer');
+            const lockedContainer = document.getElementById('lockedContainer');
+            
+            allContainer.innerHTML = '';
+            unlockedContainer.innerHTML = '';
+            lockedContainer.innerHTML = '';
+            
+            this.achievements.forEach(achievement => {
+                const card = this.createAchievementCard(achievement);
+                
+                allContainer.innerHTML += card;
+                
+                if (achievement.unlocked) {
+                    unlockedContainer.innerHTML += card;
+                } else {
+                    lockedContainer.innerHTML += card;
+                }
+            });
+            
+            if (this.achievements.filter(a => a.unlocked).length === 0) {
+                unlockedContainer.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-lock" style="font-size: 4rem; color: var(--text-muted);"></i>
+                        <p class="text-muted mt-3">Пока нет разблокированных достижений</p>
+                    </div>
+                `;
+            }
+        }
+        
+        createAchievementCard(achievement) {
+            const tierClass = `tier-${achievement.tier}`;
+            const statusClass = achievement.unlocked ? 'unlocked' : 'locked';
+            const iconColor = achievement.unlocked ? 'text-warning' : 'text-muted';
+            
+            return `
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card achievement-card ${statusClass}">
+                        <span class="tier-badge ${tierClass}">${achievement.tier}</span>
+                        <div class="card-body text-center">
+                            <div class="achievement-icon ${iconColor}">
+                                <i class="${achievement.icon}"></i>
+                            </div>
+                            <h5 class="card-title">${achievement.name}</h5>
+                            <p class="text-muted">${achievement.description}</p>
+                            
+                            ${achievement.unlocked ? `
+                                <div class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Разблокировано
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">+${achievement.points} очков</small>
+                                </div>
+                            ` : `
+                                <div class="progress mb-2" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: ${(achievement.progress / achievement.progress_max) * 100}%">
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    ${achievement.progress}/${achievement.progress_max}
+                                </small>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async loadLeaderboard() {
+            try {
+                const response = await fetch('/api/achievements/leaderboard?limit=20');
+                const data = await response.json();
+                
+                this.renderLeaderboard(data.leaderboard);
+            } catch (error) {
+                console.error('Failed to load leaderboard:', error);
+            }
+        }
+        
+        renderLeaderboard(leaderboard) {
+            const container = document.getElementById('leaderboardContainer');
+            
+            if (leaderboard.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <p class="text-muted">Таблица лидеров пуста</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = leaderboard.map((user, index) => {
+                const rank = index + 1;
+                let rankClass = '';
+                if (rank === 1) rankClass = 'gold';
+                else if (rank === 2) rankClass = 'silver';
+                else if (rank === 3) rankClass = 'bronze';
+                
+                return `
+                    <div class="leaderboard-item">
+                        <div class="leaderboard-rank ${rankClass}">
+                            ${rank <= 3 ? '<i class="bi bi-trophy-fill"></i>' : rank}
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>${user.username}</strong>
+                            <div class="small text-muted">
+                                Уровень ${user.level} • ${user.unlocked_achievements} достижений
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold text-primary">${user.total_points}</div>
+                            <small class="text-muted">очков</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        const userId = {{ session.get('user_id', 0) }};
+        if (userId) {
+            new AchievementsPage(userId);
+        } else {
+            window.location.href = '/login';
+        }
+    });
+</script>
+{% endblock %}

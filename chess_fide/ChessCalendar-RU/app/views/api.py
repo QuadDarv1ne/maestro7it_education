@@ -765,3 +765,136 @@ def search_tournaments():
         from app.utils.logger import logger
         logger.error(f"Search error: {str(e)}")
         return jsonify({'error': 'Search failed'}), 500
+
+
+@api_bp.route('/tournaments/<int:tournament_id>/export/ical', methods=['GET'])
+def export_tournament_ical(tournament_id):
+    """Export single tournament to iCal format"""
+    try:
+        from app.utils.ical_export import ICalExporter, create_ical_response
+        
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        ical_content = ICalExporter.export_tournament(tournament)
+        filename = f"tournament_{tournament_id}.ics"
+        
+        return create_ical_response(ical_content, filename)
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"iCal export error: {str(e)}")
+        return jsonify({'error': 'Export failed'}), 500
+
+
+@api_bp.route('/tournaments/export/ical', methods=['GET'])
+def export_tournaments_ical():
+    """Export multiple tournaments to iCal format"""
+    try:
+        from app.utils.ical_export import ICalExporter, create_ical_response
+        
+        # Get filter parameters
+        category = request.args.get('category')
+        location = request.args.get('location')
+        days = request.args.get('days', 30, type=int)
+        
+        # Build query
+        query = Tournament.query
+        
+        if category:
+            query = query.filter_by(category=category)
+        
+        if location:
+            query = query.filter(Tournament.location.ilike(f'%{location}%'))
+        
+        # Date range
+        from datetime import datetime, timedelta
+        start_date = datetime.now().date()
+        end_date = start_date + timedelta(days=days)
+        
+        query = query.filter(
+            Tournament.start_date >= start_date,
+            Tournament.start_date <= end_date
+        )
+        
+        tournaments = query.order_by(Tournament.start_date).all()
+        
+        ical_content = ICalExporter.export_tournaments(tournaments)
+        filename = "tournaments.ics"
+        
+        return create_ical_response(ical_content, filename)
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"iCal export error: {str(e)}")
+        return jsonify({'error': 'Export failed'}), 500
+
+
+@api_bp.route('/users/<int:user_id>/favorites/export/ical', methods=['GET'])
+def export_user_favorites_ical(user_id):
+    """Export user's favorite tournaments to iCal"""
+    try:
+        from app.utils.ical_export import ICalExporter, create_ical_response
+        
+        # Check if user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        ical_content = ICalExporter.export_user_favorites(user_id)
+        filename = f"favorites_{user_id}.ics"
+        
+        return create_ical_response(ical_content, filename)
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"iCal export error: {str(e)}")
+        return jsonify({'error': 'Export failed'}), 500
+
+
+@api_bp.route('/users/<int:user_id>/achievements', methods=['GET'])
+def get_user_achievements(user_id):
+    """Get user achievements"""
+    try:
+        from app.utils.achievements import AchievementSystem
+        
+        # Check if user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        achievements = AchievementSystem.get_user_achievements(user_id)
+        stats = AchievementSystem.get_user_stats(user_id)
+        
+        return jsonify({
+            'achievements': [a.to_dict() for a in achievements],
+            'stats': stats
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Achievements error: {str(e)}")
+        return jsonify({'error': 'Failed to get achievements'}), 500
+
+
+@api_bp.route('/achievements/leaderboard', methods=['GET'])
+def get_achievements_leaderboard():
+    """Get achievements leaderboard"""
+    try:
+        from app.utils.achievements import AchievementSystem
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = min(max(limit, 1), 100)
+        
+        leaderboard = AchievementSystem.get_leaderboard(limit)
+        
+        return jsonify({
+            'leaderboard': leaderboard,
+            'count': len(leaderboard)
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Leaderboard error: {str(e)}")
+        return jsonify({'error': 'Failed to get leaderboard'}), 500
