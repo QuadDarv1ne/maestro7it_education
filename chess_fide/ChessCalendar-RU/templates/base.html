@@ -453,9 +453,65 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container text-center">
-            <span class="text-muted">&copy; 2026 ChessCalendar-RU - Календарь шахматных турниров</span>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <!-- About Section -->
+                <div class="footer-section">
+                    <h5><i class="bi bi-trophy-fill"></i> ChessCalendar-RU</h5>
+                    <p style="color: #94a3b8; line-height: 1.6;">
+                        Ваш надежный источник информации о шахматных турнирах в России и мире. 
+                        Следите за событиями, находите турниры и будьте в курсе шахматной жизни.
+                    </p>
+                    <div class="footer-social">
+                        <a href="#" title="Telegram"><i class="bi bi-telegram"></i></a>
+                        <a href="#" title="VK"><i class="bi bi-vk"></i></a>
+                        <a href="#" title="YouTube"><i class="bi bi-youtube"></i></a>
+                        <a href="#" title="Email"><i class="bi bi-envelope-fill"></i></a>
+                    </div>
+                </div>
+                
+                <!-- Quick Links -->
+                <div class="footer-section">
+                    <h5><i class="bi bi-link-45deg"></i> Быстрые ссылки</h5>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('main.index') }}"><i class="bi bi-calendar-check"></i> Все турниры</a></li>
+                        <li><a href="{{ url_for('main.calendar') }}"><i class="bi bi-calendar-month"></i> Календарь</a></li>
+                        <li><a href="{{ url_for('main.notifications') }}"><i class="bi bi-bell"></i> Уведомления</a></li>
+                        <li><a href="/api/docs"><i class="bi bi-code-square"></i> API Документация</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Resources -->
+                <div class="footer-section">
+                    <h5><i class="bi bi-book"></i> Ресурсы</h5>
+                    <ul class="footer-links">
+                        <li><a href="https://fide.com" target="_blank"><i class="bi bi-globe"></i> FIDE</a></li>
+                        <li><a href="https://ruchess.ru" target="_blank"><i class="bi bi-flag"></i> Федерация шахмат России</a></li>
+                        <li><a href="{{ url_for('main.export_csv') }}"><i class="bi bi-download"></i> Экспорт CSV</a></li>
+                        <li><a href="{{ url_for('main.export_json') }}"><i class="bi bi-filetype-json"></i> Экспорт JSON</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Contact -->
+                <div class="footer-section">
+                    <h5><i class="bi bi-envelope"></i> Контакты</h5>
+                    <ul class="footer-links">
+                        <li><a href="mailto:info@chesscalendar.ru"><i class="bi bi-envelope-at"></i> info@chesscalendar.ru</a></li>
+                        <li><a href="#"><i class="bi bi-question-circle"></i> Поддержка</a></li>
+                        <li><a href="#"><i class="bi bi-shield-check"></i> Политика конфиденциальности</a></li>
+                        <li><a href="#"><i class="bi bi-file-text"></i> Условия использования</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>
+                    <i class="bi bi-c-circle"></i> 2026 ChessCalendar-RU. Все права защищены. 
+                    <span style="margin: 0 0.5rem;">|</span>
+                    Сделано с <i class="bi bi-heart-fill" style="color: #ef4444;"></i> для шахматного сообщества
+                </p>
+            </div>
         </div>
     </footer>
     
