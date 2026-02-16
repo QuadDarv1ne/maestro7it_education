@@ -2,59 +2,220 @@
 
 {% block title %}Шахматный календарь - ChessCalendar-RU{% endblock %}
 
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        border-radius: 16px;
+        padding: 3rem;
+        color: white;
+        box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    
+    .hero-section h1 {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .hero-section .lead {
+        font-size: 1.5rem;
+        font-weight: 500;
+        opacity: 0.95;
+    }
+    
+    .hero-icon {
+        font-size: 8rem;
+        opacity: 0.15;
+        position: absolute;
+        right: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(-50%) rotate(0deg); }
+        50% { transform: translateY(-55%) rotate(5deg); }
+    }
+    
+    .stats-card {
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .stats-card:nth-child(1) { border-left-color: #2563eb; }
+    .stats-card:nth-child(2) { border-left-color: #10b981; }
+    .stats-card:nth-child(3) { border-left-color: #f59e0b; }
+    .stats-card:nth-child(4) { border-left-color: #06b6d4; }
+    
+    .stats-card:hover {
+        transform: translateY(-5px) scale(1.02);
+    }
+    
+    .stats-card h3 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, currentColor 0%, currentColor 100%);
+        -webkit-background-clip: text;
+    }
+    
+    .filter-form {
+        background: white;
+        border-radius: 12px;
+    }
+    
+    .filter-form .card-title {
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .tournament-card {
+        border-left: 4px solid #2563eb;
+        transition: all 0.3s ease;
+    }
+    
+    .tournament-card:hover {
+        border-left-color: #1e40af;
+    }
+    
+    .tournament-card .card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, white 100%);
+    }
+    
+    .tournament-card .card-title {
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 1.1rem;
+        line-height: 1.4;
+    }
+    
+    .tournament-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .btn-view-details {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        border: none;
+        color: white;
+        padding: 0.6rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-view-details:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        color: white;
+    }
+    
+    .pagination {
+        margin-top: 2rem;
+    }
+    
+    .pagination .page-link {
+        border-radius: 8px;
+        margin: 0 0.25rem;
+        border: 2px solid #e2e8f0;
+        color: #2563eb;
+        font-weight: 600;
+    }
+    
+    .pagination .page-link:hover {
+        background: #2563eb;
+        color: white;
+        border-color: #2563eb;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background: #2563eb;
+        border-color: #2563eb;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <!-- Hero Section -->
-    <div class="row mb-5 hero-section">
-        <div class="col-12">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h1 class="display-4 fw-bold"><i class="bi bi-trophy"></i> ChessCalendar-RU</h1>
-                            <p class="lead">Календарь шахматных турниров России и мира</p>
-                            <p class="mb-0">Следите за предстоящими турнирами, находите интересующие вас события и будьте в курсе последних новостей шахматного мира</p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <i class="bi bi-chess" style="font-size: 5rem; opacity: 0.3;"></i>
-                        </div>
-                    </div>
-                </div>
+    <div class="hero-section mb-5">
+        <div class="row align-items-center position-relative">
+            <div class="col-md-8">
+                <h1><i class="bi bi-trophy-fill"></i> ChessCalendar-RU</h1>
+                <p class="lead">Календарь шахматных турниров России и мира</p>
+                <p class="mb-0" style="opacity: 0.9;">
+                    Следите за предстоящими турнирами, находите интересующие вас события и будьте в курсе последних новостей шахматного мира
+                </p>
+            </div>
+            <div class="col-md-4">
+                <i class="bi bi-chess hero-icon"></i>
             </div>
         </div>
     </div>
 
     <!-- Stats Overview -->
-    <div class="row mb-4">
+    <div class="row mb-4 g-3">
         <div class="col-md-3 col-sm-6">
-            <div class="card text-center bg-light stats-card">
+            <div class="card text-center stats-card">
                 <div class="card-body">
-                    <h3 class="text-primary">{{ tournaments.total }}</h3>
-                    <p class="text-muted mb-0">Всего турниров</p>
+                    <i class="bi bi-calendar-check-fill text-primary" style="font-size: 2rem;"></i>
+                    <h3 class="text-primary mt-2">{{ tournaments.total }}</h3>
+                    <p class="text-muted mb-0 fw-semibold">Всего турниров</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
-            <div class="card text-center bg-light stats-card">
+            <div class="card text-center stats-card">
                 <div class="card-body">
-                    <h3 class="text-success">{{ tournaments.items|selectattr('status', 'equalto', 'Ongoing')|list|length }}</h3>
-                    <p class="text-muted mb-0">Активных</p>
+                    <i class="bi bi-play-circle-fill text-success" style="font-size: 2rem;"></i>
+                    <h3 class="text-success mt-2">{{ tournaments.items|selectattr('status', 'equalto', 'Ongoing')|list|length }}</h3>
+                    <p class="text-muted mb-0 fw-semibold">Активных</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
-            <div class="card text-center bg-light stats-card">
+            <div class="card text-center stats-card">
                 <div class="card-body">
-                    <h3 class="text-warning">{{ tournaments.items|selectattr('status', 'equalto', 'Scheduled')|list|length }}</h3>
-                    <p class="text-muted mb-0">Предстоящих</p>
+                    <i class="bi bi-clock-fill text-warning" style="font-size: 2rem;"></i>
+                    <h3 class="text-warning mt-2">{{ tournaments.items|selectattr('status', 'equalto', 'Scheduled')|list|length }}</h3>
+                    <p class="text-muted mb-0 fw-semibold">Предстоящих</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 col-sm-6">
-            <div class="card text-center bg-light stats-card">
+            <div class="card text-center stats-card">
                 <div class="card-body">
-                    <h3 class="text-info">{{ tournaments.items|selectattr('category', 'equalto', 'International')|list|length }}</h3>
-                    <p class="text-muted mb-0">Международных</p>
+                    <i class="bi bi-globe-americas text-info" style="font-size: 2rem;"></i>
+                    <h3 class="text-info mt-2">{{ tournaments.items|selectattr('category', 'equalto', 'International')|list|length }}</h3>
+                    <p class="text-muted mb-0 fw-semibold">Международных</p>
                 </div>
             </div>
         </div>
@@ -63,11 +224,13 @@
     <!-- Filters -->
     <div class="card mb-4 filter-form">
         <div class="card-body">
-            <h5 class="card-title"><i class="bi bi-filter"></i> Фильтры</h5>
+            <h5 class="card-title"><i class="bi bi-funnel-fill"></i> Фильтры</h5>
             <form method="GET" id="filterForm">
                 <div class="row g-3">
                     <div class="col-md-3 col-sm-6">
-                        <label for="category" class="form-label">Категория</label>
+                        <label for="category" class="form-label fw-semibold">
+                            <i class="bi bi-tag-fill"></i> Категория
+                        </label>
                         <select name="category" id="category" class="form-select">
                             <option value="">Все категории</option>
                             {% for cat in categories %}
@@ -76,7 +239,9 @@
                         </select>
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <label for="status" class="form-label">Статус</label>
+                        <label for="status" class="form-label fw-semibold">
+                            <i class="bi bi-info-circle-fill"></i> Статус
+                        </label>
                         <select name="status" id="status" class="form-select">
                             <option value="">Все статусы</option>
                             {% for stat in statuses %}
@@ -85,11 +250,15 @@
                         </select>
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <label for="location" class="form-label">Место</label>
+                        <label for="location" class="form-label fw-semibold">
+                            <i class="bi bi-geo-alt-fill"></i> Место
+                        </label>
                         <input type="text" name="location" id="location" class="form-control" placeholder="Введите место..." value="{{ filters.location or '' }}">
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <label for="sort_by" class="form-label">Сортировка</label>
+                        <label for="sort_by" class="form-label fw-semibold">
+                            <i class="bi bi-sort-down"></i> Сортировка
+                        </label>
                         <select name="sort_by" id="sort_by" class="form-select">
                             <option value="start_date" {% if filters.sort_by == 'start_date' %}selected{% endif %}>По дате</option>
                             <option value="name" {% if filters.sort_by == 'name' %}selected{% endif %}>По названию</option>
