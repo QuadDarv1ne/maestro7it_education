@@ -675,6 +675,116 @@
     <!-- Custom App JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('[App] Service Worker registered:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    if (confirm('Доступна новая версия приложения. Обновить?')) {
+                                        newWorker.postMessage({ action: 'skipWaiting' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('[App] Service Worker registration failed:', error);
+                    });
+                
+                // Handle controller change
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    window.location.reload();
+                });
+            });
+        }
+        
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button
+            showInstallPrompt();
+        });
+        
+        function showInstallPrompt() {
+            const installBanner = document.createElement('div');
+            installBanner.id = 'installBanner';
+            installBanner.style.cssText = `
+                position: fixed;
+                bottom: 80px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                animation: slideUp 0.5s ease;
+            `;
+            
+            installBanner.innerHTML = `
+                <i class="bi bi-download" style="font-size: 1.5rem;"></i>
+                <div>
+                    <div style="font-weight: 600;">Установить приложение</div>
+                    <small style="opacity: 0.9;">Быстрый доступ с главного экрана</small>
+                </div>
+                <button id="installBtn" class="btn btn-light btn-sm" style="margin-left: 1rem;">
+                    Установить
+                </button>
+                <button id="dismissInstall" class="btn btn-link text-white btn-sm">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            `;
+            
+            document.body.appendChild(installBanner);
+            
+            document.getElementById('installBtn').addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log('[App] Install prompt outcome:', outcome);
+                    deferredPrompt = null;
+                    installBanner.remove();
+                }
+            });
+            
+            document.getElementById('dismissInstall').addEventListener('click', () => {
+                installBanner.remove();
+                localStorage.setItem('installPromptDismissed', 'true');
+            });
+            
+            // Don't show if previously dismissed
+            if (localStorage.getItem('installPromptDismissed')) {
+                installBanner.remove();
+            }
+        }
+        
+        // Track app install
+        window.addEventListener('appinstalled', () => {
+            console.log('[App] PWA installed successfully');
+            if (window.ChessCalendar) {
+                window.ChessCalendar.showToast('Приложение установлено!', 'success');
+            }
+        });
+    </script>
     
     <!-- Theme Toggle Script -->
     <script>

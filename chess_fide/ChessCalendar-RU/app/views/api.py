@@ -693,3 +693,75 @@ def get_collaborative_recommendations(user_id):
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/analytics', methods=['POST'])
+def track_analytics():
+    """Track analytics events from frontend"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'events' not in data:
+            return jsonify({'error': 'No events provided'}), 400
+        
+        events = data.get('events', [])
+        session_id = data.get('session_id')
+        
+        # Log analytics events (in production, save to database or analytics service)
+        from app.utils.logger import logger
+        
+        for event in events:
+            logger.info(f"Analytics: {event.get('event')} - Session: {session_id}", extra={
+                'event_type': event.get('event'),
+                'session_id': session_id,
+                'event_data': event
+            })
+        
+        # In production, you might want to:
+        # 1. Save to a dedicated analytics database
+        # 2. Send to analytics service (Google Analytics, Mixpanel, etc.)
+        # 3. Process for real-time dashboards
+        
+        return jsonify({
+            'success': True,
+            'events_received': len(events)
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Analytics tracking error: {str(e)}")
+        return jsonify({'error': 'Failed to track analytics'}), 500
+
+
+@api_bp.route('/tournaments/search', methods=['GET'])
+def search_tournaments():
+    """Search tournaments by query"""
+    try:
+        query = request.args.get('q', '').strip()
+        
+        if not query or len(query) < 2:
+            return jsonify([]), 200
+        
+        # Search in name, location, and description
+        tournaments = Tournament.query.filter(
+            db.or_(
+                Tournament.name.ilike(f'%{query}%'),
+                Tournament.location.ilike(f'%{query}%'),
+                Tournament.description.ilike(f'%{query}%')
+            )
+        ).order_by(Tournament.start_date.desc()).limit(20).all()
+        
+        return jsonify([{
+            'id': t.id,
+            'name': t.name,
+            'location': t.location,
+            'start_date': t.start_date.isoformat() if t.start_date else None,
+            'end_date': t.end_date.isoformat() if t.end_date else None,
+            'category': t.category,
+            'rating': t.average_rating
+        } for t in tournaments]), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Search error: {str(e)}")
+        return jsonify({'error': 'Search failed'}), 500

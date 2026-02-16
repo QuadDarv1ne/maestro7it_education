@@ -1,153 +1,365 @@
 {% extends "base.html" %}
 
-{% block title %}Профиль - ChessCalendar-RU{% endblock %}
+{% block title %}Профиль - {{ user.username }} - ChessCalendar-RU{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="card shadow">
-            <div class="card-header bg-info text-white">
-                <h4 class="mb-0"><i class="bi bi-person-fill"></i> Мой профиль</h4>
-            </div>
-            <div class="card-body">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-                
-                <form method="POST" action="{{ url_for('user.update_profile') }}" id="profileForm">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Имя пользователя</label>
-                        <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+<div class="container mt-4">
+    <!-- Profile Header -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    <div class="profile-avatar">
+                        <i class="bi bi-person-circle" style="font-size: 5rem; color: var(--primary-color);"></i>
                     </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Дата регистрации</label>
-                        <input type="text" class="form-control-plaintext" readonly value="{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Последний вход</label>
-                        <input type="text" class="form-control-plaintext" readonly value="{{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else 'Еще не входил' }}">
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-info">
-                            <i class="bi bi-save"></i> Сохранить изменения
-                        </button>
-                    </div>
-                </form>
-                
-                <hr>
-                
-                <h5>Смена пароля</h5>
-                <form method="POST" action="{{ url_for('user.change_password') }}" id="passwordForm">
-                    <div class="mb-3">
-                        <label for="current_password" class="form-label">Текущий пароль</label>
-                        <input type="password" class="form-control" id="current_password" name="current_password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="new_password" class="form-label">Новый пароль</label>
-                        <input type="password" class="form-control" id="new_password" name="new_password" required>
-                        <div class="form-text">Пароль должен содержать не менее 8 символов, включая буквы, цифры и хотя бы один специальный символ (!@#$%^&*(),.?":{}|<>[]), без повторяющихся символов подряд</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="confirm_password" class="form-label">Подтверждение нового пароля</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-warning">
-                            <i class="bi bi-key"></i> Изменить пароль
-                        </button>
-                    </div>
-                </form>
-                
-                <hr>
-                
-                <h5>Настройки уведомлений</h5>
-                <form method="POST" action="{{ url_for('main.update_notification_preferences') }}">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="new_tournaments" name="new_tournaments" {% if preferences.new_tournaments %}checked{% endif %}>
-                        <label class="form-check-label" for="new_tournaments">Новые турниры</label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="tournament_updates" name="tournament_updates" {% if preferences.tournament_updates %}checked{% endif %}>
-                        <label class="form-check-label" for="tournament_updates">Обновления турниров</label>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="daily_summary" name="daily_summary" {% if preferences.daily_summary %}checked{% endif %}>
-                        <label class="form-check-label" for="daily_summary">Ежедневная сводка</label>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-outline-primary">
-                            <i class="bi bi-bell"></i> Сохранить настройки уведомлений
-                        </button>
-                    </div>
-                </form>
-                
-                <hr>
-                
-                <div class="text-center">
-                    <a href="{{ url_for('user.logout') }}" class="btn btn-danger">
-                        <i class="bi bi-box-arrow-right"></i> Выйти из аккаунта
+                </div>
+                <div class="col-md-7">
+                    <h2 class="mb-2">{{ user.username }}</h2>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-envelope"></i> {{ user.email }}
+                    </p>
+                    <p class="text-muted mb-0">
+                        <i class="bi bi-calendar-check"></i> Зарегистрирован: {{ user.created_at.strftime('%d.%m.%Y') if user.created_at else 'Неизвестно' }}
+                    </p>
+                </div>
+                <div class="col-md-3 text-end">
+                    <a href="{{ url_for('user.edit_profile') }}" class="btn btn-primary">
+                        <i class="bi bi-pencil"></i> Редактировать
                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-heart-fill text-danger" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ favorites_count }}</h3>
+                    <p class="text-muted mb-0">Избранных турниров</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-star-fill text-warning" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ ratings_count }}</h3>
+                    <p class="text-muted mb-0">Оценок</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-bell-fill text-info" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ subscriptions_count }}</h3>
+                    <p class="text-muted mb-0">Подписок</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="bi bi-eye-fill text-success" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ views_count }}</h3>
+                    <p class="text-muted mb-0">Просмотров</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites" type="button">
+                <i class="bi bi-heart"></i> Избранное
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ratings-tab" data-bs-toggle="tab" data-bs-target="#ratings" type="button">
+                <i class="bi bi-star"></i> Мои оценки
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="subscriptions-tab" data-bs-toggle="tab" data-bs-target="#subscriptions" type="button">
+                <i class="bi bi-bell"></i> Подписки
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button">
+                <i class="bi bi-gear"></i> Настройки
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="profileTabsContent">
+        <!-- Favorites Tab -->
+        <div class="tab-pane fade show active" id="favorites" role="tabpanel">
+            {% if favorites %}
+                <div class="row">
+                    {% for favorite in favorites %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card tournament-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-0">
+                                        <a href="{{ url_for('main.tournament_detail', tournament_id=favorite.tournament.id) }}" class="text-decoration-none">
+                                            {{ favorite.tournament.name }}
+                                        </a>
+                                    </h5>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="removeFavorite({{ favorite.tournament.id }})">
+                                        <i class="bi bi-heart-fill"></i>
+                                    </button>
+                                </div>
+                                <p class="text-muted mb-2">
+                                    <i class="bi bi-geo-alt"></i> {{ favorite.tournament.location }}
+                                </p>
+                                <p class="text-muted mb-0">
+                                    <i class="bi bi-calendar"></i> 
+                                    {{ favorite.tournament.start_date.strftime('%d.%m.%Y') if favorite.tournament.start_date else 'Дата не указана' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-heart" style="font-size: 4rem; color: var(--text-muted);"></i>
+                    <p class="text-muted mt-3">У вас пока нет избранных турниров</p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Найти турниры
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Ratings Tab -->
+        <div class="tab-pane fade" id="ratings" role="tabpanel">
+            {% if ratings %}
+                <div class="list-group">
+                    {% for rating in ratings %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <a href="{{ url_for('main.tournament_detail', tournament_id=rating.tournament.id) }}">
+                                        {{ rating.tournament.name }}
+                                    </a>
+                                </h6>
+                                <div class="mb-1">
+                                    {% for i in range(5) %}
+                                        <i class="bi bi-star{% if i < rating.rating %}-fill{% endif %} text-warning"></i>
+                                    {% endfor %}
+                                </div>
+                                {% if rating.comment %}
+                                <p class="mb-0 text-muted">{{ rating.comment }}</p>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">
+                                {{ rating.created_at.strftime('%d.%m.%Y') if rating.created_at else '' }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-star" style="font-size: 4rem; color: var(--text-muted);"></i>
+                    <p class="text-muted mt-3">Вы еще не оценили ни одного турнира</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Subscriptions Tab -->
+        <div class="tab-pane fade" id="subscriptions" role="tabpanel">
+            {% if subscriptions %}
+                <div class="list-group">
+                    {% for sub in subscriptions %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <a href="{{ url_for('main.tournament_detail', tournament_id=sub.tournament.id) }}">
+                                        {{ sub.tournament.name }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-bell-fill"></i> 
+                                    Уведомления: 
+                                    {% if sub.notify_before_start %}За день до начала{% endif %}
+                                    {% if sub.notify_on_update %}, При обновлении{% endif %}
+                                </small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="unsubscribe({{ sub.id }})">
+                                <i class="bi bi-bell-slash"></i> Отписаться
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-bell" style="font-size: 4rem; color: var(--text-muted);"></i>
+                    <p class="text-muted mt-3">У вас нет активных подписок</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Settings Tab -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Настройки уведомлений</h5>
+                    <form method="POST" action="{{ url_for('user.update_preferences') }}">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" 
+                                   {% if preferences and preferences.email_notifications %}checked{% endif %}>
+                            <label class="form-check-label" for="emailNotifications">
+                                Email уведомления
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="pushNotifications" name="push_notifications"
+                                   {% if preferences and preferences.push_notifications %}checked{% endif %}>
+                            <label class="form-check-label" for="pushNotifications">
+                                Push уведомления
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="weeklyDigest" name="weekly_digest"
+                                   {% if preferences and preferences.weekly_digest %}checked{% endif %}>
+                            <label class="form-check-label" for="weeklyDigest">
+                                Еженедельная рассылка
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Сохранить настройки
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-4 text-danger">Опасная зона</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6>Удалить аккаунт</h6>
+                            <p class="text-muted mb-0">Это действие необратимо</p>
+                        </div>
+                        <button class="btn btn-danger" onclick="confirmDeleteAccount()">
+                            <i class="bi bi-trash"></i> Удалить аккаунт
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-document.getElementById('profileForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+<style>
+    .stats-card {
+        border-left: 4px solid var(--primary-color);
+        transition: all 0.3s ease;
+    }
     
-    const formData = new FormData(this);
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--box-shadow-lg);
+    }
     
-    fetch(this.action, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert(data.message);
-        } else {
-            alert('Ошибка: ' + data.message);
-        }
-    })
-    .catch(error => {
-        alert('Произошла ошибка при сохранении профиля');
-    });
-});
+    .stats-card h3 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .nav-tabs .nav-link {
+        color: var(--text-secondary);
+        border: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        border-bottom-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+    
+    .nav-tabs .nav-link.active {
+        border-bottom-color: var(--primary-color);
+        color: var(--primary-color);
+        background: transparent;
+    }
+    
+    .profile-avatar {
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+</style>
 
-document.getElementById('passwordForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    
-    fetch(this.action, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert(data.message);
-            document.getElementById('passwordForm').reset();
-        } else {
-            alert('Ошибка: ' + data.message);
+<script>
+    function removeFavorite(tournamentId) {
+        if (confirm('Удалить из избранного?')) {
+            fetch(`/api/favorites/${tournamentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.ChessCalendar.showToast('Удалено из избранного', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    window.ChessCalendar.showToast('Ошибка удаления', 'danger');
+                }
+            })
+            .catch(error => {
+                window.ChessCalendar.showToast('Ошибка удаления', 'danger');
+            });
         }
-    })
-    .catch(error => {
-        alert('Произошла ошибка при смене пароля');
-    });
-});
+    }
+    
+    function unsubscribe(subscriptionId) {
+        if (confirm('Отписаться от уведомлений?')) {
+            fetch(`/api/subscriptions/${subscriptionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.ChessCalendar.showToast('Подписка отменена', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    window.ChessCalendar.showToast('Ошибка отписки', 'danger');
+                }
+            })
+            .catch(error => {
+                window.ChessCalendar.showToast('Ошибка отписки', 'danger');
+            });
+        }
+    }
+    
+    function confirmDeleteAccount() {
+        if (confirm('Вы уверены, что хотите удалить аккаунт? Это действие необратимо!')) {
+            if (confirm('Последнее предупреждение! Все ваши данные будут удалены безвозвратно.')) {
+                window.location.href = '{{ url_for("user.delete_account") }}';
+            }
+        }
+    }
 </script>
 {% endblock %}
