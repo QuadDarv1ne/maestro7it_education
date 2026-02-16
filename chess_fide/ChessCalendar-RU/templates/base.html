@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Mobile CSS -->
+    <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
     
     <style>
         :root {
@@ -25,6 +27,37 @@
             --border-radius: 12px;
             --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --box-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            /* Light theme colors */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+        }
+        
+        [data-theme="dark"] {
+            --primary-color: #3b82f6;
+            --secondary-color: #94a3b8;
+            --success-color: #22c55e;
+            --danger-color: #f87171;
+            --warning-color: #fbbf24;
+            --info-color: #22d3ee;
+            --dark-color: #f8fafc;
+            --light-color: #1e293b;
+            
+            /* Dark theme colors */
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --box-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
         }
         
         * {
@@ -33,14 +66,55 @@
         
         body {
             padding-top: 70px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background: var(--bg-secondary);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         
         main {
             flex: 1;
+        }
+        
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--box-shadow-lg);
+        }
+        
+        /* Form controls */
+        .form-control, .form-select {
+            background: var(--bg-primary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-primary);
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+        }
+        
+        /* Text colors */
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+        
+        /* Borders */
+        .border, [class*="border-"] {
+            border-color: var(--border-color) !important;
         }
         
         /* Navbar Styles */
@@ -434,6 +508,13 @@
                             </li>
                         {% endif %}
                         
+                        <!-- Theme Toggle -->
+                        <li class="nav-item">
+                            <button class="nav-link btn btn-link" id="themeToggle" onclick="toggleTheme()">
+                                <i class="bi bi-moon-fill" id="themeIcon"></i>
+                            </button>
+                        </li>
+                        
                         {% if 'user_id' in session and current_user.is_admin %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
@@ -515,11 +596,70 @@
         </div>
     </footer>
     
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav d-sm-none">
+        <a href="{{ url_for('main.index') }}" class="mobile-nav-item {% if request.endpoint == 'main.index' %}active{% endif %}">
+            <i class="bi bi-house-fill"></i>
+            <span>Главная</span>
+        </a>
+        <a href="{{ url_for('main.calendar') }}" class="mobile-nav-item {% if request.endpoint == 'main.calendar' %}active{% endif %}">
+            <i class="bi bi-calendar-month"></i>
+            <span>Календарь</span>
+        </a>
+        <a href="{{ url_for('main.notifications') }}" class="mobile-nav-item {% if request.endpoint == 'main.notifications' %}active{% endif %}">
+            <i class="bi bi-bell-fill"></i>
+            <span>Уведомления</span>
+        </a>
+        {% if 'user_id' in session %}
+        <a href="{{ url_for('user.profile') }}" class="mobile-nav-item {% if request.endpoint == 'user.profile' %}active{% endif %}">
+            <i class="bi bi-person-fill"></i>
+            <span>Профиль</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('user.login') }}" class="mobile-nav-item">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <span>Войти</span>
+        </a>
+        {% endif %}
+    </nav>
+    
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Custom App JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    <!-- Theme Toggle Script -->
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Update icon
+            const icon = document.getElementById('themeIcon');
+            if (newTheme === 'dark') {
+                icon.className = 'bi bi-sun-fill';
+            } else {
+                icon.className = 'bi bi-moon-fill';
+            }
+        }
+        
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            const icon = document.getElementById('themeIcon');
+            if (savedTheme === 'dark') {
+                icon.className = 'bi bi-sun-fill';
+            }
+        });
+    </script>
     
     <!-- Search functionality -->
     <script>

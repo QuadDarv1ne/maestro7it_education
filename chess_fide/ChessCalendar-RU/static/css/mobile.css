@@ -1,0 +1,232 @@
+/* Mobile Navigation Enhancements */
+
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background: rgba(37, 99, 235, 0.98);
+        padding: 1rem;
+        border-radius: 12px;
+        margin-top: 1rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    
+    [data-theme="dark"] .navbar-collapse {
+        background: rgba(30, 41, 59, 0.98);
+    }
+    
+    .navbar-nav {
+        gap: 0.5rem;
+    }
+    
+    .nav-link {
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(5px);
+    }
+    
+    .search-container {
+        width: 100%;
+        margin: 1rem 0;
+    }
+    
+    .search-container input {
+        width: 100%;
+    }
+    
+    .dropdown-menu {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    [data-theme="dark"] .dropdown-menu {
+        background: rgba(30, 41, 59, 0.95);
+    }
+}
+
+/* Mobile Cards */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card h3 {
+        font-size: 2rem;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+    
+    .hero-section .lead {
+        font-size: 1.1rem;
+    }
+    
+    .tournament-card .card-title {
+        font-size: 1rem;
+    }
+    
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
+/* Touch Optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .btn, .nav-link, .card {
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .btn:active, .nav-link:active {
+        transform: scale(0.95);
+    }
+    
+    .card:active {
+        transform: scale(0.98);
+    }
+}
+
+/* Bottom Navigation for Mobile */
+@media (max-width: 576px) {
+    body {
+        padding-bottom: 70px;
+    }
+    
+    .mobile-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-primary);
+        border-top: 2px solid var(--border-color);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        display: flex;
+        justify-content: space-around;
+        padding: 0.5rem 0;
+    }
+    
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.75rem;
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        min-width: 60px;
+    }
+    
+    .mobile-nav-item i {
+        font-size: 1.5rem;
+    }
+    
+    .mobile-nav-item.active {
+        color: var(--primary-color);
+        background: rgba(37, 99, 235, 0.1);
+    }
+    
+    .mobile-nav-item:hover {
+        color: var(--primary-color);
+    }
+}
+
+/* Swipe Gestures */
+.swipe-container {
+    touch-action: pan-y;
+    user-select: none;
+}
+
+/* Loading States */
+.skeleton {
+    background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Pull to Refresh */
+.pull-to-refresh {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    z-index: 9999;
+}
+
+.pull-to-refresh.active {
+    transform: translateY(0);
+}
+
+/* Improved Touch Targets */
+@media (max-width: 768px) {
+    .btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .nav-link {
+        min-height: 44px;
+    }
+    
+    .form-control, .form-select {
+        min-height: 44px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
+
+/* Landscape Mode */
+@media (max-width: 768px) and (orientation: landscape) {
+    .hero-section {
+        padding: 1.5rem;
+    }
+    
+    .hero-section h1 {
+        font-size: 1.75rem;
+    }
+    
+    .stats-card {
+        padding: 0.75rem;
+    }
+}
+
+/* Safe Area Insets for Notched Devices */
+@supports (padding: max(0px)) {
+    body {
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-right: max(0px, env(safe-area-inset-right));
+    }
+    
+    .mobile-bottom-nav {
+        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+    
+    .navbar {
+        padding-top: max(1rem, env(safe-area-inset-top));
+    }
+}
