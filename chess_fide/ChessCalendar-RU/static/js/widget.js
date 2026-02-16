@@ -126,3 +126,187 @@
                 
                 .ccw-link {
                     color: #2563eb;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 0.875rem;
+                }
+                
+                .ccw-link:hover {
+                    text-decoration: underline;
+                }
+                
+                .ccw-loading {
+                    text-align: center;
+                    padding: 2rem;
+                    color: ${this.config.theme === 'dark' ? '#cbd5e1' : '#64748b'};
+                }
+                
+                .ccw-error {
+                    text-align: center;
+                    padding: 2rem;
+                    color: #ef4444;
+                }
+                
+                .ccw-compact .ccw-tournament {
+                    padding: 0.75rem;
+                    margin-bottom: 0.5rem;
+                }
+                
+                .ccw-compact .ccw-tournament-name {
+                    font-size: 0.875rem;
+                }
+                
+                .ccw-compact .ccw-tournament-info {
+                    font-size: 0.75rem;
+                }
+            `;
+            
+            const styleSheet = document.createElement('style');
+            styleSheet.textContent = styles;
+            document.head.appendChild(styleSheet);
+        }
+        
+        async loadTournaments() {
+            this.container.innerHTML = `
+                <div class="ccw-widget ${this.config.compact ? 'ccw-compact' : ''}">
+                    <div class="ccw-loading">Загрузка турниров...</div>
+                </div>
+            `;
+            
+            try {
+                let url = `${this.config.apiUrl}/tournaments?limit=${this.config.limit}`;
+                
+                if (this.config.category) {
+                    url += `&category=${encodeURIComponent(this.config.category)}`;
+                }
+                
+                if (this.config.location) {
+                    url += `&location=${encodeURIComponent(this.config.location)}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                this.render(data.tournaments || []);
+            } catch (error) {
+                console.error('Widget error:', error);
+                this.renderError();
+            }
+        }
+        
+        render(tournaments) {
+            if (tournaments.length === 0) {
+                this.container.innerHTML = `
+                    <div class="ccw-widget ${this.config.compact ? 'ccw-compact' : ''}">
+                        <div class="ccw-header">
+                            <span class="ccw-logo">♟️</span>
+                            <h3 class="ccw-title">Шахматные турниры</h3>
+                        </div>
+                        <div class="ccw-loading">Турниры не найдены</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const tournamentsHtml = tournaments.map(t => this.renderTournament(t)).join('');
+            
+            this.container.innerHTML = `
+                <div class="ccw-widget ${this.config.compact ? 'ccw-compact' : ''}">
+                    <div class="ccw-header">
+                        <span class="ccw-logo">♟️</span>
+                        <h3 class="ccw-title">Шахматные турниры</h3>
+                    </div>
+                    ${tournamentsHtml}
+                    <div class="ccw-footer">
+                        <a href="https://chesscalendar.ru" target="_blank" class="ccw-link">
+                            Все турниры на ChessCalendar-RU →
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        renderTournament(tournament) {
+            const url = `https://chesscalendar.ru/tournament/${tournament.id}`;
+            
+            return `
+                <a href="${url}" target="_blank" class="ccw-tournament">
+                    <div class="ccw-tournament-name">${this.escapeHtml(tournament.name)}</div>
+                    <div class="ccw-tournament-info">
+                        <span class="ccw-info-item">
+                            📍 ${this.escapeHtml(tournament.location)}
+                        </span>
+                        <span class="ccw-info-item">
+                            📅 ${this.formatDate(tournament.start_date)}
+                        </span>
+                    </div>
+                    ${tournament.category ? `
+                        <span class="ccw-badge">${this.escapeHtml(tournament.category)}</span>
+                    ` : ''}
+                    ${this.config.showRating && tournament.average_rating ? `
+                        <div class="ccw-rating">
+                            ${this.renderStars(tournament.average_rating)} 
+                            ${tournament.average_rating.toFixed(1)}
+                        </div>
+                    ` : ''}
+                </a>
+            `;
+        }
+        
+        renderStars(rating) {
+            const fullStars = Math.floor(rating);
+            let html = '';
+            
+            for (let i = 0; i < fullStars; i++) {
+                html += '⭐';
+            }
+            
+            return html;
+        }
+        
+        renderError() {
+            this.container.innerHTML = `
+                <div class="ccw-widget ${this.config.compact ? 'ccw-compact' : ''}">
+                    <div class="ccw-error">
+                        Ошибка загрузки турниров
+                    </div>
+                </div>
+            `;
+        }
+        
+        formatDate(dateString) {
+            if (!dateString) return 'Дата не указана';
+            
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    }
+    
+    // Auto-initialize widgets
+    function initWidgets() {
+        const widgets = document.querySelectorAll('[id^="chess-calendar-widget"]');
+        widgets.forEach(widget => {
+            new ChessCalendarWidget(widget);
+        });
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWidgets);
+    } else {
+        initWidgets();
+    }
+    
+    // Export for manual initialization
+    window.ChessCalendarWidget = ChessCalendarWidget;
+})();
