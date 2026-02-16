@@ -1,126 +1,208 @@
 """
-Unit tests for models
+Тесты моделей данных
 """
 import pytest
 from datetime import datetime, timedelta
-from app.models.tournament import Tournament
 from app.models.user import User
-
-
-class TestTournamentModel:
-    """Tests for Tournament model"""
-    
-    def test_create_tournament(self, db_session):
-        """Test creating a tournament"""
-        tournament = Tournament(
-            name='Test Tournament',
-            start_date=datetime.now().date(),
-            end_date=(datetime.now() + timedelta(days=3)).date(),
-            location='Moscow',
-            category='National',
-            status='Scheduled'
-        )
-        db_session.session.add(tournament)
-        db_session.session.commit()
-        
-        assert tournament.id is not None
-        assert tournament.name == 'Test Tournament'
-        assert tournament.location == 'Moscow'
-        assert tournament.category == 'National'
-        assert tournament.status == 'Scheduled'
-    
-    def test_tournament_validation(self, db_session):
-        """Test tournament validation"""
-        tournament = Tournament(
-            name='Test',
-            start_date=datetime.now().date(),
-            end_date=(datetime.now() - timedelta(days=1)).date(),  # Invalid: end before start
-            location='Moscow',
-            category='National',
-            status='Scheduled'
-        )
-        
-        errors = tournament.validate()
-        assert len(errors) > 0
-        assert any('end_date' in error.lower() for error in errors)
-    
-    def test_tournament_to_dict(self, sample_tournament):
-        """Test tournament serialization"""
-        data = sample_tournament.to_dict()
-        
-        assert isinstance(data, dict)
-        assert data['name'] == 'Test Tournament'
-        assert data['location'] == 'Moscow'
-        assert 'id' in data
-        assert 'start_date' in data
-        assert 'end_date' in data
-    
-    def test_tournament_status_update(self, sample_tournament, db_session):
-        """Test updating tournament status"""
-        sample_tournament.status = 'Ongoing'
-        db_session.session.commit()
-        
-        assert sample_tournament.status == 'Ongoing'
+from app.models.tournament import Tournament
+from app.models.favorite import Favorite
+from app.models.rating import Rating
 
 
 class TestUserModel:
-    """Tests for User model"""
+    """Тесты модели User"""
     
     def test_create_user(self, db_session):
-        """Test creating a user"""
+        """Тест создания пользователя"""
         user = User(
             username='testuser',
-            email='test@example.com',
-            password='password123',
-            is_admin=False
+            email='test@example.com'
         )
-        db_session.session.add(user)
-        db_session.session.commit()
+        user.set_password('password123')
+        db_session.add(user)
+        db_session.commit()
         
         assert user.id is not None
         assert user.username == 'testuser'
         assert user.email == 'test@example.com'
-        assert user.is_admin is False
-    
-    def test_password_hashing(self, db_session):
-        """Test password hashing"""
-        user = User(
-            username='testuser',
-            email='test@example.com',
-            password='password123'
-        )
-        
-        # Password should be hashed
-        assert user.password_hash != 'password123'
-        
-        # Check password should work
         assert user.check_password('password123')
         assert not user.check_password('wrongpassword')
     
-    def test_user_unique_constraints(self, db_session, sample_user):
-        """Test unique constraints on username and email"""
-        # Try to create user with same username
+    def test_user_password_hashing(self, db_session):
+        """Тест хеширования пароля"""
+        user = User(username='test', email='test@test.com')
+        user.set_password('secret')
+        
+        assert user.password_hash != 'secret'
+        assert user.check_password('secret')
+        assert not user.check_password('wrong')
+    
+    def test_user_unique_username(self, db_session, regular_user):
+        """Тест уникальности username"""
         duplicate_user = User(
-            username='testuser',  # Same as sample_user
-            email='different@example.com',
-            password='password123'
+            username='user',  # Уже существует
+            email='another@test.com'
         )
-        db_session.session.add(duplicate_user)
+        db_session.add(duplicate_user)
         
-        with pytest.raises(Exception):  # Should raise IntegrityError
-            db_session.session.commit()
+        with pytest.raises(Exception):
+            db_session.commit()
     
-    def test_user_to_dict(self, sample_user):
-        """Test user serialization"""
-        data = sample_user.to_dict()
+    def test_user_unique_email(self, db_session, regular_user):
+        """Тест уникальности email"""
+        duplicate_user = User(
+            username='another',
+            email='user@test.com'  # Уже существует
+        )
+        db_session.add(duplicate_user)
         
-        assert isinstance(data, dict)
-        assert data['username'] == 'testuser'
-        assert data['email'] == 'test@example.com'
-        assert 'password_hash' not in data  # Should not expose password
-        assert 'id' in data
+        with pytest.raises(Exception):
+            db_session.commit()
+
+
+class TestTournamentModel:
+    """Тесты модели Tournament"""
     
-    def test_admin_user(self, admin_user):
-        """Test admin user"""
-        assert admin_user.is_admin is True
-        assert admin_user.username == 'admin'
+    def test_create_tournament(self, db_session):
+        """Тест создания турнира"""
+        tournament = Tournament(
+            name='Чемпионат России',
+            start_date=datetime.now() + timedelta(days=30),
+            end_date=datetime.now() + timedelta(days=37),
+            location='Москва',
+            category='National',
+            status='Scheduled'
+        )
+        db_session.add(tournament)
+        db_session.commit()
+        
+        assert tournament.id is not None
+        assert tournament.name == 'Чемпионат России'
+        assert tournament.category == 'National'
+        assert tournament.status == 'Scheduled'
+    
+    def test_tournament_dates_validation(self, db_session):
+        """Тест валидации дат турнира"""
+        # end_date должна быть после start_date
+        tournament = Tournament(
+            name='Тест',
+            start_date=datetime.now() + timedelta(days=10),
+            end_date=datetime.now() + timedelta(days=5),  # Раньше start_date
+            location='Москва',
+            category='Regional'
+        )
+        db_session.add(tournament)
+        
+        # Должна быть ошибка валидации
+        with pytest.raises(Exception):
+            db_session.commit()
+    
+    def test_tournament_status_values(self, db_session):
+        """Тест допустимых значений статуса"""
+        valid_statuses = ['Scheduled', 'Ongoing', 'Completed', 'Cancelled']
+        
+        for status in valid_statuses:
+            tournament = Tournament(
+                name=f'Турнир {status}',
+                start_date=datetime.now(),
+                end_date=datetime.now() + timedelta(days=1),
+                location='Тест',
+                category='Regional',
+                status=status
+            )
+            db_session.add(tournament)
+            db_session.commit()
+            assert tournament.status == status
+            db_session.delete(tournament)
+            db_session.commit()
+    
+    def test_tournament_search(self, db_session, multiple_tournaments):
+        """Тест поиска турниров"""
+        # Поиск по названию
+        results = Tournament.query.filter(
+            Tournament.name.ilike('%Турнир 1%')
+        ).all()
+        assert len(results) >= 1
+        
+        # Поиск по категории
+        fide_tournaments = Tournament.query.filter_by(category='FIDE').all()
+        assert len(fide_tournaments) > 0
+
+
+class TestFavoriteModel:
+    """Тесты модели Favorite"""
+    
+    def test_add_favorite(self, db_session, regular_user, sample_tournament):
+        """Тест добавления в избранное"""
+        favorite = Favorite(
+            user_id=regular_user.id,
+            tournament_id=sample_tournament.id
+        )
+        db_session.add(favorite)
+        db_session.commit()
+        
+        assert favorite.id is not None
+        assert favorite.user_id == regular_user.id
+        assert favorite.tournament_id == sample_tournament.id
+    
+    def test_unique_favorite(self, db_session, regular_user, sample_tournament):
+        """Тест уникальности избранного"""
+        favorite1 = Favorite(
+            user_id=regular_user.id,
+            tournament_id=sample_tournament.id
+        )
+        db_session.add(favorite1)
+        db_session.commit()
+        
+        # Попытка добавить дубликат
+        favorite2 = Favorite(
+            user_id=regular_user.id,
+            tournament_id=sample_tournament.id
+        )
+        db_session.add(favorite2)
+        
+        with pytest.raises(Exception):
+            db_session.commit()
+
+
+class TestRatingModel:
+    """Тесты модели Rating"""
+    
+    def test_add_rating(self, db_session, regular_user, sample_tournament):
+        """Тест добавления рейтинга"""
+        rating = Rating(
+            user_id=regular_user.id,
+            tournament_id=sample_tournament.id,
+            rating=5
+        )
+        db_session.add(rating)
+        db_session.commit()
+        
+        assert rating.id is not None
+        assert rating.rating == 5
+    
+    def test_rating_range(self, db_session, regular_user, sample_tournament):
+        """Тест диапазона рейтинга (1-5)"""
+        # Валидный рейтинг
+        for value in [1, 2, 3, 4, 5]:
+            rating = Rating(
+                user_id=regular_user.id,
+                tournament_id=sample_tournament.id,
+                rating=value
+            )
+            db_session.add(rating)
+            db_session.commit()
+            assert rating.rating == value
+            db_session.delete(rating)
+            db_session.commit()
+        
+        # Невалидный рейтинг
+        invalid_rating = Rating(
+            user_id=regular_user.id,
+            tournament_id=sample_tournament.id,
+            rating=6  # Больше 5
+        )
+        db_session.add(invalid_rating)
+        
+        with pytest.raises(Exception):
+            db_session.commit()

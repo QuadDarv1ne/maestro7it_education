@@ -1,0 +1,145 @@
+version: '3.8'
+
+# Production конфигурация с PostgreSQL
+services:
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-chess_calendar}
+      - POSTGRES_USER=${POSTGRES_USER:-chess_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-me-in-production}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=ru_RU.UTF-8 --lc-ctype=ru_RU.UTF-8
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - chess-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chess_user} -d ${POSTGRES_DB:-chess_calendar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=1310kB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+
+  # API Gateway с PostgreSQL
+  api-gateway:
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-chess_calendar}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Tournament Service с PostgreSQL
+  tournament-service:
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-chess_calendar}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # User Service с PostgreSQL
+  user-service:
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-chess_calendar}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Celery Worker с PostgreSQL
+  celery-worker:
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-chess_calendar}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Celery Beat с PostgreSQL
+  celery-beat:
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-chess_calendar}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # PgBouncer для connection pooling
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    ports:
+      - "6432:6432"
+    environment:
+      - DATABASES_HOST=postgres
+      - DATABASES_PORT=5432
+      - DATABASES_USER=${POSTGRES_USER:-chess_user}
+      - DATABASES_PASSWORD=${POSTGRES_PASSWORD:-change-me-in-production}
+      - DATABASES_DBNAME=${POSTGRES_DB:-chess_calendar}
+      - PGBOUNCER_POOL_MODE=transaction
+      - PGBOUNCER_MAX_CLIENT_CONN=1000
+      - PGBOUNCER_DEFAULT_POOL_SIZE=25
+      - PGBOUNCER_MIN_POOL_SIZE=10
+      - PGBOUNCER_RESERVE_POOL_SIZE=5
+      - PGBOUNCER_RESERVE_POOL_TIMEOUT=3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chess-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "psql", "-h", "localhost", "-p", "6432", "-U", "${POSTGRES_USER:-chess_user}", "-d", "${POSTGRES_DB:-chess_calendar}", "-c", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backup сервис для PostgreSQL
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:15-alpine
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=${POSTGRES_DB:-chess_calendar}
+      - POSTGRES_USER=${POSTGRES_USER:-chess_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-me-in-production}
+      - SCHEDULE=@daily
+      - BACKUP_KEEP_DAYS=7
+      - BACKUP_KEEP_WEEKS=4
+      - BACKUP_KEEP_MONTHS=6
+      - HEALTHCHECK_PORT=8080
+    volumes:
+      - ./backups/postgres:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chess-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

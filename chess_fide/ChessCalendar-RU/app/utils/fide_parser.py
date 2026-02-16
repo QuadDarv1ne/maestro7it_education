@@ -30,7 +30,24 @@ class FIDEParses:
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
+            'Referer': 'https://calendar.fide.com/',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'same-origin',
         })
+        
+        # Configure retries
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.retry import Retry
+        
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
         self.logger = logger  # Use centralized logger
         
         # Initialize Selenium for JavaScript-heavy pages
@@ -504,12 +521,66 @@ class FIDEParses:
 
     def _is_valid_russian_tournament(self, tournament_data):
         """Проверка, что турнир проходит в России"""
+        if not tournament_data.get('location'):
+            return False
+            
         russian_locations = ['moscow', 'москва', 'st. petersburg', 'санкт-петербург', 
                            'ekaterinburg', 'екатеринбург', 'kazan', 'казань', 
-                           'sochi', 'сочи', 'russia', 'россия']
+                           'sochi', 'сочи', 'russia', 'россия', 'россий', 'russian']
         
         location = tournament_data.get('location', '').lower()
         return any(loc in location for loc in russian_locations)
+    
+    def validate_and_normalize_tournament(self, tournament_data):
+        """Validate and normalize tournament data before saving"""
+        if not tournament_data:
+            return None
+        
+        # Ensure required fields exist
+        required_fields = ['name', 'start_date']
+        for field in required_fields:
+            if not tournament_data.get(field):
+                return None
+        
+        # Normalize name
+        name = tournament_data.get('name', '').strip()
+        if len(name) < 3 or len(name) > 200:
+            return None
+        
+        # Validate dates
+        start_date = tournament_data.get('start_date')
+        end_date = tournament_data.get('end_date', start_date)
+        
+        if not start_date:
+            return None
+        
+        # Ensure end_date is not before start_date
+        if end_date and end_date < start_date:
+            tournament_data['end_date'] = start_date
+        
+        # Set default values for missing fields
+        defaults = {
+            'location': 'Russia',
+            'category': 'FIDE',
+            'status': 'Scheduled',
+            'description': '',
+            'prize_fund': '',
+            'organizer': 'FIDE',
+            'source_url': '',
+            'fide_id': None
+        }
+        
+        for field, default_value in defaults.items():
+            if field not in tournament_data or tournament_data[field] is None:
+                tournament_data[field] = default_value
+        
+        # Clean up fields
+        tournament_data['name'] = name
+        tournament_data['location'] = tournament_data.get('location', '').strip()
+        tournament_data['category'] = tournament_data.get('category', '').strip()
+        tournament_data['status'] = tournament_data.get('status', '').strip()
+        
+        return tournament_data
 
     def _extract_fide_id(self, element):
         """Извлечение FIDE ID из элемента"""

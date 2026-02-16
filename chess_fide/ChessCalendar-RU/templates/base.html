@@ -543,9 +543,16 @@
                                     <i class="bi bi-person-circle"></i> {{ session.username }}
                                 </a>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ url_for('user.profile') }}">Профиль</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('user.profile') }}">
+                                        <i class="bi bi-person"></i> Профиль
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('main.achievements') }}">
+                                        <i class="bi bi-trophy"></i> Достижения
+                                    </a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('user.logout') }}">Выйти</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('user.logout') }}">
+                                        <i class="bi bi-box-arrow-right"></i> Выйти
+                                    </a></li>
                                 </ul>
                             </li>
                         {% else %}
@@ -615,6 +622,7 @@
                     <ul class="footer-links">
                         <li><a href="https://fide.com" target="_blank"><i class="bi bi-globe"></i> FIDE</a></li>
                         <li><a href="https://ruchess.ru" target="_blank"><i class="bi bi-flag"></i> Федерация шахмат России</a></li>
+                        <li><a href="{{ url_for('main.widget_docs') }}"><i class="bi bi-code-square"></i> Виджет для сайта</a></li>
                         <li><a href="{{ url_for('main.export_csv') }}"><i class="bi bi-download"></i> Экспорт CSV</a></li>
                         <li><a href="{{ url_for('main.export_json') }}"><i class="bi bi-filetype-json"></i> Экспорт JSON</a></li>
                     </ul>

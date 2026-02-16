@@ -24,6 +24,37 @@ class TournamentSearch {
                 this.hideResults();
             }
         });
+        
+        // Initialize advanced search
+        this.initializeAdvancedSearch();
+    }
+    
+    initializeAdvancedSearch() {
+        // Add advanced search functionality
+        this.advancedFilters = {};
+        this.activeFilters = {};
+    }
+    
+    // Method to apply advanced filters
+    applyFilters(filters) {
+        this.activeFilters = { ...this.activeFilters, ...filters };
+        
+        // Re-run search with current query and new filters
+        const query = this.searchInput.value.trim();
+        if (query.length >= 2) {
+            this.search(query);
+        }
+    }
+    
+    // Method to clear filters
+    clearFilters() {
+        this.activeFilters = {};
+        
+        // Re-run search without filters
+        const query = this.searchInput.value.trim();
+        if (query.length >= 2) {
+            this.search(query);
+        }
     }
     
     handleInput(e) {
@@ -42,18 +73,31 @@ class TournamentSearch {
     }
     
     async search(query) {
+        // Create cache key with active filters
+        const cacheKey = `${query}_${JSON.stringify(this.activeFilters)}`;
+        
         // Check cache first
-        if (this.cache.has(query)) {
-            this.displayResults(this.cache.get(query), query);
+        if (this.cache.has(cacheKey)) {
+            this.displayResults(this.cache.get(cacheKey), query);
             return;
         }
         
         try {
-            const response = await fetch(`/api/tournaments/search?q=${encodeURIComponent(query)}`);
+            // Build query parameters
+            let url = `/api/tournaments/search?q=${encodeURIComponent(query)}`;
+            
+            // Add active filters as query parameters
+            Object.entries(this.activeFilters).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                    url += `&${key}=${encodeURIComponent(value)}`;
+                }
+            });
+            
+            const response = await fetch(url);
             const data = await response.json();
             
-            // Cache results
-            this.cache.set(query, data);
+            // Cache results with filters
+            this.cache.set(cacheKey, data);
             
             // Limit cache size
             if (this.cache.size > 50) {

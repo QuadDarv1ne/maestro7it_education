@@ -560,6 +560,97 @@ def export_ics():
         return jsonify({'error': str(e)}), 500
 
 
+@main_bp.route('/api/export/google', methods=['POST'])
+def export_google():
+    """API endpoint for generating Google Calendar URLs"""
+    from datetime import datetime
+    import urllib.parse
+    
+    try:
+        data = request.get_json()
+        tournaments = data.get('tournaments', [])
+        
+        # If there's only one tournament, generate URL for that tournament
+        # If there are multiple tournaments, we'll generate URLs for all of them
+        calendar_urls = []
+        
+        for tournament in tournaments:
+            start_date = datetime.strptime(tournament['start_date'], '%Y-%m-%d')
+            end_date = datetime.strptime(tournament['end_date'], '%Y-%m-%d')
+            
+            # Format dates for Google Calendar (YYYYMMDDTHHmmss)
+            start_formatted = start_date.strftime('%Y%m%dT%H%M%S')
+            end_formatted = end_date.strftime('%Y%m%dT%H%M%S')
+            
+            params = {
+                'action': 'TEMPLATE',
+                'text': tournament['name'],
+                'dates': f"{start_formatted}/{end_formatted}",
+                'details': tournament.get('description', 'Шахматный турнир'),
+                'location': tournament['location'],
+                'trp': 'false'
+            }
+            
+            query_string = urllib.parse.urlencode(params)
+            google_url = f"https://www.google.com/calendar/render?{query_string}"
+            
+            calendar_urls.append({
+                'tournament_id': tournament.get('id'),
+                'tournament_name': tournament['name'],
+                'google_calendar_url': google_url
+            })
+        
+        return jsonify({
+            'google_calendar_urls': calendar_urls,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@main_bp.route('/api/export/outlook', methods=['POST'])
+def export_outlook():
+    """API endpoint for generating Outlook Calendar URLs"""
+    from datetime import datetime
+    import urllib.parse
+    
+    try:
+        data = request.get_json()
+        tournaments = data.get('tournaments', [])
+        
+        calendar_urls = []
+        
+        for tournament in tournaments:
+            start_date = datetime.strptime(tournament['start_date'], '%Y-%m-%d')
+            end_date = datetime.strptime(tournament['end_date'], '%Y-%m-%d')
+            
+            params = {
+                'path': '/calendar/action/compose',
+                'rru': 'addevent',
+                'subject': tournament['name'],
+                'startdt': start_date.strftime('%Y-%m-%d'),
+                'enddt': end_date.strftime('%Y-%m-%d'),
+                'location': tournament['location'],
+                'body': tournament.get('description', 'Шахматный турнир')
+            }
+            
+            query_string = urllib.parse.urlencode(params)
+            outlook_url = f"https://outlook.live.com/calendar/0/deeplink/compose?{query_string}"
+            
+            calendar_urls.append({
+                'tournament_id': tournament.get('id'),
+                'tournament_name': tournament['name'],
+                'outlook_calendar_url': outlook_url
+            })
+        
+        return jsonify({
+            'outlook_calendar_urls': calendar_urls,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @main_bp.route('/health')
 def health_check():
     """Health check endpoint for the application"""
@@ -596,3 +687,25 @@ def internal_error(error):
     logger = get_logger('app.errors')
     logger.error(f'Server Error: {error}', exc_info=True)
     return render_template('error/500.html'), 500
+
+
+@main_bp.route('/widget')
+def widget_docs():
+    """Widget documentation page"""
+    return render_template('widget_docs.html')
+
+
+@main_bp.route('/achievements')
+def achievements():
+    """User achievements page"""
+    if 'user_id' not in session:
+        flash('Пожалуйста, войдите в систему', 'warning')
+        return redirect(url_for('user.login'))
+    
+    return render_template('user/achievements.html')
+
+
+@main_bp.route('/offline')
+def offline():
+    """Offline page for PWA"""
+    return render_template('offline.html')

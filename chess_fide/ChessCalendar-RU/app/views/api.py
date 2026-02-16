@@ -7,7 +7,7 @@ from app.models.favorite import FavoriteTournament
 from app.models.notification import Subscription
 from app.utils.cache import TournamentCache
 from app.utils.performance_monitor import track_performance
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
 
@@ -735,21 +735,82 @@ def track_analytics():
 
 @api_bp.route('/tournaments/search', methods=['GET'])
 def search_tournaments():
-    """Search tournaments by query"""
+    """Search tournaments with advanced filtering"""
     try:
+        # Get all search parameters
         query = request.args.get('q', '').strip()
+        category = request.args.get('category', '')
+        location = request.args.get('location', '')
+        status = request.args.get('status', '')
+        start_date = request.args.get('start_date', '')
+        end_date = request.args.get('end_date', '')
+        min_rating = request.args.get('min_rating', type=float)
+        max_rating = request.args.get('max_rating', type=float)
+        sort_by = request.args.get('sort_by', 'start_date')  # start_date, rating, name
+        sort_order = request.args.get('sort_order', 'asc')  # asc, desc
+        limit = min(request.args.get('limit', 20, type=int), 100)  # Max 100 results
         
-        if not query or len(query) < 2:
-            return jsonify([]), 200
+        # Build query
+        search_query = Tournament.query
         
-        # Search in name, location, and description
-        tournaments = Tournament.query.filter(
-            db.or_(
-                Tournament.name.ilike(f'%{query}%'),
-                Tournament.location.ilike(f'%{query}%'),
-                Tournament.description.ilike(f'%{query}%')
+        # Apply search term if provided
+        if query and len(query) >= 2:
+            search_query = search_query.filter(
+                db.or_(
+                    Tournament.name.ilike(f'%{query}%'),
+                    Tournament.location.ilike(f'%{query}%'),
+                    Tournament.description.ilike(f'%{query}%')
+                )
             )
-        ).order_by(Tournament.start_date.desc()).limit(20).all()
+        
+        # Apply filters
+        if category:
+            search_query = search_query.filter(Tournament.category == category)
+        
+        if location:
+            search_query = search_query.filter(Tournament.location.ilike(f'%{location}%'))
+        
+        if status:
+            search_query = search_query.filter(Tournament.status == status)
+        
+        if start_date:
+            from datetime import datetime
+            try:
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+                search_query = search_query.filter(Tournament.start_date >= start_dt)
+            except ValueError:
+                pass  # Invalid date format, ignore filter
+        
+        if end_date:
+            from datetime import datetime
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+                search_query = search_query.filter(Tournament.end_date <= end_dt)
+            except ValueError:
+                pass  # Invalid date format, ignore filter
+        
+        # Apply rating filters
+        if min_rating is not None:
+            search_query = search_query.filter(Tournament.average_rating >= min_rating)
+        
+        if max_rating is not None:
+            search_query = search_query.filter(Tournament.average_rating <= max_rating)
+        
+        # Apply sorting
+        if sort_by == 'rating':
+            order_column = Tournament.average_rating
+        elif sort_by == 'name':
+            order_column = Tournament.name
+        else:  # default to start_date
+            order_column = Tournament.start_date
+        
+        if sort_order == 'desc':
+            search_query = search_query.order_by(order_column.desc())
+        else:
+            search_query = search_query.order_by(order_column.asc())
+        
+        # Execute query with limit
+        tournaments = search_query.limit(limit).all()
         
         return jsonify([{
             'id': t.id,
@@ -758,12 +819,14 @@ def search_tournaments():
             'start_date': t.start_date.isoformat() if t.start_date else None,
             'end_date': t.end_date.isoformat() if t.end_date else None,
             'category': t.category,
-            'rating': t.average_rating
+            'status': t.status,
+            'rating': t.average_rating,
+            'description': t.description[:100] + '...' if t.description and len(t.description) > 100 else t.description
         } for t in tournaments]), 200
         
     except Exception as e:
         from app.utils.logger import logger
-        logger.error(f"Search error: {str(e)}")
+        logger.error(f"Advanced search error: {str(e)}")
         return jsonify({'error': 'Search failed'}), 500
 
 
@@ -898,3 +961,166 @@ def get_achievements_leaderboard():
         from app.utils.logger import logger
         logger.error(f"Leaderboard error: {str(e)}")
         return jsonify({'error': 'Failed to get leaderboard'}), 500
+
+
+@api_bp.route('/tournaments/popular', methods=['GET'])
+@track_performance()
+def get_popular_tournaments():
+    """Get popular tournaments based on user interactions"""
+    try:
+        from app.utils.recommendations import RecommendationEngine
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = min(max(limit, 1), 50)
+        
+        popular_tournaments = RecommendationEngine.get_popular_tournaments(limit=limit)
+        
+        return jsonify({
+            'tournaments': [t.to_dict() for t in popular_tournaments],
+            'count': len(popular_tournaments)
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Popular tournaments error: {str(e)}")
+        return jsonify({'error': 'Failed to get popular tournaments'}), 500
+
+
+@api_bp.route('/tournaments/nearby', methods=['GET'])
+@track_performance()
+def get_nearby_tournaments():
+    """Get tournaments near a specific location"""
+    try:
+        latitude = request.args.get('lat', type=float)
+        longitude = request.args.get('lon', type=float)
+        radius = request.args.get('radius', 100, type=int)  # in km
+        limit = request.args.get('limit', 10, type=int)
+        
+        if latitude is None or longitude is None:
+            return jsonify({'error': 'Latitude and longitude are required'}), 400
+        
+        # This would require geocoding functionality which isn't fully implemented
+        # For now, return tournaments that have location info
+        tournaments = Tournament.query.filter(
+            Tournament.location.isnot(None)
+        ).limit(limit).all()
+        
+        return jsonify({
+            'tournaments': [t.to_dict() for t in tournaments],
+            'count': len(tournaments)
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Nearby tournaments error: {str(e)}")
+        return jsonify({'error': 'Failed to get nearby tournaments'}), 500
+
+
+@api_bp.route('/tournaments/<int:tournament_id>/similar', methods=['GET'])
+@track_performance()
+def get_similar_tournaments(tournament_id):
+    """Get tournaments similar to the given tournament"""
+    try:
+        tournament = Tournament.query.get_or_404(tournament_id)
+        
+        limit = request.args.get('limit', 10, type=int)
+        limit = min(max(limit, 1), 20)
+        
+        # Find similar tournaments based on category, location, and date proximity
+        similar_tournaments = Tournament.query.filter(
+            Tournament.id != tournament_id,
+            Tournament.category == tournament.category,
+            Tournament.start_date.between(
+                tournament.start_date.replace(day=1),
+                tournament.start_date.replace(day=28) + timedelta(days=7)
+            )
+        ).limit(limit).all()
+        
+        return jsonify({
+            'tournaments': [t.to_dict() for t in similar_tournaments],
+            'count': len(similar_tournaments),
+            'reference_tournament': tournament.to_dict()
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Similar tournaments error: {str(e)}")
+        return jsonify({'error': 'Failed to get similar tournaments'}), 500
+
+
+@api_bp.route('/tournaments/upcoming-by-category', methods=['GET'])
+@track_performance()
+def get_upcoming_by_category():
+    """Get upcoming tournaments grouped by category"""
+    try:
+        from datetime import datetime
+        
+        # Get all upcoming tournaments
+        upcoming_tournaments = Tournament.query.filter(
+            Tournament.start_date >= datetime.now().date(),
+            Tournament.status.in_(['Scheduled', 'Registration Open'])
+        ).order_by(Tournament.start_date).all()
+        
+        # Group by category
+        grouped_tournaments = {}
+        for tournament in upcoming_tournaments:
+            category = tournament.category
+            if category not in grouped_tournaments:
+                grouped_tournaments[category] = []
+            grouped_tournaments[category].append(tournament.to_dict())
+        
+        return jsonify({
+            'categories': grouped_tournaments,
+            'total_count': len(upcoming_tournaments)
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Upcoming by category error: {str(e)}")
+        return jsonify({'error': 'Failed to get upcoming tournaments by category'}), 500
+
+
+@api_bp.route('/tournaments/statistics', methods=['GET'])
+@track_performance()
+def get_tournament_statistics():
+    """Get comprehensive tournament statistics"""
+    try:
+        from app.utils.analytics import analytics_service
+        
+        # Get comprehensive statistics
+        stats = {
+            'general': analytics_service.get_tournament_analytics(),
+            'by_category': {},
+            'by_location': {},
+            'by_status': {}
+        }
+        
+        # Get category breakdown
+        category_stats = db.session.query(
+            Tournament.category,
+            db.func.count(Tournament.id)
+        ).group_by(Tournament.category).all()
+        stats['by_category'] = dict(category_stats)
+        
+        # Get location breakdown
+        location_stats = db.session.query(
+            Tournament.location,
+            db.func.count(Tournament.id)
+        ).group_by(Tournament.location).order_by(
+            db.func.count(Tournament.id).desc()
+        ).limit(10).all()
+        stats['by_location'] = dict(location_stats)
+        
+        # Get status breakdown
+        status_stats = db.session.query(
+            Tournament.status,
+            db.func.count(Tournament.id)
+        ).group_by(Tournament.status).all()
+        stats['by_status'] = dict(status_stats)
+        
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Tournament statistics error: {str(e)}")
+        return jsonify({'error': 'Failed to get tournament statistics'}), 500

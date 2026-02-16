@@ -361,19 +361,163 @@ class EnhancedCalendar {
         }
     }
     
-    exportToGoogle() {
-        alert('Функция экспорта в Google Calendar будет реализована в следующем обновлении');
-        // Здесь должна быть реализация интеграции с Google Calendar API
+    async exportToGoogle() {
+        try {
+            const response = await fetch('/api/export/google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tournaments: this.filteredTournaments
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Открываем Google Calendar в новой вкладке
+                if (data.google_calendar_urls && data.google_calendar_urls.length > 0) {
+                    // Если есть только один турнир, открываем его в Google Calendar
+                    if (data.google_calendar_urls.length === 1) {
+                        window.open(data.google_calendar_urls[0].google_calendar_url, '_blank');
+                    } else {
+                        // Если несколько турниров, показываем диалог с выбором
+                        this.showMultipleEventsDialog(data.google_calendar_urls, 'Google Calendar');
+                    }
+                }
+            } else {
+                console.error('Ошибка экспорта в Google Calendar:', response.statusText);
+                alert('Ошибка при экспорте в Google Calendar');
+            }
+        } catch (error) {
+            console.error('Ошибка экспорта в Google Calendar:', error);
+            alert('Ошибка при экспорте в Google Calendar');
+        }
     }
     
-    exportToOutlook() {
-        alert('Функция экспорта в Outlook будет реализована в следующем обновлении');
-        // Здесь должна быть реализация интеграции с Outlook API
+    async exportToOutlook() {
+        try {
+            const response = await fetch('/api/export/outlook', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tournaments: this.filteredTournaments
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Открываем Outlook Calendar в новой вкладке
+                if (data.outlook_calendar_urls && data.outlook_calendar_urls.length > 0) {
+                    // Если есть только один турнир, открываем его в Outlook Calendar
+                    if (data.outlook_calendar_urls.length === 1) {
+                        window.open(data.outlook_calendar_urls[0].outlook_calendar_url, '_blank');
+                    } else {
+                        // Если несколько турниров, показываем диалог с выбором
+                        this.showMultipleEventsDialog(data.outlook_calendar_urls, 'Outlook Calendar');
+                    }
+                }
+            } else {
+                console.error('Ошибка экспорта в Outlook:', response.statusText);
+                alert('Ошибка при экспорте в Outlook');
+            }
+        } catch (error) {
+            console.error('Ошибка экспорта в Outlook:', error);
+            alert('Ошибка при экспорте в Outlook');
+        }
     }
     
-    exportToCSV() {
-        alert('Функция экспорта в CSV будет реализована в следующем обновлении');
-        // Здесь должна быть реализация экспорта в CSV
+    showMultipleEventsDialog(urls, serviceName) {
+        // Создаем диалог для выбора турнира
+        const tournamentNames = urls.map(item => item.tournament_name);
+        
+        const dialogHTML = `
+            <div class="modal fade show" id="calendarExportModal" tabindex="-1" style="display: block; padding-right: 17px;">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Экспорт в ${serviceName}</h5>
+                            <button type="button" class="btn-close" onclick="document.getElementById('calendarExportModal').remove()"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Выберите турнир для экспорта:</p>
+                            <div class="list-group">
+                                ${urls.map((item, index) => `
+                                    <a href="#" class="list-group-item list-group-item-action tournament-export-item" data-url="${item[serviceName === 'Google Calendar' ? 'google_calendar_url' : 'outlook_calendar_url']}" data-index="${index}">
+                                        <div class="fw-bold">${item.tournament_name}</div>
+                                        <small>Нажмите для экспорта</small>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('calendarExportModal').remove()">Закрыть</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-backdrop fade show"></div>
+        `;
+        
+        // Добавляем диалог в документ
+        document.body.insertAdjacentHTML('beforeend', dialogHTML);
+        
+        // Добавляем обработчики кликов
+        document.querySelectorAll('.tournament-export-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = item.getAttribute('data-url');
+                window.open(url, '_blank');
+                document.getElementById('calendarExportModal').remove();
+            });
+        });
+    }
+    
+    async exportToCSV() {
+        try {
+            // Генерируем CSV содержимое
+            const csvContent = this.generateCSVContent(this.filteredTournaments);
+            
+            // Создаем Blob и ссылку для скачивания
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chess-tournaments-${this.currentDate.getFullYear()}-${String(this.currentDate.getMonth() + 1).padStart(2, '0')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Ошибка экспорта в CSV:', error);
+            alert('Ошибка при экспорте в CSV');
+        }
+    }
+    
+    generateCSVContent(tournaments) {
+        if (!tournaments || tournaments.length === 0) return '';
+        
+        // Заголовки CSV
+        const headers = ['ID', 'Название', 'Дата начала', 'Дата окончания', 'Место', 'Категория', 'Статус'];
+        let csv = headers.join(',') + '\n';
+        
+        // Данные
+        tournaments.forEach(tournament => {
+            const row = [
+                tournament.id || '',
+                `"${tournament.name || ''}"`,
+                tournament.start_date || '',
+                tournament.end_date || '',
+                `"${tournament.location || ''}"`,
+                tournament.category || '',
+                tournament.status || ''
+            ];
+            csv += row.join(',') + '\n';
+        });
+        
+        return csv;
     }
     
     updateCalendarDays() {
