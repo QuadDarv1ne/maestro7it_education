@@ -1,25 +1,25 @@
 """
-Security utilities for ChessCalendar-RU application
-
-Этот модуль содержит специфические функции безопасности, не дублирующие
-функциональность werkzeug.security (generate_password_hash/check_password_hash).
+Улучшенная система безопасности и аутентификации
 """
-import re
-import bleach
-from functools import wraps
-from flask import request, abort, session
-import logging
+import hashlib
+import secrets
+import time
 from datetime import datetime, timedelta
-from typing import Optional
+from functools import wraps
+from typing import Optional, Dict, Any
+import logging
+from flask import request, jsonify, current_app
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 
+logger = logging.getLogger(__name__)
 
-class SecurityUtils:
-    """Security utilities for input validation and sanitization"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger('app.security')
-        # Regex patterns for validation
-        self.email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+# Argon2 для более безопасного хеширования паролей
+ph = PasswordHasher(
+    time_cost=2,
+    memory_cost=65536,
         self.username_pattern = re.compile(r'^[a-zA-Z0-9_]{3,20}$')  # 3-20 chars, alphanumeric and underscore
         self.url_pattern = re.compile(
             r'^https?://'  # http:// or https://

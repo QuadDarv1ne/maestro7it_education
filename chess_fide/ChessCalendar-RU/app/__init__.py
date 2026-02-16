@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect, generate_csrf
+from flask_socketio import SocketIO
 import os
 
 db = SQLAlchemy()
@@ -63,6 +64,14 @@ def create_app(config_name='default'):
         logger.info("Scheduler initialized")
     except ImportError:
         logger.warning("Scheduler module not available")
+    
+    # Initialize WebSocket handlers
+    try:
+        from app.websocket_handlers import init_websocket_handlers
+        socketio = init_websocket_handlers(app)
+        logger.info("WebSocket handlers initialized")
+    except ImportError:
+        logger.warning("WebSocket handlers module not available")
     
     # Создание таблиц
     with app.app_context():
