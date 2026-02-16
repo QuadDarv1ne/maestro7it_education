@@ -54,6 +54,31 @@ services:
     networks:
       - chess-network
 
+  recommendation-service:
+    build: ./services/recommendation-service
+    ports:
+      - "5008:5008"
+    networks:
+      - chess-network
+    depends_on:
+      - redis
+
+  notification-service:
+    build: ./services/notification-service
+    ports:
+      - "5007:5007"
+    networks:
+      - chess-network
+    depends_on:
+      - redis
+
+  calendar-service:
+    build: ./services/calendar-service
+    ports:
+      - "5006:5006"
+    networks:
+      - chess-network
+
   image-optimization-service:
     build: ./services/image-optimization-service
     ports:
