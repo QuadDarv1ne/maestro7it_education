@@ -32,6 +32,11 @@ def profile():
     """Страница профиля пользователя"""
     return render_template('profile_modern.html')
 
+@app.route('/recommendations')
+def recommendations():
+    """Страница рекомендаций"""
+    return render_template('recommendations_modern.html')
+
 @app.route('/api/tournaments')
 def api_tournaments():
     """API для получения турниров"""
