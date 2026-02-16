@@ -1,0 +1,363 @@
+"""
+Улучшенная система кэширования с поддержкой:
+- Автоматической инвалидации
+- Тегирования кэша
+- CDN интеграции
+- Многоуровневого кэширования
+"""
+import redis
+import pickle
+import hashlib
+import logging
+from datetime import timedelta
+from functools import wraps
+from typing import Any, Optional, List, Callable
+import time
+
+logger = logging.getLogger(__name__)
+
+class CacheInvalidationStrategy:
+    """Стратегии инвалидации кэша"""
+    
+    @staticmethod
+    def time_based(timeout: int):
+        """Инвалидация по времени"""
+        return {'type': 'time', 'timeout': timeout}
+    
+    @staticmethod
+    def tag_based(tags: List[str]):
+        """Инвалидация по тегам"""
+        return {'type': 'tags', 'tags': tags}
+    
+    @staticmethod
+    def dependency_based(dependencies: List[str]):
+        """Инвалидация по зависимостям"""
+        return {'type': 'dependencies', 'deps': dependencies}
+
+class MultiLevelCache:
+    """
+    Многоуровневая система кэширования:
+    L1 - In-memory (быстрый, ограниченный)
+    L2 - Redis (средний, распределенный)
+    L3 - CDN (медленный, глобальный)
+    """
+    
+    def __init__(self, redis_url: str = 'redis://localhost:6379/0', 
+                 l1_max_size: int = 1000,
+                 enable_cdn: bool = False):
+        self.l1_cache = {}  # In-memory cache
+        self.l1_max_size = l1_max_size
+        self.l1_access_count = {}
+        self.enable_cdn = enable_cdn
+        
+        # Redis (L2)
+        try:
+            self.redis_client = redis.from_url(redis_url, decode_responses=False)
+            self.redis_client.ping()
+            self.redis_available = True
+            logger.info("Redis L2 cache initialized")
+        except Exception as e:
+            logger.warning(f"Redis unavailable, using L1 only: {e}")
+            self.redis_available = False
+        
+        # Теги для группировки кэша
+        self.tag_registry = {}
+    
+    def _evict_l1_if_needed(self):
+        """Вытеснение из L1 кэша при превышении размера (LFU)"""
+        if len(self.l1_cache) >= self.l1_max_size:
+            # Удаляем наименее часто используемый элемент
+            if self.l1_access_count:
+                least_used = min(self.l1_access_count, key=self.l1_access_count.get)
+                self.l1_cache.pop(least_used, None)
+                self.l1_access_count.pop(least_used, None)
+    
+    def get(self, key: str) -> Optional[Any]:
+        """Получить значение из кэша (проверяет все уровни)"""
+        start_time = time.time()
+        
+        # L1 - In-memory
+        if key in self.l1_cache:
+            self.l1_access_count[key] = self.l1_access_count.get(key, 0) + 1
+            logger.debug(f"L1 cache hit: {key}")
+            return self.l1_cache[key]
+        
+        # L2 - Redis
+        if self.redis_available:
+            try:
+                value = self.redis_client.get(key)
+                if value:
+                    deserialized = pickle.loads(value)
+                    # Продвигаем в L1
+                    self._evict_l1_if_needed()
+                    self.l1_cache[key] = deserialized
+                    self.l1_access_count[key] = 1
+                    
+                    elapsed = time.time() - start_time
+                    logger.debug(f"L2 cache hit: {key} ({elapsed:.3f}s)")
+                    return deserialized
+            except Exception as e:
+                logger.error(f"L2 cache error: {e}")
+        
+        logger.debug(f"Cache miss: {key}")
+        return None
+    
+    def set(self, key: str, value: Any, timeout: int = 300, tags: Optional[List[str]] = None):
+        """Установить значение в кэш"""
+        # L1 - In-memory
+        self._evict_l1_if_needed()
+        self.l1_cache[key] = value
+        self.l1_access_count[key] = 0
+        
+        # L2 - Redis
+        if self.redis_available:
+            try:
+                serialized = pickle.dumps(value)
+                self.redis_client.setex(key, timeout, serialized)
+                
+                # Регистрируем теги
+                if tags:
+                    for tag in tags:
+                        tag_key = f"tag:{tag}"
+                        self.redis_client.sadd(tag_key, key)
+                        self.redis_client.expire(tag_key, timeout)
+            except Exception as e:
+                logger.error(f"L2 cache set error: {e}")
+    
+    def delete(self, key: str):
+        """Удалить значение из всех уровней кэша"""
+        # L1
+        self.l1_cache.pop(key, None)
+        self.l1_access_count.pop(key, None)
+        
+        # L2
+        if self.redis_available:
+            try:
+                self.redis_client.delete(key)
+            except Exception as e:
+                logger.error(f"L2 cache delete error: {e}")
+    
+    def invalidate_by_tag(self, tag: str):
+        """Инвалидировать все ключи с определенным тегом"""
+        if not self.redis_available:
+            # Для L1 очищаем все (упрощенная версия)
+            self.l1_cache.clear()
+            self.l1_access_count.clear()
+            return
+        
+        try:
+            tag_key = f"tag:{tag}"
+            keys = self.redis_client.smembers(tag_key)
+            
+            if keys:
+                # Удаляем из L1
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    self.l1_cache.pop(key_str, None)
+                    self.l1_access_count.pop(key_str, None)
+                
+                # Удаляем из L2
+                self.redis_client.delete(*keys)
+                self.redis_client.delete(tag_key)
+                
+                logger.info(f"Invalidated {len(keys)} keys with tag '{tag}'")
+        except Exception as e:
+            logger.error(f"Tag invalidation error: {e}")
+    
+    def invalidate_by_pattern(self, pattern: str):
+        """Инвалидировать ключи по паттерну"""
+        if not self.redis_available:
+            self.l1_cache.clear()
+            self.l1_access_count.clear()
+            return
+        
+        try:
+            keys = self.redis_client.keys(pattern)
+            if keys:
+                # Удаляем из L1
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    self.l1_cache.pop(key_str, None)
+                    self.l1_access_count.pop(key_str, None)
+                
+                # Удаляем из L2
+                self.redis_client.delete(*keys)
+                logger.info(f"Invalidated {len(keys)} keys matching '{pattern}'")
+        except Exception as e:
+            logger.error(f"Pattern invalidation error: {e}")
+    
+    def clear(self):
+        """Очистить весь кэш"""
+        self.l1_cache.clear()
+        self.l1_access_count.clear()
+        
+        if self.redis_available:
+            try:
+                self.redis_client.flushdb()
+            except Exception as e:
+                logger.error(f"Cache clear error: {e}")
+    
+    def get_stats(self) -> dict:
+        """Получить статистику кэша"""
+        stats = {
+            'l1': {
+                'size': len(self.l1_cache),
+                'max_size': self.l1_max_size,
+                'utilization': len(self.l1_cache) / self.l1_max_size * 100
+            }
+        }
+        
+        if self.redis_available:
+            try:
+                info = self.redis_client.info()
+                stats['l2'] = {
+                    'keys': self.redis_client.dbsize(),
+                    'used_memory': info.get('used_memory_human'),
+                    'hit_rate': info.get('keyspace_hits', 0) / max(info.get('keyspace_hits', 0) + info.get('keyspace_misses', 1), 1) * 100
+                }
+            except Exception as e:
+                logger.error(f"Stats error: {e}")
+        
+        return stats
+
+# Глобальный экземпляр
+cache_manager = MultiLevelCache()
+
+# Декораторы
+def cached(timeout: int = 300, tags: Optional[List[str]] = None, key_prefix: str = 'cache'):
+    """
+    Декоратор для кэширования результатов функций
+    
+    Args:
+        timeout: Время жизни кэша в секундах
+        tags: Теги для группировки и инвалидации
+        key_prefix: Префикс ключа кэша
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Генерируем ключ кэша
+            key_parts = [key_prefix, func.__name__]
+            
+            # Добавляем аргументы в ключ
+            if args:
+                key_parts.append(hashlib.md5(str(args).encode()).hexdigest()[:8])
+            if kwargs:
+                key_parts.append(hashlib.md5(str(sorted(kwargs.items())).encode()).hexdigest()[:8])
+            
+            cache_key = ':'.join(key_parts)
+            
+            # Проверяем кэш
+            result = cache_manager.get(cache_key)
+            if result is not None:
+                return result
+            
+            # Выполняем функцию
+            result = func(*args, **kwargs)
+            
+            # Кэшируем результат
+            cache_manager.set(cache_key, result, timeout, tags)
+            
+            return result
+        return wrapper
+    return decorator
+
+def invalidate_cache(tags: Optional[List[str]] = None, pattern: Optional[str] = None):
+    """
+    Декоратор для автоматической инвалидации кэша после выполнения функции
+    
+    Args:
+        tags: Теги для инвалидации
+        pattern: Паттерн ключей для инвалидации
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+            
+            # Инвалидируем кэш
+            if tags:
+                for tag in tags:
+                    cache_manager.invalidate_by_tag(tag)
+            
+            if pattern:
+                cache_manager.invalidate_by_pattern(pattern)
+            
+            return result
+        return wrapper
+    return decorator
+
+# Специализированные кэш-менеджеры
+class TournamentCacheManager:
+    """Менеджер кэша для турниров"""
+    
+    @staticmethod
+    @cached(timeout=600, tags=['tournaments', 'list'], key_prefix='tournaments')
+    def get_all(filters: dict = None):
+        """Получить все турниры с кэшированием"""
+        from app.models.tournament import Tournament
+        query = Tournament.query
+        
+        if filters:
+            if 'category' in filters:
+                query = query.filter(Tournament.category == filters['category'])
+            if 'status' in filters:
+                query = query.filter(Tournament.status == filters['status'])
+        
+        return query.all()
+    
+    @staticmethod
+    @cached(timeout=1800, tags=['tournaments', 'detail'], key_prefix='tournament')
+    def get_by_id(tournament_id: int):
+        """Получить турнир по ID с кэшированием"""
+        from app.models.tournament import Tournament
+        return Tournament.query.get(tournament_id)
+    
+    @staticmethod
+    @invalidate_cache(tags=['tournaments'])
+    def invalidate_all():
+        """Инвалидировать весь кэш турниров"""
+        logger.info("Tournament cache invalidated")
+    
+    @staticmethod
+    def invalidate_tournament(tournament_id: int):
+        """Инвалидировать кэш конкретного турнира"""
+        cache_manager.invalidate_by_pattern(f'tournament:get_by_id:*{tournament_id}*')
+        cache_manager.invalidate_by_tag('tournaments')
+
+class UserCacheManager:
+    """Менеджер кэша для пользователей"""
+    
+    @staticmethod
+    @cached(timeout=900, tags=['users'], key_prefix='user')
+    def get_by_id(user_id: int):
+        """Получить пользователя по ID с кэшированием"""
+        from app.models.user import User
+        return User.query.get(user_id)
+    
+    @staticmethod
+    def invalidate_user(user_id: int):
+        """Инвалидировать кэш пользователя"""
+        cache_manager.invalidate_by_pattern(f'user:get_by_id:*{user_id}*')
+        cache_manager.invalidate_by_tag('users')
+
+# CDN интеграция (заглушка для будущей реализации)
+class CDNCache:
+    """Интеграция с CDN для кэширования статических ресурсов"""
+    
+    def __init__(self, provider: str = 'cloudflare'):
+        self.provider = provider
+        logger.info(f"CDN cache initialized with provider: {provider}")
+    
+    def purge_url(self, url: str):
+        """Очистить URL в CDN"""
+        logger.info(f"CDN purge: {url}")
+        # Здесь будет интеграция с API CDN провайдера
+        pass
+    
+    def purge_tag(self, tag: str):
+        """Очистить все URL с определенным тегом"""
+        logger.info(f"CDN purge tag: {tag}")
+        pass
+
+cdn_cache = CDNCache()

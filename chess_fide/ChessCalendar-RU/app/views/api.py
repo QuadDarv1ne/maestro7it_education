@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify
-from app import db
+from flask import Blueprint, request, jsonify, session
+from app import db, csrf
 from app.models.tournament import Tournament
 from app.models.user import User
 from app.models.rating import TournamentRating
@@ -12,6 +12,21 @@ from sqlalchemy import or_, and_
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+# CSRF защита для API (исключаем GET запросы)
+@api_bp.before_request
+def check_csrf():
+    """Check CSRF token for non-GET requests"""
+    if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+        # Проверяем токен из заголовка или JSON
+        token = request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken')
+        if not token:
+            token = request.get_json(silent=True).get('_csrf_token') if request.is_json else None
+        if not token:
+            return jsonify({'error': 'CSRF token missing'}), 403
+        
+        stored_token = session.get('_csrf_token')
+        if not stored_token or token != stored_token:
+            return jsonify({'error': 'Invalid CSRF token'}), 403
 @api_bp.route('/tournaments', methods=['GET'])
 @track_performance()
 def get_tournaments():

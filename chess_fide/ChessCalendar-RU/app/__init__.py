@@ -1,13 +1,12 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 import os
 
 db = SQLAlchemy()
 csrf = CSRFProtect()
-
 
 
 def create_app(config_name='default'):
@@ -91,6 +90,11 @@ def create_app(config_name='default'):
     def now():
         from datetime import datetime
         return datetime.now()
+    
+    @app.template_global()
+    def csrf_token():
+        """Generate CSRF token for templates"""
+        return generate_csrf()
     
     # Security headers
     @app.after_request
