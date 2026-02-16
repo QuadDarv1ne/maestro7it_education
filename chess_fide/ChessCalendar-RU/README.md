@@ -417,8 +417,101 @@ docker-compose logs --tail=100 celery-worker
 
 Для запуска тестов:
 
-```
+```bash
+# Все тесты
 python -m pytest tests/
+
+# С покрытием
+python -m pytest tests/ --cov=app --cov-report=html
+
+# Конкретный тест
+python -m pytest tests/test_api.py
+```
+
+## 📚 Документация
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Подробная архитектура системы
+- **[QUICK_START.md](QUICK_START.md)** - Быстрый старт и примеры использования
+- **[API Documentation](http://localhost:5000/api/docs)** - Swagger документация API
+
+## 🔧 Полезные команды
+
+### Docker
+
+```bash
+# Запуск всех сервисов
+docker-compose up -d
+
+# Остановка
+docker-compose down
+
+# Перезапуск конкретного сервиса
+docker-compose restart api-gateway
+
+# Просмотр логов
+docker-compose logs -f
+
+# Выполнение команды в контейнере
+docker-compose exec api-gateway python manage.py --action stats
+```
+
+### Celery
+
+```bash
+# Просмотр активных задач
+docker-compose exec celery-worker celery -A app.celery_app inspect active
+
+# Просмотр зарегистрированных задач
+docker-compose exec celery-worker celery -A app.celery_app inspect registered
+
+# Статистика
+docker-compose exec celery-worker celery -A app.celery_app inspect stats
+
+# Очистка очереди
+docker-compose exec celery-worker celery -A app.celery_app purge
+```
+
+### Управление данными
+
+```bash
+# Резервное копирование
+python manage.py --action backup
+
+# Экспорт данных
+python manage.py --action export --format json
+
+# Очистка старых уведомлений
+python manage.py --action clean-notifications --days 30
+
+# Валидация турниров
+python manage.py --action validate
+
+# Статистика
+python manage.py --action stats
+```
+
+## 🚀 Масштабирование
+
+### Горизонтальное масштабирование
+
+```bash
+# Увеличение количества worker'ов
+docker-compose up -d --scale celery-worker=4
+
+# Запуск нескольких инстансов API Gateway
+docker-compose up -d --scale api-gateway=3
+```
+
+### Миграция на PostgreSQL
+
+```bash
+# 1. Установите PostgreSQL
+# 2. Создайте базу данных
+# 3. Обновите .env
+DATABASE_URL=postgresql://user:password@localhost:5432/chess_calendar
+
+# 4. Запустите миграцию
+python manage.py migrate
 ```
 
 ## 🤝 Участие в разработке

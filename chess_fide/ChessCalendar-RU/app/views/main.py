@@ -416,6 +416,12 @@ def calendar():
                          next_year=next_year,
                          today=today)
 
+@main_bp.route('/calendar/enhanced')
+@track_performance()
+def enhanced_calendar():
+    """Улучшенный календарь турниров"""
+    return render_template('calendar_enhanced.html')
+
 @main_bp.route('/recommendations')
 def recommendations():
     """Show tournament recommendations for the user"""
@@ -502,6 +508,54 @@ def api_tournament_analytics(tournament_id):
     try:
         tournament_analytics = analytics_service.get_tournament_performance(tournament_id)
         return jsonify(tournament_analytics)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@main_bp.route('/api/export/ics', methods=['POST'])
+def export_ics():
+    """API endpoint for exporting tournaments to ICS format"""
+    from datetime import datetime
+    import uuid
+    
+    try:
+        data = request.get_json()
+        tournaments = data.get('tournaments', [])
+        
+        ics_content = "BEGIN:VCALENDAR\\n"
+        ics_content += "VERSION:2.0\\n"
+        ics_content += "PRODID:-//ChessCalendar-RU//NONSGML v1.0//EN\\n"
+        ics_content += "CALSCALE:GREGORIAN\\n"
+        ics_content += "METHOD:PUBLISH\\n"
+        
+        for tournament in tournaments:
+            start_date = datetime.strptime(tournament['start_date'], '%Y-%m-%d')
+            end_date = datetime.strptime(tournament['end_date'], '%Y-%m-%d')
+            
+            event_uid = str(uuid.uuid4())
+            ics_content += f"BEGIN:VEVENT\\n"
+            ics_content += f"UID:{event_uid}@chesscalendar-ru.ru\\n"
+            ics_content += f"DTSTART;VALUE=DATE:{start_date.strftime('%Y%m%d')}\\n"
+            ics_content += f"DTEND;VALUE=DATE:{(end_date.replace(day=end_date.day + 1)).strftime('%Y%m%d')}\\n"
+            
+            ics_content += f"SUMMARY:{tournament['name']}\\n"
+            ics_content += f"LOCATION:{tournament['location']}\\n"
+            if tournament.get('description'):
+                ics_content += f"DESCRIPTION:{tournament['description']}\\n"
+            ics_content += f"CATEGORIES:Chess Tournament,{tournament['category']}\\n"
+            ics_content += f"STATUS:{tournament['status']}\\n"
+            ics_content += f"END:VEVENT\\n"
+        
+        ics_content += "END:VCALENDAR"
+        
+        from flask import Response
+        return Response(
+            ics_content,
+            mimetype='text/calendar',
+            headers={
+                'Content-Disposition': 'attachment; filename=chess_tournaments.ics'
+            }
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
