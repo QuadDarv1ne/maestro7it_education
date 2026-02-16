@@ -54,6 +54,13 @@ services:
     networks:
       - chess-network
 
+  favorites-service:
+    build: ./services/favorites-service
+    ports:
+      - "5009:5009"
+    networks:
+      - chess-network
+
   recommendation-service:
     build: ./services/recommendation-service
     ports:
