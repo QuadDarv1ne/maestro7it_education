@@ -97,10 +97,15 @@
     .tournament-card {
         border-left: 4px solid #2563eb;
         transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
     
     .tournament-card:hover {
         border-left-color: #1e40af;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
     }
     
     .tournament-card .card-header {
@@ -145,6 +150,7 @@
     
     .pagination {
         margin-top: 2rem;
+        margin-bottom: 2rem;
     }
     
     .pagination .page-link {
@@ -165,18 +171,70 @@
         background: #2563eb;
         border-color: #2563eb;
     }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .hero-section {
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .hero-section h1 {
+            font-size: 1.75rem;
+        }
+        
+        .hero-section .lead {
+            font-size: 1rem;
+        }
+        
+        .hero-icon {
+            font-size: 4rem;
+            opacity: 0.1;
+        }
+        
+        .stats-card h3 {
+            font-size: 1.5rem;
+        }
+        
+        .stats-card .card-body {
+            padding: 1rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .hero-section {
+            padding: 1.25rem;
+        }
+        
+        .hero-section h1 {
+            font-size: 1.5rem;
+        }
+        
+        .hero-icon {
+            display: none;
+        }
+        
+        .filter-form .card-body {
+            padding: 1rem;
+        }
+        
+        .btn-view-details {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-3 mb-4">
     <!-- Hero Section -->
-    <div class="hero-section mb-5">
+    <div class="hero-section">
         <div class="row align-items-center position-relative">
             <div class="col-md-8">
                 <h1><i class="bi bi-trophy-fill"></i> ChessCalendar-RU</h1>
                 <p class="lead">Календарь шахматных турниров России и мира</p>
-                <p class="mb-0" style="opacity: 0.9;">
+                <p class="mb-0" style="opacity: 0.9; font-size: 0.95rem;">
                     Следите за предстоящими турнирами, находите интересующие вас события и будьте в курсе последних новостей шахматного мира
                 </p>
             </div>
@@ -187,7 +245,7 @@
     </div>
 
     <!-- Stats Overview -->
-    <div class="row mb-4 g-3">
+    <div class="row mb-3 g-3">
         <div class="col-md-3 col-sm-6">
             <div class="card text-center stats-card">
                 <div class="card-body">
@@ -227,7 +285,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="card mb-4 filter-form">
+    <div class="card mb-3 filter-form">
         <div class="card-body">
             <h5 class="card-title"><i class="bi bi-funnel-fill"></i> Фильтры</h5>
             <form method="GET" id="filterForm">
@@ -282,7 +340,7 @@
     </div>
 
     <!-- Tournament Stats and Actions -->
-    <div class="row mb-4">
+    <div class="row mb-3">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <h3 class="mb-0">

@@ -15,6 +15,8 @@
     <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
     <!-- Dark Theme CSS -->
     <link href="{{ url_for('static', filename='css/dark-theme.css') }}" rel="stylesheet">
+    <!-- UI Improvements CSS -->
+    <link href="{{ url_for('static', filename='css/improvements.css') }}" rel="stylesheet">
     
     <style>
         :root {
@@ -123,70 +125,74 @@
         .navbar {
             background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%) !important;
             box-shadow: var(--box-shadow);
-            padding: 1rem 0;
+            padding: 0.75rem 0;
         }
         
         .navbar-brand {
             font-weight: 700;
-            font-size: 1.5rem;
+            font-size: 1.35rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
         
         .navbar-brand i {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             animation: pulse 2s infinite;
         }
         
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.05); }
         }
         
         .nav-link {
             font-weight: 500;
             transition: all 0.3s ease;
             border-radius: 8px;
-            padding: 0.5rem 1rem !important;
-            margin: 0 0.25rem;
+            padding: 0.4rem 0.8rem !important;
+            margin: 0 0.15rem;
+            font-size: 0.95rem;
         }
         
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
         }
         
         .nav-link i {
-            margin-right: 0.5rem;
-            font-size: 1.1rem;
+            margin-right: 0.4rem;
+            font-size: 1rem;
         }
         
         /* Search Bar */
         .search-container {
             position: relative;
-            min-width: 300px;
+            min-width: 250px;
+            max-width: 350px;
         }
         
         .search-container input {
-            border-radius: 25px;
-            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
             border: 2px solid rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.9);
             transition: all 0.3s ease;
+            font-size: 0.9rem;
         }
         
         .search-container input:focus {
             border-color: white;
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
             background: white;
         }
         
         .search-container .btn {
-            border-radius: 25px;
-            margin-left: -50px;
+            border-radius: 20px;
+            margin-left: -45px;
             z-index: 10;
             position: relative;
+            padding: 0.4rem 0.8rem;
         }
         
         .search-results {
@@ -449,11 +455,21 @@
         /* Responsive */
         @media (max-width: 768px) {
             .navbar-brand {
-                font-size: 1.2rem;
+                font-size: 1.1rem;
+            }
+            
+            .navbar-brand i {
+                font-size: 1.3rem;
             }
             
             .search-container {
-                min-width: 200px;
+                min-width: 180px;
+                max-width: 250px;
+            }
+            
+            .nav-link {
+                padding: 0.4rem 0.6rem !important;
+                font-size: 0.9rem;
             }
             
             .footer-content {
@@ -468,14 +484,25 @@
         @media (max-width: 576px) {
             body {
                 padding-top: 60px;
+                padding-bottom: 70px;
             }
             
             .search-container {
                 width: 100%;
+                min-width: auto;
+                max-width: none;
             }
             
             .navbar-brand {
-                font-size: 1.1rem;
+                font-size: 1rem;
+            }
+            
+            .navbar-brand i {
+                font-size: 1.2rem;
+            }
+            
+            .nav-link i {
+                margin-right: 0.25rem;
             }
         }
     </style>
@@ -483,6 +510,9 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Перейти к основному содержанию</a>
+    
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
         <div class="container">
@@ -594,7 +624,7 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="container-fluid mt-4">
+    <main class="container-fluid mt-4" id="main-content">
         {% block content %}{% endblock %}
     </main>
 
@@ -695,19 +725,39 @@
     <!-- Theme Switcher -->
     <script src="{{ url_for('static', filename='js/theme-switcher.js') }}"></script>
     
-    <!-- Custom App JS -->
+    <!-- Core App JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/search.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
     <script src="{{ url_for('static', filename='js/toast-notifications.js') }}"></script>
+    
+    <!-- Feature Scripts - Load conditionally -->
+    {% if request.endpoint in ['main.index', 'main.tournament_detail'] %}
     <script src="{{ url_for('static', filename='js/achievements-system.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tournament-comparison.js') }}"></script>
     <script src="{{ url_for('static', filename='js/quick-actions.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/advanced-filters.js') }}"></script>
     <script src="{{ url_for('static', filename='js/favorites-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/calendar-export.js') }}"></script>
     <script src="{{ url_for('static', filename='js/rating-system.js') }}"></script>
+    {% endif %}
+    
+    {% if request.endpoint == 'main.index' %}
     <script src="{{ url_for('static', filename='js/advanced-search.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quick-filters.js') }}"></script>
+    {% endif %}
+    
+    {% if 'user_id' in session %}
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+    {% endif %}
+    
+    <!-- New Features -->
+    <script src="{{ url_for('static', filename='js/tournament-history.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/smart-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tournament-compare.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tournament-of-the-day.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/user-stats.js') }}"></script>
+    
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <!-- Service Worker Registration -->
     <script>
