@@ -98,10 +98,8 @@ class KeyboardShortcuts {
         }
     }
 
-    // Действия
-
     focusSearch() {
-        const searchInput = document.querySelector('input[name="search"], #searchInput');
+        const searchInput = document.querySelector('#searchInput, input[type="search"]');
         if (searchInput) {
             searchInput.focus();
             searchInput.select();
@@ -158,8 +156,8 @@ class KeyboardShortcuts {
             if (bsModal) bsModal.hide();
         });
         
-        // Закрываем боковые панели
-        document.querySelectorAll('.open').forEach(panel => {
+        // Закрываем панели
+        document.querySelectorAll('.panel.open, .widget.open').forEach(panel => {
             panel.classList.remove('open');
         });
     }

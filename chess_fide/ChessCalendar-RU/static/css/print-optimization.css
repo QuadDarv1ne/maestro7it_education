@@ -1,0 +1,400 @@
+/**
+ * Print Optimization Styles
+ * Оптимизация для печати турниров
+ */
+
+@media print {
+    /* Скрываем ненужные элементы */
+    .navbar,
+    .footer,
+    .mobile-bottom-nav,
+    .skip-to-main,
+    button,
+    .btn,
+    .fab-menu,
+    .quick-actions,
+    .toast-container,
+    .modal,
+    .dropdown,
+    .voice-search-btn,
+    #themeToggle,
+    .share-tournament-btn,
+    .set-reminder-btn,
+    .accessibility-panel,
+    .performance-monitor,
+    .offline-indicator,
+    .keyboard-shortcuts-help,
+    .search-container,
+    .nav-link,
+    .footer-social,
+    .install-banner,
+    #installBanner,
+    .tournament-history-panel,
+    .quick-filters,
+    .notification-center,
+    .comparison-fab,
+    .achievement-notification,
+    .user-stats-widget,
+    .tournament-of-day-widget {
+        display: none !important;
+    }
+
+    /* Основные стили */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 12pt;
+        line-height: 1.5;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    main {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Заголовки */
+    h1 {
+        font-size: 24pt;
+        margin-bottom: 12pt;
+        page-break-after: avoid;
+    }
+
+    h2 {
+        font-size: 18pt;
+        margin-top: 12pt;
+        margin-bottom: 8pt;
+        page-break-after: avoid;
+    }
+
+    h3 {
+        font-size: 14pt;
+        margin-top: 8pt;
+        margin-bottom: 6pt;
+        page-break-after: avoid;
+    }
+
+    /* Карточки турниров */
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 12pt;
+        background: white !important;
+    }
+
+    .card-header {
+        background: #f0f0f0 !important;
+        border-bottom: 1px solid #000 !important;
+        padding: 8pt !important;
+    }
+
+    .card-body {
+        padding: 8pt !important;
+    }
+
+    .card-title {
+        font-size: 14pt;
+        font-weight: bold;
+        margin-bottom: 6pt;
+    }
+
+    /* Бейджи */
+    .badge {
+        border: 1px solid #000 !important;
+        background: white !important;
+        color: black !important;
+        padding: 2pt 6pt !important;
+        font-size: 10pt;
+    }
+
+    /* Таблицы */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        page-break-inside: avoid;
+        margin-bottom: 12pt;
+    }
+
+    th, td {
+        border: 1px solid #000 !important;
+        padding: 6pt !important;
+        text-align: left;
+    }
+
+    th {
+        background: #f0f0f0 !important;
+        font-weight: bold;
+    }
+
+    /* Списки */
+    ul, ol {
+        margin-bottom: 8pt;
+    }
+
+    li {
+        margin-bottom: 4pt;
+    }
+
+    /* Ссылки */
+    a {
+        color: black !important;
+        text-decoration: underline;
+    }
+
+    a[href]:after {
+        content: " (" attr(href) ")";
+        font-size: 9pt;
+        color: #666;
+    }
+
+    /* Не показываем URL для внутренних ссылок */
+    a[href^="/"]:after,
+    a[href^="#"]:after {
+        content: "";
+    }
+
+    /* Иконки */
+    .bi:before {
+        content: "" !important;
+    }
+
+    /* Разрывы страниц */
+    .page-break {
+        page-break-after: always;
+    }
+
+    .no-break {
+        page-break-inside: avoid;
+    }
+
+    /* Заголовок документа для печати */
+    .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 20pt;
+        padding-bottom: 10pt;
+        border-bottom: 2px solid #000;
+    }
+
+    .print-header h1 {
+        margin: 0;
+        font-size: 20pt;
+    }
+
+    .print-date {
+        display: block !important;
+        text-align: right;
+        font-size: 10pt;
+        color: #666;
+        margin-bottom: 10pt;
+    }
+
+    /* Футер страницы */
+    @page {
+        margin: 2cm;
+        
+        @bottom-right {
+            content: "Страница " counter(page) " из " counter(pages);
+            font-size: 9pt;
+        }
+        
+        @bottom-left {
+            content: "ChessCalendar-RU";
+            font-size: 9pt;
+        }
+    }
+
+    /* Детали турнира */
+    .tournament-details {
+        page-break-inside: avoid;
+    }
+
+    .tournament-info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6pt;
+        border-bottom: 1px dotted #ccc;
+        padding-bottom: 4pt;
+    }
+
+    .tournament-info-label {
+        font-weight: bold;
+        width: 40%;
+    }
+
+    .tournament-info-value {
+        width: 60%;
+    }
+
+    /* Карта - заменяем на текст */
+    #map,
+    .leaflet-container {
+        display: none !important;
+    }
+
+    .map-print-replacement {
+        display: block !important;
+        border: 1px solid #000;
+        padding: 8pt;
+        background: #f9f9f9;
+        margin-bottom: 12pt;
+    }
+
+    /* Графики - сохраняем как изображения */
+    canvas {
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+    }
+
+    /* Статистика */
+    .stats-card {
+        border: 1px solid #000 !important;
+        padding: 8pt !important;
+        margin-bottom: 12pt;
+        page-break-inside: avoid;
+    }
+
+    .stats-card h3 {
+        font-size: 18pt;
+        margin-bottom: 4pt;
+    }
+
+    /* Сравнение турниров */
+    .comparison-table {
+        width: 100%;
+        font-size: 10pt;
+    }
+
+    .comparison-table th {
+        background: #e0e0e0 !important;
+    }
+
+    .comparison-table td {
+        vertical-align: top;
+    }
+
+    /* QR код для ссылки */
+    .print-qr {
+        display: block !important;
+        text-align: center;
+        margin-top: 20pt;
+        page-break-inside: avoid;
+    }
+
+    .print-qr img {
+        max-width: 150px;
+        height: auto;
+    }
+
+    /* Контактная информация */
+    .print-contact {
+        display: block !important;
+        margin-top: 20pt;
+        padding-top: 10pt;
+        border-top: 1px solid #000;
+        font-size: 10pt;
+    }
+
+    /* Оптимизация для цветной печати */
+    @media print and (color) {
+        .badge-primary {
+            background: #2563eb !important;
+            color: white !important;
+        }
+
+        .badge-success {
+            background: #10b981 !important;
+            color: white !important;
+        }
+
+        .badge-warning {
+            background: #f59e0b !important;
+            color: white !important;
+        }
+
+        .badge-danger {
+            background: #ef4444 !important;
+            color: white !important;
+        }
+
+        .card-header {
+            background: #e3f2fd !important;
+        }
+    }
+
+    /* Экономия чернил */
+    @media print and (monochrome) {
+        * {
+            background: white !important;
+            color: black !important;
+        }
+
+        .card-header {
+            background: #f5f5f5 !important;
+        }
+    }
+
+    /* Альбомная ориентация для широких таблиц */
+    .landscape-print {
+        page-break-before: always;
+    }
+
+    @page landscape {
+        size: landscape;
+    }
+
+    .landscape-print {
+        page: landscape;
+    }
+
+    /* Водяной знак */
+    .print-watermark {
+        position: fixed;
+        bottom: 1cm;
+        right: 1cm;
+        font-size: 8pt;
+        color: #ccc;
+        transform: rotate(-45deg);
+        opacity: 0.3;
+    }
+}
+
+/* Кнопка печати (видна на экране) */
+.print-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media print {
+    .print-button {
+        display: none !important;
+    }
+}
+
+/* Предпросмотр печати */
+.print-preview-mode {
+    background: white;
+    color: black;
+    max-width: 21cm;
+    margin: 0 auto;
+    padding: 2cm;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.print-preview-mode .navbar,
+.print-preview-mode .footer,
+.print-preview-mode button:not(.print-button) {
+    display: none;
+}

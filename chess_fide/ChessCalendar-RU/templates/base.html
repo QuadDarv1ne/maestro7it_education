@@ -17,6 +17,8 @@
     <link href="{{ url_for('static', filename='css/dark-theme.css') }}" rel="stylesheet">
     <!-- UI Improvements CSS -->
     <link href="{{ url_for('static', filename='css/improvements.css') }}" rel="stylesheet">
+    <!-- Print Optimization CSS -->
+    <link href="{{ url_for('static', filename='css/print-optimization.css') }}" rel="stylesheet">
     
     <style>
         :root {
@@ -749,12 +751,23 @@
     <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
     {% endif %}
     
-    <!-- New Features -->
+    <!-- New Features v2.0-2.2 -->
     <script src="{{ url_for('static', filename='js/tournament-history.js') }}"></script>
     <script src="{{ url_for('static', filename='js/smart-notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tournament-compare.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tournament-of-the-day.js') }}"></script>
     <script src="{{ url_for('static', filename='js/user-stats.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/keyboard-shortcuts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/offline-indicator.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/performance-monitor.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/accessibility-panel.js') }}"></script>
+    
+    <!-- New Features v2.3 -->
+    <script src="{{ url_for('static', filename='js/social-sharing.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/advanced-reminders.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auto-theme-scheduler.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voice-search.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/print-helper.js') }}"></script>
     
     <!-- Chart.js for statistics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

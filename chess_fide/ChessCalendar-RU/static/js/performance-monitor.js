@@ -40,13 +40,13 @@ class PerformanceMonitor {
     collectMetrics() {
         // Ждём полной загрузки страницы
         if (document.readyState === 'complete') {
-            this.gatherMetrics();
+            this.measurePerformance();
         } else {
-            window.addEventListener('load', () => this.gatherMetrics());
+            window.addEventListener('load', () => this.measurePerformance());
         }
     }
 
-    gatherMetrics() {
+    measurePerformance() {
         // Navigation Timing API
         const navigation = performance.getEntriesByType('navigation')[0];
         if (navigation) {
@@ -102,21 +102,22 @@ class PerformanceMonitor {
                     right: 100px;
                     background: rgba(0, 0, 0, 0.85);
                     color: #00ff00;
-                    padding: 1rem;
+                    padding: 0.75rem 1rem;
                     border-radius: 8px;
                     font-family: 'Courier New', monospace;
                     font-size: 0.75rem;
                     z-index: 9998;
-                    min-width: 250px;
                     backdrop-filter: blur(10px);
                     border: 1px solid rgba(0, 255, 0, 0.3);
+                    min-width: 200px;
+                    cursor: move;
                 }
                 
                 .perf-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 0.75rem;
+                    margin-bottom: 0.5rem;
                     padding-bottom: 0.5rem;
                     border-bottom: 1px solid rgba(0, 255, 0, 0.3);
                 }
@@ -131,24 +132,24 @@ class PerformanceMonitor {
                     border: none;
                     color: #00ff00;
                     cursor: pointer;
-                    font-size: 1rem;
                     padding: 0;
-                    line-height: 1;
+                    font-size: 1rem;
                 }
                 
                 .perf-metric {
                     display: flex;
                     justify-content: space-between;
-                    margin-bottom: 0.5rem;
+                    margin-bottom: 0.25rem;
                     line-height: 1.4;
                 }
                 
                 .perf-label {
                     color: #00ff00;
+                    opacity: 0.8;
                 }
                 
                 .perf-value {
-                    color: #ffff00;
+                    color: #00ff00;
                     font-weight: bold;
                 }
                 
@@ -157,41 +158,19 @@ class PerformanceMonitor {
                 }
                 
                 .perf-value.warning {
-                    color: #ffaa00;
+                    color: #ffff00;
                 }
                 
                 .perf-value.bad {
                     color: #ff0000;
                 }
                 
-                .perf-refresh {
-                    margin-top: 0.75rem;
-                    padding-top: 0.75rem;
-                    border-top: 1px solid rgba(0, 255, 0, 0.3);
-                    text-align: center;
-                }
-                
-                .perf-refresh button {
-                    background: rgba(0, 255, 0, 0.2);
-                    border: 1px solid #00ff00;
-                    color: #00ff00;
-                    padding: 0.25rem 0.75rem;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-family: 'Courier New', monospace;
-                    font-size: 0.75rem;
-                }
-                
-                .perf-refresh button:hover {
-                    background: rgba(0, 255, 0, 0.3);
-                }
-                
                 @media (max-width: 768px) {
                     #performanceMonitor {
                         bottom: 90px;
                         right: 15px;
-                        left: 15px;
-                        min-width: auto;
+                        font-size: 0.7rem;
+                        min-width: 180px;
                     }
                 }
             </style>
@@ -200,17 +179,13 @@ class PerformanceMonitor {
                 <div class="perf-title">⚡ Performance</div>
                 <button class="perf-close" onclick="performanceMonitor.toggle()">×</button>
             </div>
-            
             <div id="perfMetrics">
                 ${this.renderMetrics()}
-            </div>
-            
-            <div class="perf-refresh">
-                <button onclick="performanceMonitor.refresh()">🔄 Refresh</button>
             </div>
         `;
 
         document.body.appendChild(widget);
+        this.makeDraggable(widget);
     }
 
     renderMetrics() {
@@ -228,25 +203,17 @@ class PerformanceMonitor {
                 </span>
             </div>
             <div class="perf-metric">
-                <span class="perf-label">First Paint:</span>
-                <span class="perf-value ${this.getLoadTimeClass(this.metrics.firstPaint)}">
-                    ${this.formatTime(this.metrics.firstPaint)}
-                </span>
-            </div>
-            <div class="perf-metric">
                 <span class="perf-label">FCP:</span>
-                <span class="perf-value ${this.getLoadTimeClass(this.metrics.firstContentfulPaint)}">
+                <span class="perf-value ${this.getFCPClass(this.metrics.firstContentfulPaint)}">
                     ${this.formatTime(this.metrics.firstContentfulPaint)}
                 </span>
             </div>
-            ${this.metrics.largestContentfulPaint > 0 ? `
             <div class="perf-metric">
                 <span class="perf-label">LCP:</span>
                 <span class="perf-value ${this.getLCPClass(this.metrics.largestContentfulPaint)}">
                     ${this.formatTime(this.metrics.largestContentfulPaint)}
                 </span>
             </div>
-            ` : ''}
             ${this.metrics.memoryUsage > 0 ? `
             <div class="perf-metric">
                 <span class="perf-label">Memory:</span>
@@ -278,6 +245,13 @@ class PerformanceMonitor {
         return 'bad';
     }
 
+    getFCPClass(time) {
+        if (time === 0) return '';
+        if (time < 1800) return 'good';
+        if (time < 3000) return 'warning';
+        return 'bad';
+    }
+
     getLCPClass(time) {
         if (time === 0) return '';
         if (time < 2500) return 'good';
@@ -291,26 +265,53 @@ class PerformanceMonitor {
         return 'bad';
     }
 
+    makeDraggable(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        
+        element.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+            element.style.bottom = 'auto';
+            element.style.right = 'auto';
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
     toggle() {
         this.enabled = !this.enabled;
         this.saveSettings();
         
         const widget = document.getElementById('performanceMonitor');
-        if (widget) {
-            widget.remove();
-        }
-        
         if (this.enabled) {
-            this.collectMetrics();
-            this.createMonitorWidget();
-        }
-    }
-
-    refresh() {
-        this.gatherMetrics();
-        
-        if (window.toast) {
-            window.toast.success('Метрики обновлены');
+            if (!widget) {
+                this.collectMetrics();
+                this.createMonitorWidget();
+            }
+        } else {
+            if (widget) {
+                widget.remove();
+            }
         }
     }
 
@@ -335,10 +336,6 @@ class PerformanceMonitor {
         link.href = URL.createObjectURL(blob);
         link.download = `performance_report_${new Date().toISOString().split('T')[0]}.json`;
         link.click();
-        
-        if (window.toast) {
-            window.toast.success('Отчёт экспортирован');
-        }
     }
 }
 
@@ -346,10 +343,9 @@ class PerformanceMonitor {
 const performanceMonitor = new PerformanceMonitor();
 window.performanceMonitor = performanceMonitor;
 
-// Добавляем в меню разработчика (Ctrl+Shift+P)
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-        e.preventDefault();
-        performanceMonitor.toggle();
-    }
-});
+// Добавляем в меню разработчика (если нужно)
+if (window.location.search.includes('debug=true')) {
+    performanceMonitor.enabled = true;
+    performanceMonitor.collectMetrics();
+    performanceMonitor.createMonitorWidget();
+}

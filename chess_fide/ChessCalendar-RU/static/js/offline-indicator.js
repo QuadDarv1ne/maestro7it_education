@@ -36,12 +36,11 @@ class OfflineIndicator {
                     gap: 1rem;
                     font-weight: 600;
                     transition: transform 0.3s ease;
-                    pointer-events: none;
+                    backdrop-filter: blur(10px);
                 }
                 
                 #offlineIndicator.show {
                     transform: translateX(-50%) translateY(0);
-                    pointer-events: all;
                 }
                 
                 #offlineIndicator.online {
@@ -76,22 +75,19 @@ class OfflineIndicator {
                 }
                 
                 .offline-close {
-                    background: rgba(255, 255, 255, 0.2);
+                    background: none;
                     border: none;
                     color: white;
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 50%;
+                    font-size: 1.25rem;
                     cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.2s ease;
+                    padding: 0;
                     margin-left: 1rem;
+                    opacity: 0.8;
+                    transition: opacity 0.2s ease;
                 }
                 
                 .offline-close:hover {
-                    background: rgba(255, 255, 255, 0.3);
+                    opacity: 1;
                 }
                 
                 @media (max-width: 768px) {
@@ -125,7 +121,7 @@ class OfflineIndicator {
                 <div class="offline-subtitle">Некоторые функции могут быть недоступны</div>
             </div>
             <button class="offline-close" onclick="offlineIndicator.hide()">
-                <i class="bi bi-x"></i>
+                <i class="bi bi-x-lg"></i>
             </button>
         `;
 
@@ -167,10 +163,6 @@ class OfflineIndicator {
         indicator.querySelector('.offline-subtitle').textContent = 'Некоторые функции могут быть недоступны';
         
         indicator.classList.add('show');
-        
-        if (window.toast) {
-            window.toast.warning('Потеряно подключение к интернету');
-        }
     }
 
     showOnlineMessage() {
@@ -184,12 +176,12 @@ class OfflineIndicator {
         
         indicator.classList.add('show');
         
+        // Автоматически скрываем через 3 секунды
+        setTimeout(() => this.hide(), 3000);
+        
         if (window.toast) {
             window.toast.success('Подключение к интернету восстановлено');
         }
-        
-        // Автоматически скрываем через 3 секунды
-        setTimeout(() => this.hide(), 3000);
     }
 
     hide() {
@@ -220,8 +212,8 @@ class OfflineIndicator {
         return {
             online: this.isOnline,
             effectiveType: navigator.connection?.effectiveType || 'unknown',
-            downlink: navigator.connection?.downlink || 0,
-            rtt: navigator.connection?.rtt || 0
+            downlink: navigator.connection?.downlink || 'unknown',
+            rtt: navigator.connection?.rtt || 'unknown'
         };
     }
 }
@@ -230,7 +222,7 @@ class OfflineIndicator {
 const offlineIndicator = new OfflineIndicator();
 window.offlineIndicator = offlineIndicator;
 
-// Показываем индикатор если офлайн при загрузке
+// Показываем индикатор если офлайн
 if (!navigator.onLine) {
-    setTimeout(() => offlineIndicator.showOfflineMessage(), 1000);
+    offlineIndicator.showOfflineMessage();
 }
