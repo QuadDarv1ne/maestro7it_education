@@ -1,0 +1,284 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Улучшенный календарь турниров - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<style>
+.enhanced-calendar {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.calendar-controls {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+}
+
+.calendar-container {
+    background: white;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+    overflow: hidden;
+    min-height: 600px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+}
+
+.calendar-weekdays {
+    display: contents;
+}
+
+.calendar-weekday {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    color: #495057;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.week-number {
+    background-color: #e9ecef;
+    font-size: 0.875rem;
+}
+
+.calendar-days {
+    display: contents;
+}
+
+.calendar-day {
+    padding: 0.5rem;
+    min-height: 100px;
+    border-bottom: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.calendar-day:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+}
+
+.calendar-day.today {
+    background-color: #e7f5ff;
+    border: 2px solid #3b82f6;
+}
+
+.calendar-day.empty {
+    background-color: #f8f9fa;
+    cursor: default;
+    pointer-events: none;
+}
+
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.day-number {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #495057;
+}
+
+.tournament-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: #3b82f6;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.day-tournaments {
+    overflow-y: auto;
+    max-height: 70px;
+}
+
+.day-tournaments-list {
+    margin: 0;
+    padding: 0;
+}
+
+.tournament-badge {
+    display: block;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    text-decoration: none;
+    color: white;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tournament-badge.FIDE { background-color: #3b82f6; }
+.tournament-badge.National { background-color: #ef4444; }
+.tournament-badge.Regional { background-color: #10b981; }
+.tournament-badge.Youth { background-color: #f59e0b; }
+.tournament-badge.Women { background-color: #ec4899; }
+.tournament-badge.Senior { background-color: #8b5cf6; }
+.tournament-badge.Online { background-color: #6366f1; }
+
+.tournament-link {
+    color: white;
+    text-decoration: none;
+}
+
+.tournament-link:hover {
+    text-decoration: underline;
+}
+
+.more-tournaments {
+    font-size: 0.7rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.calendar-sidebar {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.tournament-day-item {
+    background: #f8f9fa;
+    border-left: 3px solid #3b82f6;
+}
+
+@media (max-width: 768px) {
+    .calendar-grid {
+        grid-template-columns: repeat(7, 1fr);
+    }
+    
+    .week-number {
+        display: none;
+    }
+    
+    .calendar-day {
+        min-height: 80px;
+        padding: 0.25rem;
+    }
+    
+    .day-number {
+        font-size: 0.9rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-calendar-check"></i> Улучшенный календарь турниров
+            </h1>
+            <p class="lead text-muted">
+                Интерактивный календарь шахматных турниров с возможностью экспорта и фильтрации
+            </p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="enhanced-calendar"></div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-funnel"></i> Фильтры</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Категория</label>
+                        <select class="form-select form-select-sm" id="categoryFilter">
+                            <option value="">Все категории</option>
+                            <option value="FIDE">FIDE</option>
+                            <option value="National">Национальные</option>
+                            <option value="Regional">Региональные</option>
+                            <option value="Youth">Юношеские</option>
+                            <option value="Women">Женские</option>
+                            <option value="Senior">Ветеранские</option>
+                            <option value="Online">Онлайн</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Статус</label>
+                        <select class="form-select form-select-sm" id="statusFilter">
+                            <option value="">Все статусы</option>
+                            <option value="Scheduled">Предстоящие</option>
+                            <option value="Ongoing">Текущие</option>
+                            <option value="Completed">Завершенные</option>
+                            <option value="Cancelled">Отмененные</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" id="applyFilters">
+                        <i class="bi bi-check"></i> Применить
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Легенда</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="tournament-badge FIDE me-2" style="width: 60px;">Турнир</div>
+                        <span>FIDE турниры</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="tournament-badge National me-2" style="width: 60px;">Турнир</div>
+                        <span>Национальные турниры</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="tournament-badge Regional me-2" style="width: 60px;">Турнир</div>
+                        <span>Региональные турниры</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="tournament-badge Youth me-2" style="width: 60px;">Турнир</div>
+                        <span>Юношеские турниры</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="calendar-day today me-2" style="width: 30px; height: 30px;"></div>
+                        <span>Сегодня</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/enhanced-calendar.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация улучшенного календаря
+    if (document.getElementById('enhanced-calendar')) {
+        new EnhancedCalendar('enhanced-calendar');
+    }
+    
+    // Обработчики фильтров
+    document.getElementById('applyFilters').addEventListener('click', function() {
+        const category = document.getElementById('categoryFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        // Здесь будет логика фильтрации
+        console.log('Применение фильтров:', { category, status });
+        
+        // TODO: Реализовать фильтрацию турниров в календаре
+    });
+});
+</script>
+{% endblock %}
