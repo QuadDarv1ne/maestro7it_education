@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  tournament-service:
+    build: ./services/tournament-service
+    ports:
+      - "5001:5001"
+    environment:
+      - DATABASE_URL=sqlite:///tournaments.db
+    volumes:
+      - ./data/tournaments:/app/instance
+    networks:
+      - chess-network
+
+  user-service:
+    build: ./services/user-service
+    ports:
+      - "5002:5002"
+    environment:
+      - DATABASE_URL=sqlite:///users.db
+    volumes:
+      - ./data/users:/app/instance
+    networks:
+      - chess-network
+
+  parser-service:
+    build: ./services/parser-service
+    ports:
+      - "5003:5003"
+    networks:
+      - chess-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./static:/var/www/static
+    depends_on:
+      - tournament-service
+      - user-service
+      - parser-service
+    networks:
+      - chess-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - chess-network
+
+  celery-worker:
+    build: ./services/tournament-service
+    command: celery -A app.celery worker --loglevel=info
+    volumes:
+      - ./services/tournament-service:/app
+    depends_on:
+      - redis
+    networks:
+      - chess-network
+
+networks:
+  chess-network:
+    driver: bridge
+
+volumes:
+  tournaments-data:
+  users-data:
+  redis-data:
