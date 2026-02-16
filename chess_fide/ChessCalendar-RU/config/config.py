@@ -1,11 +1,18 @@
-import os
-import secrets
-
 class Config:
     # Генерируем случайный SECRET_KEY если не задан через переменную окружения
     SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///chess_calendar.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Настройки пула подключений
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 20,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+        'max_overflow': 40,
+        'pool_timeout': 30
+    }
+    
     FIDE_CALENDAR_URL = 'https://calendar.fide.com/calendar.php'
     CFR_URL = 'https://ruchess.ru/'
     

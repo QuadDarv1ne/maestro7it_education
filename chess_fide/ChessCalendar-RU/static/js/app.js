@@ -1,4 +1,5 @@
-// ChessCalendar-RU - Main JavaScript
+// ChessCalendar-RU - Main JavaScript with Lazy Loading Support
+// Updated to work with lazy loading system
 
 // Loading Spinner
 function showLoader() {
@@ -246,6 +247,9 @@ document.addEventListener('DOMContentLoaded', function() {
             card.style.transform = 'translateY(0)';
         }, index * 50);
     });
+    
+    // Mark app as ready for lazy loading
+    document.body.classList.add('app-ready');
 });
 
 // Mobile UI enhancements
@@ -454,7 +458,7 @@ function throttle(func, limit) {
             inThrottle = true;
             setTimeout(() => inThrottle = false, limit);
         }
-    }
+    };
 }
 
 // Export functions for global use
@@ -463,5 +467,18 @@ window.ChessCalendar = {
     hideLoader,
     showToast,
     copyToClipboard,
-    shareContent
+    shareContent,
+    debounce,
+    throttle
 };
+
+// Initialize lazy loading if available
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if lazy loader is available and initialize it
+    if (typeof LazyLoader !== 'undefined') {
+        console.log('Lazy loader initialized');
+    } else {
+        // Fallback: load additional modules manually if needed
+        console.log('Lazy loader not available, using standard loading');
+    }
+});

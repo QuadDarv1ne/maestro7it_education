@@ -42,6 +42,10 @@ def create_app(config_name='default'):
     # Загрузка конфигурации
     app.config.from_object('config.config.Config')
     
+    # Configure connection pooling using our optimization utilities
+    from app.utils.db_optimization import QueryOptimizer
+    QueryOptimizer.enable_connection_pooling(app, pool_size=20, max_overflow=40)
+    
     # Инициализация расширений
     db.init_app(app)
     

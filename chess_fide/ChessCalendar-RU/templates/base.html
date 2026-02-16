@@ -25,6 +25,10 @@
     <link href="{{ url_for('static', filename='css/print-optimization.css') }}" rel="stylesheet">
     <!-- Layout Fixes CSS -->
     <link href="{{ url_for('static', filename='css/layout-fixes.css') }}" rel="stylesheet">
+    <!-- Composition Fixes CSS - ВАЖНО: загружается последним -->
+    <link href="{{ url_for('static', filename='css/composition-fixes.css') }}" rel="stylesheet">
+    <!-- Spacing Utilities CSS -->
+    <link href="{{ url_for('static', filename='css/spacing-utilities.css') }}" rel="stylesheet">
     
     <style>
         :root {
@@ -733,29 +737,38 @@
     <!-- Theme Switcher -->
     <script src="{{ url_for('static', filename='js/theme-switcher.js') }}"></script>
     
-    <!-- Core App JS -->
+    <!-- Core App JS with Lazy Loading Support -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lazy-loader.js') }}"></script>
+    
+    <!-- Feature Scripts - Now handled by lazy loader -->
+    <script>
+        // Register components that should be lazily loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mark the page as ready so lazy loading can begin
+            document.body.classList.add('app-initialized');
+            
+            // Register modules that should be loaded based on page content
+            if (document.querySelector('.search-container')) {
+                window.LazyLoader?.preloadModules(['search']);
+            }
+            
+            if (document.querySelector('.tournament-grid') || document.querySelector('.tournament-list')) {
+                window.LazyLoader?.preloadModules(['filters', 'comparison']);
+            }
+            
+            if (document.querySelector('.calendar-container')) {
+                window.LazyLoader?.preloadModules(['calendar']);
+            }
+            
+            if (document.querySelector('.user-profile') || document.querySelector('.user-dashboard')) {
+                window.LazyLoader?.preloadModules(['user-profile', 'achievements']);
+            }
+        });
+    </script>
+    
+    <!-- Toast Notifications -->
     <script src="{{ url_for('static', filename='js/toast-notifications.js') }}"></script>
-    
-    <!-- Feature Scripts - Load conditionally -->
-    {% if request.endpoint in ['main.index', 'main.tournament_detail'] %}
-    <script src="{{ url_for('static', filename='js/achievements-system.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/tournament-comparison.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/quick-actions.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/favorites-manager.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/calendar-export.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/rating-system.js') }}"></script>
-    {% endif %}
-    
-    {% if request.endpoint == 'main.index' %}
-    <script src="{{ url_for('static', filename='js/advanced-search.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/quick-filters.js') }}"></script>
-    {% endif %}
-    
-    {% if 'user_id' in session %}
-    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
-    {% endif %}
     
     <!-- New Features v2.0-2.2 -->
     <script src="{{ url_for('static', filename='js/tournament-history.js') }}"></script>
@@ -782,6 +795,47 @@
     <script src="{{ url_for('static', filename='js/adaptive-images.js') }}"></script>
     <script src="{{ url_for('static', filename='js/gesture-handler.js') }}"></script>
     <script src="{{ url_for('static', filename='js/adaptive-animations.js') }}"></script>
+    
+    <!-- Feature Scripts - Conditionally loaded but can be lazy loaded -->
+    {% if request.endpoint in ['main.index', 'main.tournament_detail'] %}
+    <script>
+        // Register these components for lazy loading on demand
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.LazyLoader) {
+                // Pre-register modules that might be needed
+                window.LazyLoader.registerModule('achievements', () => import('{{ url_for("static", filename="js/achievements-system.js") }}'));
+                window.LazyLoader.registerModule('tournament-comparison', () => import('{{ url_for("static", filename="js/tournament-comparison.js") }}'));
+                window.LazyLoader.registerModule('quick-actions', () => import('{{ url_for("static", filename="js/quick-actions.js") }}'));
+                window.LazyLoader.registerModule('favorites-manager', () => import('{{ url_for("static", filename="js/favorites-manager.js") }}'));
+                window.LazyLoader.registerModule('calendar-export', () => import('{{ url_for("static", filename="js/calendar-export.js") }}'));
+                window.LazyLoader.registerModule('rating-system', () => import('{{ url_for("static", filename="js/rating-system.js") }}'));
+            }
+        });
+    </script>
+    {% endif %}
+    
+    {% if request.endpoint == 'main.index' %}
+    <script>
+        // Register search and filter modules for lazy loading
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.LazyLoader) {
+                window.LazyLoader.registerModule('advanced-search', () => import('{{ url_for("static", filename="js/advanced-search.js") }}'));
+                window.LazyLoader.registerModule('quick-filters', () => import('{{ url_for("static", filename="js/quick-filters.js") }}'));
+            }
+        });
+    </script>
+    {% endif %}
+    
+    {% if 'user_id' in session %}
+    <script>
+        // Register analytics module for lazy loading
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.LazyLoader) {
+                window.LazyLoader.registerModule('analytics', () => import('{{ url_for("static", filename="js/analytics.js") }}'));
+            }
+        });
+    </script>
+    {% endif %}
     
     <!-- Chart.js for statistics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
