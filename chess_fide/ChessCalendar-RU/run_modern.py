@@ -27,6 +27,11 @@ def test_responsive_cards():
     """Тестовая страница для проверки адаптивных карточек"""
     return render_template('test_responsive_cards.html')
 
+@app.route('/test-layout')
+def test_layout():
+    """Тестовая страница для проверки layout (хедер, футер, spacing)"""
+    return render_template('test_layout.html')
+
 @app.route('/about')
 def about():
     """Страница о проекте"""
@@ -82,6 +87,9 @@ if __name__ == '__main__':
     print("   Календарь: http://localhost:5000/calendar")
     print("   Турниры: http://localhost:5000/tournaments")
     print("   О проекте: http://localhost:5000/about")
+    print("\n🧪 Тестовые страницы:")
+    print("   Адаптивные карточки: http://localhost:5000/test-responsive-cards")
+    print("   Layout (хедер/футер): http://localhost:5000/test-layout")
     print("\n🔧 Разработка в режиме отладки")
     print("   Нажмите Ctrl+C для остановки\n")
     

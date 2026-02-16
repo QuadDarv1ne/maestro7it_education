@@ -1,0 +1,113 @@
+{% extends "base_modern.html" %}
+
+{% block title %}Тест Layout - ChessCalendar-RU{% endblock %}
+
+{% block content %}
+<div class="container my-responsive">
+    <div class="page-header">
+        <h1>Тестирование Layout</h1>
+        <p class="lead">Проверка хедера, футера и spacing</p>
+    </div>
+    
+    <div class="content-wrapper">
+        <!-- Тестовый контент для проверки spacing -->
+        <section class="section-sm">
+            <h2>Секция 1: Карточки</h2>
+            <div class="row g-responsive">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Карточка 1</h5>
+                            <p class="card-text">Тестовый контент для проверки spacing и выравнивания.</p>
+                            <a href="#" class="btn btn-primary">Подробнее</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Карточка 2</h5>
+                            <p class="card-text">Тестовый контент для проверки spacing и выравнивания.</p>
+                            <a href="#" class="btn btn-primary">Подробнее</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Карточка 3</h5>
+                            <p class="card-text">Тестовый контент для проверки spacing и выравнивания.</p>
+                            <a href="#" class="btn btn-primary">Подробнее</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <hr class="divider-lg">
+        
+        <section class="section-lg">
+            <div class="content-narrow">
+                <h2>Секция 2: Узкий контент</h2>
+                <p>Этот контент ограничен максимальной шириной 800px для лучшей читаемости длинных текстов.</p>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                <ul>
+                    <li>Пункт списка 1</li>
+                    <li>Пункт списка 2</li>
+                    <li>Пункт списка 3</li>
+                </ul>
+            </div>
+        </section>
+        
+        <hr>
+        
+        <section>
+            <h2>Секция 3: Формы</h2>
+            <div class="row">
+                <div class="col-12 col-md-6">
+                    <form>
+                        <div class="mb-3">
+                            <label for="testInput1" class="form-label">Поле ввода</label>
+                            <input type="text" class="form-control" id="testInput1" placeholder="Введите текст">
+                        </div>
+                        <div class="mb-3">
+                            <label for="testSelect" class="form-label">Выбор</label>
+                            <select class="form-select" id="testSelect">
+                                <option>Опция 1</option>
+                                <option>Опция 2</option>
+                                <option>Опция 3</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Отправить</button>
+                    </form>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Информация</h5>
+                            <p class="card-text">Проверка выравнивания формы и карточки рядом.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Дополнительный контент для проверки футера -->
+<div class="container">
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Инструкции по тестированию</h4>
+        <p>Проверьте следующее:</p>
+        <ul class="mb-0">
+            <li>Хедер правильно выровнен на всех размерах экрана</li>
+            <li>Меню сворачивается на мобильных устройствах</li>
+            <li>Поиск работает корректно</li>
+            <li>Футер имеет 3 колонки на десктопе</li>
+            <li>Футер стекается в 1 колонку на мобильных</li>
+            <li>Все ссылки кликабельны</li>
+            <li>Темная тема переключается корректно</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,479 @@
+/**
+ * Content Spacing & Container Styles
+ * Professional spacing and alignment for content areas
+ * Version: 1.0.0
+ */
+
+/* ============================================
+   CONTAINER IMPROVEMENTS
+   ============================================ */
+
+.container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+@media (min-width: 576px) {
+    .container {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+/* ============================================
+   SECTION SPACING
+   ============================================ */
+
+section {
+    padding: 3rem 0;
+}
+
+@media (min-width: 768px) {
+    section {
+        padding: 4rem 0;
+    }
+}
+
+@media (min-width: 992px) {
+    section {
+        padding: 5rem 0;
+    }
+}
+
+/* Section Variants */
+.section-sm {
+    padding: 2rem 0;
+}
+
+.section-lg {
+    padding: 4rem 0;
+}
+
+@media (min-width: 768px) {
+    .section-sm {
+        padding: 3rem 0;
+    }
+    
+    .section-lg {
+        padding: 6rem 0;
+    }
+}
+
+/* ============================================
+   CONTENT WRAPPERS
+   ============================================ */
+
+.content-wrapper {
+    padding: 2rem 0;
+}
+
+@media (min-width: 768px) {
+    .content-wrapper {
+        padding: 3rem 0;
+    }
+}
+
+/* Page Header */
+.page-header {
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="dark"] .page-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+    .page-header {
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+    }
+    
+    .page-header h1 {
+        font-size: 2.5rem;
+    }
+}
+
+/* ============================================
+   GRID IMPROVEMENTS
+   ============================================ */
+
+.row {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .row {
+        --bs-gutter-x: 2rem;
+        --bs-gutter-y: 2rem;
+    }
+}
+
+/* Consistent gaps */
+.g-responsive {
+    gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .g-responsive {
+        gap: 1.5rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .g-responsive {
+        gap: 2rem;
+    }
+}
+
+/* ============================================
+   CARD SPACING
+   ============================================ */
+
+.card {
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .card {
+        margin-bottom: 2rem;
+    }
+}
+
+/* Card Body Padding */
+.card-body {
+    padding: 1.25rem;
+}
+
+@media (min-width: 768px) {
+    .card-body {
+        padding: 1.5rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .card-body {
+        padding: 2rem;
+    }
+}
+
+/* ============================================
+   TEXT SPACING
+   ============================================ */
+
+h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+h1 {
+    font-size: 2rem;
+}
+
+h2 {
+    font-size: 1.75rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+}
+
+h5 {
+    font-size: 1.125rem;
+}
+
+h6 {
+    font-size: 1rem;
+}
+
+@media (min-width: 768px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+    
+    h2 {
+        font-size: 2rem;
+    }
+    
+    h3 {
+        font-size: 1.75rem;
+    }
+    
+    h4 {
+        font-size: 1.5rem;
+    }
+}
+
+p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+/* ============================================
+   BUTTON SPACING
+   ============================================ */
+
+.btn {
+    padding: 0.625rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.125rem;
+}
+
+/* Button Groups */
+.btn-group,
+.btn-toolbar {
+    gap: 0.5rem;
+}
+
+/* ============================================
+   FORM SPACING
+   ============================================ */
+
+.form-group,
+.mb-3 {
+    margin-bottom: 1.25rem;
+}
+
+.form-label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-control {
+    padding: 0.625rem 1rem;
+}
+
+.form-control-lg {
+    padding: 0.75rem 1.25rem;
+}
+
+.form-control-sm {
+    padding: 0.5rem 0.75rem;
+}
+
+/* ============================================
+   LIST SPACING
+   ============================================ */
+
+ul, ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}
+
+.list-unstyled li {
+    margin-bottom: 0.625rem;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Margin utilities */
+.mt-responsive {
+    margin-top: 1.5rem;
+}
+
+.mb-responsive {
+    margin-bottom: 1.5rem;
+}
+
+.my-responsive {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .mt-responsive {
+        margin-top: 2.5rem;
+    }
+    
+    .mb-responsive {
+        margin-bottom: 2.5rem;
+    }
+    
+    .my-responsive {
+        margin-top: 2.5rem;
+        margin-bottom: 2.5rem;
+    }
+}
+
+/* Padding utilities */
+.pt-responsive {
+    padding-top: 1.5rem;
+}
+
+.pb-responsive {
+    padding-bottom: 1.5rem;
+}
+
+.py-responsive {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .pt-responsive {
+        padding-top: 2.5rem;
+    }
+    
+    .pb-responsive {
+        padding-bottom: 2.5rem;
+    }
+    
+    .py-responsive {
+        padding-top: 2.5rem;
+        padding-bottom: 2.5rem;
+    }
+}
+
+/* ============================================
+   MAX WIDTH CONTAINERS
+   ============================================ */
+
+.content-narrow {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.content-medium {
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.content-wide {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ============================================
+   DIVIDERS
+   ============================================ */
+
+hr {
+    margin: 2rem 0;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="dark"] hr {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.divider-lg {
+    margin: 3rem 0;
+}
+
+@media (min-width: 768px) {
+    hr {
+        margin: 3rem 0;
+    }
+    
+    .divider-lg {
+        margin: 4rem 0;
+    }
+}
+
+/* ============================================
+   ASPECT RATIOS
+   ============================================ */
+
+.ratio-16x9 {
+    aspect-ratio: 16 / 9;
+}
+
+.ratio-4x3 {
+    aspect-ratio: 4 / 3;
+}
+
+.ratio-1x1 {
+    aspect-ratio: 1 / 1;
+}
+
+/* ============================================
+   OVERFLOW HANDLING
+   ============================================ */
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-auto {
+    overflow: auto;
+}
+
+.overflow-x-auto {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.overflow-y-auto {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-color, #8B4513);
+    color: white;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    z-index: 100;
+}
+
+.skip-link:focus {
+    top: 0;
+}

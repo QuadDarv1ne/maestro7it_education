@@ -188,6 +188,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tournament-cards-enhanced.css') }}">
     <!-- Tournament Cards Responsive CSS (Mobile-First) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tournament-cards-responsive.css') }}">
+    <!-- Modern Layout CSS (Header & Footer) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout-modern.css') }}">
+    <!-- Content Spacing CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/content-spacing.css') }}">
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -196,53 +200,82 @@
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="bi bi-queen"></i> ChessCalendar-RU
+                <i class="bi bi-queen"></i>
+                <span>ChessCalendar-RU</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="bi bi-house-door"></i> Главная</a>
+                        <a class="nav-link" href="/">
+                            <i class="bi bi-house-door"></i>
+                            <span>Главная</span>
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/calendar"><i class="bi bi-calendar"></i> Календарь</a>
+                        <a class="nav-link" href="/calendar">
+                            <i class="bi bi-calendar"></i>
+                            <span>Календарь</span>
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/tournaments"><i class="bi bi-trophy"></i> Турниры</a>
+                        <a class="nav-link" href="/tournaments">
+                            <i class="bi bi-trophy"></i>
+                            <span>Турниры</span>
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/about"><i class="bi bi-info-circle"></i> О проекте</a>
+                        <a class="nav-link" href="/about">
+                            <i class="bi bi-info-circle"></i>
+                            <span>О проекте</span>
+                        </a>
                     </li>
                 </ul>
                 
-                <div class="d-flex align-items-center">
+                <div class="navbar-actions">
                     <!-- Переключатель темы -->
-                    <button id="themeToggle" class="btn btn-outline-light me-3">
+                    <button id="themeToggle" class="btn btn-outline-light" aria-label="Переключить тему">
                         <i class="bi bi-moon"></i>
                     </button>
                     
                     <!-- Поиск -->
-                    <div class="input-group me-3" style="max-width: 250px;">
-                        <input type="text" class="form-control search-box" placeholder="Поиск турниров...">
-                        <button class="btn btn-primary" type="button">
+                    <div class="navbar-search">
+                        <input type="text" class="form-control" placeholder="Поиск турниров..." aria-label="Поиск">
+                        <button class="btn" type="button" aria-label="Искать">
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
                     
                     <!-- Пользовательские действия -->
                     <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person"></i> Аккаунт
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person"></i>
+                            <span>Аккаунт</span>
                         </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/login"><i class="bi bi-box-arrow-in-right"></i> Вход</a></li>
-                            <li><a class="dropdown-item" href="/register"><i class="bi bi-person-plus"></i> Регистрация</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="/login">
+                                    <i class="bi bi-box-arrow-in-right"></i>
+                                    <span>Вход</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/register">
+                                    <i class="bi bi-person-plus"></i>
+                                    <span>Регистрация</span>
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-gear"></i> Профиль</a></li>
+                            <li>
+                                <a class="dropdown-item" href="/profile">
+                                    <i class="bi bi-gear"></i>
+                                    <span>Профиль</span>
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -257,30 +290,74 @@
     
     <!-- Футер -->
     <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h5><i class="bi bi-queen"></i> ChessCalendar-RU</h5>
-                    <p>Ваш надежный помощник в мире шахматных турниров</p>
+        <div class="container footer-content">
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <h5>
+                        <i class="bi bi-queen"></i>
+                        <span>ChessCalendar-RU</span>
+                    </h5>
+                    <p>Ваш надежный помощник в мире шахматных турниров. Актуальная информация о турнирах по всей России.</p>
+                    <!-- Social links (optional) -->
+                    <div class="footer-social">
+                        <a href="#" aria-label="GitHub" title="GitHub">
+                            <i class="bi bi-github"></i>
+                        </a>
+                        <a href="#" aria-label="Telegram" title="Telegram">
+                            <i class="bi bi-telegram"></i>
+                        </a>
+                        <a href="#" aria-label="Email" title="Email">
+                            <i class="bi bi-envelope"></i>
+                        </a>
+                    </div>
                 </div>
-                <div class="col-md-4">
+                
+                <div class="col-12 col-md-4">
                     <h5>Навигация</h5>
                     <ul class="list-unstyled">
-                        <li><a href="/" class="text-white">Главная</a></li>
-                        <li><a href="/calendar" class="text-white">Календарь</a></li>
-                        <li><a href="/tournaments" class="text-white">Турниры</a></li>
-                        <li><a href="/api/docs" class="text-white">API</a></li>
+                        <li><a href="/">Главная</a></li>
+                        <li><a href="/calendar">Календарь</a></li>
+                        <li><a href="/tournaments">Турниры</a></li>
+                        <li><a href="/about">О проекте</a></li>
+                        <li><a href="/api/docs">API Документация</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4">
+                
+                <div class="col-12 col-md-4">
                     <h5>Контакты</h5>
-                    <p><i class="bi bi-envelope"></i> info@chesscalendar-ru.ru</p>
-                    <p><i class="bi bi-github"></i> GitHub: maestro7it</p>
+                    <p>
+                        <i class="bi bi-envelope"></i>
+                        <a href="mailto:info@chesscalendar-ru.ru" class="text-white text-decoration-none">
+                            info@chesscalendar-ru.ru
+                        </a>
+                    </p>
+                    <p>
+                        <i class="bi bi-github"></i>
+                        <a href="https://github.com/maestro7it" target="_blank" rel="noopener" class="text-white text-decoration-none">
+                            GitHub: maestro7it
+                        </a>
+                    </p>
+                    <p>
+                        <i class="bi bi-geo-alt"></i>
+                        Россия, Москва
+                    </p>
                 </div>
             </div>
-            <hr class="my-4">
-            <div class="text-center">
-                <p>&copy; 2026 ChessCalendar-RU. Все права защищены.</p>
+            
+            <hr>
+            
+            <div class="footer-bottom">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-6 text-center text-md-start mb-2 mb-md-0">
+                        <p>&copy; 2026 ChessCalendar-RU. Все права защищены.</p>
+                    </div>
+                    <div class="col-12 col-md-6 text-center text-md-end">
+                        <p>
+                            <a href="/privacy" class="text-white text-decoration-none me-3">Политика конфиденциальности</a>
+                            <a href="/terms" class="text-white text-decoration-none">Условия использования</a>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>
