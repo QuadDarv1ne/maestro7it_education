@@ -142,19 +142,19 @@ class AdaptiveImages {
         }
         
         // Формируем URL
-        return `${base}_${size}.${format}`;
+        return `${base}${size}.${format}`;
     }
 
     getImageSize(width) {
         const dpr = this.devicePixelRatio;
         const actualWidth = width * dpr;
         
-        if (actualWidth <= 320) return 'xs';
-        if (actualWidth <= 640) return 'sm';
-        if (actualWidth <= 768) return 'md';
-        if (actualWidth <= 1024) return 'lg';
-        if (actualWidth <= 1366) return 'xl';
-        return 'xxl';
+        if (actualWidth <= 320) return '_xs';
+        if (actualWidth <= 640) return '_sm';
+        if (actualWidth <= 768) return '_md';
+        if (actualWidth <= 1024) return '_lg';
+        if (actualWidth <= 1920) return '_xl';
+        return '_xxl';
     }
 
     getOptimalSrcset(srcset) {
@@ -183,96 +183,135 @@ class AdaptiveImages {
             const src = img.src || img.dataset.src;
             if (!src) return;
 
-            const srcset = this.generateSrcset(src);
+            const ext = src.split('.').pop();
+            const base = src.substring(0, src.lastIndexOf('.'));
+            
+            // Создаём srcset
+            const srcset = [
+                `${base}_xs.${ext} 320w`,
+                `${base}_sm.${ext} 640w`,
+                `${base}_md.${ext} 768w`,
+                `${base}_lg.${ext} 1024w`,
+                `${base}_xl.${ext} 1920w`
+            ].join(', ');
+            
             img.srcset = srcset;
-            img.sizes = this.generateSizes();
+            img.sizes = '(max-width: 576px) 100vw, (max-width: 768px) 50vw, (max-width: 992px) 33vw, 25vw';
         });
     }
 
-    generateSrcset(src) {
-        const ext = src.split('.').pop();
-        const base = src.substring(0, src.lastIndexOf('.'));
-        
-        const sizes = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
-        const widths = [320, 640, 768, 1024, 1366, 1920];
-        
-        return sizes.map((size, index) => {
-            return `${base}_${size}.${ext} ${widths[index]}w`;
-        }).join(', ');
-    }
-
-    generateSizes() {
-        return '(max-width: 576px) 100vw, (max-width: 768px) 50vw, (max-width: 992px) 33vw, 25vw';
-    }
-
     setupImageOptimization() {
-        // Оптимизация загрузки изображений
-        document.querySelectorAll('img').forEach(img => {
-            // Добавляем loading="lazy" для нативной ленивой загрузки
-            if (!img.loading) {
-                img.loading = 'lazy';
-            }
+        // Оптимизация изображений при изменении размера окна
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                this.optimizeVisibleImages();
+            }, 500);
+        });
+    }
+
+    optimizeVisibleImages() {
+        document.querySelectorAll('img.loaded').forEach(img => {
+            const currentWidth = img.offsetWidth;
+            const naturalWidth = img.naturalWidth;
             
-            // Добавляем decoding="async" для асинхронной декодировки
-            if (!img.decoding) {
-                img.decoding = 'async';
+            // Если изображение слишком большое, перезагружаем оптимальный размер
+            if (naturalWidth > currentWidth * 2) {
+                const optimalSrc = this.getOptimalImageSrc(img);
+                if (optimalSrc !== img.src) {
+                    img.src = optimalSrc;
+                }
             }
         });
     }
 
     setupImagePlaceholders() {
-        // Создаём blur placeholder для изображений
-        document.querySelectorAll('img[data-placeholder]').forEach(img => {
-            const placeholder = img.dataset.placeholder;
-            
-            // Создаём временное изображение с низким разрешением
-            const tempImg = new Image();
-            tempImg.src = placeholder;
-            tempImg.style.filter = 'blur(10px)';
-            tempImg.style.transform = 'scale(1.1)';
-            
-            img.parentNode.insertBefore(tempImg, img);
-            
-            // Удаляем placeholder после загрузки основного изображения
-            img.addEventListener('load', () => {
-                tempImg.style.opacity = '0';
-                setTimeout(() => tempImg.remove(), 300);
-            });
+        // Добавляем placeholder для изображений
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            if (!img.src || img.src === window.location.href) {
+                // Создаём SVG placeholder
+                const width = img.dataset.width || 400;
+                const height = img.dataset.height || 300;
+                const placeholder = this.createPlaceholder(width, height);
+                img.src = placeholder;
+            }
         });
+    }
+
+    createPlaceholder(width, height) {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+                <rect width="100%" height="100%" fill="#e2e8f0"/>
+                <text x="50%" y="50%" font-family="Arial" font-size="14" fill="#94a3b8" 
+                      text-anchor="middle" dominant-baseline="middle">
+                    ${width}×${height}
+                </text>
+            </svg>
+        `;
+        return 'data:image/svg+xml;base64,' + btoa(svg);
     }
 
     loadAllImages() {
         // Загружаем все изображения (fallback для старых браузеров)
         document.querySelectorAll('img[data-src]').forEach(img => {
-            img.src = img.dataset.src;
-            delete img.dataset.src;
+            this.loadImage(img);
         });
     }
 
-    // Предзагрузка критических изображений
-    preloadImages(urls) {
-        urls.forEach(url => {
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'image';
-            link.href = url;
-            document.head.appendChild(link);
+    // Утилита для предзагрузки изображений
+    preloadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
         });
     }
 
-    // Получить оптимальный формат изображения
-    getOptimalFormat() {
-        if (this.supportsAvif) return 'avif';
-        if (this.supportsWebP) return 'webp';
-        return 'jpg';
+    // Утилита для предзагрузки нескольких изображений
+    async preloadImages(sources) {
+        const promises = sources.map(src => this.preloadImage(src));
+        return Promise.all(promises);
     }
 
-    // Конвертировать URL изображения в оптимальный формат
-    convertImageUrl(url, format = null) {
-        const targetFormat = format || this.getOptimalFormat();
-        const ext = url.split('.').pop();
-        const base = url.substring(0, url.lastIndexOf('.'));
-        return `${base}.${targetFormat}`;
+    // Получить информацию об изображении
+    getImageInfo(img) {
+        return {
+            src: img.src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            displayWidth: img.offsetWidth,
+            displayHeight: img.offsetHeight,
+            aspectRatio: img.naturalWidth / img.naturalHeight,
+            loaded: img.complete && img.naturalHeight !== 0,
+            format: this.getImageFormat(img.src)
+        };
+    }
+
+    getImageFormat(src) {
+        const ext = src.split('.').pop().split('?')[0];
+        return ext.toLowerCase();
+    }
+
+    // Конвертация изображения в другой формат (требует canvas)
+    async convertImage(img, format = 'webp', quality = 0.8) {
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(URL.createObjectURL(blob));
+                } else {
+                    reject(new Error('Не удалось конвертировать изображение'));
+                }
+            }, `image/${format}`, quality);
+        });
     }
 }
 
@@ -288,6 +327,7 @@ style.textContent = `
 
     /* Состояние загрузки */
     img.loading {
+        opacity: 0.5;
         background: linear-gradient(
             90deg,
             var(--bg-secondary) 0%,
@@ -296,80 +336,37 @@ style.textContent = `
         );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
-        min-height: 200px;
     }
 
     @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
+        0% {
+            background-position: -200% 0;
+        }
+        100% {
+            background-position: 200% 0;
+        }
     }
 
     /* Состояние загружено */
     img.loaded {
-        animation: fadeIn 0.3s ease-in;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        opacity: 1;
+        transition: opacity 0.3s ease;
     }
 
     /* Состояние ошибки */
     img.error {
-        background: var(--bg-secondary);
-        position: relative;
-        min-height: 200px;
+        opacity: 0.3;
+        filter: grayscale(100%);
     }
 
-    img.error::after {
-        content: '⚠️ Ошибка загрузки';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: var(--text-muted);
-        font-size: 0.875rem;
-    }
-
-    /* Aspect ratio контейнеры */
-    .img-container {
-        position: relative;
-        overflow: hidden;
-        background: var(--bg-secondary);
-    }
-
-    .img-container::before {
-        content: '';
-        display: block;
-        padding-top: 56.25%; /* 16:9 по умолчанию */
-    }
-
-    .img-container.ratio-1-1::before {
-        padding-top: 100%; /* 1:1 */
-    }
-
-    .img-container.ratio-4-3::before {
-        padding-top: 75%; /* 4:3 */
-    }
-
-    .img-container.ratio-16-9::before {
-        padding-top: 56.25%; /* 16:9 */
-    }
-
-    .img-container.ratio-21-9::before {
-        padding-top: 42.86%; /* 21:9 */
-    }
-
-    .img-container img {
-        position: absolute;
-        top: 0;
-        left: 0;
+    /* Адаптивные изображения */
+    img[data-responsive] {
         width: 100%;
-        height: 100%;
+        height: auto;
         object-fit: cover;
     }
 
-    /* Адаптивные background images */
+    /* Background images */
     [data-bg] {
         background-size: cover;
         background-position: center;
@@ -387,29 +384,43 @@ style.textContent = `
         animation: shimmer 1.5s infinite;
     }
 
-    /* Picture element стили */
-    picture {
-        display: block;
+    /* Aspect ratio containers */
+    .img-container {
+        position: relative;
+        overflow: hidden;
     }
 
-    picture img {
+    .img-container::before {
+        content: '';
+        display: block;
+        padding-top: 75%; /* 4:3 по умолчанию */
+    }
+
+    .img-container.ratio-16-9::before {
+        padding-top: 56.25%;
+    }
+
+    .img-container.ratio-1-1::before {
+        padding-top: 100%;
+    }
+
+    .img-container.ratio-21-9::before {
+        padding-top: 42.86%;
+    }
+
+    .img-container img {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
-        height: auto;
+        height: 100%;
+        object-fit: cover;
     }
 
     /* Оптимизация для печати */
     @media print {
-        img {
-            max-width: 100% !important;
-            page-break-inside: avoid;
-        }
-    }
-
-    /* Высокий DPR */
-    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-        img {
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
+        img.loading {
+            display: none;
         }
     }
 `;
