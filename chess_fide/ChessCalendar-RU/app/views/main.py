@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
 from app import db
 from app.models.tournament import Tournament
 from app.models.user import User
@@ -107,6 +107,12 @@ def index_simple():
         page=page, per_page=per_page, error_out=False
     )
     return render_template('index_simple.html', tournaments=tournaments)
+
+@main_bp.route('/api-docs')
+def api_documentation():
+    """API Documentation page"""
+    with open('static/api-docs.html', 'r', encoding='utf-8') as f:
+        return f.read()
 
 @main_bp.route('/tournament/<int:tournament_id>')
 @track_performance()
@@ -691,6 +697,72 @@ def health_check():
         }), 500
 
 
+@main_bp.route('/statistics')
+@track_performance()
+def statistics_dashboard():
+    """Statistics dashboard page"""
+    from sqlalchemy import func, extract
+    from datetime import datetime, timedelta
+    
+    # Total tournaments
+    total_tournaments = Tournament.query.count()
+    
+    # Active tournaments (ongoing)
+    today = datetime.now().date()
+    active_tournaments = Tournament.query.filter(
+        Tournament.start_date <= today,
+        Tournament.end_date >= today
+    ).count()
+    
+    # Upcoming tournaments
+    upcoming_tournaments = Tournament.query.filter(
+        Tournament.start_date > today
+    ).count()
+    
+    # Total locations
+    total_locations = db.session.query(func.count(func.distinct(Tournament.location))).scalar()
+    
+    # Top locations
+    top_locations = db.session.query(
+        Tournament.location,
+        func.count(Tournament.id).label('count')
+    ).group_by(Tournament.location).order_by(func.count(Tournament.id).desc()).limit(10).all()
+    
+    # Top categories
+    top_categories = db.session.query(
+        Tournament.category,
+        func.count(Tournament.id).label('count')
+    ).group_by(Tournament.category).order_by(func.count(Tournament.id).desc()).limit(10).all()
+    
+    # Monthly data for current year
+    current_year = datetime.now().year
+    monthly_data = []
+    for month in range(1, 13):
+        count = Tournament.query.filter(
+            extract('year', Tournament.start_date) == current_year,
+            extract('month', Tournament.start_date) == month
+        ).count()
+        monthly_data.append(count)
+    
+    # Category data for pie chart
+    category_labels = [cat[0] for cat in top_categories[:5]]
+    category_data = [cat[1] for cat in top_categories[:5]]
+    
+    return render_template('statistics_dashboard.html',
+                         total_tournaments=total_tournaments,
+                         active_tournaments=active_tournaments,
+                         upcoming_tournaments=upcoming_tournaments,
+                         total_locations=total_locations,
+                         top_locations=top_locations,
+                         top_categories=top_categories,
+                         monthly_data=monthly_data,
+                         category_labels=category_labels,
+                         category_data=category_data)
+
+
+
+
+
 @main_bp.errorhandler(404)
 def not_found_error(error):
     """Handle 404 errors"""
@@ -726,3 +798,52 @@ def achievements():
 def offline():
     """Offline page for PWA"""
     return render_template('offline.html')
+
+
+@main_bp.route('/widget')
+def widget_documentation():
+    """Widget documentation page"""
+    return render_template('widget_documentation.html')
+
+
+@main_bp.route('/map')
+@track_performance()
+def tournament_map():
+    """Tournament map page with geographical visualization"""
+    from datetime import datetime
+    import json
+    
+    # Get all tournaments
+    tournaments = Tournament.query.all()
+    
+    # Calculate stats
+    total_tournaments = len(tournaments)
+    total_cities = len(set(t.location for t in tournaments))
+    
+    today = datetime.now().date()
+    upcoming_count = sum(1 for t in tournaments if t.start_date > today)
+    ongoing_count = sum(1 for t in tournaments if t.start_date <= today <= t.end_date)
+    
+    # Get unique categories
+    categories = list(set(t.category for t in tournaments if t.category))
+    
+    # Prepare tournament data for JSON
+    tournaments_data = []
+    for t in tournaments:
+        tournaments_data.append({
+            'id': t.id,
+            'name': t.name,
+            'location': t.location,
+            'start_date': t.start_date.isoformat() if t.start_date else None,
+            'end_date': t.end_date.isoformat() if t.end_date else None,
+            'category': t.category,
+            'status': t.status
+        })
+    
+    return render_template('tournament_map.html',
+                         total_tournaments=total_tournaments,
+                         total_cities=total_cities,
+                         upcoming_count=upcoming_count,
+                         ongoing_count=ongoing_count,
+                         categories=categories,
+                         tournaments_json=json.dumps(tournaments_data))

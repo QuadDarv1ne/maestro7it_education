@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}Карта турниров - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .map-container {
+        padding: 2rem 0;
+    }
+    
+    #tournamentMap {
+        height: 600px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        z-index: 1;
+    }
+    
+    .map-controls {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .map-legend {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        margin-top: 2rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .legend-marker {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .marker-upcoming {
+        background: var(--success-color);
+    }
+    
+    .marker-ongoing {
+        background: var(--warning-color);
+    }
+    
+    .marker-completed {
+        background: var(--secondary-color);
+    }
+    
+    .leaflet-popup-content {
+        min-width: 250px;
+    }
+    
+    .popup-title {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+    }
+    
+    .popup-info {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+    
+    .popup-actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-box {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        box-shadow: var(--box-shadow);
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-top: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        #tournamentMap {
+            height: 400px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container map-container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 fw-bold mb-2">
+                <i class="bi bi-geo-alt"></i> Карта турниров
+            </h1>
+            <p class="text-muted">Географическое распределение шахматных турниров</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-value">{{ total_tournaments }}</div>
+            <div class="stat-label">Всего турниров</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">{{ total_cities }}</div>
+            <div class="stat-label">Городов</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">{{ upcoming_count }}</div>
+            <div class="stat-label">Предстоящих</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">{{ ongoing_count }}</div>
+            <div class="stat-label">Идут сейчас</div>
+        </div>
+    </div>
+
+    <!-- Map Controls -->
+    <div class="map-controls">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Статус</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="all">Все турниры</option>
+                    <option value="upcoming">Предстоящие</option>
+                    <option value="ongoing">Идут сейчас</option>
+                    <option value="completed">Завершенные</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Категория</label>
+                <select class="form-select" id="categoryFilter">
+                    <option value="all">Все категории</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Период</label>
+                <select class="form-select" id="periodFilter">
+                    <option value="all">Все время</option>
+                    <option value="week">Эта неделя</option>
+                    <option value="month">Этот месяц</option>
+                    <option value="quarter">Этот квартал</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-primary w-100" onclick="applyMapFilters()">
+                    <i class="bi bi-funnel"></i> Применить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div id="tournamentMap"></div>
+
+    <!-- Legend -->
+    <div class="map-legend">
+        <h5 class="mb-3"><i class="bi bi-info-circle"></i> Легенда</h5>
+        <div class="legend-item">
+            <div class="legend-marker marker-upcoming">
+                <i class="bi bi-calendar-check"></i>
+            </div>
+            <span>Предстоящие турниры</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-marker marker-ongoing">
+                <i class="bi bi-play-circle"></i>
+            </div>
+            <span>Идут сейчас</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-marker marker-completed">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <span>Завершенные турниры</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Initialize map
+    const map = L.map('tournamentMap').setView([55.7558, 37.6173], 5); // Moscow center
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
+
+    // Tournament data
+    const tournaments = {{ tournaments_json|safe }};
+
+    // City coordinates (approximate)
+    const cityCoordinates = {
+        'Москва': [55.7558, 37.6173],
+        'Санкт-Петербург': [59.9343, 30.3351],
+        'Казань': [55.8304, 49.0661],
+        'Екатеринбург': [56.8389, 60.6057],
+        'Новосибирск': [55.0084, 82.9357],
+        'Нижний Новгород': [56.2965, 43.9361],
+        'Челябинск': [55.1644, 61.4368],
+        'Самара': [53.1959, 50.1002],
+        'Омск': [54.9885, 73.3242],
+        'Ростов-на-Дону': [47.2357, 39.7015],
+        'Уфа': [54.7388, 55.9721],
+        'Красноярск': [56.0153, 92.8932],
+        'Воронеж': [51.6754, 39.2088],
+        'Пермь': [58.0105, 56.2502],
+        'Волгоград': [48.7080, 44.5133]
+    };
+
+    let markers = [];
+
+    function getMarkerIcon(status) {
+        const colors = {
+            'upcoming': '#10b981',
+            'ongoing': '#f59e0b',
+            'completed': '#64748b'
+        };
+
+        const icons = {
+            'upcoming': 'calendar-check',
+            'ongoing': 'play-circle',
+            'completed': 'check-circle'
+        };
+
+        return L.divIcon({
+            className: 'custom-marker',
+            html: `
+                <div style="
+                    background: ${colors[status]};
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 20px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    border: 3px solid white;
+                ">
+                    <i class="bi bi-${icons[status]}"></i>
+                </div>
+            `,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+    }
+
+    function addMarkers(tournamentsToShow = tournaments) {
+        // Clear existing markers
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+
+        // Group tournaments by city
+        const cityGroups = {};
+        tournamentsToShow.forEach(tournament => {
+            const city = tournament.location;
+            if (!cityGroups[city]) {
+                cityGroups[city] = [];
+            }
+            cityGroups[city].push(tournament);
+        });
+
+        // Add markers for each city
+        Object.keys(cityGroups).forEach(city => {
+            const coords = cityCoordinates[city];
+            if (!coords) return;
+
+            const cityTournaments = cityGroups[city];
+            const status = getStatus(cityTournaments[0]);
+
+            const marker = L.marker(coords, {
+                icon: getMarkerIcon(status)
+            }).addTo(map);
+
+            // Create popup content
+            let popupContent = `
+                <div class="popup-title">${city}</div>
+                <div class="popup-info">
+                    <strong>${cityTournaments.length}</strong> турниров
+                </div>
+                <hr>
+            `;
+
+            cityTournaments.slice(0, 3).forEach(t => {
+                popupContent += `
+                    <div style="margin-bottom: 8px;">
+                        <strong>${t.name}</strong><br>
+                        <small>${formatDate(t.start_date)} - ${formatDate(t.end_date)}</small>
+                    </div>
+                `;
+            });
+
+            if (cityTournaments.length > 3) {
+                popupContent += `<small>и еще ${cityTournaments.length - 3}...</small>`;
+            }
+
+            popupContent += `
+                <div class="popup-actions">
+                    <a href="/?location=${encodeURIComponent(city)}" class="btn btn-sm btn-primary">
+                        Все турниры
+                    </a>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+        });
+    }
+
+    function getStatus(tournament) {
+        const today = new Date();
+        const startDate = new Date(tournament.start_date);
+        const endDate = new Date(tournament.end_date);
+
+        if (today < startDate) return 'upcoming';
+        if (today > endDate) return 'completed';
+        return 'ongoing';
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit'
+        });
+    }
+
+    function applyMapFilters() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const categoryFilter = document.getElementById('categoryFilter').value;
+        const periodFilter = document.getElementById('periodFilter').value;
+
+        let filtered = tournaments.filter(t => {
+            // Status filter
+            if (statusFilter !== 'all') {
+                const status = getStatus(t);
+                if (status !== statusFilter) return false;
+            }
+
+            // Category filter
+            if (categoryFilter !== 'all' && t.category !== categoryFilter) {
+                return false;
+            }
+
+            // Period filter
+            if (periodFilter !== 'all') {
+                const today = new Date();
+                const startDate = new Date(t.start_date);
+                
+                if (periodFilter === 'week') {
+                    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+                    if (startDate > weekFromNow) return false;
+                } else if (periodFilter === 'month') {
+                    const monthFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    if (startDate > monthFromNow) return false;
+                } else if (periodFilter === 'quarter') {
+                    const quarterFromNow = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
+                    if (startDate > quarterFromNow) return false;
+                }
+            }
+
+            return true;
+        });
+
+        addMarkers(filtered);
+
+        if (window.toast) {
+            window.toast.success(`Найдено турниров: ${filtered.length}`);
+        }
+    }
+
+    // Initial markers
+    addMarkers();
+
+    // Fit bounds to show all markers
+    if (markers.length > 0) {
+        const group = new L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+</script>
+{% endblock %}

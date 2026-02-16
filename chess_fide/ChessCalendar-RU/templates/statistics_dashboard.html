@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика турниров - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-dashboard {
+        padding: 2rem 0;
+    }
+    
+    .stat-card {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--box-shadow-lg);
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-icon.primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+    }
+    
+    .stat-icon.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .stat-icon.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .stat-icon.info {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: white;
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .stat-change {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+    
+    .stat-change.positive {
+        color: var(--success-color);
+    }
+    
+    .stat-change.negative {
+        color: var(--danger-color);
+    }
+    
+    .chart-container {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .top-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .top-list-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+    
+    .top-list-item:hover {
+        background: var(--bg-secondary);
+        padding-left: 1.5rem;
+    }
+    
+    .top-list-item:last-child {
+        border-bottom: none;
+    }
+    
+    .rank-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .rank-badge.gold {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+    }
+    
+    .rank-badge.silver {
+        background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
+        color: #1e293b;
+    }
+    
+    .rank-badge.bronze {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        color: white;
+    }
+    
+    .rank-badge.default {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+    
+    .item-info {
+        flex: 1;
+    }
+    
+    .item-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .item-meta {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .item-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container stats-dashboard">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 fw-bold mb-2">
+                <i class="bi bi-graph-up"></i> Статистика турниров
+            </h1>
+            <p class="text-muted">Аналитика и статистика шахматных турниров</p>
+        </div>
+    </div>
+
+    <!-- Main Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="bi bi-trophy"></i>
+                </div>
+                <div class="stat-value">{{ total_tournaments }}</div>
+                <div class="stat-label">Всего турниров</div>
+                <div class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i> +12% за месяц
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <div class="stat-value">{{ active_tournaments }}</div>
+                <div class="stat-label">Активных турниров</div>
+                <div class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i> +5 за неделю
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="stat-value">{{ upcoming_tournaments }}</div>
+                <div class="stat-label">Предстоящих</div>
+                <div class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i> +8 в этом месяце
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card">
+                <div class="stat-icon info">
+                    <i class="bi bi-geo-alt"></i>
+                </div>
+                <div class="stat-value">{{ total_locations }}</div>
+                <div class="stat-label">Городов</div>
+                <div class="stat-change">
+                    <i class="bi bi-dash"></i> Без изменений
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="bi bi-bar-chart-line"></i> Турниры по месяцам
+                </h3>
+                <canvas id="monthlyChart" height="80"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="bi bi-pie-chart"></i> По категориям
+                </h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Lists -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="bi bi-star"></i> Топ городов по турнирам
+                </h3>
+                <ul class="top-list">
+                    {% for location, count in top_locations[:5] %}
+                    <li class="top-list-item">
+                        <div class="rank-badge {% if loop.index == 1 %}gold{% elif loop.index == 2 %}silver{% elif loop.index == 3 %}bronze{% else %}default{% endif %}">
+                            {{ loop.index }}
+                        </div>
+                        <div class="item-info">
+                            <div class="item-name">{{ location }}</div>
+                            <div class="item-meta">{{ count }} турниров</div>
+                        </div>
+                        <div class="item-value">{{ count }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="bi bi-award"></i> Популярные категории
+                </h3>
+                <ul class="top-list">
+                    {% for category, count in top_categories[:5] %}
+                    <li class="top-list-item">
+                        <div class="rank-badge {% if loop.index == 1 %}gold{% elif loop.index == 2 %}silver{% elif loop.index == 3 %}bronze{% else %}default{% endif %}">
+                            {{ loop.index }}
+                        </div>
+                        <div class="item-info">
+                            <div class="item-name">{{ category }}</div>
+                            <div class="item-meta">{{ count }} турниров</div>
+                        </div>
+                        <div class="item-value">{{ count }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Monthly tournaments chart
+    const monthlyCtx = document.getElementById('monthlyChart');
+    if (monthlyCtx) {
+        new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+                datasets: [{
+                    label: 'Турниры',
+                    data: {{ monthly_data|tojson }},
+                    backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Category pie chart
+    const categoryCtx = document.getElementById('categoryChart');
+    if (categoryCtx) {
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ category_labels|tojson }},
+                datasets: [{
+                    data: {{ category_data|tojson }},
+                    backgroundColor: [
+                        'rgba(37, 99, 235, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(6, 182, 212, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Chess Calendar RU</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.0/swagger-ui.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .topbar {
+            display: none;
+        }
+        .swagger-ui .info {
+            margin: 50px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.0/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const spec = {
+                "openapi": "3.0.0",
+                "info": {
+                    "title": "Chess Calendar RU API",
+                    "description": "REST API для работы с шахматными турнирами России и мира",
+                    "version": "1.0.0",
+                    "contact": {
+                        "name": "API Support",
+                        "email": "support@chesscalendar.ru"
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "http://127.0.0.1:5000",
+                        "description": "Development server"
+                    }
+                ],
+                "tags": [
+                    {
+                        "name": "Tournaments",
+                        "description": "Операции с турнирами"
+                    },
+                    {
+                        "name": "Authentication",
+                        "description": "Аутентификация и авторизация"
+                    },
+                    {
+                        "name": "Users",
+                        "description": "Управление пользователями"
+                    },
+                    {
+                        "name": "Favorites",
+                        "description": "Избранные турниры"
+                    }
+                ],
+                "paths": {
+                    "/api/tournaments": {
+                        "get": {
+                            "tags": ["Tournaments"],
+                            "summary": "Получить список турниров",
+                            "description": "Возвращает список турниров с пагинацией и фильтрацией",
+                            "parameters": [
+                                {
+                                    "name": "page",
+                                    "in": "query",
+                                    "description": "Номер страницы",
+                                    "schema": {
+                                        "type": "integer",
+                                        "default": 1
+                                    }
+                                },
+                                {
+                                    "name": "per_page",
+                                    "in": "query",
+                                    "description": "Количество элементов на странице",
+                                    "schema": {
+                                        "type": "integer",
+                                        "default": 20,
+                                        "maximum": 100
+                                    }
+                                },
+                                {
+                                    "name": "category",
+                                    "in": "query",
+                                    "description": "Фильтр по категории",
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "name": "status",
+                                    "in": "query",
+                                    "description": "Фильтр по статусу",
+                                    "schema": {
+                                        "type": "string",
+                                        "enum": ["Scheduled", "Ongoing", "Completed"]
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Успешный ответ",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "tournaments": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "$ref": "#/components/schemas/Tournament"
+                                                        }
+                                                    },
+                                                    "pagination": {
+                                                        "$ref": "#/components/schemas/Pagination"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/tournaments/{id}": {
+                        "get": {
+                            "tags": ["Tournaments"],
+                            "summary": "Получить турнир по ID",
+                            "parameters": [
+                                {
+                                    "name": "id",
+                                    "in": "path",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "integer"
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Успешный ответ",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/Tournament"
+                                            }
+                                        }
+                                    }
+                                },
+                                "404": {
+                                    "description": "Турнир не найден"
+                                }
+                            }
+                        }
+                    },
+                    "/api/tournaments/upcoming": {
+                        "get": {
+                            "tags": ["Tournaments"],
+                            "summary": "Получить предстоящие турниры",
+                            "parameters": [
+                                {
+                                    "name": "limit",
+                                    "in": "query",
+                                    "schema": {
+                                        "type": "integer",
+                                        "default": 10
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Успешный ответ"
+                                }
+                            }
+                        }
+                    },
+                    "/api/tournaments/search": {
+                        "get": {
+                            "tags": ["Tournaments"],
+                            "summary": "Поиск турниров",
+                            "parameters": [
+                                {
+                                    "name": "q",
+                                    "in": "query",
+                                    "required": true,
+                                    "description": "Поисковый запрос",
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "Успешный ответ"
+                                }
+                            }
+                        }
+                    },
+                    "/auth/login": {
+                        "post": {
+                            "tags": ["Authentication"],
+                            "summary": "Вход в систему",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "username": {
+                                                    "type": "string"
+                                                },
+                                                "password": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": ["username", "password"]
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Успешная аутентификация",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "access_token": {
+                                                        "type": "string"
+                                                    },
+                                                    "refresh_token": {
+                                                        "type": "string"
+                                                    },
+                                                    "user": {
+                                                        "$ref": "#/components/schemas/User"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "401": {
+                                    "description": "Неверные учетные данные"
+                                }
+                            }
+                        }
+                    },
+                    "/auth/register": {
+                        "post": {
+                            "tags": ["Authentication"],
+                            "summary": "Регистрация нового пользователя",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "username": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email"
+                                                },
+                                                "password": {
+                                                    "type": "string",
+                                                    "minLength": 8
+                                                }
+                                            },
+                                            "required": ["username", "email", "password"]
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "201": {
+                                    "description": "Пользователь успешно зарегистрирован"
+                                },
+                                "400": {
+                                    "description": "Ошибка валидации"
+                                }
+                            }
+                        }
+                    }
+                },
+                "components": {
+                    "schemas": {
+                        "Tournament": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "start_date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "end_date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "location": {
+                                    "type": "string"
+                                },
+                                "category": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": ["Scheduled", "Ongoing", "Completed"]
+                                },
+                                "description": {
+                                    "type": "string"
+                                },
+                                "prize_fund": {
+                                    "type": "string"
+                                },
+                                "organizer": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "User": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "username": {
+                                    "type": "string"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "format": "email"
+                                },
+                                "is_admin": {
+                                    "type": "boolean"
+                                },
+                                "created_at": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                }
+                            }
+                        },
+                        "Pagination": {
+                            "type": "object",
+                            "properties": {
+                                "page": {
+                                    "type": "integer"
+                                },
+                                "per_page": {
+                                    "type": "integer"
+                                },
+                                "total": {
+                                    "type": "integer"
+                                },
+                                "pages": {
+                                    "type": "integer"
+                                },
+                                "has_next": {
+                                    "type": "boolean"
+                                },
+                                "has_prev": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    },
+                    "securitySchemes": {
+                        "bearerAuth": {
+                            "type": "http",
+                            "scheme": "bearer",
+                            "bearerFormat": "JWT"
+                        }
+                    }
+                }
+            };
+
+            SwaggerUIBundle({
+                spec: spec,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout"
+            });
+        };
+    </script>
+</body>
+</html>

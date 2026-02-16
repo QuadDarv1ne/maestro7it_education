@@ -13,6 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Mobile CSS -->
     <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
+    <!-- Dark Theme CSS -->
+    <link href="{{ url_for('static', filename='css/dark-theme.css') }}" rel="stylesheet">
     
     <style>
         :root {
@@ -504,6 +506,11 @@
                             <i class="bi bi-calendar-month"></i> Календарь
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.tournament_map') }}">
+                            <i class="bi bi-geo-alt"></i> Карта
+                        </a>
+                    </li>
                     {% if 'user_id' in session %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.recommendations') }}">
@@ -519,6 +526,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.notifications') }}">
                             <i class="bi bi-bell"></i> Уведомления
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.statistics_dashboard') }}">
+                            <i class="bi bi-graph-up"></i> Статистика
                         </a>
                     </li>
                 </ul>
@@ -680,10 +692,22 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Theme Switcher -->
+    <script src="{{ url_for('static', filename='js/theme-switcher.js') }}"></script>
+    
     <!-- Custom App JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/search.js') }}"></script>
     <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/toast-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/achievements-system.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tournament-comparison.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quick-actions.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/advanced-filters.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/favorites-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/calendar-export.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/rating-system.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/advanced-search.js') }}"></script>
     
     <!-- Service Worker Registration -->
     <script>

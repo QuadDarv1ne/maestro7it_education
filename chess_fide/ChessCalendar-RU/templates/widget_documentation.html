@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Виджет для сайта - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<style>
+    .widget-docs {
+        padding: 2rem 0;
+    }
+    
+    .code-block {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+        overflow-x: auto;
+    }
+    
+    .code-block code {
+        color: var(--text-primary);
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+    }
+    
+    .widget-preview {
+        background: var(--bg-primary);
+        border: 2px dashed var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+    
+    .feature-card {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        height: 100%;
+    }
+    
+    .feature-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 1rem;
+    }
+    
+    .feature-icon.primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+    }
+    
+    .feature-icon.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .feature-icon.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .param-table {
+        width: 100%;
+        margin: 1rem 0;
+    }
+    
+    .param-table th {
+        background: var(--bg-secondary);
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .param-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .param-name {
+        font-family: 'Courier New', monospace;
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container widget-docs">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 fw-bold mb-2">
+                <i class="bi bi-code-square"></i> Виджет для вашего сайта
+            </h1>
+            <p class="text-muted">Встройте календарь шахматных турниров на свой сайт</p>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon primary">
+                    <i class="bi bi-lightning-charge"></i>
+                </div>
+                <h5>Быстрая установка</h5>
+                <p class="text-muted">Всего одна строка кода для встраивания виджета</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon success">
+                    <i class="bi bi-palette"></i>
+                </div>
+                <h5>Настраиваемый дизайн</h5>
+                <p class="text-muted">Светлая и темная темы, настройка отображения</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon warning">
+                    <i class="bi bi-phone"></i>
+                </div>
+                <h5>Адаптивный</h5>
+                <p class="text-muted">Отлично работает на всех устройствах</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Start -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="mb-3"><i class="bi bi-rocket"></i> Быстрый старт</h3>
+            <p>Скопируйте и вставьте этот код на свой сайт:</p>
+            
+            <div class="code-block">
+                <code>&lt;script src="{{ request.url_root }}static/js/embed-widget.js" 
+       data-widget="upcoming" 
+       data-limit="5"&gt;&lt;/script&gt;</code>
+            </div>
+
+            <button class="btn btn-primary" onclick="copyToClipboard(this.previousElementSibling.querySelector('code').textContent)">
+                <i class="bi bi-clipboard"></i> Копировать код
+            </button>
+        </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="mb-3"><i class="bi bi-sliders"></i> Параметры настройки</h3>
+            
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Параметр</th>
+                        <th>Описание</th>
+                        <th>Значения</th>
+                        <th>По умолчанию</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="param-name">data-widget</span></td>
+                        <td>Тип виджета</td>
+                        <td>upcoming, popular, category</td>
+                        <td>upcoming</td>
+                    </tr>
+                    <tr>
+                        <td><span class="param-name">data-limit</span></td>
+                        <td>Количество турниров</td>
+                        <td>1-20</td>
+                        <td>5</td>
+                    </tr>
+                    <tr>
+                        <td><span class="param-name">data-category</span></td>
+                        <td>Категория турниров</td>
+                        <td>Блиц, Рапид, Классика</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td><span class="param-name">data-theme</span></td>
+                        <td>Тема оформления</td>
+                        <td>light, dark</td>
+                        <td>light</td>
+                    </tr>
+                    <tr>
+                        <td><span class="param-name">data-show-dates</span></td>
+                        <td>Показывать даты</td>
+                        <td>true, false</td>
+                        <td>true</td>
+                    </tr>
+                    <tr>
+                        <td><span class="param-name">data-show-location</span></td>
+                        <td>Показывать место</td>
+                        <td>true, false</td>
+                        <td>true</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Examples -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="mb-3"><i class="bi bi-code-slash"></i> Примеры использования</h3>
+
+            <h5 class="mt-4">1. Предстоящие турниры (по умолчанию)</h5>
+            <div class="code-block">
+                <code>&lt;script src="{{ request.url_root }}static/js/embed-widget.js"&gt;&lt;/script&gt;</code>
+            </div>
+
+            <h5 class="mt-4">2. Турниры по категории</h5>
+            <div class="code-block">
+                <code>&lt;script src="{{ request.url_root }}static/js/embed-widget.js" 
+       data-widget="category" 
+       data-category="Блиц" 
+       data-limit="10"&gt;&lt;/script&gt;</code>
+            </div>
+
+            <h5 class="mt-4">3. Темная тема</h5>
+            <div class="code-block">
+                <code>&lt;script src="{{ request.url_root }}static/js/embed-widget.js" 
+       data-theme="dark" 
+       data-limit="5"&gt;&lt;/script&gt;</code>
+            </div>
+
+            <h5 class="mt-4">4. Минимальный виджет</h5>
+            <div class="code-block">
+                <code>&lt;script src="{{ request.url_root }}static/js/embed-widget.js" 
+       data-limit="3" 
+       data-show-dates="false"&gt;&lt;/script&gt;</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="mb-3"><i class="bi bi-eye"></i> Предпросмотр</h3>
+            <p>Так будет выглядеть виджет на вашем сайте:</p>
+            
+            <div class="widget-preview">
+                <div id="widgetPreview"></div>
+            </div>
+
+            <div class="mt-3">
+                <button class="btn btn-primary" onclick="loadWidgetPreview('light')">
+                    <i class="bi bi-sun"></i> Светлая тема
+                </button>
+                <button class="btn btn-secondary" onclick="loadWidgetPreview('dark')">
+                    <i class="bi bi-moon"></i> Темная тема
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3 class="mb-3"><i class="bi bi-question-circle"></i> Часто задаваемые вопросы</h3>
+
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            Бесплатно ли использование виджета?
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Да, виджет полностью бесплатен для использования на любых сайтах.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            Как часто обновляются данные?
+                        </button>
+                    </h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Данные обновляются автоматически при каждой загрузке страницы. Турниры всегда актуальны.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            Можно ли настроить внешний вид?
+                        </button>
+                    </h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Да, виджет поддерживает светлую и темную темы, а также различные параметры отображения.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                            Работает ли виджет на мобильных устройствах?
+                        </button>
+                    </h2>
+                    <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            Да, виджет полностью адаптивен и отлично работает на всех устройствах.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support -->
+    <div class="card">
+        <div class="card-body text-center">
+            <h3 class="mb-3"><i class="bi bi-headset"></i> Нужна помощь?</h3>
+            <p class="text-muted">Если у вас возникли вопросы или проблемы с виджетом</p>
+            <a href="mailto:support@chesscalendar-ru.ru" class="btn btn-primary">
+                <i class="bi bi-envelope"></i> Связаться с поддержкой
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (window.toast) {
+                window.toast.copied();
+            } else {
+                alert('Код скопирован!');
+            }
+        });
+    }
+
+    function loadWidgetPreview(theme) {
+        const preview = document.getElementById('widgetPreview');
+        preview.innerHTML = '';
+
+        const script = document.createElement('script');
+        script.src = '{{ url_for("static", filename="js/embed-widget.js") }}';
+        script.setAttribute('data-widget', 'upcoming');
+        script.setAttribute('data-limit', '3');
+        script.setAttribute('data-theme', theme);
+        script.setAttribute('data-api-url', '{{ request.url_root[:-1] }}');
+
+        preview.appendChild(script);
+
+        if (window.toast) {
+            window.toast.success(`Загружена ${theme === 'dark' ? 'темная' : 'светлая'} тема`);
+        }
+    }
+
+    // Load default preview
+    document.addEventListener('DOMContentLoaded', () => {
+        loadWidgetPreview('light');
+    });
+</script>
+{% endblock %}
