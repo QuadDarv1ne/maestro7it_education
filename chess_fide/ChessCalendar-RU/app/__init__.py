@@ -116,15 +116,9 @@ def create_app(config_name='default'):
     # Security headers
     @app.after_request
     def after_request(response):
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
+        from app.utils.security import apply_security_headers
+        response = apply_security_headers(response)
         response.headers['X-Permitted-Cross-Domain-Policies'] = 'none'
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:"
-        response.headers['X-Content-Security-Policy'] = response.headers['Content-Security-Policy']  # For older browsers
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'

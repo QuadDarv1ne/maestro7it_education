@@ -180,8 +180,215 @@ def validate_json_input(required_fields: list = None):
     return decorator
 
 
-# Global security utility instance
+# Advanced security utilities
+import hashlib
+import hmac
+import secrets
+import time
+from datetime import datetime, timedelta
+from urllib.parse import urlparse, urljoin
+
+
+class AdvancedSecurityUtils(SecurityUtils):
+    """Advanced security utilities extending basic security functions"""
+    
+    def __init__(self):
+        super().__init__()
+        self.rate_limits = {}  # In-memory rate limiting (use Redis in production)
+        self.blocked_ips = set()  # IPs temporarily blocked
+        self.suspicious_activities = []  # Track suspicious activities
+        
+    def hash_password(self, password: str, salt: Optional[str] = None) -> tuple[str, str]:
+        """Hash password with salt using PBKDF2 (more secure than SHA-256)"""
+        if salt is None:
+            salt = secrets.token_hex(32)
+        
+        import hashlib
+        password_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), 
+                                            salt.encode('utf-8'), 100000)
+        return password_hash.hex(), salt
+    
+    def verify_password(self, password: str, stored_hash: str, salt: str) -> bool:
+        """Verify password against stored hash and salt"""
+        password_hash, _ = self.hash_password(password, salt)
+        return hmac.compare_digest(password_hash, stored_hash)
+    
+    def generate_secure_token(self, length: int = 32) -> str:
+        """Generate cryptographically secure token"""
+        return secrets.token_urlsafe(length)
+    
+    def validate_ip(self, ip: str) -> bool:
+        """Basic IP validation"""
+        import ipaddress
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except ValueError:
+            return False
+    
+    def is_blocked_ip(self, ip: str) -> bool:
+        """Check if IP is blocked"""
+        return ip in self.blocked_ips
+    
+    def block_ip(self, ip: str, duration: int = 3600):
+        """Block IP for specified duration (seconds)"""
+        self.blocked_ips.add(ip)
+        # In production, use Redis with TTL for persistence
+        # For demo purposes, we'll just log it
+        self.logger.warning(f"IP {ip} blocked for {duration} seconds")
+    
+    def check_rate_limit(self, identifier: str, max_requests: int = 10, window: int = 60) -> tuple[bool, str]:
+        """Check rate limit for an identifier (IP, user_id, etc.)"""
+        now = time.time()
+        
+        if identifier not in self.rate_limits:
+            self.rate_limits[identifier] = []
+        
+        # Clean old requests outside the window
+        self.rate_limits[identifier] = [
+            req_time for req_time in self.rate_limits[identifier] 
+            if now - req_time < window
+        ]
+        
+        if len(self.rate_limits[identifier]) >= max_requests:
+            return False, f"Rate limit exceeded: {max_requests} requests per {window} seconds"
+        
+        # Add current request
+        self.rate_limits[identifier].append(now)
+        return True, "OK"
+    
+    def detect_sql_injection(self, input_str: str) -> bool:
+        """Basic SQL injection detection"""
+        sql_keywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'UNION', 'EXEC', '--', ';']
+        normalized = input_str.upper()
+        return any(keyword in normalized for keyword in sql_keywords)
+    
+    def detect_xss_attempt(self, input_str: str) -> bool:
+        """Basic XSS attempt detection"""
+        xss_patterns = ['<SCRIPT', 'JAVASCRIPT:', 'ONLOAD=', 'ONCLICK=', '<IMG', 'ONERROR=', 'DATA:']
+        normalized = input_str.upper()
+        return any(pattern in normalized for pattern in xss_patterns)
+    
+    def validate_redirect_url(self, redirect_to: str, allowed_domains: list) -> str:
+        """Validate redirect URL to prevent open redirect vulnerabilities"""
+        if not redirect_to:
+            return ''
+        
+        # Parse the URL
+        parsed = urlparse(redirect_to)
+        
+        # Only allow relative URLs or URLs from allowed domains
+        if not parsed.netloc:  # Relative URL
+            return redirect_to
+        
+        if parsed.netloc in allowed_domains:
+            return redirect_to
+        
+        # Return empty string if not in allowed domains
+        return ''
+    
+    def log_security_event(self, event_type: str, details: dict):
+        """Log security-related events"""
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'event_type': event_type,
+            'details': details
+        }
+        self.logger.warning(f"SECURITY EVENT: {log_entry}")
+        self.suspicious_activities.append(log_entry)
+    
+    def get_security_headers(self) -> dict:
+        """Return recommended security headers"""
+        return {
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+            'X-XSS-Protection': '1; mode=block',
+            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:",
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+        }
+
+
+class InputValidator:
+    """Comprehensive input validation utilities"""
+    
+    @staticmethod
+    def validate_json_schema(data: dict, schema: dict) -> tuple[bool, list]:
+        """Validate data against a simple schema definition"""
+        errors = []
+        
+        # Check required fields
+        for field, field_def in schema.items():
+            if field_def.get('required', False):
+                if field not in data or data[field] is None:
+                    errors.append(f"Field '{field}' is required")
+                    continue
+            
+            if field in data:
+                value = data[field]
+                field_type = field_def.get('type')
+                max_length = field_def.get('max_length')
+                min_length = field_def.get('min_length')
+                
+                # Type checking
+                if field_type:
+                    if field_type == 'string' and not isinstance(value, str):
+                        errors.append(f"Field '{field}' must be a string")
+                    elif field_type == 'integer' and not isinstance(value, int):
+                        errors.append(f"Field '{field}' must be an integer")
+                    elif field_type == 'boolean' and not isinstance(value, bool):
+                        errors.append(f"Field '{field}' must be a boolean")
+                    elif field_type == 'email' and not isinstance(value, str):
+                        errors.append(f"Field '{field}' must be a string")
+                    elif field_type == 'url' and not isinstance(value, str):
+                        errors.append(f"Field '{field}' must be a string")
+                
+                # Length validation
+                if isinstance(value, str):
+                    if max_length and len(value) > max_length:
+                        errors.append(f"Field '{field}' exceeds maximum length of {max_length}")
+                    if min_length and len(value) < min_length:
+                        errors.append(f"Field '{field}' is shorter than minimum length of {min_length}")
+                
+                # Special validations
+                if field_type == 'email' and isinstance(value, str):
+                    import re
+                    email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+                    if not email_pattern.match(value):
+                        errors.append(f"Field '{field}' must be a valid email address")
+                
+                if field_type == 'url' and isinstance(value, str):
+                    import re
+                    url_pattern = re.compile(
+                        r'^https?://'  # http:// or https://
+                        r'(?:www\.)?'  # optional www.
+                        r'[a-zA-Z0-9.-]+'  # domain
+                        r'\.[a-zA-Z]{2,}'  # TLD
+                        r'(?:/[^\s]*)?$',  # optional path
+                        re.IGNORECASE
+                    )
+                    if not url_pattern.match(value):
+                        errors.append(f"Field '{field}' must be a valid URL")
+        
+        return len(errors) == 0, errors
+    
+    @staticmethod
+    def clean_input(text: str, allowed_tags: list = None, allowed_attributes: dict = None) -> str:
+        """Clean input using bleach with customizable allowed tags"""
+        if allowed_tags is None:
+            allowed_tags = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+        if allowed_attributes is None:
+            allowed_attributes = {}
+        
+        import bleach
+        return bleach.clean(text, tags=allowed_tags, attributes=allowed_attributes, strip=True)
+
+
+# Global security utility instances
 security_utils = SecurityUtils()
+advanced_security = AdvancedSecurityUtils()
+input_validator = InputValidator()
 
 
 def sanitize_tournament_data(data: dict) -> dict:
@@ -213,3 +420,11 @@ def sanitize_tournament_data(data: dict) -> dict:
     sanitized['fide_id'] = data.get('fide_id')
     
     return sanitized
+
+
+def apply_security_headers(response):
+    """Apply security headers to Flask response"""
+    headers = advanced_security.get_security_headers()
+    for header, value in headers.items():
+        response.headers[header] = value
+    return response

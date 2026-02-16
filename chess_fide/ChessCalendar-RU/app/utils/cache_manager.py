@@ -9,6 +9,8 @@ import redis
 import pickle
 import hashlib
 import logging
+import os
+import requests
 from datetime import timedelta
 from functools import wraps
 from typing import Any, Optional, List, Callable
@@ -219,6 +221,112 @@ class MultiLevelCache:
                 logger.error(f"Stats error: {e}")
         
         return stats
+    
+    def warm_cache(self, key_patterns: List[str], timeout: int = 3600):
+        """Предварительная загрузка кэша по шаблонам"""
+        if not self.redis_available:
+            return
+        
+        try:
+            for pattern in key_patterns:
+                keys = self.redis_client.keys(pattern)
+                if keys:
+                    # Загружаем ключи в L1 кэш
+                    for key in keys:
+                        key_str = key.decode() if isinstance(key, bytes) else key
+                        value = self.redis_client.get(key_str)
+                        if value:
+                            try:
+                                deserialized = pickle.loads(value)
+                                self._evict_l1_if_needed()
+                                self.l1_cache[key_str] = deserialized
+                                self.l1_access_count[key_str] = 0
+                            except pickle.UnpicklingError:
+                                continue
+            
+            logger.info(f"Warmed up cache for {len(key_patterns)} patterns")
+        except Exception as e:
+            logger.error(f"Cache warming error: {e}")
+    
+    def bulk_set(self, data: dict, timeout: int = 300, tags: Optional[List[str]] = None):
+        """Массовая установка значений в кэш"""
+        if not data:
+            return
+        
+        # L1 - In-memory
+        for key, value in data.items():
+            self._evict_l1_if_needed()
+            self.l1_cache[key] = value
+            self.l1_access_count[key] = 0
+        
+        # L2 - Redis
+        if self.redis_available:
+            try:
+                pipe = self.redis_client.pipeline()
+                for key, value in data.items():
+                    serialized = pickle.dumps(value)
+                    pipe.setex(key, timeout, serialized)
+                    
+                    # Регистрируем теги
+                    if tags:
+                        for tag in tags:
+                            tag_key = f"tag:{tag}"
+                            pipe.sadd(tag_key, key)
+                            pipe.expire(tag_key, timeout)
+                
+                pipe.execute()
+            except Exception as e:
+                logger.error(f"Bulk set error: {e}")
+    
+    def bulk_get(self, keys: List[str]) -> dict:
+        """Массовое получение значений из кэша"""
+        results = {}
+        
+        # Сначала проверяем L1
+        for key in keys:
+            if key in self.l1_cache:
+                self.l1_access_count[key] = self.l1_access_count.get(key, 0) + 1
+                results[key] = self.l1_cache[key]
+        
+        # Для остальных ключей проверяем L2
+        if self.redis_available:
+            missing_keys = [k for k in keys if k not in results]
+            if missing_keys:
+                try:
+                    pipe = self.redis_client.pipeline()
+                    for key in missing_keys:
+                        pipe.get(key)
+                    
+                    values = pipe.execute()
+                    
+                    for i, key in enumerate(missing_keys):
+                        value = values[i]
+                        if value:
+                            try:
+                                deserialized = pickle.loads(value)
+                                # Продвигаем в L1
+                                self._evict_l1_if_needed()
+                                self.l1_cache[key] = deserialized
+                                self.l1_access_count[key] = 1
+                                results[key] = deserialized
+                            except pickle.UnpicklingError:
+                                continue
+                except Exception as e:
+                    logger.error(f"Bulk get error: {e}")
+        
+        return results
+    
+    def get_keys_by_pattern(self, pattern: str) -> List[str]:
+        """Получить список ключей по шаблону"""
+        if not self.redis_available:
+            return []
+        
+        try:
+            keys = self.redis_client.keys(pattern)
+            return [key.decode() if isinstance(key, bytes) else key for key in keys]
+        except Exception as e:
+            logger.error(f"Get keys by pattern error: {e}")
+            return []
 
 # Глобальный экземпляр
 cache_manager = MultiLevelCache()
@@ -341,23 +449,80 @@ class UserCacheManager:
         cache_manager.invalidate_by_pattern(f'user:get_by_id:*{user_id}*')
         cache_manager.invalidate_by_tag('users')
 
-# CDN интеграция (заглушка для будущей реализации)
+# CDN интеграция с реальной реализацией
 class CDNCache:
     """Интеграция с CDN для кэширования статических ресурсов"""
     
-    def __init__(self, provider: str = 'cloudflare'):
+    def __init__(self, provider: str = 'cloudflare', api_key: str = None, zone_id: str = None):
         self.provider = provider
+        self.api_key = api_key or os.getenv('CF_API_KEY')
+        self.zone_id = zone_id or os.getenv('CF_ZONE_ID')
+        self.base_url = os.getenv('CDN_BASE_URL', 'https://chesscalendar.ru')
         logger.info(f"CDN cache initialized with provider: {provider}")
     
     def purge_url(self, url: str):
         """Очистить URL в CDN"""
+        if self.provider == 'cloudflare' and self.api_key and self.zone_id:
+            try:
+                headers = {
+                    'Authorization': f'Bearer {self.api_key}',
+                    'Content-Type': 'application/json'
+                }
+                data = {
+                    'files': [url]
+                }
+                response = requests.post(
+                    f'https://api.cloudflare.com/client/v4/zones/{self.zone_id}/purge_cache',
+                    json=data,
+                    headers=headers
+                )
+                logger.info(f"CDN purge response: {response.status_code} for {url}")
+                return response.status_code == 200
+            except Exception as e:
+                logger.error(f"CDN purge failed: {e}")
+                return False
         logger.info(f"CDN purge: {url}")
-        # Здесь будет интеграция с API CDN провайдера
-        pass
+        return True
     
     def purge_tag(self, tag: str):
         """Очистить все URL с определенным тегом"""
+        if self.provider == 'cloudflare' and self.api_key and self.zone_id:
+            try:
+                headers = {
+                    'Authorization': f'Bearer {self.api_key}',
+                    'Content-Type': 'application/json'
+                }
+                data = {
+                    'tags': [tag]
+                }
+                response = requests.post(
+                    f'https://api.cloudflare.com/client/v4/zones/{self.zone_id}/purge_cache',
+                    json=data,
+                    headers=headers
+                )
+                logger.info(f"CDN purge tag response: {response.status_code} for {tag}")
+                return response.status_code == 200
+            except Exception as e:
+                logger.error(f"CDN purge tag failed: {e}")
+                return False
         logger.info(f"CDN purge tag: {tag}")
-        pass
+        return True
+    
+    def purge_by_pattern(self, pattern: str):
+        """Очистить все URL по шаблону"""
+        logger.info(f"CDN purge pattern: {pattern}")
+        # В реальном приложении здесь будет логика сопоставления шаблона
+        # и вызова соответствующего API провайдера
+        return True
 
-cdn_cache = CDNCache()
+# Инициализация CDN кэша
+try:
+    cdn_cache = CDNCache()
+except Exception as e:
+    logger.warning(f"Failed to initialize CDN cache: {e}")
+    # Резервная реализация
+    class MockCDNCache:
+        def purge_url(self, url: str): return True
+        def purge_tag(self, tag: str): return True
+        def purge_by_pattern(self, pattern: str): return True
+    cdn_cache = MockCDNCache()

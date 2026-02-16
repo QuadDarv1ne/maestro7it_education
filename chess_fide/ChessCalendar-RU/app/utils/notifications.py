@@ -287,5 +287,259 @@ class NotificationService:
             self.logger.error(f"Error getting upcoming tournaments: {e}")
             return []
 
-# Глобальный экземпляр сервиса уведомлений
-notification_service = NotificationService()
+# Real-time notifications using WebSocket
+import asyncio
+import json
+from datetime import datetime
+try:
+    from flask_socketio import SocketIO, emit, join_room, leave_room
+    from threading import Lock
+    
+    socketio = SocketIO(cors_allowed_origins="*")
+    thread = None
+    thread_lock = Lock()
+    
+    def get_socketio_instance():
+        return socketio
+    
+    @socketio.on('connect')
+    def handle_connect():
+        print('Client connected')
+        emit('status', {'msg': 'Connected to notification server'})
+    
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        print('Client disconnected')
+    
+    @socketio.on('join')
+    def on_join(data):
+        username = data['username']
+        room = data['room']
+        join_room(room)
+        emit('status', {'msg': f'{username} has entered the room {room}'})
+    
+    @socketio.on('leave')
+    def on_leave(data):
+        username = data['username']
+        room = data['room']
+        leave_room(room)
+        emit('status', {'msg': f'{username} has left the room {room}'})
+    
+    def broadcast_notification(notification_data):
+        """Broadcast notification to all connected clients or specific rooms"""
+        try:
+            socketio.emit('notification', notification_data)
+            # Also emit to specific tournament room if applicable
+            if 'tournament_id' in notification_data:
+                socketio.emit('tournament_notification', notification_data, room=f"tournament_{notification_data['tournament_id']}")
+        except Exception as e:
+            logging.error(f"Error broadcasting notification via WebSocket: {e}")
+    
+    def send_realtime_notification(user_id, notification_data):
+        """Send real-time notification to specific user"""
+        try:
+            socketio.emit('user_notification', notification_data, room=f"user_{user_id}")
+        except Exception as e:
+            logging.error(f"Error sending real-time notification to user {user_id}: {e}")
+    
+except ImportError:
+    # SocketIO not available, create mock functions
+    def get_socketio_instance():
+        return None
+    
+    def broadcast_notification(notification_data):
+        logging.info(f"WebSocket not available, notification would be sent: {notification_data}")
+    
+    def send_realtime_notification(user_id, notification_data):
+        logging.info(f"WebSocket not available, notification to user {user_id} would be sent: {notification_data}")
+
+
+class RealTimeNotificationService:
+    """Enhanced notification service with real-time capabilities"""
+    
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+    
+    def send_new_tournament_notification(self, tournament):
+        """Send real-time notification about new tournament"""
+        try:
+            # Create notification record
+            title = f"Новый турнир: {tournament.name}"
+            message = f"Добавлен новый турнир: {tournament.name}. Начало: {tournament.start_date}. Место: {tournament.location}."
+            
+            notification = Notification(
+                title=title,
+                message=message,
+                type=NotificationType.NEW_TOURNAMENT,
+                tournament_id=tournament.id
+            )
+            
+            db.session.add(notification)
+            db.session.commit()
+            
+            # Prepare real-time notification data
+            realtime_data = {
+                'id': notification.id,
+                'title': title,
+                'message': message,
+                'type': notification.type.value,
+                'tournament_id': tournament.id,
+                'timestamp': datetime.utcnow().isoformat(),
+                'priority': notification.priority
+            }
+            
+            # Send via WebSocket
+            broadcast_notification(realtime_data)
+            
+            # Also send via traditional method
+            self._send_to_subscribers(notification)
+            
+            self.logger.info(f"Real-time notification sent for new tournament {tournament.name}")
+        except Exception as e:
+            self.logger.error(f"Error sending real-time new tournament notification: {e}")
+    
+    def send_tournament_update_notification(self, tournament, changes):
+        """Send real-time notification about tournament update"""
+        try:
+            # Create notification record
+            title = f"Изменения в турнире: {tournament.name}"
+            change_descriptions = []
+            for field, (old_val, new_val) in changes.items():
+                field_names = {
+                    'name': 'название',
+                    'start_date': 'дата начала',
+                    'end_date': 'дата окончания',
+                    'location': 'место проведения',
+                    'category': 'категория',
+                    'status': 'статус'
+                }
+                field_name = field_names.get(field, field)
+                change_descriptions.append(f"{field_name}: {old_val} → {new_val}")
+            
+            message = f"В турнире '{tournament.name}' произошли изменения:\n" + "\n".join(change_descriptions)
+            
+            notification = Notification(
+                title=title,
+                message=message,
+                type=NotificationType.TOURNAMENT_UPDATE,
+                tournament_id=tournament.id
+            )
+            
+            db.session.add(notification)
+            db.session.commit()
+            
+            # Prepare real-time notification data
+            realtime_data = {
+                'id': notification.id,
+                'title': title,
+                'message': message,
+                'type': notification.type.value,
+                'tournament_id': tournament.id,
+                'changes': changes,
+                'timestamp': datetime.utcnow().isoformat(),
+                'priority': notification.priority
+            }
+            
+            # Send via WebSocket
+            broadcast_notification(realtime_data)
+            
+            # Also send via traditional method
+            self._send_to_subscribers(notification)
+            
+            self.logger.info(f"Real-time notification sent for tournament update {tournament.name}")
+        except Exception as e:
+            self.logger.error(f"Error sending real-time tournament update notification: {e}")
+    
+    def send_tournament_cancelled_notification(self, tournament):
+        """Send real-time notification about tournament cancellation"""
+        try:
+            title = f"Турнир отменен: {tournament.name}"
+            message = f"Турнир '{tournament.name}' был отменен."
+            
+            notification = Notification(
+                title=title,
+                message=message,
+                type=NotificationType.TOURNAMENT_CANCELLED,
+                tournament_id=tournament.id,
+                priority=3  # High priority
+            )
+            
+            db.session.add(notification)
+            db.session.commit()
+            
+            # Prepare real-time notification data
+            realtime_data = {
+                'id': notification.id,
+                'title': title,
+                'message': message,
+                'type': notification.type.value,
+                'tournament_id': tournament.id,
+                'timestamp': datetime.utcnow().isoformat(),
+                'priority': notification.priority
+            }
+            
+            # Send via WebSocket
+            broadcast_notification(realtime_data)
+            
+            # Also send via traditional method
+            self._send_to_subscribers(notification)
+            
+            self.logger.info(f"Real-time notification sent for cancelled tournament {tournament.name}")
+        except Exception as e:
+            self.logger.error(f"Error sending real-time tournament cancelled notification: {e}")
+    
+    def send_push_notification(self, user_ids, title, message, data=None):
+        """Send push notifications to specific users"""
+        try:
+            import pywebpush
+            from app.models.user import User
+            
+            # This is a simplified implementation
+            # In production, you would need to store user subscription info
+            # for Web Push protocol
+            
+            for user_id in user_ids:
+                user = User.query.get(user_id)
+                if user and user.web_push_subscription:
+                    try:
+                        # Send web push notification
+                        subscription_info = json.loads(user.web_push_subscription)
+                        pywebpush.send_webpush(
+                            subscription_info,
+                            json.dumps({
+                                'title': title,
+                                'body': message,
+                                'icon': '/static/icons/icon-192x192.png',
+                                'data': data or {}
+                            }),
+                            vapid_private_key=os.getenv('VAPID_PRIVATE_KEY'),
+                            vapid_claims={
+                                'sub': 'mailto:admin@chesscalendar.ru'
+                            }
+                        )
+                    except Exception as e:
+                        self.logger.error(f"Failed to send push notification to user {user_id}: {e}")
+        except ImportError:
+            self.logger.warning("pywebpush not installed, skipping push notifications")
+        except Exception as e:
+            self.logger.error(f"Error sending push notifications: {e}")
+    
+    def send_mobile_notification(self, device_tokens, title, message, data=None):
+        """Send mobile notifications via Firebase Cloud Messaging (FCM)"""
+        try:
+            # This would integrate with FCM in production
+            # Simplified implementation here
+            self.logger.info(f"Mobile notification would be sent to {len(device_tokens)} devices")
+        except Exception as e:
+            self.logger.error(f"Error sending mobile notifications: {e}")
+
+
+# Enhanced notification service with real-time capabilities
+class EnhancedNotificationService(NotificationService, RealTimeNotificationService):
+    def __init__(self, smtp_server='localhost', smtp_port=587, username=None, password=None, sender_email=None):
+        NotificationService.__init__(self, smtp_server, smtp_port, username, password, sender_email)
+        RealTimeNotificationService.__init__(self)
+
+
+# Global enhanced notification service instance
+notification_service = EnhancedNotificationService()
