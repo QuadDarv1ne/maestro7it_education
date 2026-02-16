@@ -422,6 +422,67 @@ class TournamentCacheManager:
         return Tournament.query.get(tournament_id)
     
     @staticmethod
+    @cached(timeout=3600, tags=['tournaments', 'calendar'], key_prefix='tournaments_calendar')
+    def get_tournaments_for_calendar(start_date: str, end_date: str):
+        """Получить турниры для календаря с кэшированием"""
+        from app.models.tournament import Tournament
+        from datetime import datetime
+        
+        start = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        tournaments = Tournament.query.filter(
+            Tournament.start_date <= end,
+            Tournament.end_date >= start
+        ).all()
+        
+        return [tournament.to_dict() for tournament in tournaments]
+    
+    @staticmethod
+    @cached(timeout=1800, tags=['tournaments', 'stats'], key_prefix='tournaments_stats')
+    def get_tournaments_stats():
+        """Получить статистику турниров с кэшированием"""
+        from app.models.tournament import Tournament
+        from sqlalchemy import func
+        from app import db
+        
+        stats = {
+            'total': Tournament.query.count(),
+            'by_status': {},
+            'by_category': {},
+            'by_month': {}
+        }
+        
+        # Статистика по статусам
+        status_counts = db.session.query(
+            Tournament.status, 
+            func.count(Tournament.id)
+        ).group_by(Tournament.status).all()
+        
+        for status, count in status_counts:
+            stats['by_status'][status] = count
+        
+        # Статистика по категориям
+        category_counts = db.session.query(
+            Tournament.category, 
+            func.count(Tournament.id)
+        ).group_by(Tournament.category).all()
+        
+        for category, count in category_counts:
+            stats['by_category'][category] = count
+        
+        # Статистика по месяцам
+        monthly_counts = db.session.query(
+            func.strftime('%Y-%m', Tournament.start_date).label('month'),
+            func.count(Tournament.id)
+        ).group_by(func.strftime('%Y-%m', Tournament.start_date)).all()
+        
+        for month, count in monthly_counts:
+            stats['by_month'][month] = count
+        
+        return stats
+    
+    @staticmethod
     @invalidate_cache(tags=['tournaments'])
     def invalidate_all():
         """Инвалидировать весь кэш турниров"""
@@ -432,6 +493,16 @@ class TournamentCacheManager:
         """Инвалидировать кэш конкретного турнира"""
         cache_manager.invalidate_by_pattern(f'tournament:get_by_id:*{tournament_id}*')
         cache_manager.invalidate_by_tag('tournaments')
+    
+    @staticmethod
+    def invalidate_calendar_cache():
+        """Инвалидировать кэш календаря турниров"""
+        cache_manager.invalidate_by_pattern('tournaments_calendar*')
+    
+    @staticmethod
+    def invalidate_stats_cache():
+        """Инвалидировать кэш статистики турниров"""
+        cache_manager.invalidate_by_pattern('tournaments_stats*')
 
 class UserCacheManager:
     """Менеджер кэша для пользователей"""
@@ -444,9 +515,25 @@ class UserCacheManager:
         return User.query.get(user_id)
     
     @staticmethod
+    @cached(timeout=1800, tags=['users', 'preferences'], key_prefix='user_preferences')
+    def get_user_preferences(user_id: int):
+        """Получить настройки пользователя с кэшированием"""
+        from app.models.preference import Preference
+        return Preference.query.filter_by(user_id=user_id).first()
+    
+    @staticmethod
+    @cached(timeout=1800, tags=['users', 'notifications'], key_prefix='user_notifications')
+    def get_unread_notifications_count(user_id: int):
+        """Получить количество непрочитанных уведомлений с кэшированием"""
+        from app.models.notification import Notification
+        return Notification.query.filter_by(user_id=user_id, is_read=False).count()
+    
+    @staticmethod
     def invalidate_user(user_id: int):
         """Инвалидировать кэш пользователя"""
         cache_manager.invalidate_by_pattern(f'user:get_by_id:*{user_id}*')
+        cache_manager.invalidate_by_pattern(f'user_preferences:*{user_id}*')
+        cache_manager.invalidate_by_pattern(f'user_notifications:*{user_id}*')
         cache_manager.invalidate_by_tag('users')
 
 # CDN интеграция с реальной реализацией

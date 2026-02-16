@@ -56,6 +56,10 @@ class UserInteraction(db.Model):
         db.Index('idx_user_interaction', 'user_id', 'interaction_type'),
         db.Index('idx_tournament_interaction', 'tournament_id', 'interaction_type'),
         db.Index('idx_created_interaction', 'created_at', 'interaction_type'),
+        # Дополнительные индексы для оптимизации производительности
+        db.Index('idx_user_created_at', 'user_id', 'created_at'),
+        db.Index('idx_tournament_created_at', 'tournament_id', 'created_at'),
+        db.Index('idx_interaction_type_value', 'interaction_type', 'interaction_value'),
     )
     
     def __init__(self, user_id, tournament_id, interaction_type, interaction_value=1):

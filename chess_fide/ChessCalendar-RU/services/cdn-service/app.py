@@ -2,8 +2,14 @@
 CDN Configuration для ChessCalendar-RU
 """
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request, abort
 from werkzeug.middleware.proxy_fix import ProxyFix
+import os
+from PIL import Image
+import io
+import hashlib
+from urllib.parse import urlparse
+import requests
 
 class CDNConfig:
     # Конфигурация CDN провайдеров
@@ -67,9 +73,48 @@ def is_cdn_file(filename):
     
     return False, None
 
+def optimize_image(image_path, quality=85, max_width=None, max_height=None):
+    """Оптимизация изображения"""
+    try:
+        with Image.open(image_path) as img:
+            # Конвертировать в RGB если необходимо (для PNG с альфа-каналом)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+            
+            # Изменить размер если указаны максимальные параметры
+            if max_width or max_height:
+                img.thumbnail((max_width or img.width, max_height or img.height), Image.Resampling.LANCZOS)
+            
+            # Сохранить оптимизированное изображение
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            output.seek(0)
+            
+            return output
+    except Exception as e:
+        print(f"Error optimizing image {image_path}: {str(e)}")
+        return None
+
+def get_image_cache_path(image_filename, width=None, height=None, quality=None):
+    """Получить путь к кешированному изображению"""
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache', 'images')
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    # Создать уникальное имя файла на основе параметров
+    name, ext = os.path.splitext(image_filename)
+    params = f"_{width or 'orig'}x{height or 'orig'}_{quality or 85}" if width or height or quality else ""
+    cache_filename = f"{name}{params}_{hashlib.md5((image_filename + str(width) + str(height) + str(quality)).encode()).hexdigest()[:8]}{ext}"
+    
+    return os.path.join(cache_dir, cache_filename)
+
 # Flask приложение для обслуживания статических файлов
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+@app.before_request
+def before_request():
+    # Логирование запросов к CDN
+    print(f"CDN request: {request.method} {request.path}")
 
 @app.route('/cdn/<file_type>/<path:filename>')
 def serve_cdn_file(file_type, filename):
@@ -100,6 +145,57 @@ def serve_cdn_file(file_type, filename):
     
     response.headers['Cache-Control'] = cache_control
     response.headers['CDN-Provider'] = CDNConfig.CURRENT_PROVIDER
+    
+    return response
+
+@app.route('/cdn/images/optimized/<path:filename>')
+def serve_optimized_image(filename):
+    """Обслуживание оптимизированных изображений"""
+    # Получить параметры из запроса
+    width = request.args.get('width', type=int)
+    height = request.args.get('height', type=int)
+    quality = request.args.get('quality', default=85, type=int)
+    
+    # Ограничить максимальные значения параметров для безопасности
+    width = min(width, 2000) if width else None
+    height = min(height, 2000) if height else None
+    quality = max(10, min(quality, 100)) if quality else 85
+    
+    static_folder = os.path.join(app.root_path, '..', 'static')
+    original_path = os.path.join(static_folder, 'icons', filename)  # Предполагаем, что изображения в папке icons
+    
+    # Если файл не найден в icons, проверяем в других папках
+    if not os.path.exists(original_path):
+        original_path = os.path.join(static_folder, 'images', filename)
+        if not os.path.exists(original_path):
+            original_path = os.path.join(static_folder, 'screenshots', filename)
+            if not os.path.exists(original_path):
+                return "Image not found", 404
+    
+    # Проверить, есть ли уже оптимизированная версия в кэше
+    cache_path = get_image_cache_path(filename, width, height, quality)
+    
+    if os.path.exists(cache_path):
+        # Отдать закешированную версию
+        response = send_from_directory(os.path.dirname(cache_path), os.path.basename(cache_path))
+    else:
+        # Оптимизировать изображение и сохранить в кэш
+        optimized_img = optimize_image(original_path, quality, width, height)
+        if optimized_img:
+            # Сохранить оптимизированное изображение в кэш
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            with open(cache_path, 'wb') as f:
+                f.write(optimized_img.getvalue())
+            
+            # Отдать из кэша
+            response = send_from_directory(os.path.dirname(cache_path), os.path.basename(cache_path))
+        else:
+            # Если оптимизация не удалась, вернуть оригинальный файл
+            response = send_from_directory(os.path.dirname(original_path), os.path.basename(original_path))
+    
+    response.headers['Cache-Control'] = CDNConfig.CACHE_CONTROL.get('images', 'public, max-age=31536000')
+    response.headers['CDN-Provider'] = CDNConfig.CURRENT_PROVIDER
+    response.headers['Content-Type'] = 'image/jpeg'
     
     return response
 

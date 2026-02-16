@@ -253,4 +253,79 @@ def parse_enhanced():
             'parsed_at': datetime.utcnow().isoformat()
         }), 500
 
-# ... остальные маршруты и функции ...
+# Улучшенная система кеширования для результатов парсинга
+PARSER_CACHE_PREFIX = "parser_results"
+PARSER_CACHE_TTL = 3600 * 2  # 2 часа по умолчанию
+
+
+def get_parser_cache_key(parser_name: str, year: int, source: str = "all") -> str:
+    """Получить ключ кэша для результатов парсинга"""
+    return f"{PARSER_CACHE_PREFIX}:{parser_name}:{year}:{source}"
+
+
+def get_cached_parsing_results(parser_name: str, year: int, source: str = "all") -> dict:
+    """Получить закешированные результаты парсинга"""
+    if not redis_available:
+        return None
+    
+    cache_key = get_parser_cache_key(parser_name, year, source)
+    try:
+        cached_data = redis_client.get(cache_key)
+        if cached_data:
+            result = json.loads(cached_data)
+            print(f"Parser cache HIT for {parser_name}:{year}:{source}")
+            return result
+    except Exception as e:
+        print(f"Error retrieving parser cache: {e}")
+        return None
+    
+    print(f"Parser cache MISS for {parser_name}:{year}:{source}")
+    return None
+
+
+def cache_parsing_results(parser_name: str, year: int, results: dict, source: str = "all", ttl: int = None) -> bool:
+    """Закешировать результаты парсинга"""
+    if not redis_available:
+        return False
+    
+    ttl = ttl or PARSER_CACHE_TTL
+    cache_key = get_parser_cache_key(parser_name, year, source)
+    try:
+        redis_client.setex(cache_key, ttl, json.dumps(results, default=str))
+        print(f"Parser results cached for {parser_name}:{year}:{source} with TTL {ttl}s")
+        return True
+    except Exception as e:
+        print(f"Error caching parser results: {e}")
+        return False
+
+
+def invalidate_parser_cache(parser_name: str = None, year: int = None, source: str = None) -> bool:
+    """Инвалидировать кэш парсинга"""
+    if not redis_available:
+        return False
+    
+    try:
+        if parser_name:
+            pattern = f"{PARSER_CACHE_PREFIX}:{parser_name}:*"
+            if year:
+                pattern = f"{PARSER_CACHE_PREFIX}:{parser_name}:{year}:*"
+            if source:
+                pattern = f"{PARSER_CACHE_PREFIX}:{parser_name}:{year}:{source}"
+        else:
+            pattern = f"{PARSER_CACHE_PREFIX}:*"
+        
+        keys = redis_client.keys(pattern)
+        if keys:
+            redis_client.delete(*keys)
+            print(f"Invalidated {len(keys)} parser cache entries for pattern {pattern}")
+        else:
+            print(f"No parser cache entries found for pattern {pattern}")
+        
+        return True
+    except Exception as e:
+        print(f"Error invalidating parser cache: {e}")
+        return False
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5003, debug=True)

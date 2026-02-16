@@ -1,0 +1,572 @@
+/**
+ * Layout Fixes - Исправление наложения элементов
+ * Версия: 1.0.0
+ * Дата: 2026-02-16
+ * 
+ * Этот файл решает проблемы с наложением элементов друг на друга
+ * путем правильной настройки z-index иерархии и позиционирования
+ * 
+ * ВАЖНО: Этот файл должен загружаться ПОСЛЕДНИМ среди всех CSS файлов
+ * для переопределения конфликтующих z-index значений из других файлов.
+ * 
+ * Конфликтующие значения в других файлах:
+ * - mobile.css: z-index: 1000, 9999, 1050, 1051, 1040, 1001
+ * - mobile-enhanced.css: z-index: 1000, 1050
+ * - responsive-enhanced.css: z-index: 1000
+ * - improvements.css: z-index: 10000
+ * - favorites.css: z-index: 10000
+ * 
+ * Все эти значения переопределяются нашей централизованной системой.
+ */
+
+/* ============================================
+   Z-INDEX ИЕРАРХИЯ
+   ============================================ */
+
+:root {
+    /* Определяем z-index уровни для всего приложения */
+    --z-base: 1;
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    --z-notification: 1080;
+    --z-fab: 999;
+}
+
+/* ============================================
+   ФИКСИРОВАННЫЕ ЭЛЕМЕНТЫ
+   ============================================ */
+
+/* Верхняя навигация */
+.navbar.fixed-top {
+    z-index: var(--z-fixed) !important;
+}
+
+/* Нижняя мобильная навигация */
+.mobile-bottom-nav {
+    z-index: var(--z-fixed) !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+/* Поисковые результаты */
+.search-results {
+    z-index: var(--z-dropdown) !important;
+    position: absolute;
+}
+
+/* Dropdown меню */
+.dropdown-menu {
+    z-index: var(--z-dropdown) !important;
+}
+
+/* ============================================
+   FAB КНОПКА (QUICK ACTIONS)
+   ============================================ */
+
+/* FAB контейнер */
+#quickActionsFAB {
+    position: fixed;
+    z-index: var(--z-fab) !important;
+    bottom: 30px;
+    right: 30px;
+}
+
+/* Адаптация для мобильных устройств - НЕ перекрывает нижнюю навигацию */
+@media (max-width: 576px) {
+    #quickActionsFAB {
+        bottom: 80px !important; /* 60px высота навигации + 20px отступ */
+        right: 15px;
+    }
+    
+    /* Убедимся что FAB не перекрывает нижнюю навигацию */
+    body {
+        padding-bottom: 70px; /* Высота нижней навигации + отступ */
+    }
+}
+
+/* FAB кнопка */
+.fab-button {
+    position: relative;
+    z-index: var(--z-fab);
+}
+
+/* FAB меню действий */
+.fab-actions {
+    position: absolute;
+    z-index: calc(var(--z-fab) + 1);
+    bottom: 70px;
+    right: 0;
+}
+
+/* ============================================
+   МОДАЛЬНЫЕ ОКНА
+   ============================================ */
+
+/* Backdrop модального окна */
+.modal-backdrop {
+    z-index: var(--z-modal-backdrop) !important;
+}
+
+/* Модальное окно */
+.modal {
+    z-index: var(--z-modal) !important;
+}
+
+/* Вложенные модальные окна */
+.modal.show ~ .modal {
+    z-index: calc(var(--z-modal) + 10) !important;
+}
+
+.modal.show ~ .modal-backdrop {
+    z-index: calc(var(--z-modal-backdrop) + 10) !important;
+}
+
+/* ============================================
+   УВЕДОМЛЕНИЯ И ТОСТЫ
+   ============================================ */
+
+/* Toast уведомления */
+.toast-container,
+#toastContainer {
+    z-index: var(--z-notification) !important;
+    position: fixed;
+}
+
+/* Позиционирование toast на мобильных */
+@media (max-width: 576px) {
+    .toast-container,
+    #toastContainer {
+        bottom: 80px !important; /* Над нижней навигацией */
+        left: 10px;
+        right: 10px;
+    }
+}
+
+/* Offline индикатор */
+.offline-indicator,
+#offlineIndicator {
+    z-index: var(--z-notification) !important;
+    position: fixed;
+    top: 70px; /* Под навигацией */
+}
+
+/* ============================================
+   ПАНЕЛИ И САЙДБАРЫ
+   ============================================ */
+
+/* История турниров */
+.tournament-history-panel,
+#tournamentHistoryPanel {
+    z-index: calc(var(--z-fixed) - 10);
+    position: fixed;
+}
+
+/* Панель фильтров */
+.filters-panel,
+.advanced-filters-panel,
+#advancedFiltersPanel {
+    z-index: calc(var(--z-fixed) - 10);
+    position: fixed;
+}
+
+/* Панель доступности */
+.accessibility-panel,
+#accessibilityPanel {
+    z-index: calc(var(--z-modal) - 10);
+    position: fixed;
+}
+
+/* ============================================
+   POPOVER И TOOLTIP
+   ============================================ */
+
+/* Popover */
+.popover {
+    z-index: var(--z-popover) !important;
+}
+
+/* Tooltip */
+.tooltip {
+    z-index: var(--z-tooltip) !important;
+}
+
+/* ============================================
+   КОНТЕНТ И ОТСТУПЫ
+   ============================================ */
+
+/* Основной контент - отступы для фиксированных элементов */
+body {
+    padding-top: 70px; /* Высота верхней навигации */
+    position: relative;
+    overflow-x: hidden; /* Предотвращаем горизонтальную прокрутку */
+}
+
+@media (max-width: 576px) {
+    body {
+        padding-top: 60px; /* Меньшая высота навигации на мобильных */
+        padding-bottom: 80px; /* Увеличен отступ для нижней навигации */
+    }
+}
+
+/* Главный контент */
+main {
+    position: relative;
+    z-index: var(--z-base);
+    min-height: calc(100vh - 140px); /* Вычитаем высоту навигации и футера */
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+@media (max-width: 576px) {
+    main {
+        min-height: calc(100vh - 200px);
+        padding-bottom: 2rem;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+/* Контейнеры */
+.container,
+.container-fluid {
+    position: relative;
+    z-index: var(--z-base);
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* ============================================
+   ФУТЕР
+   ============================================ */
+
+.footer {
+    position: relative;
+    z-index: var(--z-base);
+    margin-top: 3rem;
+}
+
+@media (max-width: 576px) {
+    .footer {
+        margin-top: 2rem;
+        padding-bottom: 1rem; /* Дополнительный отступ над нижней навигацией */
+    }
+}
+
+/* ============================================
+   КАРТОЧКИ И ЭЛЕМЕНТЫ КОНТЕНТА
+   ============================================ */
+
+/* Карточки */
+.card {
+    position: relative;
+    z-index: var(--z-base);
+    margin-bottom: 1.5rem;
+    overflow: visible; /* Позволяем dropdown выходить за границы */
+}
+
+/* Карточки при наведении */
+.card:hover {
+    z-index: calc(var(--z-base) + 1);
+}
+
+/* Предотвращаем наложение карточек друг на друга */
+.row > [class*="col-"] {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 576px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .row > [class*="col-"] {
+        margin-bottom: 0.75rem;
+    }
+}
+
+/* ============================================
+   СПЕЦИАЛЬНЫЕ ЭЛЕМЕНТЫ
+   ============================================ */
+
+/* Баннер установки PWA */
+#installBanner {
+    z-index: var(--z-notification) !important;
+    position: fixed;
+}
+
+@media (max-width: 576px) {
+    #installBanner {
+        bottom: 80px !important; /* Над нижней навигацией */
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+}
+
+/* Индикатор загрузки */
+.loading-overlay,
+.spinner-overlay {
+    z-index: calc(var(--z-modal) + 20) !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* ============================================
+   ИСПРАВЛЕНИЕ КОНКРЕТНЫХ ПРОБЛЕМ
+   ============================================ */
+
+/* Исправление: Поисковые результаты перекрывают контент */
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+@media (max-width: 576px) {
+    .search-results {
+        position: fixed !important;
+        top: 60px;
+        left: 0;
+        right: 0;
+        bottom: 70px; /* Над нижней навигацией */
+        max-height: none;
+        border-radius: 0;
+    }
+}
+
+/* Исправление: Dropdown в навигации */
+.navbar .dropdown-menu {
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 991px) {
+    .navbar-collapse {
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+        z-index: calc(var(--z-fixed) - 1);
+    }
+}
+
+/* Исправление: Модальные окна на мобильных */
+@media (max-width: 576px) {
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+    }
+    
+    .modal-content {
+        border-radius: 20px 20px 0 0;
+        max-height: 90vh;
+    }
+    
+    .modal-body {
+        max-height: calc(90vh - 120px);
+        overflow-y: auto;
+    }
+}
+
+/* ============================================
+   ПРЕДОТВРАЩЕНИЕ НАЛОЖЕНИЯ
+   ============================================ */
+
+/* Убедимся что элементы не выходят за границы */
+.container,
+.container-fluid {
+    position: relative;
+    z-index: var(--z-base);
+}
+
+/* Sticky элементы */
+.sticky-top {
+    z-index: var(--z-sticky) !important;
+}
+
+/* ============================================
+   АНИМАЦИИ БЕЗ НАЛОЖЕНИЯ
+   ============================================ */
+
+/* Плавное появление без скачков z-index */
+.fade-in,
+.slide-in {
+    animation-fill-mode: both;
+}
+
+/* Предотвращение мерцания при анимации */
+.card,
+.btn,
+.modal {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* ============================================
+   ACCESSIBILITY - SKIP LINK
+   ============================================ */
+
+.skip-to-main {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-color);
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    z-index: calc(var(--z-notification) + 10);
+    border-radius: 0 0 4px 0;
+}
+
+.skip-to-main:focus {
+    top: 0;
+}
+
+/* ============================================
+   ДОПОЛНИТЕЛЬНЫЕ ИСПРАВЛЕНИЯ
+   ============================================ */
+
+/* Исправление: Кнопки в карточках не перекрывают другие элементы */
+.card .btn-group,
+.card .dropdown {
+    position: relative;
+    z-index: auto;
+}
+
+/* Исправление: Бейджи и метки */
+.badge {
+    position: relative;
+    z-index: auto;
+}
+
+/* Исправление: Изображения в карточках */
+.card img {
+    position: relative;
+    z-index: auto;
+}
+
+/* ============================================
+   ОТЛАДКА (удалить в продакшене)
+   ============================================ */
+
+/* Раскомментируйте для визуальной отладки z-index */
+/*
+.navbar { outline: 2px solid red; }
+.mobile-bottom-nav { outline: 2px solid blue; }
+#quickActionsFAB { outline: 2px solid green; }
+.modal { outline: 2px solid yellow; }
+.toast-container { outline: 2px solid purple; }
+*/
+
+/* ============================================
+   МЕДИА-ЗАПРОСЫ ДЛЯ СПЕЦИФИЧНЫХ УСТРОЙСТВ
+   ============================================ */
+
+/* iPhone X и выше (с вырезом) */
+@supports (padding: max(0px)) {
+    body {
+        padding-top: max(70px, env(safe-area-inset-top));
+    }
+    
+    .mobile-bottom-nav {
+        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+    
+    @media (max-width: 576px) {
+        body {
+            padding-top: max(60px, env(safe-area-inset-top));
+        }
+    }
+}
+
+/* Планшеты в портретной ориентации */
+@media (min-width: 577px) and (max-width: 768px) {
+    #quickActionsFAB {
+        bottom: 30px;
+        right: 20px;
+    }
+}
+
+/* Планшеты в ландшафтной ориентации */
+@media (min-width: 577px) and (max-width: 1024px) and (orientation: landscape) {
+    body {
+        padding-top: 60px;
+    }
+    
+    .navbar {
+        padding: 0.25rem 0;
+    }
+}
+
+/* Большие экраны */
+@media (min-width: 1400px) {
+    #quickActionsFAB {
+        bottom: 40px;
+        right: 40px;
+    }
+}
+
+/* ============================================
+   ПЕЧАТЬ
+   ============================================ */
+
+@media print {
+    /* Скрываем все фиксированные элементы при печати */
+    .navbar,
+    .mobile-bottom-nav,
+    #quickActionsFAB,
+    .toast-container,
+    .modal,
+    .modal-backdrop {
+        display: none !important;
+    }
+    
+    body {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+}
+
+/* ============================================
+   ТЕМНАЯ ТЕМА
+   ============================================ */
+
+[data-theme="dark"] {
+    /* Убедимся что тени видны в темной теме */
+    .modal-content,
+    .dropdown-menu,
+    .popover,
+    .tooltip {
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* ============================================
+   ПРОИЗВОДИТЕЛЬНОСТЬ
+   ============================================ */
+
+/* Оптимизация рендеринга для фиксированных элементов */
+.navbar,
+.mobile-bottom-nav,
+#quickActionsFAB,
+.modal {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* Отключаем will-change после анимации */
+.navbar,
+.mobile-bottom-nav {
+    transition: transform 0.3s ease;
+}
+
+.navbar:not(:hover),
+.mobile-bottom-nav:not(:hover) {
+    will-change: auto;
+}

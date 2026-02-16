@@ -44,6 +44,11 @@ class Tournament(db.Model):
         db.Index('idx_prize_fund_usd', 'prize_fund_usd'),
         db.Index('idx_players_count', 'players_count'),
         db.Index('idx_time_control', 'time_control'),
+        # Дополнительные индексы для оптимизации производительности
+        db.Index('idx_status_start_date', 'status', 'start_date'),  # Для запросов по статусу и дате начала
+        db.Index('idx_location_status', 'location', 'status'),  # Для запросов по местоположению и статусу
+        db.Index('idx_category_start_date_desc', 'category', db.text('start_date DESC')),  # Для сортировки
+        db.Index('idx_fide_id_status', 'fide_id', 'status'),  # Для запросов по FIDE ID и статусу
     )
 
     def __repr__(self):
