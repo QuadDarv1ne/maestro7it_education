@@ -5,8 +5,8 @@ import pytest
 from datetime import datetime, timedelta
 from app.models.user import User
 from app.models.tournament import Tournament
-from app.models.favorite import Favorite
-from app.models.rating import Rating
+from app.models.favorite import FavoriteTournament
+from app.models.rating import TournamentRating
 
 
 class TestUserModel:
@@ -134,7 +134,7 @@ class TestFavoriteModel:
     
     def test_add_favorite(self, db_session, regular_user, sample_tournament):
         """Тест добавления в избранное"""
-        favorite = Favorite(
+        favorite = FavoriteTournament(
             user_id=regular_user.id,
             tournament_id=sample_tournament.id
         )
@@ -147,7 +147,7 @@ class TestFavoriteModel:
     
     def test_unique_favorite(self, db_session, regular_user, sample_tournament):
         """Тест уникальности избранного"""
-        favorite1 = Favorite(
+        favorite1 = FavoriteTournament(
             user_id=regular_user.id,
             tournament_id=sample_tournament.id
         )
@@ -155,7 +155,7 @@ class TestFavoriteModel:
         db_session.commit()
         
         # Попытка добавить дубликат
-        favorite2 = Favorite(
+        favorite2 = FavoriteTournament(
             user_id=regular_user.id,
             tournament_id=sample_tournament.id
         )
@@ -170,7 +170,7 @@ class TestRatingModel:
     
     def test_add_rating(self, db_session, regular_user, sample_tournament):
         """Тест добавления рейтинга"""
-        rating = Rating(
+        rating = TournamentRating(
             user_id=regular_user.id,
             tournament_id=sample_tournament.id,
             rating=5
@@ -185,7 +185,7 @@ class TestRatingModel:
         """Тест диапазона рейтинга (1-5)"""
         # Валидный рейтинг
         for value in [1, 2, 3, 4, 5]:
-            rating = Rating(
+            rating = TournamentRating(
                 user_id=regular_user.id,
                 tournament_id=sample_tournament.id,
                 rating=value
@@ -197,7 +197,7 @@ class TestRatingModel:
             db_session.commit()
         
         # Невалидный рейтинг
-        invalid_rating = Rating(
+        invalid_rating = TournamentRating(
             user_id=regular_user.id,
             tournament_id=sample_tournament.id,
             rating=6  # Больше 5

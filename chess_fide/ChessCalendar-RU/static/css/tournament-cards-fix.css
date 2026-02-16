@@ -1,0 +1,511 @@
+/**
+ * Исправление отображения карточек турниров
+ * Адаптивный дизайн для Full HD и других разрешений
+ */
+
+/* Сброс всех конфликтующих стилей */
+.tournament-card {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 450px !important;
+    max-height: 550px !important;
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 4px solid #2563eb !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+}
+
+[data-theme="dark"] .tournament-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+.tournament-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12) !important;
+    border-left-color: #1e40af !important;
+}
+
+.tournament-card .card-header {
+    background: linear-gradient(135deg, #f8fafc 0%, white 100%) !important;
+    padding: 1.25rem !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    flex-shrink: 0 !important;
+    min-height: 100px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+}
+
+[data-theme="dark"] .tournament-card .card-header {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
+    border-bottom-color: #475569 !important;
+}
+
+.tournament-card .card-body {
+    padding: 1.25rem !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Футер карточки с кнопками */
+.tournament-card .card-body > div:last-child {
+    margin-top: auto !important;
+    padding-top: 1rem !important;
+    border-top: 1px solid #e2e8f0 !important;
+}
+
+.tournament-card .card-title {
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    font-size: 1.1rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 1rem !important;
+    min-height: 2.8rem !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+}
+
+[data-theme="dark"] .tournament-card .card-title {
+    color: #f8fafc !important;
+}
+
+.tournament-card .card-text {
+    margin-bottom: 0.75rem !important;
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+}
+
+.tournament-card .card-text i {
+    margin-right: 0.5rem !important;
+    width: 1.25rem !important;
+    display: inline-block !important;
+}
+
+.tournament-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    padding: 0.4rem 0.9rem !important;
+    border-radius: 20px !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+}
+
+/* Контейнер для бейджей в header */
+.tournament-card .card-header > div:first-child {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+/* Статус бейджи */
+.badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 20px !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap !important;
+    line-height: 1.2 !important;
+}
+
+.btn-view-details {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+    border: none !important;
+    color: white !important;
+    padding: 0.6rem 1.5rem !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    text-decoration: none !important;
+    width: 100% !important;
+}
+
+.btn-view-details:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+    color: white !important;
+}
+
+/* Исправление grid layout для разных разрешений */
+.row.g-4 {
+    display: grid !important;
+    gap: 1.5rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Mobile - 1 колонка */
+@media (max-width: 767px) {
+    .row.g-4 {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .tournament-card {
+        min-height: 400px !important;
+        max-height: none !important;
+    }
+}
+
+/* Tablet - 2 колонки */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .row.g-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* Desktop HD (1280-1599) - 3 колонки */
+@media (min-width: 1200px) and (max-width: 1599px) {
+    .row.g-4 {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+/* Full HD и выше (1600+) - 4 колонки */
+@media (min-width: 1600px) {
+    .row.g-4 {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+    
+    .tournament-card {
+        min-height: 420px !important;
+    }
+}
+
+/* Очень большие экраны (2K+) - 5 колонок */
+@media (min-width: 2000px) {
+    .row.g-4 {
+        grid-template-columns: repeat(5, 1fr) !important;
+    }
+}
+
+/* Исправление статистических карточек */
+.stats-card {
+    background: white !important;
+    border-left: 4px solid !important;
+    transition: all 0.3s ease !important;
+    height: 100% !important;
+}
+
+[data-theme="dark"] .stats-card {
+    background: #1e293b !important;
+}
+
+.stats-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.stats-card h3 {
+    font-size: 2rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* Исправление фильтров */
+.filter-form {
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    margin-bottom: 1.5rem !important;
+}
+
+[data-theme="dark"] .filter-form {
+    background: #1e293b !important;
+}
+
+.filter-form .card-title {
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+[data-theme="dark"] .filter-form .card-title {
+    color: #f8fafc !important;
+}
+
+/* Исправление hero section */
+.hero-section {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+    border-radius: 16px !important;
+    padding: 2.5rem !important;
+    color: white !important;
+    box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.3) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    margin-bottom: 2rem !important;
+}
+
+.hero-section h1 {
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.75rem !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    color: white !important;
+}
+
+.hero-section .lead {
+    font-size: 1.25rem !important;
+    font-weight: 500 !important;
+    opacity: 0.95 !important;
+    margin-bottom: 0.5rem !important;
+    color: white !important;
+}
+
+/* Убираем конфликты с другими CSS */
+.tournament-card * {
+    box-sizing: border-box !important;
+}
+
+
+/* Улучшенная структура для статистических карточек */
+.stats-card .card-body {
+    padding: 1.5rem !important;
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 140px !important;
+}
+
+.stats-card i {
+    font-size: 2.5rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.stats-card h3 {
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+    margin: 0.5rem 0 0.25rem 0 !important;
+    line-height: 1 !important;
+}
+
+.stats-card p {
+    font-size: 0.9rem !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+}
+
+/* Улучшенная структура hero section */
+.hero-section {
+    margin-bottom: 2rem !important;
+    padding: 2rem 2.5rem !important;
+}
+
+.hero-section h1 {
+    font-size: 2.25rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.hero-section .lead {
+    font-size: 1.15rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+@media (min-width: 1600px) {
+    .hero-section {
+        padding: 3rem !important;
+    }
+    
+    .hero-section h1 {
+        font-size: 2.75rem !important;
+    }
+    
+    .hero-section .lead {
+        font-size: 1.35rem !important;
+    }
+}
+
+/* Улучшенная структура фильтров */
+.filter-form .card-body {
+    padding: 1.5rem !important;
+}
+
+.filter-form .row {
+    margin: 0 !important;
+}
+
+.filter-form .form-label {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+}
+
+.filter-form .form-control,
+.filter-form .form-select {
+    font-size: 0.9rem !important;
+    padding: 0.6rem 0.9rem !important;
+    border-radius: 8px !important;
+}
+
+/* Кнопки фильтров */
+.filter-form .btn {
+    padding: 0.65rem 1.5rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+/* Заголовок секции турниров */
+.row.mb-3 h3 {
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+}
+
+.row.mb-3 h3 .badge {
+    font-size: 1rem !important;
+    padding: 0.4rem 0.9rem !important;
+}
+
+/* Кнопки действий в заголовке */
+.row.mb-3 .btn {
+    padding: 0.6rem 1.25rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    white-space: nowrap !important;
+}
+
+/* Пагинация */
+.pagination {
+    margin-top: 2.5rem !important;
+    margin-bottom: 2rem !important;
+    display: flex !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+}
+
+.pagination .page-item {
+    margin: 0 !important;
+}
+
+.pagination .page-link {
+    border-radius: 8px !important;
+    padding: 0.6rem 1rem !important;
+    border: 2px solid #e2e8f0 !important;
+    color: #2563eb !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+}
+
+.pagination .page-link:hover {
+    background: #2563eb !important;
+    color: white !important;
+    border-color: #2563eb !important;
+    transform: translateY(-1px) !important;
+}
+
+.pagination .page-item.active .page-link {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: white !important;
+}
+
+.pagination .page-item.disabled .page-link {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+/* Пустое состояние */
+.card.text-center.py-5 {
+    padding: 4rem 2rem !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.card.text-center.py-5 i {
+    font-size: 5rem !important;
+    opacity: 0.3 !important;
+}
+
+.card.text-center.py-5 h4 {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    margin-top: 1.5rem !important;
+}
+
+.card.text-center.py-5 p {
+    font-size: 1rem !important;
+    max-width: 500px !important;
+    margin: 1rem auto !important;
+}
+
+/* Адаптивность для контейнера */
+@media (min-width: 1600px) {
+    .container {
+        max-width: 1520px !important;
+    }
+}
+
+@media (min-width: 1920px) {
+    .container {
+        max-width: 1800px !important;
+    }
+}
+
+/* Скрытие лишних элементов на маленьких экранах */
+@media (max-width: 767px) {
+    .hero-icon {
+        display: none !important;
+    }
+    
+    .stats-card h3 {
+        font-size: 2rem !important;
+    }
+    
+    .filter-form .col-md-3 {
+        margin-bottom: 1rem !important;
+    }
+}
+
+/* Оптимизация для планшетов */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .hero-section {
+        padding: 2rem !important;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem !important;
+    }
+}

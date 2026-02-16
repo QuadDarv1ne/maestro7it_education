@@ -1,0 +1,332 @@
+/**
+ * Визуальные улучшения для ChessCalendar-RU
+ * Анимации, переходы и микроинтеракции
+ */
+
+/* ============================================
+   1. ПЛАВНЫЕ ПЕРЕХОДЫ
+   ============================================ */
+
+* {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ============================================
+   2. АНИМАЦИИ ПОЯВЛЕНИЯ КАРТОЧЕК
+   ============================================ */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Применение анимаций */
+.tournament-card {
+    animation: fadeInUp 0.5s ease-out !important;
+    animation-fill-mode: both !important;
+}
+
+/* Задержка для эффекта каскада */
+.tournament-card:nth-child(1) { animation-delay: 0.05s !important; }
+.tournament-card:nth-child(2) { animation-delay: 0.1s !important; }
+.tournament-card:nth-child(3) { animation-delay: 0.15s !important; }
+.tournament-card:nth-child(4) { animation-delay: 0.2s !important; }
+.tournament-card:nth-child(5) { animation-delay: 0.25s !important; }
+.tournament-card:nth-child(6) { animation-delay: 0.3s !important; }
+.tournament-card:nth-child(7) { animation-delay: 0.35s !important; }
+.tournament-card:nth-child(8) { animation-delay: 0.4s !important; }
+
+.stats-card {
+    animation: scaleIn 0.4s ease-out !important;
+    animation-fill-mode: both !important;
+}
+
+.stats-card:nth-child(1) { animation-delay: 0.1s !important; }
+.stats-card:nth-child(2) { animation-delay: 0.15s !important; }
+.stats-card:nth-child(3) { animation-delay: 0.2s !important; }
+.stats-card:nth-child(4) { animation-delay: 0.25s !important; }
+
+.hero-section {
+    animation: fadeIn 0.6s ease-out !important;
+}
+
+.filter-form {
+    animation: slideInRight 0.5s ease-out !important;
+}
+
+
+/* ============================================
+   3. УЛУЧШЕННЫЕ HOVER ЭФФЕКТЫ
+   ============================================ */
+
+.tournament-card {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.tournament-card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent) !important;
+    transition: left 0.5s ease !important;
+}
+
+.tournament-card:hover::before {
+    left: 100% !important;
+}
+
+.tournament-card:hover {
+    border-left-color: #1e40af !important;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* ============================================
+   4. УЛУЧШЕННЫЕ КНОПКИ
+   ============================================ */
+
+.btn {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.btn::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: translate(-50%, -50%) !important;
+    transition: width 0.6s, height 0.6s !important;
+}
+
+.btn:hover::before {
+    width: 300px !important;
+    height: 300px !important;
+}
+
+.btn:active {
+    transform: translateY(0) scale(0.98) !important;
+}
+
+/* ============================================
+   5. УЛУЧШЕННЫЕ БЕЙДЖИ
+   ============================================ */
+
+.badge,
+.tournament-badge {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.badge::after,
+.tournament-badge::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent) !important;
+    transition: left 0.5s ease !important;
+}
+
+.tournament-card:hover .badge::after,
+.tournament-card:hover .tournament-badge::after {
+    left: 100% !important;
+}
+
+/* ============================================
+   6. ПУЛЬСАЦИЯ ДЛЯ АКТИВНЫХ ЭЛЕМЕНТОВ
+   ============================================ */
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+.badge.bg-warning {
+    animation: pulse 2s ease-in-out infinite !important;
+}
+
+/* ============================================
+   7. УЛУЧШЕННЫЕ ТЕНИ
+   ============================================ */
+
+.card,
+.tournament-card,
+.stats-card {
+    box-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.05),
+        0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.card:hover,
+.tournament-card:hover,
+.stats-card:hover {
+    box-shadow: 
+        0 10px 25px rgba(0, 0, 0, 0.1),
+        0 6px 12px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* ============================================
+   8. ГРАДИЕНТНЫЕ АКЦЕНТЫ
+   ============================================ */
+
+.hero-section::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 4px !important;
+    background: linear-gradient(90deg, 
+        #f59e0b 0%, 
+        #ef4444 25%, 
+        #8b5cf6 50%, 
+        #3b82f6 75%, 
+        #10b981 100%) !important;
+    opacity: 0.6 !important;
+}
+
+/* ============================================
+   9. УЛУЧШЕННЫЙ ФОКУС ДЛЯ ДОСТУПНОСТИ
+   ============================================ */
+
+.form-control:focus,
+.form-select:focus,
+.btn:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* ============================================
+   10. СКЕЛЕТОН ЗАГРУЗКИ
+   ============================================ */
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%) !important;
+    background-size: 1000px 100% !important;
+    animation: shimmer 2s infinite !important;
+}
+
+/* ============================================
+   11. УЛУЧШЕННАЯ ПРОКРУТКА
+   ============================================ */
+
+::-webkit-scrollbar {
+    width: 10px !important;
+    height: 10px !important;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9 !important;
+    border-radius: 10px !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+    border-radius: 10px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+}
+
+/* ============================================
+   12. ЭФФЕКТ СТЕКЛА (GLASSMORPHISM)
+   ============================================ */
+
+.filter-form,
+.stats-card {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* ============================================
+   13. УЛУЧШЕННЫЕ ПЕРЕХОДЫ СТРАНИЦ
+   ============================================ */
+
+.page-transition {
+    animation: fadeIn 0.3s ease-out !important;
+}
+
+/* ============================================
+   14. АДАПТИВНЫЕ АНИМАЦИИ
+   ============================================ */
+
+/* Отключение анимаций на мобильных для производительности */
+@media (max-width: 575px) {
+    .tournament-card,
+    .stats-card,
+    .hero-section,
+    .filter-form {
+        animation: none !important;
+    }
+    
+    .tournament-card:hover::before {
+        display: none !important;
+    }
+}
+
+/* Полные анимации только на десктопе */
+@media (min-width: 992px) {
+    .tournament-card:hover {
+        transform: translateY(-5px) rotate(0.5deg) !important;
+    }
+}

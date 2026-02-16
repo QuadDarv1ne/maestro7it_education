@@ -1,7 +1,9 @@
 """
 Pydantic схемы для пользователей
 """
-from pydantic import BaseModel, Field, validator, EmailStr
+from pydantic import BaseModel, Field, EmailStr
+from pydantic.functional_validators import field_validator
+from pydantic.config import ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -11,10 +13,11 @@ class UserBase(BaseModel):
     username: str = Field(min_length=3, max_length=80, description="Имя пользователя")
     email: EmailStr = Field(description="Email адрес")
     
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username(cls, v):
         """Валидация username"""
-        if not v.isalnum() and '_' not in v:
+        if v and (not v.isalnum() and '_' not in v):
             raise ValueError('username must contain only alphanumeric characters and underscores')
         return v.lower()
 
@@ -23,7 +26,8 @@ class UserCreate(UserBase):
     """Схема для создания пользователя"""
     password: str = Field(min_length=8, max_length=128, description="Пароль")
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         """Валидация пароля"""
         if not any(c.isupper() for c in v):
@@ -34,14 +38,13 @@ class UserCreate(UserBase):
             raise ValueError('password must contain at least one digit')
         return v
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "username": "johndoe",
-                "email": "john@example.com",
-                "password": "SecurePass123"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "username": "johndoe",
+            "email": "john@example.com",
+            "password": "SecurePass123"
         }
+    })
 
 
 class UserUpdate(BaseModel):
@@ -50,20 +53,20 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username(cls, v):
         """Валидация username"""
         if v and (not v.isalnum() and '_' not in v):
             raise ValueError('username must contain only alphanumeric characters and underscores')
         return v.lower() if v else v
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "email": "newemail@example.com",
-                "is_active": True
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "email": "newemail@example.com",
+            "is_active": True
         }
+    })
 
 
 class UserResponse(UserBase):
@@ -75,9 +78,9 @@ class UserResponse(UserBase):
     last_login: Optional[datetime] = Field(default=None, description="Последний вход")
     two_factor_enabled: bool = Field(default=False, description="Включен ли 2FA")
     
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "username": "johndoe",
@@ -89,6 +92,7 @@ class UserResponse(UserBase):
                 "two_factor_enabled": False
             }
         }
+    )
 
 
 class UserLogin(BaseModel):
@@ -97,14 +101,13 @@ class UserLogin(BaseModel):
     password: str = Field(min_length=1, description="Пароль")
     totp_code: Optional[str] = Field(default=None, min_length=6, max_length=6, description="2FA код")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "username": "johndoe",
-                "password": "SecurePass123",
-                "totp_code": "123456"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "username": "johndoe",
+            "password": "SecurePass123",
+            "totp_code": "123456"
         }
+    })
 
 
 class UserPasswordChange(BaseModel):
@@ -112,7 +115,8 @@ class UserPasswordChange(BaseModel):
     old_password: str = Field(min_length=1, description="Старый пароль")
     new_password: str = Field(min_length=8, max_length=128, description="Новый пароль")
     
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_password(cls, v):
         """Валидация нового пароля"""
         if not any(c.isupper() for c in v):
@@ -123,13 +127,12 @@ class UserPasswordChange(BaseModel):
             raise ValueError('password must contain at least one digit')
         return v
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "old_password": "OldPass123",
-                "new_password": "NewSecurePass456"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "old_password": "OldPass123",
+            "new_password": "NewSecurePass456"
         }
+    })
 
 
 class UserProfile(UserResponse):
@@ -138,9 +141,9 @@ class UserProfile(UserResponse):
     ratings_count: int = Field(default=0, description="Количество оценок")
     subscriptions_count: int = Field(default=0, description="Количество подписок")
     
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "username": "johndoe",
@@ -155,6 +158,7 @@ class UserProfile(UserResponse):
                 "subscriptions_count": 3
             }
         }
+    )
 
 
 class UserPreferences(BaseModel):
@@ -165,16 +169,15 @@ class UserPreferences(BaseModel):
     preferred_categories: Optional[list] = Field(default=None, description="Предпочитаемые категории")
     preferred_locations: Optional[list] = Field(default=None, description="Предпочитаемые локации")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "email_notifications": True,
-                "push_notifications": True,
-                "newsletter": False,
-                "preferred_categories": ["National", "FIDE"],
-                "preferred_locations": ["Москва", "Санкт-Петербург"]
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "email_notifications": True,
+            "push_notifications": True,
+            "newsletter": False,
+            "preferred_categories": ["National", "FIDE"],
+            "preferred_locations": ["Москва", "Санкт-Петербург"]
         }
+    })
 
 
 class TokenResponse(BaseModel):
@@ -185,25 +188,24 @@ class TokenResponse(BaseModel):
     expires_in: int = Field(description="Время жизни токена в секундах")
     user: UserResponse = Field(description="Данные пользователя")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                "token_type": "bearer",
-                "expires_in": 3600,
-                "user": {
-                    "id": 1,
-                    "username": "johndoe",
-                    "email": "john@example.com",
-                    "is_admin": False,
-                    "is_active": True,
-                    "created_at": "2024-01-01T12:00:00",
-                    "last_login": "2024-02-16T10:30:00",
-                    "two_factor_enabled": False
-                }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "token_type": "bearer",
+            "expires_in": 3600,
+            "user": {
+                "id": 1,
+                "username": "johndoe",
+                "email": "john@example.com",
+                "is_admin": False,
+                "is_active": True,
+                "created_at": "2024-01-01T12:00:00",
+                "last_login": "2024-02-16T10:30:00",
+                "two_factor_enabled": False
             }
         }
+    })
 
 
 class TwoFactorSetupResponse(BaseModel):
@@ -212,26 +214,24 @@ class TwoFactorSetupResponse(BaseModel):
     qr_code_url: str = Field(description="URL для QR кода")
     backup_codes: Optional[list] = Field(default=None, description="Резервные коды")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "secret": "JBSWY3DPEHPK3PXP",
-                "qr_code_url": "otpauth://totp/ChessCalendar:johndoe?secret=JBSWY3DPEHPK3PXP&issuer=ChessCalendar",
-                "backup_codes": ["ABCD1234", "EFGH5678", "IJKL9012"]
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "secret": "JBSWY3DPEHPK3PXP",
+            "qr_code_url": "otpauth://totp/ChessCalendar:johndoe?secret=JBSWY3DPEHPK3PXP&issuer=ChessCalendar",
+            "backup_codes": ["ABCD1234", "EFGH5678", "IJKL9012"]
         }
+    })
 
 
 class TwoFactorVerify(BaseModel):
     """Схема для проверки 2FA"""
     totp_code: str = Field(min_length=6, max_length=6, description="TOTP код")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "totp_code": "123456"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "totp_code": "123456"
         }
+    })
 
 
 class TwoFactorDisable(BaseModel):
@@ -239,10 +239,9 @@ class TwoFactorDisable(BaseModel):
     password: str = Field(min_length=1, description="Пароль")
     totp_code: str = Field(min_length=6, max_length=6, description="TOTP код")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "password": "SecurePass123",
-                "totp_code": "123456"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "password": "SecurePass123",
+            "totp_code": "123456"
         }
+    })

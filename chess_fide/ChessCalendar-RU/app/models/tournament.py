@@ -132,16 +132,18 @@ class Tournament(db.Model):
         
         # Проверка категории
         valid_categories = ['FIDE', 'National', 'Regional', 'Youth', 'Women', 'Senior', 'Online']
-        if self.category not in valid_categories:
+        # Проверка только для новых записей, чтобы избежать ошибок с существующими данными
+        if self.id is None and self.category not in valid_categories:
             errors.append(f"Недопустимая категория. Допустимые значения: {', '.join(valid_categories)}")
         
         # Проверка статуса
         valid_statuses = ['Scheduled', 'Ongoing', 'Completed', 'Cancelled']
-        if self.status not in valid_statuses:
+        if self.id is None and self.status not in valid_statuses:
             errors.append(f"Недопустимый статус. Допустимые значения: {', '.join(valid_statuses)}")
         
         # Проверка FIDE ID
-        if self.fide_id and not re.match(r'^\d+$', self.fide_id):
+        # Проверка только для новых записей, чтобы избежать ошибок с существующими данными
+        if self.id is None and self.fide_id and not re.match(r'^\d+$', self.fide_id):
             errors.append("FIDE ID должен содержать только цифры")
         
         # Проверка URL

@@ -1,0 +1,261 @@
+/**
+ * OVERRIDE ALL - Перебивает ВСЕ стили карточек
+ * Загружается последним и имеет максимальный приоритет
+ */
+
+/* ============================================
+   GRID СИСТЕМА - МАКСИМАЛЬНЫЙ ПРИОРИТЕТ
+   ============================================ */
+
+.row.g-4,
+div.row.g-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 2.5rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+/* ============================================
+   КАРТОЧКИ - ПОЛНЫЙ КОНТРОЛЬ
+   ============================================ */
+
+.tournament-card,
+div.tournament-card,
+.card.tournament-card {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 550px !important;
+    max-height: none !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 4px solid #2563eb !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+}
+
+.tournament-card:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.15) !important;
+    border-left-color: #1e40af !important;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.tournament-card .card-header {
+    flex-shrink: 0 !important;
+    padding: 1.5rem !important;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    min-height: auto !important;
+}
+
+.tournament-card .card-header > div {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+/* Бейджи */
+.tournament-card .tournament-badge,
+.tournament-card .badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    border-radius: 20px !important;
+    white-space: nowrap !important;
+}
+
+/* ============================================
+   BODY
+   ============================================ */
+
+.tournament-card .card-body {
+    flex: 1 1 auto !important;
+    padding: 1.75rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    overflow: visible !important;
+}
+
+/* Заголовок */
+.tournament-card .card-title,
+.tournament-card h5.card-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    line-height: 1.4 !important;
+    color: #1e293b !important;
+    margin: 0 0 1.5rem 0 !important;
+    min-height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
+}
+
+/* Блоки контента */
+.tournament-card .card-body > div {
+    margin-bottom: 1rem !important;
+}
+
+/* Параграфы */
+.tournament-card .card-text,
+.tournament-card p.card-text {
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+    color: #475569 !important;
+    margin: 0 0 0.85rem 0 !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+}
+
+/* Иконки */
+.tournament-card .card-text i,
+.tournament-card p i {
+    flex-shrink: 0 !important;
+    width: 1.5rem !important;
+    font-size: 1.1rem !important;
+    margin-top: 0.2rem !important;
+}
+
+/* Жирный текст */
+.tournament-card strong {
+    font-weight: 600 !important;
+    color: #1e293b !important;
+}
+
+/* ============================================
+   FOOTER С КНОПКОЙ
+   ============================================ */
+
+.tournament-card .card-body > div:last-child,
+.tournament-card .mt-auto {
+    margin-top: auto !important;
+    padding-top: 1.5rem !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin-bottom: 0 !important;
+}
+
+.tournament-card .btn-view-details,
+.tournament-card a.btn-view-details {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    padding: 1rem 1.75rem !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    color: white !important;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+}
+
+.tournament-card .btn-view-details:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3) !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+/* ============================================
+   АДАПТИВНОСТЬ
+   ============================================ */
+
+/* 3 колонки для средних экранов */
+@media (max-width: 1599px) {
+    .row.g-4 {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 2rem !important;
+    }
+}
+
+/* 2 колонки для планшетов */
+@media (max-width: 1199px) {
+    .row.g-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.75rem !important;
+    }
+    
+    .tournament-card {
+        min-height: 500px !important;
+    }
+}
+
+/* 1 колонка для мобильных */
+@media (max-width: 767px) {
+    .row.g-4 {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+    
+    .tournament-card {
+        min-height: 480px !important;
+    }
+    
+    .tournament-card .card-header {
+        padding: 1.25rem !important;
+    }
+    
+    .tournament-card .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .tournament-card .card-title {
+        font-size: 1.15rem !important;
+    }
+    
+    .tournament-card .card-text {
+        font-size: 0.95rem !important;
+    }
+}
+
+/* ============================================
+   ТЕМНАЯ ТЕМА
+   ============================================ */
+
+[data-theme="dark"] .tournament-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .tournament-card .card-header {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
+    border-bottom-color: #475569 !important;
+}
+
+[data-theme="dark"] .tournament-card .card-title {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .tournament-card .card-text {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .tournament-card strong {
+    color: #f8fafc !important;
+}

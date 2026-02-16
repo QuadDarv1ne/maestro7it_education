@@ -256,8 +256,8 @@ def create_predictive_cache():
         return PredictiveCache(cache_manager)
     except ImportError:
         # Fallback на простой кэш
-        from app.utils.cache import cache
-        return PredictiveCache(cache)
+        from app.utils.cache import cache_service
+        return PredictiveCache(cache_service)
 
 
-predictive_cache = None  # Будет инициализирован при первом использовании
+predictive_cache = create_predictive_cache()  # Инициализация глобального экземпляра предиктивного кэша
