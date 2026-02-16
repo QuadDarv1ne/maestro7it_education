@@ -2,286 +2,460 @@
 
 {% block title %}{{ tournament.name }} - Шахматный турнир{% endblock %}
 
+{% block extra_css %}
+<style>
+    .tournament-hero {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        border-radius: 16px;
+        padding: 2.5rem;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .tournament-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    
+    .tournament-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .tournament-hero .location {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #2563eb;
+        transition: all 0.3s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-card h5 {
+        color: #1e293b;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .info-card h5 i {
+        color: #2563eb;
+        font-size: 1.3rem;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: start;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .info-item i {
+        font-size: 1.5rem;
+        color: #2563eb;
+        margin-top: 0.25rem;
+    }
+    
+    .info-item-content {
+        flex: 1;
+    }
+    
+    .info-item-label {
+        font-weight: 600;
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-item-value {
+        font-size: 1.1rem;
+        color: #1e293b;
+        font-weight: 600;
+    }
+    
+    .action-btn {
+        width: 100%;
+        padding: 0.875rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        border: 2px solid transparent;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .action-btn i {
+        font-size: 1.2rem;
+    }
+    
+    .rating-card {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+    }
+    
+    .rating-stars-large i {
+        font-size: 2rem;
+        margin: 0 0.1rem;
+    }
+    
+    .rating-value {
+        font-size: 3rem;
+        font-weight: 800;
+        margin: 1rem 0 0.5rem;
+    }
+    
+    .status-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .status-progress {
+        height: 30px;
+        border-radius: 15px;
+        overflow: hidden;
+        background: #e2e8f0;
+        margin: 1rem 0;
+    }
+    
+    .status-progress .progress-bar {
+        font-weight: 700;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .badge-custom {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .prize-amount {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #10b981;
+        margin: 0.5rem 0;
+    }
+    
+    .login-prompt {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .login-prompt h6 {
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
-    <!-- Tournament Header -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card border-start border-primary border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h1 class="display-5">{{ tournament.name }}</h1>
-                            <p class="text-muted">{{ tournament.location }}</p>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge bg-{{ 'primary' if tournament.category == 'International' else 'secondary' }} fs-6">{{ tournament.category }}</span>
-                            <span class="badge {{ 'bg-success' if tournament.status == 'Completed' else 'bg-warning' if tournament.status == 'Ongoing' else 'bg-info' }} fs-6">{{ tournament.status }}</span>
-                        </div>
-                    </div>
-                </div>
+    <!-- Tournament Hero -->
+    <div class="tournament-hero">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h1><i class="bi bi-trophy-fill"></i> {{ tournament.name }}</h1>
+                <p class="location mb-0">
+                    <i class="bi bi-geo-alt-fill"></i> {{ tournament.location }}
+                </p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <span class="badge-custom bg-white text-primary">
+                    <i class="bi bi-tag-fill"></i> {{ tournament.category }}
+                </span>
+                <span class="badge-custom {{ 'bg-success' if tournament.status == 'Completed' else 'bg-warning text-dark' if tournament.status == 'Ongoing' else 'bg-info' }}">
+                    <i class="bi bi-{{ 'check-circle-fill' if tournament.status == 'Completed' else 'play-circle-fill' if tournament.status == 'Ongoing' else 'clock-fill' }}"></i>
+                    {{ tournament.status }}
+                </span>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4><i class="bi bi-calendar-event"></i> Информация о турнире</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong><i class="bi bi-calendar-check"></i> Начало:</strong><br>
-                               <span class="badge bg-info">{{ tournament.start_date.strftime('%d.%m.%Y') }}</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong><i class="bi bi-calendar-x"></i> Окончание:</strong><br>
-                               <span class="badge bg-info">{{ tournament.end_date.strftime('%d.%m.%Y') }}</span></p>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong><i class="bi bi-geo-alt"></i> Место:</strong><br>
-                               {{ tournament.location }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong><i class="bi bi-clock"></i> Длительность:</strong><br>
-                               {{ ((tournament.end_date - tournament.start_date).days + 1) }} дней</p>
-                        </div>
-                    </div>
-                    
-                    <!-- New Detailed Information Fields -->
-                    {% if tournament.description %}
-                    <div class="mb-3">
-                        <h5><i class="bi bi-info-circle"></i> Описание:</h5>
-                        <p class="text-muted">{{ tournament.description }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    {% if tournament.prize_fund %}
-                    <div class="mb-3">
-                        <h5><i class="bi bi-cash-coin"></i> Призовой фонд:</h5>
-                        <p class="fw-bold text-success fs-5">{{ tournament.prize_fund }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    {% if tournament.organizer %}
-                    <div class="mb-3">
-                        <h5><i class="bi bi-people"></i> Организатор:</h5>
-                        <p class="fw-medium">{{ tournament.organizer }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    {% if tournament.source_url %}
-                    <div class="mb-3">
-                        <h5><i class="bi bi-link-45deg"></i> Источник:</h5>
-                        <a href="{{ tournament.source_url }}" target="_blank" class="btn btn-outline-primary">
-                            <i class="bi bi-box-arrow-up-right"></i> Перейти к источнику
-                        </a>
-                    </div>
-                    {% endif %}
-                    
-                    {% if tournament.fide_id %}
-                    <div class="mb-3">
-                        <h5><i class="bi bi-hash"></i> FIDE ID:</h5>
-                        <span class="text-muted">{{ tournament.fide_id }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4><i class="bi bi-tools"></i> Действия</h4>
-                </div>
-                <div class="card-body">
-                    {% if 'user_id' in session %}
-                        <!-- Subscription Button -->
-                        <button id="subscriptionBtn" class="btn btn-lg w-100 mb-3 {% if is_subscribed %}btn-danger{% else %}btn-primary{% endif %}" onclick="toggleTournamentSubscription()">
-                            <i class="bi {% if is_subscribed %}bi-bell-slash{% else %}bi-bell{% endif %}"></i>
-                            {% if is_subscribed %}Отписаться от обновлений{% else %}Подписаться на обновления{% endif %}
-                        </button>
-                        
-                        <!-- Add to Favorites -->
-                        <a href="{{ url_for('user.toggle_favorite', tournament_id=tournament.id) }}" class="btn btn-outline-warning w-100 mb-3">
-                            <i class="bi bi-heart"></i> {% if tournament in user_favorites %}Удалить из избранного{% else %}Добавить в избранное{% endif %}
-                        </a>
-                        
-                        <!-- Rate Tournament -->
-                        <div class="mb-3">
-                            <p><strong>Оцените турнир:</strong></p>
-                            <div class="rating-stars" id="tournament-rating">
-                                {% for i in range(1, 6) %}
-                                    <a href="{{ url_for('user.rate_tournament', tournament_id=tournament.id, rating=i) }}" 
-                                       class="star-link {% if i <= tournament.user_rating %}text-warning{% else %}text-muted{% endif %}"
-                                       style="font-size: 1.5rem; text-decoration: none;"
-                                       title="Оценить {{ i }} звездой">
-                                        <i class="bi bi-star{% if i <= tournament.user_rating %}-fill{% endif %}"></i>
-                                    </a>
-                                {% endfor %}
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Dates & Duration -->
+            <div class="info-card">
+                <h5><i class="bi bi-calendar-event-fill"></i> Даты проведения</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <i class="bi bi-calendar-check-fill text-success"></i>
+                            <div class="info-item-content">
+                                <div class="info-item-label">Начало турнира</div>
+                                <div class="info-item-value">{{ tournament.start_date.strftime('%d.%m.%Y') }}</div>
                             </div>
                         </div>
-                        
-                        <!-- Join Discussion -->
-                        <a href="{{ url_for('user.tournament_forum', tournament_id=tournament.id) }}" class="btn btn-outline-info w-100 mb-3">
-                            <i class="bi bi-chat-square-text"></i> Обсудить турнир
-                        </a>
-                        
-                        <!-- Report Content -->
-                        <a href="{{ url_for('user.report_tournament', tournament_id=tournament.id) }}" class="btn btn-outline-danger w-100">
-                            <i class="bi bi-exclamation-triangle"></i> Сообщить о проблеме
-                        </a>
-                    {% else %}
-                        <div class="alert alert-info">
-                            <h6><i class="bi bi-info-circle"></i> Войдите в систему</h6>
-                            <p class="mb-2">Чтобы воспользоваться дополнительными возможностями:</p>
-                            <a href="{{ url_for('user.login') }}" class="btn btn-primary w-100 mb-2">Войти</a>
-                            <a href="{{ url_for('user.register') }}" class="btn btn-outline-primary w-100">Регистрация</a>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <i class="bi bi-calendar-x-fill text-danger"></i>
+                            <div class="info-item-content">
+                                <div class="info-item-label">Окончание турнира</div>
+                                <div class="info-item-value">{{ tournament.end_date.strftime('%d.%m.%Y') }}</div>
+                            </div>
                         </div>
-                    {% endif %}
+                    </div>
+                </div>
+                <div class="info-item mt-3">
+                    <i class="bi bi-hourglass-split"></i>
+                    <div class="info-item-content">
+                        <div class="info-item-label">Длительность</div>
+                        <div class="info-item-value">{{ ((tournament.end_date - tournament.start_date).days + 1) }} дней</div>
+                    </div>
                 </div>
             </div>
             
-            <!-- Rating Summary -->
-            {% if tournament.average_rating %}
-            <div class="card mb-4">
-                <div class="card-header bg-success text-white">
-                    <h4><i class="bi bi-star-half"></i> Рейтинг турнира</h4>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-center">
-                        <div class="rating-stars me-2">
-                            {% for i in range(5) %}
-                                {% if i < (tournament.average_rating | int) %}
-                                    <i class="bi bi-star-fill text-warning" style="font-size: 2rem;"></i>
-                                {% else %}
-                                    <i class="bi bi-star text-muted" style="font-size: 2rem;"></i>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="text-center mt-2">
-                        <h2 class="text-success">{{ tournament.average_rating }}/5</h2>
-                        <small class="text-muted">{{ tournament.ratings_count }} голосов</small>
+            <!-- Description -->
+            {% if tournament.description %}
+            <div class="info-card">
+                <h5><i class="bi bi-info-circle-fill"></i> Описание турнира</h5>
+                <p class="text-muted mb-0" style="line-height: 1.8;">{{ tournament.description }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Prize Fund -->
+            {% if tournament.prize_fund %}
+            <div class="info-card border-left-success">
+                <h5><i class="bi bi-cash-coin"></i> Призовой фонд</h5>
+                <div class="prize-amount">{{ tournament.prize_fund }}</div>
+                <p class="text-muted mb-0">Общий призовой фонд турнира</p>
+            </div>
+            {% endif %}
+            
+            <!-- Organizer -->
+            {% if tournament.organizer %}
+            <div class="info-card">
+                <h5><i class="bi bi-building"></i> Организатор</h5>
+                <div class="info-item">
+                    <i class="bi bi-people-fill text-info"></i>
+                    <div class="info-item-content">
+                        <div class="info-item-value">{{ tournament.organizer }}</div>
                     </div>
                 </div>
             </div>
             {% endif %}
             
-            <!-- Tournament Status Info -->
-            <div class="card">
-                <div class="card-body">
-                    <h5><i class="bi bi-info-square"></i> Статус турнира</h5>
-                    <div class="progress mb-2" style="height: 20px;">
-                        {% set days_total = (tournament.end_date - tournament.start_date).days + 1 %}
-                        {% set days_passed = (now().date() - tournament.start_date).days if now().date() >= tournament.start_date else 0 %}
-                        {% set progress_percent = (days_passed / days_total * 100) if days_total > 0 else 0 %}
-                        {% if progress_percent > 100 %}{% set progress_percent = 100 %}{% endif %}
-                        
-                        <div class="progress-bar 
-                            {% if tournament.status == 'Completed' %}bg-success
-                            {% elif tournament.status == 'Ongoing' %}bg-warning
-                            {% else %}bg-info
-                            {% endif %}" 
-                             role="progressbar" 
-                             style="width: {{ progress_percent }}%" 
-                             aria-valuenow="{{ progress_percent }}" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                            {{ '%.1f'|format(progress_percent) }}%
-                        </div>
+            <!-- Additional Info -->
+            <div class="info-card">
+                <h5><i class="bi bi-list-ul"></i> Дополнительная информация</h5>
+                {% if tournament.source_url %}
+                <div class="info-item">
+                    <i class="bi bi-link-45deg"></i>
+                    <div class="info-item-content">
+                        <div class="info-item-label">Официальный сайт</div>
+                        <a href="{{ tournament.source_url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="bi bi-box-arrow-up-right"></i> Перейти к источнику
+                        </a>
                     </div>
-                    <p class="text-center mb-0">
-                        {% if tournament.status == 'Completed' %}
-                            Турнир завершен
-                        {% elif tournament.status == 'Ongoing' %}
-                            Турнир идет сейчас
-                        {% else %}
-                            Турнир еще не начался
-                        {% endif %}
-                    </p>
                 </div>
+                {% endif %}
+                
+                {% if tournament.fide_id %}
+                <div class="info-item">
+                    <i class="bi bi-hash"></i>
+                    <div class="info-item-content">
+                        <div class="info-item-label">FIDE ID</div>
+                        <div class="info-item-value">{{ tournament.fide_id }}</div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="info-card">
+                <h5><i class="bi bi-lightning-fill"></i> Действия</h5>
+                {% if 'user_id' in session %}
+                    <button id="subscriptionBtn" class="action-btn {% if is_subscribed %}btn-danger{% else %}btn-primary{% endif %}" onclick="toggleTournamentSubscription()">
+                        <i class="bi {% if is_subscribed %}bi-bell-slash-fill{% else %}bi-bell-fill{% endif %}"></i>
+                        {% if is_subscribed %}Отписаться{% else %}Подписаться{% endif %}
+                    </button>
+                    
+                    <a href="{{ url_for('user.toggle_favorite', tournament_id=tournament.id) }}" class="action-btn btn-outline-danger">
+                        <i class="bi bi-heart-fill"></i> В избранное
+                    </a>
+                    
+                    <a href="#" class="action-btn btn-outline-info">
+                        <i class="bi bi-share-fill"></i> Поделиться
+                    </a>
+                {% else %}
+                    <div class="login-prompt">
+                        <h6><i class="bi bi-lock-fill"></i> Требуется авторизация</h6>
+                        <p class="mb-3">Войдите, чтобы подписаться на турнир и получать уведомления</p>
+                        <a href="{{ url_for('user.login') }}" class="btn btn-light w-100 mb-2">
+                            <i class="bi bi-box-arrow-in-right"></i> Войти
+                        </a>
+                        <a href="{{ url_for('user.register') }}" class="btn btn-outline-light w-100">
+                            <i class="bi bi-person-plus-fill"></i> Регистрация
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Rating -->
+            {% if tournament.average_rating %}
+            <div class="rating-card mb-3">
+                <h5 class="mb-3"><i class="bi bi-star-fill"></i> Рейтинг турнира</h5>
+                <div class="rating-stars-large">
+                    {% for i in range(5) %}
+                        <i class="bi bi-star{{ '-fill' if i < (tournament.average_rating | int) else '' }}"></i>
+                    {% endfor %}
+                </div>
+                <div class="rating-value">{{ '%.1f'|format(tournament.average_rating) }}</div>
+                <p class="mb-0 opacity-75">на основе {{ tournament.ratings_count }} отзывов</p>
+            </div>
+            {% endif %}
+            
+            <!-- Status Progress -->
+            <div class="status-card">
+                <h5 class="mb-3"><i class="bi bi-activity"></i> Прогресс турнира</h5>
+                {% set days_total = (tournament.end_date - tournament.start_date).days + 1 %}
+                {% set days_passed = (now().date() - tournament.start_date).days if now().date() >= tournament.start_date else 0 %}
+                {% set progress_percent = (days_passed / days_total * 100) if days_total > 0 else 0 %}
+                {% if progress_percent > 100 %}{% set progress_percent = 100 %}{% endif %}
+                
+                <div class="status-progress">
+                    <div class="progress-bar {{ 'bg-success' if tournament.status == 'Completed' else 'bg-warning' if tournament.status == 'Ongoing' else 'bg-info' }}" 
+                         role="progressbar" 
+                         style="width: {{ progress_percent }}%">
+                        {{ '%.0f'|format(progress_percent) }}%
+                    </div>
+                </div>
+                
+                <p class="text-center mb-0 fw-semibold">
+                    {% if tournament.status == 'Completed' %}
+                        <i class="bi bi-check-circle-fill text-success"></i> Турнир завершен
+                    {% elif tournament.status == 'Ongoing' %}
+                        <i class="bi bi-play-circle-fill text-warning"></i> Турнир идет сейчас
+                    {% else %}
+                        <i class="bi bi-clock-fill text-info"></i> Турнир еще не начался
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Back Button -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Вернуться к списку турниров
+            </a>
         </div>
     </div>
 </div>
 
-<!-- JavaScript for subscription functionality -->
 <script>
 function toggleTournamentSubscription() {
-    var button = document.getElementById('subscriptionBtn');
-    var tournamentId = {{ tournament.id }};
+    const button = document.getElementById('subscriptionBtn');
+    const tournamentId = {{ tournament.id }};
     
-    // Show loading state
-    var originalHTML = button.innerHTML;
+    const originalHTML = button.innerHTML;
     button.disabled = true;
-    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Обработка...';
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Обработка...';
     
-    // Make AJAX request
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/tournament/' + tournamentId + '/subscribe', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-            button.innerHTML = originalHTML;
-            button.disabled = false;
-            
-            if (xhr.status === 200) {
-                var response = JSON.parse(xhr.responseText);
-                
-                if (response.success) {
-                    // Toggle button state
-                    if (response.subscribed) {
-                        button.className = 'btn btn-lg btn-danger w-100 mb-3';
-                        button.innerHTML = '<i class="bi bi-bell-slash"></i> Отписаться от обновлений';
-                    } else {
-                        button.className = 'btn btn-lg btn-primary w-100 mb-3';
-                        button.innerHTML = '<i class="bi bi-bell"></i> Подписаться на обновления';
-                    }
-                    
-                    // Show success message
-                    showMessage(response.message, 'success');
-                } else {
-                    showMessage(response.message || 'Произошла ошибка', 'danger');
-                }
-            } else {
-                showMessage('Произошла сетевая ошибка', 'danger');
-            }
+    fetch('/tournament/' + tournamentId + '/subscribe', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
         }
-    };
-    
-    xhr.send();
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.subscribed) {
+                button.className = 'action-btn btn-danger';
+                button.innerHTML = '<i class="bi bi-bell-slash-fill"></i> Отписаться';
+            } else {
+                button.className = 'action-btn btn-primary';
+                button.innerHTML = '<i class="bi bi-bell-fill"></i> Подписаться';
+            }
+            showToast(data.message, 'success');
+        } else {
+            button.innerHTML = originalHTML;
+            showToast(data.message || 'Произошла ошибка', 'danger');
+        }
+    })
+    .catch(error => {
+        button.innerHTML = originalHTML;
+        showToast('Произошла сетевая ошибка', 'danger');
+    })
+    .finally(() => {
+        button.disabled = false;
+    });
 }
 
-function showMessage(message, type) {
-    // Remove any existing messages
-    var existingAlert = document.querySelector('.alert');
-    if (existingAlert) {
-        existingAlert.remove();
-    }
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
     
-    // Create new alert
-    var alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
-    alertDiv.style.top = '20px';
-    alertDiv.style.right = '20px';
-    alertDiv.style.zIndex = '9999';
-    alertDiv.setAttribute('role', 'alert');
-    
-    alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-    
-    document.body.appendChild(alertDiv);
-    
-    // Auto dismiss after 5 seconds
-    setTimeout(function() {
-        var bsAlert = new bootstrap.Alert(alertDiv);
-        bsAlert.close();
+    setTimeout(() => {
+        toast.remove();
     }, 5000);
 }
 </script>

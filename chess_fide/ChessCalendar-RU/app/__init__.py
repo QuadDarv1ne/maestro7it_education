@@ -76,11 +76,15 @@ def create_app(config_name='default'):
     # Дополнительные статические маршруты для PWA
     @app.route('/favicon.ico')
     def favicon():
-        return send_from_directory('static', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+        import os
+        static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+        return send_from_directory(static_dir, 'favicon.ico', mimetype='image/vnd.microsoft.icon')
     
     @app.route('/robots.txt')
     def robots():
-        return send_from_directory('static', 'robots.txt', mimetype='text/plain')
+        import os
+        static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+        return send_from_directory(static_dir, 'robots.txt', mimetype='text/plain')
     
     # PWA маршруты
     @app.route('/sw.js')
@@ -119,7 +123,7 @@ def create_app(config_name='default'):
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:"
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:"
         response.headers['X-Content-Security-Policy'] = response.headers['Content-Security-Policy']  # For older browsers
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate'
         response.headers['Pragma'] = 'no-cache'
