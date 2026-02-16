@@ -20,411 +20,519 @@ logger = logging.getLogger(__name__)
 ph = PasswordHasher(
     time_cost=2,
     memory_cost=65536,
-        self.username_pattern = re.compile(r'^[a-zA-Z0-9_]{3,20}$')  # 3-20 chars, alphanumeric and underscore
-        self.url_pattern = re.compile(
-            r'^https?://'  # http:// or https://
-            r'(?:www\.)?'  # optional www.
-            r'[a-zA-Z0-9.-]+'  # domain
-            r'\.[a-zA-Z]{2,}'  # TLD
-            r'(?:/[^\s]*)?$',  # optional path
-            re.IGNORECASE
-        )
-        
-    def sanitize_input(self, text: str, max_length: int = 1000) -> str:
-        """Sanitize input text to prevent XSS and other injection attacks"""
-        if not text:
-            return ""
-        
-        # Truncate if too long
-        if len(text) > max_length:
-            text = text[:max_length]
-        
-        # Use bleach to sanitize HTML
-        cleaned = bleach.clean(
-            text, 
-            tags=['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-            attributes={},
-            strip=True
-        )
-        
-        # Remove any potentially dangerous characters
-        cleaned = cleaned.replace('\0', '')  # Remove null bytes
-        cleaned = cleaned.replace('\x00', '')  # Remove null bytes alternative
-        
-        return cleaned.strip()
-    
-    def validate_email(self, email: str) -> tuple[bool, str]:
-        """Validate email format"""
-        if not email:
-            return False, "Email is required"
-        
-        if len(email) > 100:
-            return False, "Email too long"
-        
-        if not self.email_pattern.match(email):
-            return False, "Invalid email format"
-        
-        return True, "Valid email"
-    
-    def validate_username(self, username: str) -> tuple[bool, str]:
-        """Validate username format"""
-        if not username:
-            return False, "Username is required"
-        
-        if len(username) < 3:
-            return False, "Username must be at least 3 characters"
-        
-        if len(username) > 20:
-            return False, "Username must be no more than 20 characters"
-        
-        if not self.username_pattern.match(username):
-            return False, "Username can only contain letters, numbers, and underscores"
-        
-        return True, "Valid username"
-    
-    def validate_url(self, url: str) -> tuple[bool, str]:
-        """Validate URL format"""
-        if not url:
-            return True, "URL is optional"
-        
-        if len(url) > 500:
-            return False, "URL too long"
-        
-        if not self.url_pattern.match(url):
-            return False, "Invalid URL format"
-        
-        return True, "Valid URL"
-    
-    def validate_csrf_token(self, token: str) -> bool:
-        """Validate CSRF token"""
-        if not token:
-            return False
-        stored_token = session.get('_csrf_token')
-        if not stored_token:
-            return False
-        return token == stored_token
-    
-    def generate_csrf_token(self) -> str:
-        """Generate CSRF token"""
-        import secrets
-        token = secrets.token_hex(32)
-        session['_csrf_token'] = token
-        return token
-
-def rate_limit(max_attempts: int = 5, window: int = 300):
-    """Rate limiting decorator to prevent brute force attacks"""
-    attempts = {}
-    
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            ip_addr = request.remote_addr
-            now = datetime.now()
-            
-            # Clean old attempts
-            attempts[ip_addr] = [time for time in attempts.get(ip_addr, []) 
-                               if now - time < timedelta(seconds=window)]
-            
-            # Check if limit exceeded
-            if len(attempts[ip_addr]) >= max_attempts:
-                abort(429, "Too many requests. Please try again later.")
-            
-            # Record this attempt
-            attempts[ip_addr].append(now)
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
+    parallelism=2,
+    hash_len=32,
+    salt_len=16
+)
 
 
-def validate_csrf_token():
-    """CSRF token validation decorator"""
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            # In a real implementation, you would check the CSRF token
-            # This is a placeholder for demonstration
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-
-def validate_json_input(required_fields: list = None):
-    """Validate JSON input data"""
-    if required_fields is None:
-        required_fields = []
+class PasswordManager:
+    """Менеджер паролей с Argon2"""
     
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not request.is_json:
-                abort(400, "Content-Type must be application/json")
-            
-            data = request.get_json()
-            if not data:
-                abort(400, "No JSON data provided")
-            
-            # Check required fields
-            for field in required_fields:
-                if field not in data:
-                    abort(400, f"Missing required field: {field}")
-            
-            # Sanitize all string inputs
-            security_utils = SecurityUtils()
-            for key, value in data.items():
-                if isinstance(value, str):
-                    data[key] = security_utils.sanitize_input(value)
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-
-# Advanced security utilities
-import hashlib
-import hmac
-import secrets
-import time
-from datetime import datetime, timedelta
-from urllib.parse import urlparse, urljoin
-
-
-class AdvancedSecurityUtils(SecurityUtils):
-    """Advanced security utilities extending basic security functions"""
-    
-    def __init__(self):
-        super().__init__()
-        self.rate_limits = {}  # In-memory rate limiting (use Redis in production)
-        self.blocked_ips = set()  # IPs temporarily blocked
-        self.suspicious_activities = []  # Track suspicious activities
+    @staticmethod
+    def hash_password(password: str) -> str:
+        """
+        Хеширование пароля с использованием Argon2
         
-    def hash_password(self, password: str, salt: Optional[str] = None) -> tuple[str, str]:
-        """Hash password with salt using PBKDF2 (more secure than SHA-256)"""
-        if salt is None:
-            salt = secrets.token_hex(32)
+        Args:
+            password: Пароль в открытом виде
         
-        import hashlib
-        password_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), 
-                                            salt.encode('utf-8'), 100000)
-        return password_hash.hex(), salt
-    
-    def verify_password(self, password: str, stored_hash: str, salt: str) -> bool:
-        """Verify password against stored hash and salt"""
-        password_hash, _ = self.hash_password(password, salt)
-        return hmac.compare_digest(password_hash, stored_hash)
-    
-    def generate_secure_token(self, length: int = 32) -> str:
-        """Generate cryptographically secure token"""
-        return secrets.token_urlsafe(length)
-    
-    def validate_ip(self, ip: str) -> bool:
-        """Basic IP validation"""
-        import ipaddress
+        Returns:
+            Хеш пароля
+        """
         try:
-            ipaddress.ip_address(ip)
+            return ph.hash(password)
+        except Exception as e:
+            logger.error(f"Password hashing error: {e}")
+            # Fallback на werkzeug
+            return generate_password_hash(password, method='pbkdf2:sha256')
+    
+    @staticmethod
+    def verify_password(password_hash: str, password: str) -> bool:
+        """
+        Проверка пароля
+        
+        Args:
+            password_hash: Хеш пароля
+            password: Пароль в открытом виде
+        
+        Returns:
+            True если пароль верный
+        """
+        try:
+            # Пробуем Argon2
+            ph.verify(password_hash, password)
+            
+            # Проверяем, нужно ли обновить хеш
+            if ph.check_needs_rehash(password_hash):
+                logger.info("Password hash needs rehashing")
+            
             return True
-        except ValueError:
+        except VerifyMismatchError:
             return False
+        except Exception:
+            # Fallback на werkzeug
+            return check_password_hash(password_hash, password)
     
-    def is_blocked_ip(self, ip: str) -> bool:
-        """Check if IP is blocked"""
-        return ip in self.blocked_ips
+    @staticmethod
+    def validate_password_strength(password: str) -> tuple[bool, str]:
+        """
+        Проверка надежности пароля
+        
+        Args:
+            password: Пароль для проверки
+        
+        Returns:
+            (is_valid, error_message)
+        """
+        if len(password) < 8:
+            return False, "Пароль должен содержать минимум 8 символов"
+        
+        if len(password) > 128:
+            return False, "Пароль слишком длинный (максимум 128 символов)"
+        
+        has_upper = any(c.isupper() for c in password)
+        has_lower = any(c.islower() for c in password)
+        has_digit = any(c.isdigit() for c in password)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password)
+        
+        if not (has_upper and has_lower and has_digit):
+            return False, "Пароль должен содержать заглавные и строчные буквы, цифры"
+        
+        # Проверка на распространенные пароли
+        common_passwords = ['password', '12345678', 'qwerty', 'admin', 'letmein']
+        if password.lower() in common_passwords:
+            return False, "Пароль слишком простой"
+        
+        return True, ""
+
+
+class RateLimiter:
+    """Rate limiting для защиты от брутфорса"""
     
-    def block_ip(self, ip: str, duration: int = 3600):
-        """Block IP for specified duration (seconds)"""
-        self.blocked_ips.add(ip)
-        # In production, use Redis with TTL for persistence
-        # For demo purposes, we'll just log it
-        self.logger.warning(f"IP {ip} blocked for {duration} seconds")
+    def __init__(self, redis_client=None):
+        self.redis = redis_client
+        self.memory_store = {}  # Fallback если Redis недоступен
     
-    def check_rate_limit(self, identifier: str, max_requests: int = 10, window: int = 60) -> tuple[bool, str]:
-        """Check rate limit for an identifier (IP, user_id, etc.)"""
+    def is_rate_limited(self, key: str, max_attempts: int = 5, 
+                       window: int = 300) -> tuple[bool, int]:
+        """
+        Проверка rate limit
+        
+        Args:
+            key: Ключ (например, IP или username)
+            max_attempts: Максимум попыток
+            window: Окно времени в секундах
+        
+        Returns:
+            (is_limited, remaining_attempts)
+        """
+        if self.redis:
+            return self._check_redis(key, max_attempts, window)
+        else:
+            return self._check_memory(key, max_attempts, window)
+    
+    def _check_redis(self, key: str, max_attempts: int, 
+                    window: int) -> tuple[bool, int]:
+        """Проверка через Redis"""
+        try:
+            rate_key = f"rate_limit:{key}"
+            current = self.redis.get(rate_key)
+            
+            if current is None:
+                self.redis.setex(rate_key, window, 1)
+                return False, max_attempts - 1
+            
+            current = int(current)
+            if current >= max_attempts:
+                ttl = self.redis.ttl(rate_key)
+                logger.warning(f"Rate limit exceeded for {key}, TTL: {ttl}s")
+                return True, 0
+            
+            self.redis.incr(rate_key)
+            return False, max_attempts - current - 1
+        
+        except Exception as e:
+            logger.error(f"Redis rate limit error: {e}")
+            return self._check_memory(key, max_attempts, window)
+    
+    def _check_memory(self, key: str, max_attempts: int, 
+                     window: int) -> tuple[bool, int]:
+        """Проверка через память (fallback)"""
         now = time.time()
         
-        if identifier not in self.rate_limits:
-            self.rate_limits[identifier] = []
+        if key not in self.memory_store:
+            self.memory_store[key] = {'count': 1, 'reset_at': now + window}
+            return False, max_attempts - 1
         
-        # Clean old requests outside the window
-        self.rate_limits[identifier] = [
-            req_time for req_time in self.rate_limits[identifier] 
-            if now - req_time < window
-        ]
+        data = self.memory_store[key]
         
-        if len(self.rate_limits[identifier]) >= max_requests:
-            return False, f"Rate limit exceeded: {max_requests} requests per {window} seconds"
+        # Сброс если окно истекло
+        if now > data['reset_at']:
+            self.memory_store[key] = {'count': 1, 'reset_at': now + window}
+            return False, max_attempts - 1
         
-        # Add current request
-        self.rate_limits[identifier].append(now)
-        return True, "OK"
+        if data['count'] >= max_attempts:
+            return True, 0
+        
+        data['count'] += 1
+        return False, max_attempts - data['count']
     
-    def detect_sql_injection(self, input_str: str) -> bool:
-        """Basic SQL injection detection"""
-        sql_keywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'UNION', 'EXEC', '--', ';']
-        normalized = input_str.upper()
-        return any(keyword in normalized for keyword in sql_keywords)
-    
-    def detect_xss_attempt(self, input_str: str) -> bool:
-        """Basic XSS attempt detection"""
-        xss_patterns = ['<SCRIPT', 'JAVASCRIPT:', 'ONLOAD=', 'ONCLICK=', '<IMG', 'ONERROR=', 'DATA:']
-        normalized = input_str.upper()
-        return any(pattern in normalized for pattern in xss_patterns)
-    
-    def validate_redirect_url(self, redirect_to: str, allowed_domains: list) -> str:
-        """Validate redirect URL to prevent open redirect vulnerabilities"""
-        if not redirect_to:
-            return ''
-        
-        # Parse the URL
-        parsed = urlparse(redirect_to)
-        
-        # Only allow relative URLs or URLs from allowed domains
-        if not parsed.netloc:  # Relative URL
-            return redirect_to
-        
-        if parsed.netloc in allowed_domains:
-            return redirect_to
-        
-        # Return empty string if not in allowed domains
-        return ''
-    
-    def log_security_event(self, event_type: str, details: dict):
-        """Log security-related events"""
-        log_entry = {
-            'timestamp': datetime.now().isoformat(),
-            'event_type': event_type,
-            'details': details
-        }
-        self.logger.warning(f"SECURITY EVENT: {log_entry}")
-        self.suspicious_activities.append(log_entry)
-    
-    def get_security_headers(self) -> dict:
-        """Return recommended security headers"""
-        return {
-            'X-Content-Type-Options': 'nosniff',
-            'X-Frame-Options': 'DENY',
-            'X-XSS-Protection': '1; mode=block',
-            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:",
-            'Referrer-Policy': 'strict-origin-when-cross-origin',
-            'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
-        }
-
-
-class InputValidator:
-    """Comprehensive input validation utilities"""
-    
-    @staticmethod
-    def validate_json_schema(data: dict, schema: dict) -> tuple[bool, list]:
-        """Validate data against a simple schema definition"""
-        errors = []
-        
-        # Check required fields
-        for field, field_def in schema.items():
-            if field_def.get('required', False):
-                if field not in data or data[field] is None:
-                    errors.append(f"Field '{field}' is required")
-                    continue
-            
-            if field in data:
-                value = data[field]
-                field_type = field_def.get('type')
-                max_length = field_def.get('max_length')
-                min_length = field_def.get('min_length')
-                
-                # Type checking
-                if field_type:
-                    if field_type == 'string' and not isinstance(value, str):
-                        errors.append(f"Field '{field}' must be a string")
-                    elif field_type == 'integer' and not isinstance(value, int):
-                        errors.append(f"Field '{field}' must be an integer")
-                    elif field_type == 'boolean' and not isinstance(value, bool):
-                        errors.append(f"Field '{field}' must be a boolean")
-                    elif field_type == 'email' and not isinstance(value, str):
-                        errors.append(f"Field '{field}' must be a string")
-                    elif field_type == 'url' and not isinstance(value, str):
-                        errors.append(f"Field '{field}' must be a string")
-                
-                # Length validation
-                if isinstance(value, str):
-                    if max_length and len(value) > max_length:
-                        errors.append(f"Field '{field}' exceeds maximum length of {max_length}")
-                    if min_length and len(value) < min_length:
-                        errors.append(f"Field '{field}' is shorter than minimum length of {min_length}")
-                
-                # Special validations
-                if field_type == 'email' and isinstance(value, str):
-                    import re
-                    email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-                    if not email_pattern.match(value):
-                        errors.append(f"Field '{field}' must be a valid email address")
-                
-                if field_type == 'url' and isinstance(value, str):
-                    import re
-                    url_pattern = re.compile(
-                        r'^https?://'  # http:// or https://
-                        r'(?:www\.)?'  # optional www.
-                        r'[a-zA-Z0-9.-]+'  # domain
-                        r'\.[a-zA-Z]{2,}'  # TLD
-                        r'(?:/[^\s]*)?$',  # optional path
-                        re.IGNORECASE
-                    )
-                    if not url_pattern.match(value):
-                        errors.append(f"Field '{field}' must be a valid URL")
-        
-        return len(errors) == 0, errors
-    
-    @staticmethod
-    def clean_input(text: str, allowed_tags: list = None, allowed_attributes: dict = None) -> str:
-        """Clean input using bleach with customizable allowed tags"""
-        if allowed_tags is None:
-            allowed_tags = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
-        if allowed_attributes is None:
-            allowed_attributes = {}
-        
-        import bleach
-        return bleach.clean(text, tags=allowed_tags, attributes=allowed_attributes, strip=True)
-
-
-# Global security utility instances
-security_utils = SecurityUtils()
-advanced_security = AdvancedSecurityUtils()
-input_validator = InputValidator()
-
-
-def sanitize_tournament_data(data: dict) -> dict:
-    """Specific sanitizer for tournament data"""
-    sanitized = {}
-    security_utils = SecurityUtils()
-    
-    # Sanitize each field according to its purpose
-    sanitized['name'] = security_utils.sanitize_input(data.get('name', ''), max_length=200)
-    sanitized['location'] = security_utils.sanitize_input(data.get('location', ''), max_length=100)
-    sanitized['description'] = security_utils.sanitize_input(data.get('description', ''), max_length=2000)
-    sanitized['prize_fund'] = security_utils.sanitize_input(data.get('prize_fund', ''), max_length=200)
-    sanitized['organizer'] = security_utils.sanitize_input(data.get('organizer', ''), max_length=200)
-    
-    # Validate and sanitize URL
-    source_url = data.get('source_url', '')
-    if source_url:
-        is_valid, msg = security_utils.validate_url(source_url)
-        if is_valid:
-            sanitized['source_url'] = security_utils.sanitize_input(source_url, max_length=300)
+    def reset(self, key: str):
+        """Сброс счетчика"""
+        if self.redis:
+            self.redis.delete(f"rate_limit:{key}")
         else:
-            sanitized['source_url'] = None
-    
-    # Keep certain fields as-is (they should be validated separately)
-    sanitized['start_date'] = data.get('start_date')
-    sanitized['end_date'] = data.get('end_date')
-    sanitized['category'] = data.get('category')
-    sanitized['status'] = data.get('status')
-    sanitized['fide_id'] = data.get('fide_id')
-    
-    return sanitized
+            self.memory_store.pop(key, None)
 
 
-def apply_security_headers(response):
-    """Apply security headers to Flask response"""
-    headers = advanced_security.get_security_headers()
-    for header, value in headers.items():
-        response.headers[header] = value
-    return response
+class JWTManager:
+    """Менеджер JWT токенов"""
+    
+    @staticmethod
+    def generate_token(user_id: int, username: str, is_admin: bool = False,
+                      expires_in: int = 3600) -> str:
+        """
+        Генерация JWT токена
+        
+        Args:
+            user_id: ID пользователя
+            username: Имя пользователя
+            is_admin: Флаг администратора
+            expires_in: Время жизни в секундах
+        
+        Returns:
+            JWT токен
+        """
+        payload = {
+            'user_id': user_id,
+            'username': username,
+            'is_admin': is_admin,
+            'exp': datetime.utcnow() + timedelta(seconds=expires_in),
+            'iat': datetime.utcnow(),
+            'jti': secrets.token_urlsafe(16)  # JWT ID для отзыва
+        }
+        
+        secret = current_app.config.get('SECRET_KEY')
+        return jwt.encode(payload, secret, algorithm='HS256')
+    
+    @staticmethod
+    def generate_refresh_token(user_id: int) -> str:
+        """
+        Генерация refresh токена
+        
+        Args:
+            user_id: ID пользователя
+        
+        Returns:
+            Refresh токен
+        """
+        payload = {
+            'user_id': user_id,
+            'type': 'refresh',
+            'exp': datetime.utcnow() + timedelta(days=30),
+            'iat': datetime.utcnow(),
+            'jti': secrets.token_urlsafe(16)
+        }
+        
+        secret = current_app.config.get('SECRET_KEY')
+        return jwt.encode(payload, secret, algorithm='HS256')
+    
+    @staticmethod
+    def verify_token(token: str) -> Optional[Dict[str, Any]]:
+        """
+        Проверка JWT токена
+        
+        Args:
+            token: JWT токен
+        
+        Returns:
+            Payload токена или None
+        """
+        try:
+            secret = current_app.config.get('SECRET_KEY')
+            payload = jwt.decode(token, secret, algorithms=['HS256'])
+            return payload
+        except jwt.ExpiredSignatureError:
+            logger.warning("Token expired")
+            return None
+        except jwt.InvalidTokenError as e:
+            logger.warning(f"Invalid token: {e}")
+            return None
+    
+    @staticmethod
+    def is_token_revoked(jti: str, redis_client=None) -> bool:
+        """
+        Проверка, отозван ли токен
+        
+        Args:
+            jti: JWT ID
+            redis_client: Redis клиент
+        
+        Returns:
+            True если токен отозван
+        """
+        if not redis_client:
+            return False
+        
+        try:
+            return redis_client.exists(f"revoked_token:{jti}") > 0
+        except Exception as e:
+            logger.error(f"Token revocation check error: {e}")
+            return False
+    
+    @staticmethod
+    def revoke_token(jti: str, expires_in: int, redis_client=None):
+        """
+        Отозвать токен
+        
+        Args:
+            jti: JWT ID
+            expires_in: Время до истечения токена
+            redis_client: Redis клиент
+        """
+        if not redis_client:
+            logger.warning("Cannot revoke token: Redis not available")
+            return
+        
+        try:
+            redis_client.setex(f"revoked_token:{jti}", expires_in, "1")
+            logger.info(f"Token revoked: {jti}")
+        except Exception as e:
+            logger.error(f"Token revocation error: {e}")
+
+
+class TwoFactorAuth:
+    """Двухфакторная аутентификация (TOTP)"""
+    
+    @staticmethod
+    def generate_secret() -> str:
+        """Генерация секрета для 2FA"""
+        return secrets.token_urlsafe(32)
+    
+    @staticmethod
+    def generate_qr_code_url(username: str, secret: str, 
+                            issuer: str = "Chess Calendar RU") -> str:
+        """
+        Генерация URL для QR кода
+        
+        Args:
+            username: Имя пользователя
+            secret: Секрет 2FA
+            issuer: Название приложения
+        
+        Returns:
+            otpauth:// URL
+        """
+        import urllib.parse
+        
+        params = {
+            'secret': secret,
+            'issuer': issuer,
+            'algorithm': 'SHA1',
+            'digits': 6,
+            'period': 30
+        }
+        
+        query = urllib.parse.urlencode(params)
+        return f"otpauth://totp/{issuer}:{username}?{query}"
+    
+    @staticmethod
+    def verify_totp(secret: str, token: str, window: int = 1) -> bool:
+        """
+        Проверка TOTP кода
+        
+        Args:
+            secret: Секрет 2FA
+            token: Код от пользователя
+            window: Окно времени (количество периодов)
+        
+        Returns:
+            True если код верный
+        """
+        try:
+            import pyotp
+            totp = pyotp.TOTP(secret)
+            return totp.verify(token, valid_window=window)
+        except ImportError:
+            logger.error("pyotp not installed, 2FA unavailable")
+            return False
+        except Exception as e:
+            logger.error(f"TOTP verification error: {e}")
+            return False
+
+
+class AuditLogger:
+    """Логирование административных действий"""
+    
+    def __init__(self, db):
+        self.db = db
+    
+    def log_action(self, user_id: int, action: str, resource: str,
+                   resource_id: Optional[int] = None, 
+                   details: Optional[Dict] = None,
+                   ip_address: Optional[str] = None):
+        """
+        Логирование действия
+        
+        Args:
+            user_id: ID пользователя
+            action: Действие (create, update, delete, login, etc.)
+            resource: Ресурс (tournament, user, etc.)
+            resource_id: ID ресурса
+            details: Дополнительные детали
+            ip_address: IP адрес
+        """
+        from app.models.audit_log import AuditLog
+        
+        log_entry = AuditLog(
+            user_id=user_id,
+            action=action,
+            resource=resource,
+            resource_id=resource_id,
+            details=details,
+            ip_address=ip_address or request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            timestamp=datetime.utcnow()
+        )
+        
+        self.db.session.add(log_entry)
+        self.db.session.commit()
+        
+        logger.info(f"Audit: user={user_id} action={action} resource={resource} id={resource_id}")
+    
+    def get_user_actions(self, user_id: int, limit: int = 100):
+        """Получить действия пользователя"""
+        from app.models.audit_log import AuditLog
+        
+        return AuditLog.query.filter_by(user_id=user_id)\
+            .order_by(AuditLog.timestamp.desc())\
+            .limit(limit)\
+            .all()
+    
+    def get_resource_history(self, resource: str, resource_id: int):
+        """Получить историю ресурса"""
+        from app.models.audit_log import AuditLog
+        
+        return AuditLog.query.filter_by(
+            resource=resource,
+            resource_id=resource_id
+        ).order_by(AuditLog.timestamp.desc()).all()
+
+
+# Декораторы
+def require_auth(f):
+    """Декоратор для требования аутентификации"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        
+        if not token:
+            return jsonify({'error': 'No token provided'}), 401
+        
+        if token.startswith('Bearer '):
+            token = token[7:]
+        
+        payload = JWTManager.verify_token(token)
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        
+        # Проверка отзыва токена
+        from app.utils.cache_manager import cache_manager
+        if JWTManager.is_token_revoked(payload.get('jti'), cache_manager.redis_client):
+            return jsonify({'error': 'Token has been revoked'}), 401
+        
+        # Добавляем данные пользователя в request
+        request.current_user = payload
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def require_admin(f):
+    """Декоратор для требования прав администратора"""
+    @wraps(f)
+    @require_auth
+    def decorated_function(*args, **kwargs):
+        if not request.current_user.get('is_admin'):
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def rate_limit(max_attempts: int = 5, window: int = 300):
+    """
+    Декоратор для rate limiting
+    
+    Args:
+        max_attempts: Максимум попыток
+        window: Окно времени в секундах
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            from app.utils.cache_manager import cache_manager
+            
+            # Используем IP адрес как ключ
+            key = request.remote_addr
+            
+            limiter = RateLimiter(cache_manager.redis_client)
+            is_limited, remaining = limiter.is_rate_limited(key, max_attempts, window)
+            
+            if is_limited:
+                return jsonify({
+                    'error': 'Too many requests',
+                    'retry_after': window
+                }), 429
+            
+            # Добавляем заголовки rate limit
+            response = f(*args, **kwargs)
+            if isinstance(response, tuple):
+                response_obj, status_code = response[0], response[1]
+            else:
+                response_obj, status_code = response, 200
+            
+            if hasattr(response_obj, 'headers'):
+                response_obj.headers['X-RateLimit-Limit'] = str(max_attempts)
+                response_obj.headers['X-RateLimit-Remaining'] = str(remaining)
+            
+            return response_obj, status_code
+        
+        return decorated_function
+    return decorator
+
+
+def audit_log(action: str, resource: str):
+    """
+    Декоратор для автоматического логирования действий
+    
+    Args:
+        action: Действие
+        resource: Ресурс
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            from app import db
+            
+            # Выполняем функцию
+            result = f(*args, **kwargs)
+            
+            # Логируем действие
+            if hasattr(request, 'current_user'):
+                user_id = request.current_user.get('user_id')
+                resource_id = kwargs.get('id') or kwargs.get('tournament_id') or kwargs.get('user_id')
+                
+                audit_logger = AuditLogger(db)
+                audit_logger.log_action(
+                    user_id=user_id,
+                    action=action,
+                    resource=resource,
+                    resource_id=resource_id
+                )
+            
+            return result
+        
+        return decorated_function
+    return decorator
