@@ -30,14 +30,20 @@ def create_app(config_name='default'):
                 static_url_path='/static')
     
     # Initialize rate limiter with proper storage
+    # Try to use Redis, but fallback to in-memory if not available
     try:
-        # Try to use Redis for rate limiting if available
+        import redis
         redis_url = app.config.get('REDIS_URL', 'redis://localhost:6379/1')
+        # Test Redis connection
+        r = redis.from_url(redis_url)
+        r.ping()
+        # Redis is available, use it
         limiter = Limiter(
             key_func=get_remote_address,
             default_limits=["1000 per day", "100 per hour"],
             storage_uri=redis_url
         )
+        logger.info(f"Rate limiter initialized with Redis: {redis_url}")
     except Exception as e:
         logger.warning(f"Redis not available for rate limiting, using in-memory storage: {e}")
         # Fallback to in-memory storage for development
@@ -49,6 +55,13 @@ def create_app(config_name='default'):
     
     # Initialize CSRF protection
     csrf.init_app(app)
+    
+    # Exempt API routes from CSRF protection
+    # API routes should use token-based authentication instead
+    @csrf.exempt
+    def csrf_exempt_api():
+        """Exempt API routes from CSRF"""
+        return request.path.startswith('/api/') or request.path.startswith('/auth/')
     
     # Загрузка конфигурации
     app.config.from_object('config.config.Config')

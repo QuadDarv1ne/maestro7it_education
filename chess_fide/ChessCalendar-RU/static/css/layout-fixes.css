@@ -1,32 +1,83 @@
 /* Layout Fixes CSS */
 /* Исправления макета и выравнивания */
 
+/* ============================================
+   CONTAINER FIXES
+   ============================================ */
+
 .container {
     max-width: 1400px;
+    padding-left: 1rem;
+    padding-right: 1rem;
 }
 
-/* Исправление отступов */
-.main-content {
+.container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* ============================================
+   MAIN CONTENT
+   ============================================ */
+
+.main-content,
+main {
     padding-top: 2rem;
     padding-bottom: 2rem;
+    min-height: calc(100vh - 70px - 200px);
 }
 
-/* Исправление высоты navbar */
+/* ============================================
+   NAVBAR HEIGHT
+   ============================================ */
+
 .navbar {
-    min-height: 64px;
+    min-height: 70px;
 }
 
-/* Исправление footer */
+body {
+    padding-top: 70px;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
 footer {
     margin-top: auto;
 }
 
-/* Flexbox исправления */
+/* ============================================
+   FLEXBOX FIXES
+   ============================================ */
+
 .d-flex {
+    display: flex;
+}
+
+/* Prevent flex items from overflowing */
+.d-flex > * {
+    min-width: 0;
+    min-height: 0;
+}
+
+/* Add gap support for older browsers */
+.d-flex.gap-1 {
+    gap: 0.25rem;
+}
+
+.d-flex.gap-2 {
     gap: 0.5rem;
 }
 
-/* Grid исправления */
+.d-flex.gap-3 {
+    gap: 1rem;
+}
+
+/* ============================================
+   GRID FIXES
+   ============================================ */
+
 .row {
     margin-left: -0.75rem;
     margin-right: -0.75rem;
@@ -35,4 +86,246 @@ footer {
 .row > * {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
+}
+
+/* Prevent grid items from overflowing */
+.row > [class*="col-"] {
+    min-width: 0;
+}
+
+/* ============================================
+   SPACING UTILITIES
+   ============================================ */
+
+/* Consistent spacing */
+.mb-section {
+    margin-bottom: 3rem;
+}
+
+.mt-section {
+    margin-top: 3rem;
+}
+
+.py-section {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+}
+
+/* ============================================
+   CARD GRID LAYOUT
+   ============================================ */
+
+/* Ensure cards have equal height in grid */
+.row.g-4 > [class*="col-"] {
+    display: flex;
+    margin-bottom: 1.5rem;
+}
+
+.row.g-4 > [class*="col-"] > .card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ============================================
+   RESPONSIVE SPACING
+   ============================================ */
+
+@media (max-width: 991px) {
+    .container,
+    .container-fluid {
+        padding-left: 0.875rem;
+        padding-right: 0.875rem;
+    }
+    
+    .main-content,
+    main {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .container,
+    .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    
+    .main-content,
+    main {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    
+    .row {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+    }
+    
+    .row > * {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+@media (max-width: 575px) {
+    body {
+        padding-top: 60px;
+        padding-bottom: 70px;
+    }
+    
+    .navbar {
+        min-height: 60px;
+    }
+    
+    .container,
+    .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+/* ============================================
+   OVERFLOW FIXES
+   ============================================ */
+
+/* Prevent horizontal scroll */
+body {
+    overflow-x: hidden;
+}
+
+.container,
+.container-fluid {
+    overflow-x: hidden;
+}
+
+/* Prevent content from breaking layout */
+* {
+    box-sizing: border-box;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ============================================
+   Z-INDEX MANAGEMENT
+   ============================================ */
+
+.navbar {
+    z-index: 1030;
+}
+
+.modal {
+    z-index: 1050;
+}
+
+.modal-backdrop {
+    z-index: 1040;
+}
+
+.dropdown-menu {
+    z-index: 1000;
+}
+
+.tooltip {
+    z-index: 1070;
+}
+
+.popover {
+    z-index: 1060;
+}
+
+/* ============================================
+   BUTTON GROUP FIXES
+   ============================================ */
+
+.btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.btn-group .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ============================================
+   FORM LAYOUT FIXES
+   ============================================ */
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-control,
+.form-select {
+    width: 100%;
+}
+
+/* Prevent form elements from overflowing */
+input,
+select,
+textarea {
+    max-width: 100%;
+}
+
+/* ============================================
+   TABLE RESPONSIVE
+   ============================================ */
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* Skip to main content */
+.skip-to-main {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #2563eb;
+    color: white;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    z-index: 1100;
+}
+
+.skip-to-main:focus {
+    top: 0;
+}
+
+/* Focus visible */
+:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+    body {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    
+    .navbar,
+    .footer,
+    .mobile-bottom-nav {
+        display: none;
+    }
+    
+    .container,
+    .container-fluid {
+        max-width: 100%;
+    }
 }

@@ -36,9 +36,44 @@ class EmailNotificationService:
             return False
         
         try:
-            # TODO: Интеграция с SMTP или email сервисом (SendGrid, AWS SES, etc.)
-            logger.info(f"Email sent: {subject} to {to_email}")
+            # Проверяем наличие SMTP настроек
+            smtp_host = self.app.config.get('SMTP_HOST')
+            smtp_port = self.app.config.get('SMTP_PORT', 587)
+            smtp_user = self.app.config.get('SMTP_USER')
+            smtp_password = self.app.config.get('SMTP_PASSWORD')
+            
+            if not all([smtp_host, smtp_user, smtp_password]):
+                logger.warning("SMTP settings not configured, email not sent")
+                return False
+            
+            # Импортируем модули для отправки email
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Создаем сообщение
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = self.from_email
+            msg['To'] = to_email
+            
+            # Добавляем текстовую и HTML версии
+            if body_text:
+                part1 = MIMEText(body_text, 'plain', 'utf-8')
+                msg.attach(part1)
+            
+            part2 = MIMEText(body_html, 'html', 'utf-8')
+            msg.attach(part2)
+            
+            # Отправляем email
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+            
+            logger.info(f"Email sent successfully: {subject} to {to_email}")
             return True
+            
         except Exception as e:
             logger.error(f"Failed to send email: {e}")
             return False

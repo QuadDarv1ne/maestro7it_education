@@ -1,6 +1,115 @@
 /* Override All CSS */
 /* Максимальный приоритет - финальные переопределения */
 
+/* ============================================
+   CRITICAL FIXES - PREVENT OVERLAPPING
+   ============================================ */
+
+/* Ensure all flex containers handle wrapping properly */
+.d-flex,
+[class*="d-flex"] {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+}
+
+/* Prevent flex items from overflowing */
+.d-flex > *,
+[class*="d-flex"] > * {
+    min-width: 0 !important;
+    flex-shrink: 1 !important;
+}
+
+/* Ensure badges and buttons don't overlap */
+.badge,
+.btn {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Card header fixes */
+.card-header .d-flex {
+    align-items: flex-start !important;
+}
+
+/* Navbar fixes - prevent items from overlapping */
+.navbar .container {
+    flex-wrap: wrap !important;
+}
+
+.navbar-nav {
+    flex-wrap: wrap !important;
+}
+
+.navbar-nav .nav-item {
+    flex-shrink: 0 !important;
+}
+
+/* Search container responsive */
+.search-container {
+    flex-shrink: 1 !important;
+    min-width: 150px !important;
+}
+
+/* ============================================
+   RESPONSIVE FIXES
+   ============================================ */
+
+@media (max-width: 991px) {
+    /* Stack navbar items vertically */
+    .navbar-collapse {
+        width: 100% !important;
+    }
+    
+    .navbar-nav {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+    
+    .navbar-nav .nav-item {
+        width: 100% !important;
+    }
+    
+    .search-container {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (max-width: 767px) {
+    /* Ensure card badges stack properly */
+    .card-header .d-flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    
+    /* Full width buttons on mobile */
+    .card-body .btn {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 575px) {
+    /* Extra small screens - ensure no overlapping */
+    .d-flex {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    
+    .d-flex > * {
+        width: 100% !important;
+    }
+    
+    /* Exception for inline elements */
+    .d-flex.align-items-center:not(.card-header .d-flex) {
+        flex-direction: row !important;
+    }
+}
+
+/* ============================================
+   ORIGINAL STYLES
+   ============================================ */
+
 /* Критические исправления с !important */
 
 /* Исправление отступов контейнера */

@@ -492,6 +492,8 @@ def recommendations():
 def tournament_map():
     """Карта турниров"""
     try:
+        import json
+        
         # Получаем турниры с геоданными (упрощенная версия)
         tournaments = Tournament.query.filter(
             Tournament.location.isnot(None)
@@ -503,14 +505,19 @@ def tournament_map():
             # В реальной реализации здесь будет геокодирование адреса в координаты
             map_data.append({
                 'id': t.id,
-                'name': t.name,
-                'location': t.location,
+                'name': bleach.clean(t.name),  # Защита от XSS
+                'location': bleach.clean(t.location),  # Защита от XSS
                 'start_date': t.start_date.isoformat() if t.start_date else None,
                 'end_date': t.end_date.isoformat() if t.end_date else None,
-                'category': t.category
+                'category': bleach.clean(t.category) if t.category else None
             })
         
-        return render_template('tournament_map.html', tournaments=map_data)
+        # Безопасно сериализуем в JSON
+        tournaments_json = json.dumps(map_data, ensure_ascii=False)
+        
+        return render_template('tournament_map.html', 
+                             tournaments=map_data,
+                             tournaments_json=tournaments_json)
         
     except Exception as e:
         logger.error(f"Error in tournament_map route: {str(e)}")

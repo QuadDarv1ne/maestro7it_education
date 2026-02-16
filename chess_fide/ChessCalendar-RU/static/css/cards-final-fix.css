@@ -1,6 +1,10 @@
 /* Cards Final Fix CSS */
 /* Финальные исправления для карточек турниров */
 
+/* ============================================
+   BASE CARD STYLES
+   ============================================ */
+
 .tournament-card {
     border-radius: 16px;
     overflow: hidden;
@@ -8,6 +12,9 @@
     border: 1px solid #e2e8f0;
     background: white;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .tournament-card:hover {
@@ -16,17 +23,60 @@
     border-color: #cbd5e1;
 }
 
+/* ============================================
+   CARD HEADER
+   ============================================ */
+
 .tournament-card .card-header {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border-bottom: 2px solid #e2e8f0;
     padding: 1rem 1.25rem;
+    flex-shrink: 0;
 }
+
+.tournament-card .card-header .d-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+/* Prevent badges from overlapping */
+.tournament-card .card-header .d-flex > * {
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Ensure badges wrap properly on small screens */
+.tournament-card .card-header .badge,
+.tournament-card .card-header .tournament-badge {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* ============================================
+   CARD BODY
+   ============================================ */
 
 .tournament-card .card-body {
     padding: 1.5rem 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Ensure card body content doesn't overflow */
+.tournament-card .card-body > * {
+    flex-shrink: 0;
+    min-width: 0;
 }
 
 .tournament-card .card-title {
@@ -39,6 +89,8 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-wrap: break-word;
+    hyphens: auto;
 }
 
 .tournament-card .card-text {
@@ -46,21 +98,35 @@
     color: #475569;
     font-size: 0.9rem;
     line-height: 1.6;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .tournament-card .card-text i {
     width: 20px;
     display: inline-block;
     text-align: center;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
 }
 
-/* Улучшенные badge */
+/* Ensure text content has proper spacing */
+.tournament-card .card-text strong {
+    display: inline-block;
+    margin-right: 0.25rem;
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+
 .tournament-card .badge {
     font-size: 0.75rem;
     padding: 0.4em 0.8em;
     font-weight: 600;
     border-radius: 6px;
     letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
 .tournament-badge {
@@ -72,9 +138,13 @@
     font-weight: 600;
     font-size: 0.8rem;
     letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
-/* Улучшенные кнопки в карточках */
+/* ============================================
+   BUTTONS - PREVENT OVERLAPPING
+   ============================================ */
+
 .tournament-card .btn {
     border-radius: 10px;
     padding: 0.65rem 1.25rem;
@@ -85,13 +155,16 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    white-space: nowrap;
+    border: none;
+    flex-shrink: 0;
 }
 
 .tournament-card .btn-view-details {
     background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    border: none;
     color: white;
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    width: 100%;
 }
 
 .tournament-card .btn-view-details:hover {
@@ -104,23 +177,32 @@
     transform: translateY(0);
 }
 
-/* Группа кнопок действий */
+/* ============================================
+   ACTION BUTTONS GROUP
+   ============================================ */
+
 .tournament-card .action-buttons {
     display: flex;
     gap: 0.5rem;
     margin-top: auto;
     padding-top: 1rem;
     border-top: 1px solid #e2e8f0;
+    flex-wrap: wrap;
 }
 
 .tournament-card .btn-action {
-    flex: 1;
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
     padding: 0.6rem 0.75rem;
     border-radius: 8px;
     font-weight: 600;
     font-size: 0.85rem;
     transition: all 0.3s ease;
     border: 2px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
 }
 
 .tournament-card .btn-favorite {
@@ -152,12 +234,16 @@
     transform: scale(1.05);
 }
 
-/* Информационные блоки */
+/* ============================================
+   INFO BLOCKS
+   ============================================ */
+
 .tournament-card .info-block {
     background: #f8fafc;
     padding: 0.75rem;
     border-radius: 8px;
     border-left: 3px solid #2563eb;
+    word-wrap: break-word;
 }
 
 .tournament-card .info-block.prize {
@@ -170,69 +256,37 @@
     background: #f0f9ff;
 }
 
-/* Иконки в карточках */
+/* ============================================
+   ICONS
+   ============================================ */
+
 .tournament-card i {
     margin-right: 0.4rem;
+    flex-shrink: 0;
 }
 
-/* Статус индикатор */
-.tournament-card .status-indicator {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
 
-.tournament-card .status-indicator.ongoing {
-    background: #10b981;
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-}
-
-.tournament-card .status-indicator.scheduled {
-    background: #06b6d4;
-    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
+/* Tablets */
+@media (max-width: 991px) {
     .tournament-card .card-body {
         padding: 1.25rem 1rem;
     }
     
     .tournament-card .card-title {
-        font-size: 1rem;
+        font-size: 1.05rem;
     }
     
     .tournament-card .btn {
-        padding: 0.55rem 1rem;
-        font-size: 0.85rem;
-    }
-    
-    .tournament-card .action-buttons {
-        flex-direction: column;
-    }
-    
-    .tournament-card .btn-action {
-        width: 100%;
+        padding: 0.6rem 1rem;
+        font-size: 0.875rem;
     }
 }
 
-@media (max-width: 576px) {
+/* Mobile */
+@media (max-width: 767px) {
     .tournament-card {
         border-radius: 12px;
     }
@@ -243,15 +297,188 @@
     }
     
     .tournament-card .card-title {
-        font-size: 0.95rem;
+        font-size: 1rem;
     }
     
     .tournament-card .card-text {
-        font-size: 0.85rem;
+        font-size: 0.875rem;
     }
     
     .tournament-badge {
         font-size: 0.75rem;
         padding: 0.35rem 0.7rem;
+    }
+    
+    .tournament-card .btn {
+        padding: 0.55rem 0.875rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Stack action buttons vertically on mobile */
+    .tournament-card .action-buttons {
+        flex-direction: column;
+    }
+    
+    .tournament-card .btn-action {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    
+    /* Ensure card header badges stack properly */
+    .tournament-card .card-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .tournament-card .card-header .badge,
+    .tournament-card .card-header .tournament-badge {
+        max-width: 100%;
+    }
+}
+
+/* Small mobile */
+@media (max-width: 575px) {
+    .tournament-card .card-header {
+        padding: 0.875rem 1rem;
+    }
+    
+    .tournament-card .card-body {
+        padding: 0.875rem 0.75rem;
+    }
+    
+    .tournament-card .card-title {
+        font-size: 0.95rem;
+    }
+    
+    .tournament-card .card-text {
+        font-size: 0.8rem;
+    }
+    
+    .tournament-card .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .tournament-card .btn i {
+        font-size: 0.9rem;
+    }
+}
+
+/* ============================================
+   GRID LAYOUT FIXES
+   ============================================ */
+
+/* Ensure cards don't overflow their containers */
+.row > [class*="col-"] {
+    display: flex;
+}
+
+.row > [class*="col-"] > .tournament-card {
+    width: 100%;
+}
+
+/* Prevent content from breaking layout */
+.tournament-card * {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* ============================================
+   FLEXBOX FIXES
+   ============================================ */
+
+/* Ensure proper spacing in flex containers */
+.tournament-card .d-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Prevent flex items from shrinking too much */
+.tournament-card .d-flex > * {
+    flex-shrink: 0;
+}
+
+/* ============================================
+   TEXT OVERFLOW HANDLING
+   ============================================ */
+
+.tournament-card .text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Multi-line truncation */
+.tournament-card .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.tournament-card .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+.tournament-card:focus-within {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.tournament-card .btn:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .tournament-card {
+        border: 2px solid currentColor;
+    }
+    
+    .tournament-badge,
+    .tournament-card .badge {
+        border: 1px solid currentColor;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .tournament-card,
+    .tournament-card .btn {
+        transition: none;
+    }
+    
+    .tournament-card:hover {
+        transform: none;
+    }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+    .tournament-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .tournament-card .action-buttons {
+        display: none;
+    }
+    
+    .tournament-card:hover {
+        transform: none;
+        box-shadow: none;
     }
 }
