@@ -105,6 +105,10 @@ class SecurityMiddleware:
     
     def check_rate_limit(self):
         """Проверка rate limiting"""
+        # Исключаем статические файлы из rate limiting
+        if request.path.startswith('/static/'):
+            return True
+        
         ip = request.remote_addr
         now = datetime.now()
         
@@ -114,8 +118,8 @@ class SecurityMiddleware:
             if now - timestamp < timedelta(minutes=1)
         ]
         
-        # Проверка лимита (100 запросов в минуту)
-        if len(self.rate_limits[ip]) >= 100:
+        # Проверка лимита (300 запросов в минуту для development)
+        if len(self.rate_limits[ip]) >= 300:
             return False
         
         # Добавление текущего запроса

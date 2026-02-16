@@ -1,0 +1,38 @@
+/* Layout Fixes CSS */
+/* Исправления макета и выравнивания */
+
+.container {
+    max-width: 1400px;
+}
+
+/* Исправление отступов */
+.main-content {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+/* Исправление высоты navbar */
+.navbar {
+    min-height: 64px;
+}
+
+/* Исправление footer */
+footer {
+    margin-top: auto;
+}
+
+/* Flexbox исправления */
+.d-flex {
+    gap: 0.5rem;
+}
+
+/* Grid исправления */
+.row {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+}
+
+.row > * {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}

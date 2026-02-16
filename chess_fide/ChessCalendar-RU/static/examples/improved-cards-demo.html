@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Демонстрация улучшенных карточек</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Custom CSS -->
+    <link href="../css/improvements.css" rel="stylesheet">
+    <link href="../css/cards-final-fix.css" rel="stylesheet">
+    <link href="../css/override-all.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .demo-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .demo-header {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="container demo-container">
+        <!-- Header -->
+        <div class="demo-header">
+            <h1 class="mb-3">
+                <i class="bi bi-palette-fill text-primary"></i>
+                Демонстрация улучшенных карточек турниров
+            </h1>
+            <p class="lead mb-0">
+                Современный дизайн с градиентами, анимациями и улучшенной интерактивностью
+            </p>
+        </div>
+        
+        <!-- Cards Grid -->
+        <div class="row g-4">
+            <!-- Card 1: International Tournament -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card h-100 tournament-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="tournament-badge bg-primary">
+                                <i class="bi bi-globe"></i> International
+                            </span>
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-play-circle-fill"></i> Ongoing
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title mb-3">FIDE World Chess Championship 2026</h5>
+                        
+                        <div class="mb-3">
+                            <p class="card-text mb-2">
+                                <i class="bi bi-calendar-event-fill text-primary"></i> 
+                                <strong>15.02.2026</strong> - <strong>28.02.2026</strong>
+                            </p>
+                            <p class="card-text mb-2">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> 
+                                Москва, Россия
+                            </p>
+                        </div>
+                        
+                        <p class="card-text small text-muted mb-3">
+                            <i class="bi bi-info-circle-fill"></i> 
+                            Чемпионат мира по шахматам среди мужчин. Участвуют сильнейшие гроссмейстеры планеты.
+                        </p>
+                        
+                        <div class="info-block prize mb-3">
+                            <p class="card-text small mb-0">
+                                <i class="bi bi-cash-coin text-success"></i> 
+                                <strong>Призовой фонд:</strong> 
+                                <span class="text-success fw-bold">$2,000,000</span>
+                            </p>
+                        </div>
+                        
+                        <div class="info-block organizer mb-3">
+                            <p class="card-text small mb-0">
+                                <i class="bi bi-building text-info"></i> 
+                                <strong>Организатор:</strong> FIDE
+                            </p>
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <div class="action-buttons mb-2">
+                                <button class="btn btn-action btn-favorite">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                                <button class="btn btn-action btn-share">
+                                    <i class="bi bi-share"></i>
+                                </button>
+                            </div>
+                            <a href="#" class="btn btn-view-details w-100">
+                                <i class="bi bi-eye-fill"></i> Подробнее
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card 2: National Tournament -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card h-100 tournament-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="tournament-badge bg-success">
+                                <i class="bi bi-flag-fill"></i> National
+                            </span>
+                            <span class="badge bg-info">
+                                <i class="bi bi-clock-fill"></i> Scheduled
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title mb-3">Чемпионат России по быстрым шахматам</h5>
+                        
+                        <div class="mb-3">
+                            <p class="card-text mb-2">
+                                <i class="bi bi-calendar-event-fill text-primary"></i> 
+                                <strong>10.03.2026</strong> - <strong>15.03.2026</strong>
+                            </p>
+                            <p class="card-text mb-2">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> 
+                                Санкт-Петербург, Россия
+                            </p>
+                        </div>
+                        
+                        <p class="card-text small text-muted mb-3">
+                            <i class="bi bi-info-circle-fill"></i> 
+                            Национальный чемпионат по быстрым шахматам. Контроль времени: 15 минут + 10 секунд на ход.
+                        </p>
+                        
+                        <div class="info-block prize mb-3">
+                            <p class="card-text small mb-0">
+                                <i class="bi bi-cash-coin text-success"></i> 
+                                <strong>Призовой фонд:</strong> 
+                                <span class="text-success fw-bold">5,000,000 ₽</span>
+                            </p>
+                        </div>
+                        
+                        <div class="info-block organizer mb-3">
+                            <p class="card-text small mb-0">
+                                <i class="bi bi-building text-info"></i> 
+                                <strong>Организатор:</strong> РШФ
+                            </p>
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <div class="action-buttons mb-2">
+                                <button class="btn btn-action btn-favorite active">
+                                    <i class="bi bi-heart-fill"></i>
+                                </button>
+                                <button class="btn btn-action btn-share">
+                                    <i class="bi bi-share"></i>
+                                </button>
+                            </div>
+                            <a href="#" class="btn btn-view-details w-100">
+                                <i class="bi bi-eye-fill"></i> Подробнее
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card 3: Regional Tournament -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card h-100 tournament-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="tournament-badge bg-secondary">
+                                <i class="bi bi-geo"></i> Regional
+                            </span>
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle-fill"></i> Completed
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title mb-3">Открытый турнир "Белые ночи"</h5>
+                        
+                        <div class="mb-3">
+                            <p class="card-text mb-2">
+                                <i class="bi bi-calendar-event-fill text-primary"></i> 
+                                <strong>01.02.2026</strong> - <strong>05.02.2026</strong>
+                            </p>
+                            <p class="card-text mb-2">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> 
+                                Санкт-Петербург, Россия
+                            </p>
+                        </div>
+                        
+                        <p class="card-text small text-muted mb-3">
+                            <i class="bi bi-info-circle-fill"></i> 
+                            Традиционный открытый турнир для шахматистов всех возрастов. Швейцарская система, 9 туров.
+                        </p>
+                        
+                        <div class="info-block prize mb-3">
+                            <p class="card-text small mb-0">
+                                <i class="bi bi-cash-coin text-success"></i> 
+                                <strong>Призовой фонд:</strong> 
+                                <span class="text-success fw-bold">500,000 ₽</span>
+                            </p>
+                        </div>
+                        
+                        <div class="info-block organizer mb-3">
+                            <p class="card-text small mb-0">
+                                <i class="bi bi-building text-info"></i> 
+                                <strong>Организатор:</strong> Шахматный клуб "Белые ночи"
+                            </p>
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <div class="action-buttons mb-2">
+                                <button class="btn btn-action btn-favorite">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                                <button class="btn btn-action btn-share">
+                                    <i class="bi bi-share"></i>
+                                </button>
+                            </div>
+                            <a href="#" class="btn btn-view-details w-100">
+                                <i class="bi bi-eye-fill"></i> Результаты
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Features Section -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="mb-4">
+                            <i class="bi bi-stars text-warning"></i>
+                            Ключевые улучшения
+                        </h3>
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="bi bi-palette-fill text-primary" style="font-size: 3rem;"></i>
+                                    <h5 class="mt-3">Современный дизайн</h5>
+                                    <p class="text-muted">Градиенты, тени и скругленные углы</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="bi bi-lightning-fill text-warning" style="font-size: 3rem;"></i>
+                                    <h5 class="mt-3">Плавные анимации</h5>
+                                    <p class="text-muted">60fps переходы и эффекты</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="bi bi-phone-fill text-success" style="font-size: 3rem;"></i>
+                                    <h5 class="mt-3">Адаптивность</h5>
+                                    <p class="text-muted">Отлично работает на всех устройствах</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Demo Script -->
+    <script>
+        // Favorite button toggle
+        document.querySelectorAll('.btn-favorite').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const icon = this.querySelector('i');
+                if (this.classList.contains('active')) {
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill');
+                } else {
+                    icon.classList.remove('bi-heart-fill');
+                    icon.classList.add('bi-heart');
+                }
+            });
+        });
+        
+        // Share button
+        document.querySelectorAll('.btn-share').forEach(btn => {
+            btn.addEventListener('click', function() {
+                alert('Функция "Поделиться" будет реализована');
+            });
+        });
+        
+        // View details
+        document.querySelectorAll('.btn-view-details').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const card = this.closest('.tournament-card');
+                const title = card.querySelector('.card-title').textContent;
+                alert(`Открытие деталей турнира: ${title}`);
+            });
+        });
+    </script>
+</body>
+</html>

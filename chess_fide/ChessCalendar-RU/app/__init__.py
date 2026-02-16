@@ -29,11 +29,22 @@ def create_app(config_name='default'):
                 static_folder='../static',
                 static_url_path='/static')
     
-    # Initialize rate limiter
-    limiter = Limiter(
-        key_func=get_remote_address,
-        default_limits=["200 per day", "50 per hour"]
-    )
+    # Initialize rate limiter with proper storage
+    try:
+        # Try to use Redis for rate limiting if available
+        redis_url = app.config.get('REDIS_URL', 'redis://localhost:6379/1')
+        limiter = Limiter(
+            key_func=get_remote_address,
+            default_limits=["1000 per day", "100 per hour"],
+            storage_uri=redis_url
+        )
+    except Exception as e:
+        logger.warning(f"Redis not available for rate limiting, using in-memory storage: {e}")
+        # Fallback to in-memory storage for development
+        limiter = Limiter(
+            key_func=get_remote_address,
+            default_limits=["1000 per day", "100 per hour"]
+        )
     limiter.init_app(app)
     
     # Initialize CSRF protection

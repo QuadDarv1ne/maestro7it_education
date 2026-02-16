@@ -1,0 +1,53 @@
+/* Override All CSS */
+/* Максимальный приоритет - финальные переопределения */
+
+/* Критические исправления с !important */
+
+/* Исправление отступов контейнера */
+.container-fluid {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+/* Исправление цветов кнопок */
+.btn-primary {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+}
+
+/* Исправление шрифтов */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Исправление скругления углов */
+.card,
+.btn,
+.form-control,
+.modal-content {
+    border-radius: 12px !important;
+}
+
+/* Исправление теней */
+.card {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Исправление переходов */
+* {
+    transition-duration: 0.3s !important;
+    transition-timing-function: ease !important;
+}
+
+/* Отключение переходов для анимаций */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
