@@ -22,6 +22,11 @@ class Tournament(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
     
+    # Добавляем новые поля
+    prize_fund_usd = db.Column(db.Integer, nullable=True)  # Призовой фонд в долларах США
+    players_count = db.Column(db.Integer, nullable=True)  # Количество участников
+    time_control = db.Column(db.String(50), nullable=True)  # Контроль времени (Classical, Rapid, Blitz)
+    
     # Composite indexes for common query patterns
     __table_args__ = (
         db.Index('idx_location_category', 'location', 'category'),
@@ -35,6 +40,10 @@ class Tournament(db.Model):
         db.Index('idx_location_start_date', 'location', 'start_date'),  # For location + date range queries
         db.Index('idx_category_start_date', 'category', 'start_date'),  # For category + date range queries
         db.Index('idx_status_updated_at', 'status', 'updated_at'),  # For status + updated queries
+        # Индексы для новых полей
+        db.Index('idx_prize_fund_usd', 'prize_fund_usd'),
+        db.Index('idx_players_count', 'players_count'),
+        db.Index('idx_time_control', 'time_control'),
     )
 
     def __repr__(self):
@@ -56,6 +65,9 @@ class Tournament(db.Model):
             'organizer': self.organizer,
             'fide_id': self.fide_id,
             'source_url': self.source_url,
+            'prize_fund_usd': self.prize_fund_usd,
+            'players_count': self.players_count,
+            'time_control': self.time_control,
             'average_rating': avg_rating['average_rating'],
             'total_ratings': avg_rating['total_ratings']
         }
