@@ -363,9 +363,24 @@ def health_check():
 
 # Метрики
 @app.route('/metrics', methods=['GET'])
+def prometheus_metrics():
+    """Prometheus metrics endpoint"""
+    try:
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        from app.utils.metrics import update_business_metrics
+        
+        # Update business metrics before exposing
+        update_business_metrics()
+        
+        return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+    except Exception as e:
+        logger.error(f"Error generating metrics: {e}")
+        return jsonify({'error': 'Metrics unavailable'}), 500
+
+@app.route('/api/metrics', methods=['GET'])
 @admin_required
 def get_metrics():
-    """Получить метрики API Gateway"""
+    """Получить метрики API Gateway (требует admin)"""
     if not redis_client:
         return jsonify({'error': 'Redis unavailable'}), 503
     

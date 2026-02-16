@@ -13,14 +13,14 @@ def create_app(config_name='default'):
     import logging
     # Initialize logging before anything else
     try:
-        from app.utils.logging_config import init_logging, setup_error_handlers
-        init_logging()
+        from app.utils.logger import setup_logging, RequestLogger
+        setup_logging(app_name='chess_calendar', json_logs=True)
+        logger = logging.getLogger('chess_calendar')
     except Exception as e:
         logging.warning(f"Failed to initialize advanced logging: {e}")
-        # Fallback to basic logging
         logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(__name__)
     
-    logger = logging.getLogger(__name__)
     logger.info("Starting application initialization")
     
     app = Flask(__name__, template_folder='../templates')
@@ -36,10 +36,26 @@ def create_app(config_name='default'):
     csrf.init_app(app)
     
     # Загрузка конфигурации
-    app.config.from_object('config.Config')
+    app.config.from_object('config.config.Config')
     
     # Инициализация расширений
     db.init_app(app)
+    
+    # Initialize metrics middleware
+    try:
+        from app.utils.metrics import MetricsMiddleware
+        metrics_middleware = MetricsMiddleware(app)
+        logger.info("Metrics middleware initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize metrics: {e}")
+    
+    # Initialize request logger
+    try:
+        from app.utils.logger import RequestLogger
+        request_logger = RequestLogger(app)
+        logger.info("Request logger initialized")
+    except Exception as e:
+        logger.warning(f"Failed to initialize request logger: {e}")
     
     # Initialize scheduler
     try:
@@ -51,9 +67,6 @@ def create_app(config_name='default'):
     # Создание таблиц
     with app.app_context():
         db.create_all()
-    
-    # Setup error handlers
-    setup_error_handlers(app)
     
     # Статические файлы
     @app.route('/static/<path:filename>')
