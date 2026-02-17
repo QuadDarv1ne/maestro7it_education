@@ -1,404 +1,579 @@
-// Quick Actions Menu - Floating Action Button with shortcuts
+/**
+ * Система быстрых действий для карточек турниров
+ * Контекстное меню, горячие клавиши, drag & drop
+ */
 
 class QuickActions {
     constructor() {
-        this.isOpen = false;
+        this.selectedCards = new Set();
+        this.contextMenu = null;
         this.init();
     }
 
     init() {
-        this.createFAB();
+        this.createContextMenu();
         this.attachEventListeners();
+        this.registerKeyboardShortcuts();
     }
 
-    createFAB() {
-        // Check if already exists
-        if (document.getElementById('quickActionsFAB')) return;
-
-        const fab = document.createElement('div');
-        fab.id = 'quickActionsFAB';
-        fab.innerHTML = `
-            <style>
-                #quickActionsFAB {
-                    position: fixed;
-                    bottom: 30px;
-                    right: 30px;
-                    z-index: 999;
-                }
-                
-                /* Adjust for mobile bottom nav */
-                @media (max-width: 576px) {
-                    #quickActionsFAB {
-                        bottom: 90px;
-                        right: 15px;
-                    }
-                }
-                
-                .fab-button {
-                    width: 60px;
-                    height: 60px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-                    color: white;
-                    border: none;
-                    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 24px;
-                    transition: all 0.3s ease;
-                }
-                
-                .fab-button:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
-                }
-                
-                .fab-button.active {
-                    transform: rotate(45deg);
-                }
-                
-                .fab-actions {
-                    position: absolute;
-                    bottom: 70px;
-                    right: 0;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                    opacity: 0;
-                    pointer-events: none;
-                    transition: all 0.3s ease;
-                }
-                
-                .fab-actions.active {
-                    opacity: 1;
-                    pointer-events: all;
-                    bottom: 80px;
-                }
-                
-                .fab-action {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    background: white;
-                    padding: 12px 20px;
-                    border-radius: 30px;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    white-space: nowrap;
-                    transform: translateX(100px);
-                    opacity: 0;
-                }
-                
-                .fab-actions.active .fab-action {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                
-                .fab-action:nth-child(1) { transition-delay: 0.05s; }
-                .fab-action:nth-child(2) { transition-delay: 0.1s; }
-                .fab-action:nth-child(3) { transition-delay: 0.15s; }
-                .fab-action:nth-child(4) { transition-delay: 0.2s; }
-                .fab-action:nth-child(5) { transition-delay: 0.25s; }
-                
-                .fab-action:hover {
-                    transform: translateX(-5px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                }
-                
-                .fab-action i {
-                    font-size: 20px;
-                    color: #2563eb;
-                }
-                
-                .fab-action span {
-                    font-weight: 500;
-                    color: #1e293b;
-                }
-                
-                @media (max-width: 768px) {
-                    #quickActionsFAB {
-                        right: 15px;
-                    }
-                    
-                    .fab-button {
-                        width: 50px;
-                        height: 50px;
-                        font-size: 20px;
-                    }
-                    
-                    .fab-action {
-                        padding: 10px 15px;
-                        font-size: 14px;
-                    }
-                }
-            </style>
-            
-            <div class="fab-actions" id="fabActions">
-                <div class="fab-action" data-action="export">
-                    <i class="bi bi-download"></i>
-                    <span>Экспорт</span>
-                </div>
-                <div class="fab-action" data-action="filter">
-                    <i class="bi bi-funnel"></i>
-                    <span>Фильтры</span>
-                </div>
-                <div class="fab-action" data-action="calendar">
-                    <i class="bi bi-calendar-plus"></i>
-                    <span>В календарь</span>
-                </div>
-                <div class="fab-action" data-action="share">
-                    <i class="bi bi-share"></i>
-                    <span>Поделиться</span>
-                </div>
-                <div class="fab-action" data-action="top">
-                    <i class="bi bi-arrow-up"></i>
-                    <span>Наверх</span>
-                </div>
+    /**
+     * Создание контекстного меню
+     */
+    createContextMenu() {
+        this.contextMenu = document.createElement('div');
+        this.contextMenu.id = 'tournamentContextMenu';
+        this.contextMenu.className = 'context-menu';
+        this.contextMenu.innerHTML = `
+            <div class="context-menu-item" data-action="open">
+                <i class="bi bi-box-arrow-up-right"></i>
+                <span>Открыть</span>
+                <kbd>Enter</kbd>
             </div>
-            
-            <button class="fab-button" id="fabButton">
-                <i class="bi bi-plus-lg"></i>
-            </button>
+            <div class="context-menu-item" data-action="favorite">
+                <i class="bi bi-heart"></i>
+                <span>В избранное</span>
+                <kbd>F</kbd>
+            </div>
+            <div class="context-menu-item" data-action="compare">
+                <i class="bi bi-bar-chart"></i>
+                <span>Сравнить</span>
+                <kbd>C</kbd>
+            </div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="share">
+                <i class="bi bi-share"></i>
+                <span>Поделиться</span>
+                <kbd>S</kbd>
+            </div>
+            <div class="context-menu-item" data-action="export">
+                <i class="bi bi-download"></i>
+                <span>Экспорт</span>
+                <kbd>E</kbd>
+            </div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="notify">
+                <i class="bi bi-bell"></i>
+                <span>Уведомить</span>
+                <kbd>N</kbd>
+            </div>
         `;
-
-        document.body.appendChild(fab);
+        document.body.appendChild(this.contextMenu);
     }
 
+    /**
+     * Прикрепление обработчиков событий
+     */
     attachEventListeners() {
-        const fabButton = document.getElementById('fabButton');
-        const fabActions = document.getElementById('fabActions');
-
-        if (fabButton) {
-            fabButton.addEventListener('click', () => this.toggle());
-        }
-
-        // Action handlers
-        document.querySelectorAll('.fab-action').forEach(action => {
-            action.addEventListener('click', (e) => {
-                const actionType = e.currentTarget.dataset.action;
-                this.handleAction(actionType);
-                this.close();
-            });
+        // Правый клик на карточках
+        document.addEventListener('contextmenu', (e) => {
+            const card = e.target.closest('[data-tournament-id]');
+            if (card) {
+                e.preventDefault();
+                this.showContextMenu(e, card);
+            }
         });
 
-        // Close on outside click
+        // Клик вне меню - закрыть
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#quickActionsFAB')) {
-                this.close();
+            if (!e.target.closest('.context-menu')) {
+                this.hideContextMenu();
+            }
+        });
+
+        // Клик по пункту меню
+        this.contextMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('.context-menu-item');
+            if (item) {
+                const action = item.dataset.action;
+                const card = this.contextMenu.dataset.cardId;
+                this.executeAction(action, card);
+                this.hideContextMenu();
+            }
+        });
+
+        // Выделение карточек (Ctrl/Cmd + Click)
+        document.addEventListener('click', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                const card = e.target.closest('[data-tournament-id]');
+                if (card) {
+                    e.preventDefault();
+                    this.toggleCardSelection(card);
+                }
+            }
+        });
+
+        // Drag & Drop
+        this.setupDragAndDrop();
+    }
+
+    /**
+     * Показать контекстное меню
+     */
+    showContextMenu(event, card) {
+        const tournamentId = card.dataset.tournamentId;
+        this.contextMenu.dataset.cardId = tournamentId;
+
+        // Позиционирование
+        const x = event.pageX;
+        const y = event.pageY;
+        
+        this.contextMenu.style.left = `${x}px`;
+        this.contextMenu.style.top = `${y}px`;
+        this.contextMenu.classList.add('show');
+
+        // Проверка выхода за границы экрана
+        requestAnimationFrame(() => {
+            const rect = this.contextMenu.getBoundingClientRect();
+            
+            if (rect.right > window.innerWidth) {
+                this.contextMenu.style.left = `${x - rect.width}px`;
+            }
+            
+            if (rect.bottom > window.innerHeight) {
+                this.contextMenu.style.top = `${y - rect.height}px`;
             }
         });
     }
 
-    toggle() {
-        this.isOpen = !this.isOpen;
-        const fabButton = document.getElementById('fabButton');
-        const fabActions = document.getElementById('fabActions');
-
-        if (this.isOpen) {
-            fabButton.classList.add('active');
-            fabActions.classList.add('active');
-        } else {
-            fabButton.classList.remove('active');
-            fabActions.classList.remove('active');
-        }
+    /**
+     * Скрыть контекстное меню
+     */
+    hideContextMenu() {
+        this.contextMenu.classList.remove('show');
     }
 
-    close() {
-        this.isOpen = false;
-        document.getElementById('fabButton')?.classList.remove('active');
-        document.getElementById('fabActions')?.classList.remove('active');
-    }
+    /**
+     * Выполнить действие
+     */
+    executeAction(action, tournamentId) {
+        const card = document.querySelector(`[data-tournament-id="${tournamentId}"]`);
+        if (!card) return;
 
-    handleAction(action) {
         switch (action) {
-            case 'export':
-                this.showExportMenu();
+            case 'open':
+                window.location.href = `/tournament/${tournamentId}`;
                 break;
-            case 'filter':
-                this.toggleFilters();
+            
+            case 'favorite':
+                const favoriteBtn = card.querySelector('[data-action="favorite"]');
+                if (favoriteBtn) favoriteBtn.click();
                 break;
-            case 'calendar':
-                this.addToCalendar();
+            
+            case 'compare':
+                const compareBtn = card.querySelector('[data-action="compare"]');
+                if (compareBtn) compareBtn.click();
                 break;
+            
             case 'share':
-                this.shareCurrentPage();
+                const shareBtn = card.querySelector('[data-action="share"]');
+                if (shareBtn) shareBtn.click();
                 break;
-            case 'top':
-                this.scrollToTop();
+            
+            case 'export':
+                const exportBtn = card.querySelector('[data-action="export"]');
+                if (exportBtn) exportBtn.click();
+                break;
+            
+            case 'notify':
+                const notifyBtn = card.querySelector('[data-action="notify"]');
+                if (notifyBtn) notifyBtn.click();
                 break;
         }
     }
 
-    showExportMenu() {
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.innerHTML = `
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-download"></i> Экспорт данных</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="d-grid gap-2">
-                            <a href="/export/csv" class="btn btn-outline-primary">
-                                <i class="bi bi-filetype-csv"></i> Экспорт в CSV
-                            </a>
-                            <a href="/export/json" class="btn btn-outline-primary">
-                                <i class="bi bi-filetype-json"></i> Экспорт в JSON
-                            </a>
-                            <button class="btn btn-outline-primary" onclick="quickActions.exportToICS()">
-                                <i class="bi bi-calendar"></i> Экспорт в ICS (календарь)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-        modal.addEventListener('hidden.bs.modal', () => modal.remove());
-    }
+    /**
+     * Регистрация горячих клавиш
+     */
+    registerKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Игнорируем если фокус в input/textarea
+            if (e.target.matches('input, textarea')) {
+                return;
+            }
 
-    toggleFilters() {
-        const filterSection = document.querySelector('.filter-section, .filters, #filters');
-        if (filterSection) {
-            filterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            filterSection.classList.add('highlight');
-            setTimeout(() => filterSection.classList.remove('highlight'), 2000);
-        }
-    }
+            const focusedCard = document.querySelector('[data-tournament-id]:focus');
+            if (!focusedCard) return;
 
-    addToCalendar() {
-        // Get current page tournaments
-        const tournaments = this.getCurrentPageTournaments();
-        
-        if (tournaments.length === 0) {
-            alert('Нет турниров для добавления в календарь');
-            return;
-        }
+            const tournamentId = focusedCard.dataset.tournamentId;
 
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.innerHTML = `
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-calendar-plus"></i> Добавить в календарь</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Выберите сервис календаря:</p>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary" onclick="quickActions.exportToGoogleCalendar()">
-                                <i class="bi bi-google"></i> Google Calendar
-                            </button>
-                            <button class="btn btn-outline-primary" onclick="quickActions.exportToOutlook()">
-                                <i class="bi bi-microsoft"></i> Outlook Calendar
-                            </button>
-                            <button class="btn btn-outline-primary" onclick="quickActions.exportToICS()">
-                                <i class="bi bi-calendar"></i> Скачать ICS файл
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-        modal.addEventListener('hidden.bs.modal', () => modal.remove());
-    }
-
-    getCurrentPageTournaments() {
-        const tournaments = [];
-        document.querySelectorAll('.tournament-card, .card').forEach(card => {
-            const link = card.querySelector('a[href*="/tournament/"]');
-            if (link) {
-                const match = link.href.match(/\/tournament\/(\d+)/);
-                if (match) {
-                    tournaments.push({ id: parseInt(match[1]) });
-                }
+            switch (e.key.toLowerCase()) {
+                case 'enter':
+                    e.preventDefault();
+                    this.executeAction('open', tournamentId);
+                    break;
+                
+                case 'f':
+                    e.preventDefault();
+                    this.executeAction('favorite', tournamentId);
+                    break;
+                
+                case 'c':
+                    e.preventDefault();
+                    this.executeAction('compare', tournamentId);
+                    break;
+                
+                case 's':
+                    e.preventDefault();
+                    this.executeAction('share', tournamentId);
+                    break;
+                
+                case 'e':
+                    e.preventDefault();
+                    this.executeAction('export', tournamentId);
+                    break;
+                
+                case 'n':
+                    e.preventDefault();
+                    this.executeAction('notify', tournamentId);
+                    break;
             }
         });
-        return tournaments;
-    }
 
-    async exportToICS() {
-        const tournaments = this.getCurrentPageTournaments();
-        
-        // Track achievement
-        if (window.achievementsSystem) {
-            window.achievementsSystem.trackAction('export_used');
-        }
-        
-        if (window.toast) {
-            window.toast.exportSuccess('ICS');
-        }
-        
-        // Implementation would call the API endpoint
-        window.location.href = '/export/ics';
-    }
-
-    async exportToGoogleCalendar() {
-        if (window.toast) {
-            window.toast.info('Функция экспорта в Google Calendar будет доступна в следующей версии');
-        }
-    }
-
-    async exportToOutlook() {
-        if (window.toast) {
-            window.toast.info('Функция экспорта в Outlook Calendar будет доступна в следующей версии');
-        }
-    }
-
-    async shareCurrentPage() {
-        const shareData = {
-            title: document.title,
-            text: 'Шахматный календарь России',
-            url: window.location.href
-        };
-
-        if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-                if (window.toast) {
-                    window.toast.success('Ссылка успешно отправлена');
-                }
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    this.fallbackShare();
-                }
+        // Навигация стрелками
+        document.addEventListener('keydown', (e) => {
+            if (e.target.matches('input, textarea')) {
+                return;
             }
+
+            const focusedCard = document.querySelector('[data-tournament-id]:focus');
+            if (!focusedCard) return;
+
+            const cards = Array.from(document.querySelectorAll('[data-tournament-id]'));
+            const currentIndex = cards.indexOf(focusedCard);
+
+            let nextIndex = currentIndex;
+
+            switch (e.key) {
+                case 'ArrowDown':
+                case 'ArrowRight':
+                    e.preventDefault();
+                    nextIndex = Math.min(currentIndex + 1, cards.length - 1);
+                    break;
+                
+                case 'ArrowUp':
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    nextIndex = Math.max(currentIndex - 1, 0);
+                    break;
+            }
+
+            if (nextIndex !== currentIndex) {
+                cards[nextIndex].focus();
+                cards[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+
+    /**
+     * Переключение выделения карточки
+     */
+    toggleCardSelection(card) {
+        const tournamentId = card.dataset.tournamentId;
+        
+        if (this.selectedCards.has(tournamentId)) {
+            this.selectedCards.delete(tournamentId);
+            card.classList.remove('selected');
         } else {
-            this.fallbackShare();
+            this.selectedCards.add(tournamentId);
+            card.classList.add('selected');
+        }
+
+        this.updateSelectionUI();
+    }
+
+    /**
+     * Обновление UI выделения
+     */
+    updateSelectionUI() {
+        const count = this.selectedCards.size;
+        
+        if (count > 0) {
+            this.showSelectionToolbar(count);
+        } else {
+            this.hideSelectionToolbar();
         }
     }
 
-    fallbackShare() {
-        const url = window.location.href;
-        navigator.clipboard.writeText(url).then(() => {
-            if (window.toast) {
-                window.toast.copied();
-            } else {
-                alert('Ссылка скопирована в буфер обмена!');
-            }
-        }).catch(() => {
-            prompt('Скопируйте ссылку:', url);
-        });
+    /**
+     * Показать панель выделения
+     */
+    showSelectionToolbar(count) {
+        let toolbar = document.getElementById('selectionToolbar');
+        
+        if (!toolbar) {
+            toolbar = document.createElement('div');
+            toolbar.id = 'selectionToolbar';
+            toolbar.className = 'selection-toolbar';
+            toolbar.innerHTML = `
+                <div class="selection-info">
+                    <span class="selection-count">${count}</span> выбрано
+                </div>
+                <div class="selection-actions">
+                    <button class="btn btn-sm btn-primary" onclick="quickActions.compareSelected()">
+                        <i class="bi bi-bar-chart"></i> Сравнить
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="quickActions.addSelectedToFavorites()">
+                        <i class="bi bi-heart"></i> В избранное
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="quickActions.clearSelection()">
+                        <i class="bi bi-x"></i> Отменить
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(toolbar);
+        } else {
+            toolbar.querySelector('.selection-count').textContent = count;
+        }
+
+        toolbar.classList.add('show');
     }
 
-    scrollToTop() {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
+    /**
+     * Скрыть панель выделения
+     */
+    hideSelectionToolbar() {
+        const toolbar = document.getElementById('selectionToolbar');
+        if (toolbar) {
+            toolbar.classList.remove('show');
+        }
+    }
+
+    /**
+     * Очистить выделение
+     */
+    clearSelection() {
+        this.selectedCards.clear();
+        document.querySelectorAll('[data-tournament-id].selected').forEach(card => {
+            card.classList.remove('selected');
         });
+        this.hideSelectionToolbar();
+    }
+
+    /**
+     * Сравнить выбранные
+     */
+    compareSelected() {
+        if (window.tournamentComparison) {
+            this.selectedCards.forEach(id => {
+                const card = document.querySelector(`[data-tournament-id="${id}"]`);
+                if (card) {
+                    const compareBtn = card.querySelector('[data-action="compare"]');
+                    if (compareBtn) compareBtn.click();
+                }
+            });
+            this.clearSelection();
+        }
+    }
+
+    /**
+     * Добавить выбранные в избранное
+     */
+    addSelectedToFavorites() {
+        if (window.tournamentCardManager) {
+            this.selectedCards.forEach(id => {
+                const card = document.querySelector(`[data-tournament-id="${id}"]`);
+                if (card) {
+                    const favoriteBtn = card.querySelector('[data-action="favorite"]');
+                    if (favoriteBtn) favoriteBtn.click();
+                }
+            });
+            this.clearSelection();
+        }
+    }
+
+    /**
+     * Настройка Drag & Drop
+     */
+    setupDragAndDrop() {
+        document.addEventListener('dragstart', (e) => {
+            const card = e.target.closest('[data-tournament-id]');
+            if (card) {
+                card.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.dataset.tournamentId);
+            }
+        });
+
+        document.addEventListener('dragend', (e) => {
+            const card = e.target.closest('[data-tournament-id]');
+            if (card) {
+                card.classList.remove('dragging');
+            }
+        });
+
+        // Можно добавить drop zones для различных действий
     }
 }
 
-// Initialize
-const quickActions = new QuickActions();
+// CSS стили
+const style = document.createElement('style');
+style.textContent = `
+    .context-menu {
+        position: absolute;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        padding: 0.5rem 0;
+        min-width: 200px;
+        z-index: 10000;
+        opacity: 0;
+        transform: scale(0.95);
+        pointer-events: none;
+        transition: all 0.15s ease;
+    }
+
+    .context-menu.show {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+    }
+
+    .context-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 1rem;
+        cursor: pointer;
+        transition: background 0.15s;
+        color: #374151;
+    }
+
+    .context-menu-item:hover {
+        background: #f3f4f6;
+    }
+
+    .context-menu-item i {
+        width: 20px;
+        font-size: 1rem;
+        color: #6b7280;
+    }
+
+    .context-menu-item span {
+        flex: 1;
+        font-size: 0.875rem;
+    }
+
+    .context-menu-item kbd {
+        padding: 0.125rem 0.375rem;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-family: monospace;
+        color: #6b7280;
+    }
+
+    .context-menu-divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 0.5rem 0;
+    }
+
+    [data-tournament-id].selected {
+        outline: 3px solid #3b82f6;
+        outline-offset: 2px;
+    }
+
+    [data-tournament-id].dragging {
+        opacity: 0.5;
+    }
+
+    .selection-toolbar {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        z-index: 1000;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .selection-toolbar.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    .selection-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .selection-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 8px;
+        background: #3b82f6;
+        color: white;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .selection-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    [data-tournament-id] {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    [data-tournament-id]:focus {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 768px) {
+        .selection-toolbar {
+            left: 1rem;
+            right: 1rem;
+            transform: translateX(0) translateY(100px);
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .selection-toolbar.show {
+            transform: translateX(0) translateY(0);
+        }
+
+        .selection-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .selection-actions button {
+            width: 100%;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+    window.quickActions = new QuickActions();
+    
+    // Делаем карточки focusable
+    document.querySelectorAll('[data-tournament-id]').forEach(card => {
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('draggable', 'true');
+    });
+});
+
+// Экспорт
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = QuickActions;
+}

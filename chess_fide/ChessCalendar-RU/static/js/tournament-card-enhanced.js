@@ -265,13 +265,19 @@ class TournamentCardManager {
      * Показать уведомление
      */
     showToast(message, type = 'info') {
+        // Используем глобальную систему уведомлений если доступна
+        if (window.notificationSystem) {
+            window.notificationSystem.show(message, type);
+            return;
+        }
+        
         // Проверить наличие toast системы
         if (typeof showToast === 'function') {
             showToast(message, type);
             return;
         }
 
-        // Простое уведомление
+        // Простое уведомление (fallback)
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.textContent = message;
