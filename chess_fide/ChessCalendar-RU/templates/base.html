@@ -628,6 +628,11 @@
                         </a>
                     {% endif %}
                     
+                    <!-- Tags Panel Toggle -->
+                    <button class="theme-toggle-btn" onclick="window.tournamentTags?.togglePanel()" title="Мои теги">
+                        <i class="bi bi-tags-fill"></i>
+                    </button>
+                    
                     <!-- Theme Toggle -->
                     <button class="theme-toggle-btn" id="themeToggle" onclick="toggleTheme()" title="Переключить тему">
                         <i class="bi bi-moon-fill" id="themeIcon"></i>
@@ -807,6 +812,18 @@
     <script src="{{ url_for('static', filename='js/notification-system.js') }}"></script>
     <!-- Quick Actions -->
     <script src="{{ url_for('static', filename='js/quick-actions.js') }}"></script>
+    <!-- Analytics Tracker -->
+    <script src="{{ url_for('static', filename='js/analytics-tracker.js') }}"></script>
+    <!-- Tournament Visualizations -->
+    <script src="{{ url_for('static', filename='js/tournament-visualizations.js') }}"></script>
+    <!-- Tournament Quick View -->
+    <script src="{{ url_for('static', filename='js/tournament-quick-view.js') }}"></script>
+    <!-- Tournament Tags -->
+    <script src="{{ url_for('static', filename='js/tournament-tags.js') }}"></script>
+    <!-- Advanced Search -->
+    <script src="{{ url_for('static', filename='js/advanced-search.js') }}"></script>
+    <!-- Filter State Manager -->
+    <script src="{{ url_for('static', filename='js/filter-state-manager.js') }}"></script>
     <!-- Enhanced Navbar -->
     <script src="{{ url_for('static', filename='js/navbar-enhanced.js') }}"></script>
     

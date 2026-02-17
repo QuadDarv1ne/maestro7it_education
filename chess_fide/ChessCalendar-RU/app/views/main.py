@@ -437,6 +437,21 @@ def statistics_dashboard():
         logger.error(f"Error in statistics dashboard: {str(e)}")
         return render_template('error/500.html'), 500
 
+@main_bp.route('/analytics')
+def analytics_dashboard():
+    """Страница аналитики пользователей (для админов)"""
+    # Проверка прав администратора
+    if 'user_id' not in session:
+        return redirect(url_for('user.login'))
+    
+    from app.models.user import User
+    user = User.query.get(session['user_id'])
+    if not user or not user.is_admin:
+        flash('Доступ запрещен. Требуются права администратора.', 'error')
+        return redirect(url_for('main.index'))
+    
+    return render_template('analytics_dashboard.html')
+
 @main_bp.route('/achievements')
 def achievements():
     """Страница достижений пользователей"""

@@ -263,7 +263,7 @@
     </div>
 
     <!-- Top Lists -->
-    <div class="row g-4">
+    <div class="row g-4 mb-4">
         <div class="col-lg-6">
             <div class="chart-container">
                 <h3 class="chart-title">
@@ -306,6 +306,30 @@
                     {% endfor %}
                 </ul>
             </div>
+        </div>
+    </div>
+
+    <!-- Advanced Visualizations -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="bi bi-activity"></i> Статистика турниров
+                </h3>
+                <div class="stats-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="chart-container" id="categoryChart"></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="chart-container" id="monthlyChart"></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="chart-container" id="locationChart"></div>
         </div>
     </div>
 </div>

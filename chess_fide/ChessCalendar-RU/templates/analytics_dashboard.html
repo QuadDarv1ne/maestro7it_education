@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика пользователей - ChessCalendar-RU{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-dashboard {
+        padding: 2rem 0;
+    }
+    
+    .metric-card {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        transition: all 0.3s ease;
+        height: 100%;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--box-shadow-lg);
+    }
+    
+    .metric-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+        color: white;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .metric-trend {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .metric-trend.up {
+        color: var(--success-color);
+    }
+    
+    .metric-trend.down {
+        color: var(--danger-color);
+    }
+    
+    .analytics-section {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--box-shadow);
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .event-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .event-item {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+    }
+    
+    .event-item:hover {
+        background: var(--bg-secondary);
+    }
+    
+    .event-item:last-child {
+        border-bottom: none;
+    }
+    
+    .event-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    
+    .event-type {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .event-time {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .event-details {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .heatmap-container {
+        position: relative;
+        width: 100%;
+        height: 400px;
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+    }
+    
+    .heatmap-point {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(37, 99, 235, 0.6) 0%, transparent 70%);
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+    }
+    
+    .filter-bar {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-item {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .refresh-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container analytics-dashboard">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-5 fw-bold mb-2">
+                        <i class="bi bi-graph-up-arrow"></i> Аналитика пользователей
+                    </h1>
+                    <p class="text-muted">Отслеживание действий и поведения пользователей</p>
+                </div>
+                <button class="btn btn-primary refresh-btn" onclick="refreshAnalytics()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Обновить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+        <div class="filter-item">
+            <label class="form-label">Период</label>
+            <select class="form-select" id="periodFilter">
+                <option value="today">Сегодня</option>
+                <option value="week" selected>Неделя</option>
+                <option value="month">Месяц</option>
+                <option value="all">Все время</option>
+            </select>
+        </div>
+        <div class="filter-item">
+            <label class="form-label">Тип события</label>
+            <select class="form-select" id="eventTypeFilter">
+                <option value="all">Все события</option>
+                <option value="page_view">Просмотры страниц</option>
+                <option value="click">Клики</option>
+                <option value="tournament_view">Просмотры турниров</option>
+                <option value="tournament_favorite">Избранное</option>
+                <option value="scroll_depth">Прокрутка</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon">
+                        <i class="bi bi-eye"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="totalPageViews">0</div>
+                <div class="metric-label">Просмотров страниц</div>
+                <div class="metric-trend up">
+                    <i class="bi bi-arrow-up"></i> +15% за неделю
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="uniqueUsers">0</div>
+                <div class="metric-label">Уникальных пользователей</div>
+                <div class="metric-trend up">
+                    <i class="bi bi-arrow-up"></i> +8% за неделю
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon">
+                        <i class="bi bi-trophy"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="tournamentViews">0</div>
+                <div class="metric-label">Просмотров турниров</div>
+                <div class="metric-trend up">
+                    <i class="bi bi-arrow-up"></i> +22% за неделю
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-sm-6">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon">
+                        <i class="bi bi-heart"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="favoriteActions">0</div>
+                <div class="metric-label">Добавлений в избранное</div>
+                <div class="metric-trend up">
+                    <i class="bi bi-arrow-up"></i> +12% за неделю
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="analytics-section">
+                <h3 class="section-title">
+                    <i class="bi bi-bar-chart-line"></i> События по времени
+                </h3>
+                <canvas id="eventsTimelineChart" height="80"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="analytics-section">
+                <h3 class="section-title">
+                    <i class="bi bi-pie-chart"></i> Типы событий
+                </h3>
+                <canvas id="eventTypesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Tournaments -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="analytics-section">
+                <h3 class="section-title">
+                    <i class="bi bi-star"></i> Популярные турниры
+                </h3>
+                <div id="popularTournaments">
+                    <p class="text-muted">Загрузка...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="analytics-section">
+                <h3 class="section-title">
+                    <i class="bi bi-clock-history"></i> Последние события
+                </h3>
+                <div class="event-list" id="recentEvents">
+                    <p class="text-muted">Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heatmap -->
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="analytics-section">
+                <h3 class="section-title">
+                    <i class="bi bi-grid-3x3"></i> Тепловая карта кликов
+                </h3>
+                <div class="heatmap-container" id="heatmapContainer">
+                    <p class="text-center text-muted" style="padding-top: 180px;">
+                        Данные тепловой карты будут отображаться здесь
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Load analytics data from API
+    let currentPeriod = 'week';
+    let currentEventType = 'all';
+
+    // Update metrics from API
+    async function updateMetrics() {
+        try {
+            const response = await fetch(`/api/analytics/summary?period=${currentPeriod}`);
+            const data = await response.json();
+            
+            if (data.summary) {
+                document.getElementById('totalPageViews').textContent = 
+                    data.summary.total_interactions.toLocaleString();
+                document.getElementById('uniqueUsers').textContent = 
+                    data.summary.unique_users.toLocaleString();
+                document.getElementById('tournamentViews').textContent = 
+                    data.summary.tournament_views.toLocaleString();
+                document.getElementById('favoriteActions').textContent = 
+                    data.summary.favorite_actions.toLocaleString();
+            }
+            
+            // Update popular tournaments
+            if (data.popular_tournaments) {
+                loadPopularTournaments(data.popular_tournaments);
+            }
+            
+            // Update charts with real data
+            if (data.interaction_types) {
+                updateEventTypesChart(data.interaction_types);
+            }
+        } catch (error) {
+            console.error('Failed to load analytics:', error);
+        }
+    }
+
+    // Events timeline chart
+    const timelineCtx = document.getElementById('eventsTimelineChart');
+    let timelineChart;
+    if (timelineCtx) {
+        timelineChart = new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+                datasets: [{
+                    label: 'Просмотры',
+                    data: [120, 190, 150, 220, 180, 240, 200],
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Клики',
+                    data: [80, 120, 100, 150, 130, 170, 140],
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Event types pie chart
+    const eventTypesCtx = document.getElementById('eventTypesChart');
+    let eventTypesChart;
+    if (eventTypesCtx) {
+        eventTypesChart = new Chart(eventTypesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Просмотры', 'Клики', 'Избранное', 'Поделиться', 'Прокрутка'],
+                datasets: [{
+                    data: [45, 25, 15, 10, 5],
+                    backgroundColor: [
+                        'rgba(37, 99, 235, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(6, 182, 212, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // Update event types chart with real data
+    function updateEventTypesChart(interactionTypes) {
+        if (!eventTypesChart) return;
+        
+        const labels = Object.keys(interactionTypes);
+        const data = Object.values(interactionTypes);
+        
+        eventTypesChart.data.labels = labels;
+        eventTypesChart.data.datasets[0].data = data;
+        eventTypesChart.update();
+    }
+
+    // Load popular tournaments with real data
+    function loadPopularTournaments(tournaments) {
+        const container = document.getElementById('popularTournaments');
+        
+        if (!tournaments || tournaments.length === 0) {
+            container.innerHTML = '<p class="text-muted">Нет данных</p>';
+            return;
+        }
+
+        container.innerHTML = tournaments.map((t, i) => `
+            <div class="event-item">
+                <div class="event-header">
+                    <span class="event-type">${i + 1}. ${t.name}</span>
+                    <span class="event-time">${t.count} взаимодействий</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Load recent events
+    function loadRecentEvents() {
+        const container = document.getElementById('recentEvents');
+        // Mock data for now - would come from real-time analytics
+        const events = [
+            { type: 'tournament_view', tournament: 'Чемпионат России 2026', time: '2 минуты назад' },
+            { type: 'tournament_favorite', tournament: 'Кубок Москвы', time: '5 минут назад' },
+            { type: 'page_view', page: 'Главная страница', time: '8 минут назад' },
+            { type: 'tournament_share', tournament: 'Открытый турнир', time: '12 минут назад' },
+            { type: 'click', element: 'Кнопка фильтра', time: '15 минут назад' }
+        ];
+
+        container.innerHTML = events.map(e => `
+            <div class="event-item">
+                <div class="event-header">
+                    <span class="event-type">${getEventTypeLabel(e.type)}</span>
+                    <span class="event-time">${e.time}</span>
+                </div>
+                <div class="event-details">${e.tournament || e.page || e.element}</div>
+            </div>
+        `).join('');
+    }
+
+    function getEventTypeLabel(type) {
+        const labels = {
+            'tournament_view': 'Просмотр турнира',
+            'tournament_favorite': 'Добавление в избранное',
+            'page_view': 'Просмотр страницы',
+            'tournament_share': 'Поделиться',
+            'click': 'Клик'
+        };
+        return labels[type] || type;
+    }
+
+    // Refresh analytics
+    async function refreshAnalytics() {
+        await updateMetrics();
+        loadRecentEvents();
+        
+        // Show toast notification
+        if (window.notificationSystem) {
+            window.notificationSystem.show('Данные обновлены', 'success');
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        updateMetrics();
+        loadRecentEvents();
+
+        // Filter handlers
+        document.getElementById('periodFilter').addEventListener('change', function() {
+            currentPeriod = this.value;
+            refreshAnalytics();
+        });
+        
+        document.getElementById('eventTypeFilter').addEventListener('change', function() {
+            currentEventType = this.value;
+            refreshAnalytics();
+        });
+        
+        // Auto-refresh every 30 seconds
+        setInterval(updateMetrics, 30000);
+    });
+</script>
+{% endblock %}

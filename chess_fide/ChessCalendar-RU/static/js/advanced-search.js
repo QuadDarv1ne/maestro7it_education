@@ -1,436 +1,657 @@
-// Advanced Search with Autocomplete
+/**
+ * Advanced Search with Autocomplete
+ * Улучшенный поиск с автодополнением и историей
+ */
 
 class AdvancedSearch {
     constructor() {
-        this.searchCache = new Map();
         this.searchHistory = this.loadSearchHistory();
+        this.recentSearches = [];
+        this.searchCache = new Map();
+        this.debounceTimer = null;
+        this.currentQuery = '';
         this.init();
     }
 
     init() {
-        this.enhanceSearchInput();
-        this.createAdvancedSearchModal();
+        this.attachEventListeners();
+        this.createSearchDropdown();
     }
 
+    /**
+     * Загрузить историю поиска
+     */
     loadSearchHistory() {
-        const saved = localStorage.getItem('searchHistory');
-        return saved ? JSON.parse(saved) : [];
-    }
-
-    saveSearchHistory() {
-        // Keep only last 10 searches
-        const history = this.searchHistory.slice(0, 10);
-        localStorage.setItem('searchHistory', JSON.stringify(history));
-    }
-
-    addToHistory(query) {
-        // Remove if already exists
-        this.searchHistory = this.searchHistory.filter(item => item.query !== query);
-        
-        // Add to beginning
-        this.searchHistory.unshift({
-            query: query,
-            timestamp: new Date().toISOString()
-        });
-
-        this.saveSearchHistory();
-    }
-
-    enhanceSearchInput() {
-        const searchInput = document.getElementById('searchInput');
-        if (!searchInput) return;
-
-        // Create autocomplete container
-        const autocomplete = document.createElement('div');
-        autocomplete.id = 'searchAutocomplete';
-        autocomplete.className = 'search-autocomplete';
-        autocomplete.style.cssText = `
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            box-shadow: var(--box-shadow-lg);
-            max-height: 400px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-            margin-top: 5px;
-        `;
-
-        searchInput.parentElement.style.position = 'relative';
-        searchInput.parentElement.appendChild(autocomplete);
-
-        // Add event listeners
-        let debounceTimer;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                this.handleSearch(e.target.value);
-            }, 300);
-        });
-
-        searchInput.addEventListener('focus', () => {
-            if (searchInput.value.length >= 2) {
-                this.handleSearch(searchInput.value);
-            } else {
-                this.showSearchHistory();
-            }
-        });
-
-        // Close on click outside
-        document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target) && !autocomplete.contains(e.target)) {
-                autocomplete.style.display = 'none';
-            }
-        });
-
-        // Keyboard navigation
-        searchInput.addEventListener('keydown', (e) => {
-            this.handleKeyboardNavigation(e);
-        });
-
-        // Add advanced search button
-        this.addAdvancedSearchButton(searchInput);
-    }
-
-    addAdvancedSearchButton(searchInput) {
-        const button = document.createElement('button');
-        button.className = 'btn btn-outline-primary';
-        button.innerHTML = '<i class="bi bi-sliders"></i>';
-        button.title = 'Расширенный поиск';
-        button.onclick = () => this.showAdvancedSearchModal();
-
-        const searchForm = searchInput.closest('form');
-        if (searchForm) {
-            searchForm.style.display = 'flex';
-            searchForm.style.gap = '0.5rem';
-            searchForm.appendChild(button);
+        try {
+            const stored = localStorage.getItem('searchHistory');
+            return stored ? JSON.parse(stored) : [];
+        } catch (error) {
+            console.error('Error loading search history:', error);
+            return [];
         }
     }
 
-    async handleSearch(query) {
-        const autocomplete = document.getElementById('searchAutocomplete');
-        if (!autocomplete) return;
+    /**
+     * Сохранить историю поиска
+     */
+    saveSearchHistory() {
+        try {
+            // Ограничиваем историю 50 записями
+            const limited = this.searchHistory.slice(0, 50);
+            localStorage.setItem('searchHistory', JSON.stringify(limited));
+        } catch (error) {
+            console.error('Error saving search history:', error);
+        }
+    }
+
+    /**
+     * Создать выпадающий список результатов
+     */
+    createSearchDropdown() {
+        const dropdownHTML = `
+            <div class="search-dropdown" id="searchDropdown">
+                <div class="search-dropdown-content" id="searchDropdownContent"></div>
+            </div>
+        `;
+
+        // Добавляем для каждого поля поиска
+        document.querySelectorAll('#navbarSearchInput, #mobileSearchInput').forEach(input => {
+            if (!input.nextElementSibling?.classList.contains('search-dropdown')) {
+                input.insertAdjacentHTML('afterend', dropdownHTML);
+            }
+        });
+    }
+
+    /**
+     * Прикрепить обработчики событий
+     */
+    attachEventListeners() {
+        // Поиск в навигации
+        const navbarSearch = document.getElementById('navbarSearchInput');
+        const mobileSearch = document.getElementById('mobileSearchInput');
+
+        [navbarSearch, mobileSearch].forEach(input => {
+            if (!input) return;
+
+            // Ввод текста
+            input.addEventListener('input', (e) => {
+                this.handleSearchInput(e.target);
+            });
+
+            // Фокус - показать историю
+            input.addEventListener('focus', (e) => {
+                if (!e.target.value) {
+                    this.showSearchHistory(e.target);
+                }
+            });
+
+            // Клавиши навигации
+            input.addEventListener('keydown', (e) => {
+                this.handleKeyNavigation(e, e.target);
+            });
+
+            // Потеря фокуса - скрыть dropdown
+            input.addEventListener('blur', (e) => {
+                setTimeout(() => {
+                    this.hideDropdown(e.target);
+                }, 200);
+            });
+        });
+
+        // Кнопка очистки
+        document.querySelectorAll('.navbar-search-clear').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const input = e.target.closest('.navbar-search-enhanced').querySelector('input');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                    this.hideDropdown(input);
+                }
+            });
+        });
+
+        // Клик вне поиска
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.navbar-search-enhanced')) {
+                document.querySelectorAll('.search-dropdown').forEach(dropdown => {
+                    dropdown.classList.remove('active');
+                });
+            }
+        });
+    }
+
+    /**
+     * Обработка ввода в поиск
+     */
+    handleSearchInput(input) {
+        const query = input.value.trim();
+        this.currentQuery = query;
+
+        // Показать/скрыть кнопку очистки
+        const clearBtn = input.closest('.navbar-search-enhanced').querySelector('.navbar-search-clear');
+        if (clearBtn) {
+            clearBtn.style.display = query ? 'flex' : 'none';
+        }
 
         if (query.length < 2) {
-            this.showSearchHistory();
+            if (query.length === 0) {
+                this.showSearchHistory(input);
+            } else {
+                this.hideDropdown(input);
+            }
             return;
         }
 
-        // Check cache
+        // Debounce поиска
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+            this.performSearch(query, input);
+        }, 300);
+    }
+
+    /**
+     * Выполнить поиск
+     */
+    async performSearch(query, input) {
+        // Проверить кэш
         if (this.searchCache.has(query)) {
-            this.displayResults(this.searchCache.get(query));
+            this.showResults(this.searchCache.get(query), input);
             return;
         }
 
         try {
-            const response = await fetch(`/api/tournaments/search?q=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/tournaments/search?q=${encodeURIComponent(query)}&limit=10`);
+            if (!response.ok) throw new Error('Search failed');
+
             const results = await response.json();
-
-            // Cache results
+            
+            // Сохранить в кэш
             this.searchCache.set(query, results);
+            
+            // Показать результаты
+            this.showResults(results, input);
 
-            this.displayResults(results);
+            // Отследить поиск
+            if (window.analyticsTracker) {
+                window.analyticsTracker.track('search', { query, results_count: results.length });
+            }
         } catch (error) {
             console.error('Search error:', error);
-            if (window.toast) {
-                window.toast.error('Ошибка поиска');
-            }
+            this.showError(input);
         }
     }
 
-    displayResults(results) {
-        const autocomplete = document.getElementById('searchAutocomplete');
-        if (!autocomplete) return;
+    /**
+     * Показать результаты поиска
+     */
+    showResults(results, input) {
+        const dropdown = input.nextElementSibling;
+        if (!dropdown) return;
+
+        const content = dropdown.querySelector('.search-dropdown-content');
+        if (!content) return;
 
         if (results.length === 0) {
-            autocomplete.innerHTML = `
-                <div style="padding: 1rem; text-align: center; color: var(--text-secondary);">
-                    <i class="bi bi-search"></i> Ничего не найдено
+            content.innerHTML = `
+                <div class="search-dropdown-empty">
+                    <i class="bi bi-search"></i>
+                    <p>Ничего не найдено</p>
+                    <small>Попробуйте изменить запрос</small>
                 </div>
             `;
-            autocomplete.style.display = 'block';
-            return;
+        } else {
+            content.innerHTML = `
+                <div class="search-dropdown-header">
+                    <span>Найдено турниров: ${results.length}</span>
+                </div>
+                ${results.map((tournament, index) => `
+                    <div class="search-dropdown-item" data-index="${index}" data-tournament-id="${tournament.id}">
+                        <div class="search-item-icon">
+                            <i class="bi bi-trophy"></i>
+                        </div>
+                        <div class="search-item-content">
+                            <div class="search-item-title">${this.highlightQuery(tournament.name, this.currentQuery)}</div>
+                            <div class="search-item-meta">
+                                <span><i class="bi bi-geo-alt"></i> ${tournament.location}</span>
+                                <span><i class="bi bi-calendar"></i> ${this.formatDate(tournament.start_date)}</span>
+                            </div>
+                        </div>
+                        <div class="search-item-badge">
+                            <span class="badge bg-${this.getStatusColor(tournament.status)}">${tournament.status}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+
+            // Обработчики кликов
+            content.querySelectorAll('.search-dropdown-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const tournamentId = item.dataset.tournamentId;
+                    this.selectResult(tournamentId, input);
+                });
+            });
         }
 
-        autocomplete.innerHTML = `
-            <div style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--text-secondary);">
-                Найдено: ${results.length}
-            </div>
-            ${results.map((result, index) => `
-                <div class="autocomplete-item" data-index="${index}" 
-                     onclick="advancedSearch.selectResult(${result.id})"
-                     style="
-                         padding: 1rem;
-                         cursor: pointer;
-                         border-bottom: 1px solid var(--border-color);
-                         transition: background 0.2s;
-                     "
-                     onmouseover="this.style.background='var(--bg-secondary)'"
-                     onmouseout="this.style.background='transparent'">
-                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">
-                        ${this.highlightMatch(result.name, document.getElementById('searchInput').value)}
-                    </div>
-                    <div style="font-size: 0.875rem; color: var(--text-secondary);">
-                        <i class="bi bi-geo-alt"></i> ${result.location}
-                        <span style="margin-left: 1rem;">
-                            <i class="bi bi-calendar"></i> ${this.formatDate(result.start_date)}
-                        </span>
-                    </div>
-                    ${result.category ? `<span class="badge bg-primary mt-1">${result.category}</span>` : ''}
-                </div>
-            `).join('')}
-        `;
-
-        autocomplete.style.display = 'block';
+        dropdown.classList.add('active');
     }
 
-    showSearchHistory() {
-        const autocomplete = document.getElementById('searchAutocomplete');
-        if (!autocomplete || this.searchHistory.length === 0) return;
+    /**
+     * Показать историю поиска
+     */
+    showSearchHistory(input) {
+        if (this.searchHistory.length === 0) return;
 
-        autocomplete.innerHTML = `
-            <div style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center;">
-                <span><i class="bi bi-clock-history"></i> История поиска</span>
-                <button class="btn btn-sm btn-link" onclick="advancedSearch.clearHistory()" style="padding: 0;">
+        const dropdown = input.nextElementSibling;
+        if (!dropdown) return;
+
+        const content = dropdown.querySelector('.search-dropdown-content');
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="search-dropdown-header">
+                <span>История поиска</span>
+                <button class="btn-link-sm" onclick="window.advancedSearch.clearHistory()">
                     Очистить
                 </button>
             </div>
-            ${this.searchHistory.map(item => `
-                <div class="autocomplete-item" 
-                     onclick="advancedSearch.searchFromHistory('${item.query}')"
-                     style="
-                         padding: 1rem;
-                         cursor: pointer;
-                         border-bottom: 1px solid var(--border-color);
-                         transition: background 0.2s;
-                         display: flex;
-                         justify-content: space-between;
-                         align-items: center;
-                     "
-                     onmouseover="this.style.background='var(--bg-secondary)'"
-                     onmouseout="this.style.background='transparent'">
-                    <span style="color: var(--text-primary);">
-                        <i class="bi bi-search"></i> ${item.query}
-                    </span>
-                    <small style="color: var(--text-secondary);">
-                        ${this.formatRelativeTime(item.timestamp)}
-                    </small>
+            ${this.searchHistory.slice(0, 10).map((item, index) => `
+                <div class="search-dropdown-item search-history-item" data-index="${index}">
+                    <div class="search-item-icon">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div class="search-item-content">
+                        <div class="search-item-title">${item.query}</div>
+                        <div class="search-item-meta">
+                            <small>${this.formatTimeAgo(item.timestamp)}</small>
+                        </div>
+                    </div>
+                    <button class="btn-icon-sm" onclick="window.advancedSearch.removeFromHistory(${index}); event.stopPropagation();">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
             `).join('')}
         `;
 
-        autocomplete.style.display = 'block';
-    }
-
-    selectResult(tournamentId) {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            this.addToHistory(searchInput.value);
-        }
-
-        window.location.href = `/tournament/${tournamentId}`;
-    }
-
-    searchFromHistory(query) {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.value = query;
-            this.handleSearch(query);
-        }
-    }
-
-    clearHistory() {
-        this.searchHistory = [];
-        this.saveSearchHistory();
-        
-        const autocomplete = document.getElementById('searchAutocomplete');
-        if (autocomplete) {
-            autocomplete.style.display = 'none';
-        }
-
-        if (window.toast) {
-            window.toast.success('История поиска очищена');
-        }
-    }
-
-    handleKeyboardNavigation(e) {
-        const autocomplete = document.getElementById('searchAutocomplete');
-        if (!autocomplete || autocomplete.style.display === 'none') return;
-
-        const items = autocomplete.querySelectorAll('.autocomplete-item');
-        if (items.length === 0) return;
-
-        const currentIndex = Array.from(items).findIndex(item => 
-            item.style.background === 'var(--bg-secondary)'
-        );
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
-            this.highlightItem(items, nextIndex);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
-            this.highlightItem(items, prevIndex);
-        } else if (e.key === 'Enter' && currentIndex >= 0) {
-            e.preventDefault();
-            items[currentIndex].click();
-        } else if (e.key === 'Escape') {
-            autocomplete.style.display = 'none';
-        }
-    }
-
-    highlightItem(items, index) {
-        items.forEach((item, i) => {
-            item.style.background = i === index ? 'var(--bg-secondary)' : 'transparent';
+        // Обработчики кликов
+        content.querySelectorAll('.search-history-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const index = parseInt(item.dataset.index);
+                const historyItem = this.searchHistory[index];
+                input.value = historyItem.query;
+                this.handleSearchInput(input);
+            });
         });
+
+        dropdown.classList.add('active');
     }
 
-    highlightMatch(text, query) {
-        const regex = new RegExp(`(${query})`, 'gi');
-        return text.replace(regex, '<mark style="background: var(--warning-color); padding: 0.1rem 0.2rem; border-radius: 3px;">$1</mark>');
-    }
+    /**
+     * Показать ошибку
+     */
+    showError(input) {
+        const dropdown = input.nextElementSibling;
+        if (!dropdown) return;
 
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    }
+        const content = dropdown.querySelector('.search-dropdown-content');
+        if (!content) return;
 
-    formatRelativeTime(timestamp) {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now - date;
-        const minutes = Math.floor(diff / 60000);
-        const hours = Math.floor(diff / 3600000);
-        const days = Math.floor(diff / 86400000);
-
-        if (minutes < 1) return 'только что';
-        if (minutes < 60) return `${minutes} мин назад`;
-        if (hours < 24) return `${hours} ч назад`;
-        if (days < 7) return `${days} дн назад`;
-        return date.toLocaleDateString('ru-RU');
-    }
-
-    createAdvancedSearchModal() {
-        // Modal will be created on demand
-    }
-
-    showAdvancedSearchModal() {
-        const existingModal = document.getElementById('advancedSearchModal');
-        if (existingModal) existingModal.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'advancedSearchModal';
-        modal.className = 'modal fade';
-        modal.innerHTML = `
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="bi bi-sliders"></i> Расширенный поиск
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="advancedSearchForm">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Название турнира</label>
-                                    <input type="text" class="form-control" name="name" placeholder="Введите название...">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Город</label>
-                                    <input type="text" class="form-control" name="location" placeholder="Москва, Санкт-Петербург...">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Категория</label>
-                                    <select class="form-select" name="category">
-                                        <option value="">Все категории</option>
-                                        <option value="Блиц">Блиц</option>
-                                        <option value="Рапид">Рапид</option>
-                                        <option value="Классика">Классика</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Статус</label>
-                                    <select class="form-select" name="status">
-                                        <option value="">Все статусы</option>
-                                        <option value="upcoming">Предстоящие</option>
-                                        <option value="ongoing">Идут сейчас</option>
-                                        <option value="completed">Завершенные</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Дата от</label>
-                                    <input type="date" class="form-control" name="dateFrom">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Дата до</label>
-                                    <input type="date" class="form-control" name="dateTo">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Призовой фонд от</label>
-                                    <input type="number" class="form-control" name="prizeMin" placeholder="0">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Организатор</label>
-                                    <input type="text" class="form-control" name="organizer" placeholder="Название организации...">
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="advancedSearch.resetAdvancedSearch()">
-                            Сбросить
-                        </button>
-                        <button type="button" class="btn btn-primary" onclick="advancedSearch.performAdvancedSearch()">
-                            <i class="bi bi-search"></i> Найти
-                        </button>
-                    </div>
-                </div>
+        content.innerHTML = `
+            <div class="search-dropdown-empty">
+                <i class="bi bi-exclamation-triangle text-danger"></i>
+                <p>Ошибка поиска</p>
+                <small>Попробуйте позже</small>
             </div>
         `;
 
-        document.body.appendChild(modal);
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
+        dropdown.classList.add('active');
     }
 
-    resetAdvancedSearch() {
-        document.getElementById('advancedSearchForm').reset();
+    /**
+     * Скрыть dropdown
+     */
+    hideDropdown(input) {
+        const dropdown = input.nextElementSibling;
+        if (dropdown) {
+            dropdown.classList.remove('active');
+        }
     }
 
-    performAdvancedSearch() {
-        const form = document.getElementById('advancedSearchForm');
-        const formData = new FormData(form);
-        const params = new URLSearchParams();
+    /**
+     * Выбрать результат
+     */
+    selectResult(tournamentId, input) {
+        // Добавить в историю
+        this.addToHistory(this.currentQuery);
 
-        for (const [key, value] of formData.entries()) {
-            if (value) {
-                params.append(key, value);
+        // Перейти на страницу турнира
+        window.location.href = `/tournament/${tournamentId}`;
+    }
+
+    /**
+     * Добавить в историю поиска
+     */
+    addToHistory(query) {
+        if (!query || query.length < 2) return;
+
+        // Удалить дубликаты
+        this.searchHistory = this.searchHistory.filter(item => item.query !== query);
+
+        // Добавить в начало
+        this.searchHistory.unshift({
+            query: query,
+            timestamp: Date.now()
+        });
+
+        this.saveSearchHistory();
+    }
+
+    /**
+     * Удалить из истории
+     */
+    removeFromHistory(index) {
+        this.searchHistory.splice(index, 1);
+        this.saveSearchHistory();
+        
+        // Обновить отображение
+        const input = document.querySelector('#navbarSearchInput, #mobileSearchInput');
+        if (input && !input.value) {
+            this.showSearchHistory(input);
+        }
+    }
+
+    /**
+     * Очистить историю
+     */
+    clearHistory() {
+        if (!confirm('Очистить всю историю поиска?')) return;
+
+        this.searchHistory = [];
+        this.saveSearchHistory();
+
+        // Скрыть dropdown
+        document.querySelectorAll('.search-dropdown').forEach(dropdown => {
+            dropdown.classList.remove('active');
+        });
+
+        if (window.notificationSystem) {
+            window.notificationSystem.show('История поиска очищена', 'success');
+        }
+    }
+
+    /**
+     * Обработка навигации клавишами
+     */
+    handleKeyNavigation(e, input) {
+        const dropdown = input.nextElementSibling;
+        if (!dropdown || !dropdown.classList.contains('active')) return;
+
+        const items = dropdown.querySelectorAll('.search-dropdown-item');
+        if (items.length === 0) return;
+
+        let currentIndex = -1;
+        items.forEach((item, index) => {
+            if (item.classList.contains('active')) {
+                currentIndex = index;
             }
+        });
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                currentIndex = (currentIndex + 1) % items.length;
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                currentIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (currentIndex >= 0) {
+                    items[currentIndex].click();
+                }
+                return;
+            case 'Escape':
+                this.hideDropdown(input);
+                return;
+            default:
+                return;
         }
 
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('advancedSearchModal'));
-        if (modal) modal.hide();
+        // Обновить активный элемент
+        items.forEach((item, index) => {
+            item.classList.toggle('active', index === currentIndex);
+        });
 
-        // Redirect to search results
-        window.location.href = `/?${params.toString()}`;
+        // Прокрутить к активному элементу
+        if (currentIndex >= 0) {
+            items[currentIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    /**
+     * Подсветить запрос в тексте
+     */
+    highlightQuery(text, query) {
+        if (!query) return text;
+        
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    /**
+     * Форматировать дату
+     */
+    formatDate(dateString) {
+        if (!dateString) return 'Не указана';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    /**
+     * Форматировать время назад
+     */
+    formatTimeAgo(timestamp) {
+        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+        
+        if (seconds < 60) return 'только что';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)} мин назад`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)} ч назад`;
+        if (seconds < 604800) return `${Math.floor(seconds / 86400)} дн назад`;
+        
+        return new Date(timestamp).toLocaleDateString('ru-RU');
+    }
+
+    /**
+     * Получить цвет статуса
+     */
+    getStatusColor(status) {
+        const colors = {
+            'Scheduled': 'primary',
+            'Ongoing': 'warning',
+            'Completed': 'success',
+            'Cancelled': 'danger'
+        };
+        return colors[status] || 'secondary';
+    }
+
+    /**
+     * Очистить кэш
+     */
+    clearCache() {
+        this.searchCache.clear();
     }
 }
 
-// Initialize
-const advancedSearch = new AdvancedSearch();
+// CSS стили
+const style = document.createElement('style');
+style.textContent = `
+    .search-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        max-height: 500px;
+        overflow-y: auto;
+        z-index: 1000;
+        opacity: 0;
+        transform: translateY(-10px);
+        pointer-events: none;
+        transition: all 0.2s ease;
+    }
 
-// Export for use in other scripts
-window.advancedSearch = advancedSearch;
+    .search-dropdown.active {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: all;
+    }
+
+    .search-dropdown-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .search-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .search-dropdown-item:hover,
+    .search-dropdown-item.active {
+        background: var(--bg-secondary);
+    }
+
+    .search-item-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-secondary);
+        border-radius: 10px;
+        font-size: 1.25rem;
+        color: var(--primary-color);
+        flex-shrink: 0;
+    }
+
+    .search-item-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .search-item-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .search-item-title mark {
+        background: var(--warning-color);
+        color: var(--dark-color);
+        padding: 0.1rem 0.2rem;
+        border-radius: 3px;
+    }
+
+    .search-item-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .search-item-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .search-item-badge {
+        flex-shrink: 0;
+    }
+
+    .search-dropdown-empty {
+        padding: 3rem 1rem;
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    .search-dropdown-empty i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .search-dropdown-empty p {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-link-sm {
+        padding: 0;
+        border: none;
+        background: none;
+        color: var(--primary-color);
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+    }
+
+    .btn-link-sm:hover {
+        opacity: 0.7;
+    }
+
+    .navbar-search-clear {
+        display: none;
+    }
+
+    /* Скроллбар для dropdown */
+    .search-dropdown::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .search-dropdown::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+    }
+
+    .search-dropdown::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 3px;
+    }
+
+    .search-dropdown::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
+    }
+`;
+document.head.appendChild(style);
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+    window.advancedSearch = new AdvancedSearch();
+    console.log('[Advanced Search] Initialized');
+});
+
+// Экспорт
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = AdvancedSearch;
+}

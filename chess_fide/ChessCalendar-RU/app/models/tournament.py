@@ -26,6 +26,9 @@ class Tournament(db.Model):
     prize_fund_usd = db.Column(db.Integer, nullable=True)  # Призовой фонд в долларах США
     players_count = db.Column(db.Integer, nullable=True)  # Количество участников
     time_control = db.Column(db.String(50), nullable=True)  # Контроль времени (Classical, Rapid, Blitz)
+    view_count = db.Column(db.Integer, default=0, nullable=False)  # Счетчик просмотров
+    participants_count = db.Column(db.Integer, nullable=True)  # Количество зарегистрированных участников
+    rating_type = db.Column(db.String(50), nullable=True)  # Тип рейтинга (FIDE, National, etc.)
     
     # Composite indexes for common query patterns
     __table_args__ = (
@@ -44,6 +47,9 @@ class Tournament(db.Model):
         db.Index('idx_prize_fund_usd', 'prize_fund_usd'),
         db.Index('idx_players_count', 'players_count'),
         db.Index('idx_time_control', 'time_control'),
+        db.Index('idx_view_count', 'view_count'),
+        db.Index('idx_participants_count', 'participants_count'),
+        db.Index('idx_rating_type', 'rating_type'),
         # Дополнительные индексы для оптимизации производительности
         db.Index('idx_status_start_date', 'status', 'start_date'),  # Для запросов по статусу и дате начала
         db.Index('idx_location_status', 'location', 'status'),  # Для запросов по местоположению и статусу
@@ -73,6 +79,9 @@ class Tournament(db.Model):
             'prize_fund_usd': self.prize_fund_usd,
             'players_count': self.players_count,
             'time_control': self.time_control,
+            'view_count': self.view_count or 0,
+            'participants_count': self.participants_count,
+            'rating_type': self.rating_type,
             'average_rating': avg_rating['average_rating'],
             'total_ratings': avg_rating['total_ratings']
         }

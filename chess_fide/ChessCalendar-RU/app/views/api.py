@@ -738,7 +738,7 @@ def get_collaborative_recommendations(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-@api_bp.route('/analytics', methods=['POST'])
+@api_bp.route('/analytics/track', methods=['POST'])
 def track_analytics():
     """Track analytics events from frontend"""
     try:
@@ -749,21 +749,36 @@ def track_analytics():
         
         events = data.get('events', [])
         session_id = data.get('session_id')
+        user_id = data.get('user_id', 'anonymous')
         
-        # Log analytics events (in production, save to database or analytics service)
+        # Log analytics events
         from app.utils.logger import logger
         
         for event in events:
-            logger.info(f"Analytics: {event.get('event')} - Session: {session_id}", extra={
-                'event_type': event.get('event'),
+            event_type = event.get('event')
+            timestamp = event.get('timestamp')
+            
+            logger.info(f"Analytics: {event_type} - User: {user_id} - Session: {session_id}", extra={
+                'event_type': event_type,
                 'session_id': session_id,
+                'user_id': user_id,
+                'timestamp': timestamp,
                 'event_data': event
             })
-        
-        # In production, you might want to:
-        # 1. Save to a dedicated analytics database
-        # 2. Send to analytics service (Google Analytics, Mixpanel, etc.)
-        # 3. Process for real-time dashboards
+            
+            # Специальная обработка для важных событий
+            if event_type == 'tournament_view':
+                # Увеличиваем счетчик просмотров
+                tournament_id = event.get('tournament_id')
+                if tournament_id:
+                    try:
+                        from app.models.tournament import Tournament
+                        tournament = Tournament.query.get(tournament_id)
+                        if tournament and hasattr(tournament, 'view_count'):
+                            tournament.view_count = (tournament.view_count or 0) + 1
+                            db.session.commit()
+                    except Exception:
+                        pass
         
         return jsonify({
             'success': True,
@@ -774,6 +789,100 @@ def track_analytics():
         from app.utils.logger import logger
         logger.error(f"Analytics tracking error: {str(e)}")
         return jsonify({'error': 'Failed to track analytics'}), 500
+
+
+@api_bp.route('/analytics/summary', methods=['GET'])
+@track_performance()
+def get_analytics_summary():
+    """Get analytics summary for dashboard"""
+    try:
+        from datetime import datetime, timedelta
+        from app.models.preference import UserInteraction
+        
+        # Get time period from query params
+        period = request.args.get('period', 'week')  # today, week, month, all
+        
+        # Calculate date range
+        now = datetime.utcnow()
+        if period == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif period == 'week':
+            start_date = now - timedelta(days=7)
+        elif period == 'month':
+            start_date = now - timedelta(days=30)
+        else:  # all
+            start_date = datetime(2020, 1, 1)
+        
+        # Get interaction statistics
+        total_interactions = UserInteraction.query.filter(
+            UserInteraction.created_at >= start_date
+        ).count()
+        
+        # Get unique users count
+        unique_users = db.session.query(
+            db.func.count(db.distinct(UserInteraction.user_id))
+        ).filter(
+            UserInteraction.created_at >= start_date
+        ).scalar() or 0
+        
+        # Get tournament views
+        tournament_views = UserInteraction.query.filter(
+            UserInteraction.created_at >= start_date,
+            UserInteraction.interaction_type == 'view'
+        ).count()
+        
+        # Get favorite actions
+        favorite_actions = UserInteraction.query.filter(
+            UserInteraction.created_at >= start_date,
+            UserInteraction.interaction_type == 'favorite'
+        ).count()
+        
+        # Get popular tournaments
+        popular_tournaments = db.session.query(
+            Tournament.id,
+            Tournament.name,
+            db.func.count(UserInteraction.id).label('interaction_count')
+        ).join(
+            UserInteraction, Tournament.id == UserInteraction.tournament_id
+        ).filter(
+            UserInteraction.created_at >= start_date
+        ).group_by(
+            Tournament.id, Tournament.name
+        ).order_by(
+            db.func.count(UserInteraction.id).desc()
+        ).limit(10).all()
+        
+        # Get interaction types distribution
+        interaction_types = db.session.query(
+            UserInteraction.interaction_type,
+            db.func.count(UserInteraction.id)
+        ).filter(
+            UserInteraction.created_at >= start_date
+        ).group_by(
+            UserInteraction.interaction_type
+        ).all()
+        
+        return jsonify({
+            'summary': {
+                'total_interactions': total_interactions,
+                'unique_users': unique_users,
+                'tournament_views': tournament_views,
+                'favorite_actions': favorite_actions
+            },
+            'popular_tournaments': [
+                {'id': t.id, 'name': t.name, 'count': t.interaction_count}
+                for t in popular_tournaments
+            ],
+            'interaction_types': dict(interaction_types),
+            'period': period,
+            'start_date': start_date.isoformat(),
+            'end_date': now.isoformat()
+        }), 200
+        
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Analytics summary error: {str(e)}")
+        return jsonify({'error': 'Failed to get analytics summary'}), 500
 
 
 @api_bp.route('/tournaments/search', methods=['GET'])

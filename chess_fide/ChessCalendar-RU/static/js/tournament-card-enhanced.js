@@ -390,3 +390,257 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+
+    /**
+     * Обработка клика по кнопке сравнения
+     */
+    async handleCompareClick(button) {
+        const card = button.closest('[data-tournament-id]');
+        if (!card) return;
+
+        const tournamentId = parseInt(card.dataset.tournamentId);
+        const tournamentName = card.dataset.tournamentName || 'Турнир';
+
+        // Проверяем, есть ли система сравнения
+        if (window.tournamentComparison) {
+            const added = window.tournamentComparison.toggleTournament(tournamentId);
+            
+            // Обновляем кнопку
+            if (added) {
+                button.classList.add('active');
+                this.showToast(`${tournamentName} добавлен в сравнение`, 'success');
+            } else {
+                button.classList.remove('active');
+                this.showToast(`${tournamentName} удален из сравнения`, 'info');
+            }
+
+            // Анимация
+            button.classList.add('animate-pulse');
+            setTimeout(() => button.classList.remove('animate-pulse'), 300);
+        } else {
+            this.showToast('Система сравнения недоступна', 'warning');
+        }
+    }
+
+    /**
+     * Обработка клика по кнопке уведомлений
+     */
+    async handleNotifyClick(button) {
+        const card = button.closest('[data-tournament-id]');
+        if (!card) return;
+
+        const tournamentId = parseInt(card.dataset.tournamentId);
+        const tournamentName = card.dataset.tournamentName || 'Турнир';
+
+        // Проверка авторизации
+        if (!this.getUserId()) {
+            this.showToast('Пожалуйста, войдите в систему', 'warning');
+            return;
+        }
+
+        // Проверяем текущее состояние
+        const isActive = button.classList.contains('active');
+
+        try {
+            // Отправляем запрос на сервер
+            const response = await fetch('/api/notifications', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.getCSRFToken()
+                },
+                body: JSON.stringify({
+                    tournament_id: tournamentId,
+                    action: isActive ? 'disable' : 'enable'
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // Обновляем кнопку
+                button.classList.toggle('active');
+                
+                // Анимация колокольчика
+                button.classList.add('animate-pulse');
+                setTimeout(() => button.classList.remove('animate-pulse'), 300);
+
+                this.showToast(
+                    isActive 
+                        ? `Уведомления для "${tournamentName}" отключены` 
+                        : `Уведомления для "${tournamentName}" включены`,
+                    'success'
+                );
+            } else {
+                throw new Error(data.error || 'Failed to toggle notifications');
+            }
+        } catch (error) {
+            console.error('Error toggling notifications:', error);
+            this.showToast('Ошибка при настройке уведомлений', 'error');
+        }
+    }
+
+    /**
+     * Обновить все обработчики событий для новых кнопок
+     */
+    updateEventListeners() {
+        // Кнопки сравнения
+        document.querySelectorAll('[data-action="compare"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleCompareClick(btn);
+            });
+        });
+
+        // Кнопки уведомлений
+        document.querySelectorAll('[data-action="notify"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleNotifyClick(btn);
+            });
+        });
+    }
+
+    /**
+     * Инициализация состояния кнопок при загрузке
+     */
+    initializeButtonStates() {
+        // Проверяем состояние кнопок сравнения
+        if (window.tournamentComparison) {
+            const comparedIds = window.tournamentComparison.getComparedTournaments();
+            comparedIds.forEach(id => {
+                const button = document.querySelector(`[data-action="compare"][data-tournament-id="${id}"]`);
+                if (button) {
+                    button.classList.add('active');
+                }
+            });
+        }
+
+        // Проверяем состояние уведомлений из localStorage
+        try {
+            const notifications = JSON.parse(localStorage.getItem('tournamentNotifications') || '[]');
+            notifications.forEach(id => {
+                const button = document.querySelector(`[data-action="notify"][data-tournament-id="${id}"]`);
+                if (button) {
+                    button.classList.add('active');
+                }
+            });
+        } catch (error) {
+            console.error('Error loading notification states:', error);
+        }
+    }
+
+    /**
+     * Анимация при наведении на карточку
+     */
+    handleCardHover(card, isHovering) {
+        const actions = card.querySelector('.tournament-card-actions');
+        if (actions) {
+            if (isHovering) {
+                actions.style.opacity = '1';
+            } else {
+                actions.style.opacity = '';
+            }
+        }
+    }
+
+    /**
+     * Показать рейтинг турнира
+     */
+    displayRating(card, rating) {
+        const ratingContainer = card.querySelector('.tournament-rating');
+        if (!ratingContainer) return;
+
+        const stars = Math.round(rating);
+        const starsHTML = Array.from({ length: 5 }, (_, i) => {
+            if (i < stars) {
+                return '<i class="bi bi-star-fill text-warning"></i>';
+            } else {
+                return '<i class="bi bi-star text-muted"></i>';
+            }
+        }).join('');
+
+        ratingContainer.innerHTML = `
+            ${starsHTML}
+            <span class="rating-value">${rating.toFixed(1)}</span>
+        `;
+    }
+
+    /**
+     * Обновить счетчик просмотров
+     */
+    updateViewCount(tournamentId) {
+        const card = document.querySelector(`[data-tournament-id="${tournamentId}"]`);
+        if (!card) return;
+
+        const viewsElement = card.querySelector('.tournament-views span');
+        if (viewsElement) {
+            const currentViews = parseInt(viewsElement.textContent) || 0;
+            viewsElement.textContent = currentViews + 1;
+        }
+    }
+
+    /**
+     * Показать индикатор популярности
+     */
+    showTrendingIndicator(card, viewCount) {
+        if (viewCount > 100 && !card.querySelector('.tournament-card-trending')) {
+            const indicator = document.createElement('div');
+            indicator.className = 'tournament-card-trending';
+            indicator.innerHTML = '<i class="bi bi-fire"></i><span>Популярный</span>';
+            card.appendChild(indicator);
+        }
+    }
+
+    /**
+     * Обновить прогресс-бар для текущих турниров
+     */
+    updateProgressBar(card, startDate, endDate) {
+        const progressContainer = card.querySelector('.tournament-progress');
+        if (!progressContainer) return;
+
+        const now = new Date();
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        const elapsedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+        const progress = Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100));
+
+        const progressBar = progressContainer.querySelector('.progress-bar');
+        const progressText = progressContainer.querySelector('small');
+
+        if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+            progressBar.setAttribute('aria-valuenow', progress);
+        }
+
+        if (progressText) {
+            progressText.textContent = `День ${elapsedDays} из ${totalDays}`;
+        }
+    }
+}
+
+// Обновляем инициализацию при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    const manager = new TournamentCardManager();
+    
+    // Обновляем обработчики для новых кнопок
+    manager.updateEventListeners();
+    
+    // Инициализируем состояние кнопок
+    manager.initializeButtonStates();
+    
+    // Делаем доступным глобально
+    window.tournamentCardManager = manager;
+    
+    console.log('[Tournament Cards] Enhanced functionality initialized');
+});
+
+// Экспорт для использования в других модулях
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = TournamentCardManager;
+}
