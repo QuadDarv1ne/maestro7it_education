@@ -1,0 +1,246 @@
+/**
+ * Feature Cards Component
+ * Карточки функций и возможностей
+ */
+
+.features-section {
+    padding: 4rem 0;
+    background: var(--gray-50);
+}
+
+.features-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.features-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 1rem;
+}
+
+.features-subtitle {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    color: var(--gray-600);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.feature-card {
+    position: relative;
+    background: white;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-600), var(--accent-purple));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover::before {
+    transform: scaleX(1);
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-icon::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--primary-600), var(--accent-purple));
+    opacity: 0.1;
+}
+
+.feature-icon i {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(135deg, var(--primary-600), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.feature-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 1rem;
+}
+
+.feature-description {
+    font-size: 1rem;
+    color: var(--gray-600);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.feature-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-600);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.feature-link:hover {
+    gap: 0.75rem;
+    color: var(--primary-700);
+}
+
+.feature-link i {
+    transition: transform 0.3s ease;
+}
+
+.feature-link:hover i {
+    transform: translateX(4px);
+}
+
+/* Feature Card Variants */
+.feature-card-primary {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+    color: white;
+    border: none;
+}
+
+.feature-card-primary .feature-title,
+.feature-card-primary .feature-description {
+    color: white;
+}
+
+.feature-card-primary .feature-icon::before {
+    background: white;
+    opacity: 0.2;
+}
+
+.feature-card-primary .feature-icon i {
+    background: white;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.feature-card-primary .feature-link {
+    color: white;
+}
+
+/* Compact Feature Cards */
+.feature-card-compact {
+    padding: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.feature-card-compact .feature-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+.feature-card-compact .feature-content {
+    flex: 1;
+}
+
+.feature-card-compact .feature-title {
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+}
+
+.feature-card-compact .feature-description {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}
+
+/* Icon Variants */
+.feature-icon-gradient-1 {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+}
+
+.feature-icon-gradient-2 {
+    background: linear-gradient(135deg, #10b981, #14b8a6);
+}
+
+.feature-icon-gradient-3 {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+}
+
+.feature-icon-gradient-4 {
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .features-section {
+        padding: 3rem 0;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .feature-card {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .features-section {
+        padding: 2rem 0;
+    }
+    
+    .feature-icon {
+        width: 56px;
+        height: 56px;
+        font-size: 1.75rem;
+    }
+    
+    .feature-title {
+        font-size: 1.25rem;
+    }
+    
+    .feature-description {
+        font-size: 0.9375rem;
+    }
+}

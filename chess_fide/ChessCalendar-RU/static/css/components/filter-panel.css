@@ -1,0 +1,390 @@
+/**
+ * Filter Panel Component
+ * Современная панель фильтров
+ */
+
+.filter-panel-modern {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+}
+
+.filter-panel-header-modern {
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, var(--gray-50), white);
+    border-bottom: 2px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filter-panel-title-modern {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.filter-panel-title-modern i {
+    color: var(--primary-600);
+    font-size: 1.25rem;
+}
+
+.filter-panel-toggle-modern {
+    display: none;
+    padding: 0.5rem;
+    background: transparent;
+    border: none;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.filter-panel-toggle-modern:hover {
+    color: var(--primary-600);
+}
+
+.filter-panel-body-modern {
+    padding: 1.5rem;
+}
+
+.filter-group-modern {
+    margin-bottom: 1.5rem;
+}
+
+.filter-group-modern:last-child {
+    margin-bottom: 0;
+}
+
+.filter-label-modern {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    margin-bottom: 0.75rem;
+}
+
+.filter-label-modern i {
+    color: var(--primary-600);
+    font-size: 1rem;
+}
+
+.filter-input-modern {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--gray-900);
+    background: white;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+}
+
+.filter-input-modern:focus {
+    outline: none;
+    border-color: var(--primary-600);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.filter-input-modern::placeholder {
+    color: var(--gray-400);
+}
+
+/* Select with Icon */
+.filter-select-wrapper-modern {
+    position: relative;
+}
+
+.filter-select-wrapper-modern::after {
+    content: '\F282';
+    font-family: 'bootstrap-icons';
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+}
+
+.filter-select-modern {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 2.5rem;
+}
+
+/* Date Range Picker */
+.filter-date-range-modern {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.filter-date-separator-modern {
+    color: var(--gray-400);
+    font-weight: 600;
+}
+
+/* Checkbox Group */
+.filter-checkbox-group-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.filter-checkbox-item-modern {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.filter-checkbox-item-modern:hover {
+    background: var(--gray-50);
+}
+
+.filter-checkbox-modern {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-300);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.filter-checkbox-modern:checked {
+    background: var(--primary-600);
+    border-color: var(--primary-600);
+}
+
+.filter-checkbox-label-modern {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    cursor: pointer;
+}
+
+.filter-checkbox-count-modern {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+/* Radio Group */
+.filter-radio-group-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-radio-item-modern {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.filter-radio-item-modern:hover {
+    border-color: var(--primary-300);
+    background: var(--primary-50);
+}
+
+.filter-radio-item-modern.active {
+    border-color: var(--primary-600);
+    background: var(--primary-50);
+}
+
+.filter-radio-modern {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Range Slider */
+.filter-range-modern {
+    width: 100%;
+}
+
+.filter-range-values-modern {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    font-weight: 600;
+}
+
+/* Tags/Pills */
+.filter-tags-modern {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.filter-tag-modern {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--gray-100);
+    border: 2px solid transparent;
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.filter-tag-modern:hover {
+    background: var(--gray-200);
+}
+
+.filter-tag-modern.active {
+    background: var(--primary-600);
+    color: white;
+    border-color: var(--primary-600);
+}
+
+/* Filter Actions */
+.filter-actions-modern {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.filter-btn-modern {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.filter-btn-apply-modern {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+    color: white;
+}
+
+.filter-btn-apply-modern:hover {
+    background: linear-gradient(135deg, var(--primary-700), var(--primary-800));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+.filter-btn-reset-modern {
+    background: white;
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.filter-btn-reset-modern:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-400);
+}
+
+/* Active Filters Display */
+.active-filters-modern {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    background: var(--primary-50);
+    border-bottom: 1px solid var(--primary-200);
+}
+
+.active-filter-chip-modern {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--primary-300);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary-700);
+}
+
+.active-filter-remove-modern {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: var(--primary-200);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.active-filter-remove-modern:hover {
+    background: var(--error);
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filter-panel-toggle-modern {
+        display: block;
+    }
+    
+    .filter-panel-body-modern {
+        display: none;
+    }
+    
+    .filter-panel-body-modern.show {
+        display: block;
+    }
+    
+    .filter-actions-modern {
+        flex-direction: column;
+    }
+    
+    .filter-btn-modern {
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    .filter-panel-header-modern {
+        padding: 1rem;
+    }
+    
+    .filter-panel-body-modern {
+        padding: 1rem;
+    }
+    
+    .filter-date-range-modern {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-date-separator-modern {
+        display: none;
+    }
+}

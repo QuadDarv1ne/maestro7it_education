@@ -1,0 +1,138 @@
+/**
+ * Toast Notifications Component
+ * Всплывающие уведомления
+ */
+
+.toast-modern {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    min-width: 300px;
+    max-width: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    z-index: 9999;
+    border-left: 4px solid var(--primary-600);
+    transition: all 0.3s ease;
+}
+
+.toast-icon-modern {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.toast-content-modern {
+    flex: 1;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--gray-900);
+}
+
+.toast-close-modern {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.toast-close-modern:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+/* Toast Variants */
+.toast-success {
+    border-left-color: var(--success);
+}
+
+.toast-success .toast-icon-modern {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.toast-error {
+    border-left-color: var(--error);
+}
+
+.toast-error .toast-icon-modern {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.toast-warning {
+    border-left-color: var(--warning);
+}
+
+.toast-warning .toast-icon-modern {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.toast-info {
+    border-left-color: var(--info);
+}
+
+.toast-info .toast-icon-modern {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.animate-slide-out-right {
+    animation: slideOutRight 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .toast-modern {
+        right: 10px;
+        left: 10px;
+        min-width: auto;
+        max-width: none;
+    }
+}

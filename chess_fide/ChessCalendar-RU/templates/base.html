@@ -38,6 +38,29 @@
     <!-- OVERRIDE ALL - МАКСИМАЛЬНЫЙ ПРИОРИТЕТ -->
     <link href="{{ url_for('static', filename='css/override-all.css') }}?v=3" rel="stylesheet">
     
+    <!-- Modern Design System -->
+    <link href="{{ url_for('static', filename='css/modern-design.css') }}" rel="stylesheet">
+    <!-- Modern Components -->
+    <link href="{{ url_for('static', filename='css/components/hero-section.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/feature-cards.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/filter-panel.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/tournament-cards.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/loading-states.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/search-autocomplete.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/modal.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/stats-cards.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/navbar-modern.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/footer-modern.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/toast.css') }}" rel="stylesheet">
+    <!-- Enhanced Components -->
+    <link href="{{ url_for('static', filename='css/components/cards-enhanced.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/buttons-enhanced.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/navigation-enhanced.css') }}" rel="stylesheet">
+    <!-- Utilities -->
+    <link href="{{ url_for('static', filename='css/utilities/animations.css') }}" rel="stylesheet">
+    <!-- Fixes - ВАЖНО: загружается последним для исправления конфликтов -->
+    <link href="{{ url_for('static', filename='css/fixes.css') }}" rel="stylesheet">
+    
     <style>
         :root {
             --primary-color: #2563eb;
@@ -748,6 +771,8 @@
     <!-- Core App JS with Lazy Loading Support -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lazy-loader.js') }}"></script>
+    <!-- Modern UI -->
+    <script src="{{ url_for('static', filename='js/modern-ui.js') }}"></script>
     
     <!-- Feature Scripts - Now handled by lazy loader -->
     <script>
