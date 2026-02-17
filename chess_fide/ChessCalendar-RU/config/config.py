@@ -7,6 +7,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///chess_calendar.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # DEBUG режим (по умолчанию False для безопасности)
+    DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    
     # Настройки пула подключений
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 20,

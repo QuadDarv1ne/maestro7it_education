@@ -10,7 +10,8 @@ import logging
 from sqlalchemy import inspect, text
 from flask import Flask
 
-logger = logging.getLogger(__name__)
+# Используем тот же логгер, что и в приложении
+logger = logging.getLogger('chess_calendar')
 
 
 class DatabaseInitializer:

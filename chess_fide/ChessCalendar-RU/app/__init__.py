@@ -71,6 +71,14 @@ def create_app(config_name='default'):
     # Инициализация расширений
     db.init_app(app)
     
+    # Регистрация обработчиков ошибок
+    try:
+        from app.utils.error_handler import register_error_handlers
+        register_error_handlers(app)
+        logger.info("Error handlers registered")
+    except Exception as e:
+        logger.warning(f"Failed to register error handlers: {e}")
+    
     # Initialize monitoring middleware (v4.0)
     try:
         from app.middleware.monitoring_middleware import monitoring_middleware
@@ -143,9 +151,28 @@ def create_app(config_name='default'):
     except ImportError:
         logger.warning("WebSocket handlers module not available")
     
-    # Создание таблиц
+    # Создание таблиц и автоматическая инициализация БД
     with app.app_context():
         db.create_all()
+        
+        # Автоматическая инициализация и проверка базы данных
+        try:
+            from app.utils.db_init import init_database
+            db_initialized = init_database(app, db)
+            if not db_initialized:
+                logger.error("Failed to initialize database! Application may not work correctly.")
+        except Exception as e:
+            logger.error(f"Critical error during database initialization: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Инициализация health check системы
+        try:
+            from app.utils.health_check import init_health_check
+            init_health_check(app, db)
+            logger.info("Health check system initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize health check: {e}")
     
     # Дополнительные статические маршруты для PWA
     @app.route('/favicon.ico')
@@ -242,17 +269,6 @@ def create_app(config_name='default'):
         response.headers['Expires'] = '0'
         return response
     
-    # Автоматическая инициализация и проверка базы данных
-    try:
-        from app.utils.db_init import init_database
-        db_initialized = init_database(app, db)
-        if not db_initialized:
-            logger.error("Failed to initialize database! Application may not work correctly.")
-    except Exception as e:
-        logger.error(f"Critical error during database initialization: {e}")
-        import traceback
-        traceback.print_exc()
-    
     # Регистрация blueprint'ов
     from app.views.main import main_bp
     from app.views.admin import admin_bp
@@ -260,8 +276,10 @@ def create_app(config_name='default'):
     from app.views.api_docs import api_docs_bp
     from app.views.forum import forum_bp
     from app.views.api import api_bp
+    from app.views.health import health_bp
     
     app.register_blueprint(main_bp)
+    app.register_blueprint(health_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(api_bp)
