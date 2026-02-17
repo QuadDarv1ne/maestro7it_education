@@ -252,12 +252,14 @@ class PredictiveCache:
 def create_predictive_cache():
     """Создать предиктивный кэш"""
     try:
-        from app.utils.advanced_cache import cache_manager
-        return PredictiveCache(cache_manager)
-    except ImportError:
-        # Fallback на простой кэш
-        from app.utils.cache import cache_service
+        from app.utils.unified_cache import cache_service
         return PredictiveCache(cache_service)
+    except ImportError:
+        # Fallback на базовый кэш
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("Could not import unified_cache, predictive cache disabled")
+        return None
 
 
 predictive_cache = create_predictive_cache()  # Инициализация глобального экземпляра предиктивного кэша

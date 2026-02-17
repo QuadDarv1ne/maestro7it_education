@@ -3,7 +3,7 @@
 """
 import pytest
 from datetime import datetime, timedelta
-from app.utils.cache import cache_get, cache_set, cache_delete
+from app.utils.unified_cache import cache_service
 from app.utils.ratings import calculate_average_rating
 from app.utils.recommendations import get_recommendations
 
@@ -16,8 +16,8 @@ class TestCacheUtils:
         key = 'test_key'
         value = {'data': 'test_value'}
         
-        cache_set(key, value, timeout=60)
-        result = cache_get(key)
+        cache_service.set(key, value, timeout=60)
+        result = cache_service.get(key)
         
         assert result == value
     
@@ -28,9 +28,9 @@ class TestCacheUtils:
         key = 'expiring_key'
         value = 'test'
         
-        cache_set(key, value, timeout=1)
+        cache_service.set(key, value, timeout=1)
         time.sleep(2)
-        result = cache_get(key)
+        result = cache_service.get(key)
         
         assert result is None
     
@@ -39,9 +39,9 @@ class TestCacheUtils:
         key = 'delete_key'
         value = 'test'
         
-        cache_set(key, value)
-        cache_delete(key)
-        result = cache_get(key)
+        cache_service.set(key, value)
+        cache_service.delete(key)
+        result = cache_service.get(key)
         
         assert result is None
 

@@ -50,19 +50,19 @@ class TestPerformanceBenchmarks:
     
     def test_cache_performance(self, client):
         """Тест производительности кэша"""
-        from app.utils.cache import cache_manager
+        from app.utils.unified_cache import cache_service
         
         # Тест записи в кэш
         def cache_write():
-            cache_manager.set('test_key', {'data': 'test'}, ttl=60)
+            cache_service.set('test_key', {'data': 'test'}, timeout=60)
         
         write_results = self.measure_time(cache_write, iterations=100)
         
         # Тест чтения из кэша
-        cache_manager.set('test_key', {'data': 'test'}, ttl=60)
+        cache_service.set('test_key', {'data': 'test'}, timeout=60)
         
         def cache_read():
-            value = cache_manager.get('test_key')
+            value = cache_service.get('test_key')
             assert value is not None
         
         read_results = self.measure_time(cache_read, iterations=100)

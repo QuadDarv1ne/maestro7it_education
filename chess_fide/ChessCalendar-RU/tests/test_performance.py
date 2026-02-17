@@ -6,7 +6,7 @@ from app import create_app, db
 from app.models.tournament import Tournament
 from app.models.user import User
 from app.utils.performance_monitor import PerformanceMonitor, perf_monitor
-from app.utils.cache import TournamentCache
+from app.utils.unified_cache import TournamentCache
 
 
 class TestPerformanceMonitoring(unittest.TestCase):

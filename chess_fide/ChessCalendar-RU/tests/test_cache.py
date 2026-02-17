@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from app import create_app, db
 from app.models.tournament import Tournament
-from app.utils.cache import CacheService, TournamentCache, cached
+from app.utils.unified_cache import UnifiedCache, TournamentCache, cached
 from datetime import date
 
 class TestCache(unittest.TestCase):

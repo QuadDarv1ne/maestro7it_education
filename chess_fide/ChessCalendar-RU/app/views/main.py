@@ -219,8 +219,8 @@ def add_tournament():
             )
             
             # Инвалидация кэша
-            from app.utils.cache_manager import TournamentCacheManager
-            TournamentCacheManager.invalidate_tournament_cache(tournament.id)
+            from app.utils.unified_cache import TournamentCache
+            TournamentCache.invalidate_tournament(tournament.id)
             
             # Создание уведомления для администраторов
             # create_notification(

@@ -132,10 +132,10 @@ class TestCacheDecorators:
     
     def test_invalidate_cache_decorator(self):
         """Test @invalidate_cache decorator"""
-        from app.utils.cache_manager import cache_manager
+        from app.utils.unified_cache import cache_service
         
         # Set some cached data
-        cache_manager.set('test:data', 'value', tags=['test'])
+        cache_service.set('test:data', 'value', tags=['test'])
         
         @invalidate_cache(tags=['test'])
         def update_function():
