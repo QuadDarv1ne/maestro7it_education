@@ -6,20 +6,21 @@ from datetime import datetime, timezone
 import json
 import uuid
 import base64
+import os
 
 app = Flask(__name__)
 
 class CalendarService:
     def __init__(self):
         # Конфигурация Google Calendar API
-        self.google_client_id = "your-google-client-id"
-        self.google_client_secret = "your-google-client-secret"
-        self.google_redirect_uri = "http://localhost:5006/callback/google"
+        self.google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+        self.google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+        self.google_redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:5006/callback/google')
         
         # Конфигурация Outlook API
-        self.outlook_client_id = "your-outlook-client-id"
-        self.outlook_client_secret = "your-outlook-client-secret"
-        self.outlook_redirect_uri = "http://localhost:5006/callback/outlook"
+        self.outlook_client_id = os.environ.get('OUTLOOK_CLIENT_ID', '')
+        self.outlook_client_secret = os.environ.get('OUTLOOK_CLIENT_SECRET', '')
+        self.outlook_redirect_uri = os.environ.get('OUTLOOK_REDIRECT_URI', 'http://localhost:5006/callback/outlook')
         
         # Хранилище токенов (в реальном приложении использовать Redis/БД)
         self.tokens = {}

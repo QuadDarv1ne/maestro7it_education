@@ -4,8 +4,7 @@ API endpoints для мониторинга и диагностики
 
 from flask import Blueprint, jsonify, request
 from functools import wraps
-from app.utils.health_checker import health_checker
-from app.utils.advanced_monitoring import performance_monitor
+from app.utils.unified_monitoring import health_checker, performance_monitor
 from app.utils.predictive_cache import predictive_cache
 from app.utils.ab_testing import ab_test_manager
 

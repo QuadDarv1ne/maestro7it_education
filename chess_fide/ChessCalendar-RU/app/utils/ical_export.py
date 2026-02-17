@@ -191,10 +191,10 @@ class ICalExporter:
     @staticmethod
     def export_user_favorites(user_id: int) -> str:
         """Export user's favorite tournaments"""
-        from app.models.favorite import Favorite
+        from app.models.favorite import FavoriteTournament
         from app.models.tournament import Tournament
         
-        favorites = Favorite.query.filter_by(user_id=user_id).all()
+        favorites = FavoriteTournament.query.filter_by(user_id=user_id).all()
         tournaments = [f.tournament for f in favorites if f.tournament]
         
         return ICalExporter.export_tournaments(

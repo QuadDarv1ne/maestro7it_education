@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import logging
+import os
 
 class NotificationService:
     def __init__(self, smtp_server='localhost', smtp_port=587, 
@@ -304,12 +305,12 @@ try:
     
     @socketio.on('connect')
     def handle_connect():
-        print('Client connected')
+        logger.info('Client connected')
         emit('status', {'msg': 'Connected to notification server'})
     
     @socketio.on('disconnect')
     def handle_disconnect():
-        print('Client disconnected')
+        logger.info('Client disconnected')
     
     @socketio.on('join')
     def on_join(data):

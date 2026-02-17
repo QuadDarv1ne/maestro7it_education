@@ -4,9 +4,9 @@ Celery задачи для парсинга турниров
 from app.celery_app import celery_app
 from app import create_app, db
 from app.models.tournament import Tournament
-from app.utils.fide_parser import FIDEParser
+from app.utils.fide_parser import FIDEParses as FIDEParser
 from app.utils.cfr_parser import CFRParser
-from app.utils.cache_manager import TournamentCacheManager
+from app.utils.unified_cache import TournamentCache
 from app.utils.metrics import track_celery_task
 from datetime import datetime
 import logging
@@ -26,7 +26,7 @@ def parse_fide_tournaments(self):
         try:
             logger.info("Starting FIDE tournament parsing")
             parser = FIDEParser()
-            tournaments = parser.parse_tournaments()
+            tournaments = parser.get_tournaments_russia()
             
             added_count = 0
             updated_count = 0
@@ -81,7 +81,7 @@ def parse_cfr_tournaments(self):
         try:
             logger.info("Starting CFR tournament parsing")
             parser = CFRParser()
-            tournaments = parser.parse_tournaments()
+            tournaments = parser.get_tournaments()
             
             added_count = 0
             updated_count = 0

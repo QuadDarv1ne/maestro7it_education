@@ -98,7 +98,7 @@ class SecurityMiddleware:
                 for pattern in self.suspicious_patterns:
                     if re.search(pattern, data, re.IGNORECASE):
                         return True
-            except:
+            except (ValueError, TypeError, AttributeError):
                 pass
         
         return False

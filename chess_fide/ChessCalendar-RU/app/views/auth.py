@@ -9,7 +9,7 @@ from app.utils.security import (
     PasswordManager, RateLimiter, JWTManager, TwoFactorAuth,
     AuditLogger, rate_limit, require_auth, require_admin
 )
-from app.utils.cache_manager import cache_manager
+from app.utils.unified_cache import cache
 from datetime import datetime, timedelta
 import logging
 
@@ -60,9 +60,9 @@ def register():
     user = User(
         username=username,
         email=email,
-        is_active=True
+        password=password
     )
-    user.set_password(password)
+    user.is_active = True
     
     db.session.add(user)
     db.session.commit()

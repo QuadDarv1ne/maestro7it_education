@@ -381,7 +381,7 @@ class SecurityMiddleware:
         if request.is_json:
             try:
                 request_data.update(request.get_json())
-            except:
+            except (ValueError, TypeError, AttributeError):
                 pass
         
         # Сканируем

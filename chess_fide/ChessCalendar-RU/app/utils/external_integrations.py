@@ -21,7 +21,7 @@ class TelegramIntegration:
         try:
             from config.config import Config
             return getattr(Config, 'TELEGRAM_BOT_TOKEN', '')
-        except:
+        except (ImportError, AttributeError):
             return ''
     
     def send_message(
@@ -110,7 +110,7 @@ class SlackIntegration:
         try:
             from config.config import Config
             return getattr(Config, 'SLACK_WEBHOOK_URL', '')
-        except:
+        except (ImportError, AttributeError):
             return ''
     
     def send_message(
@@ -251,7 +251,7 @@ class DiscordIntegration:
         try:
             from config.config import Config
             return getattr(Config, 'DISCORD_WEBHOOK_URL', '')
-        except:
+        except (ImportError, AttributeError):
             return ''
     
     def send_message(
@@ -405,7 +405,8 @@ class IntegrationManager:
                     results['telegram'] = self.telegram.send_tournament_notification(
                         chat_id, tournament
                     )
-            except:
+            except Exception as e:
+                logger.error(f"Failed to send Telegram notification: {e}")
                 results['telegram'] = {'error': 'Channel ID not configured'}
         
         if 'slack' in channels and 'slack' in self.enabled_integrations:

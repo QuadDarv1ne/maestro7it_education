@@ -4,8 +4,8 @@ from app.models.tournament import Tournament
 from app.models.user import User
 from app.utils.analytics import analytics_service
 from app.utils.notifications import notification_service
-from app.utils.cache import cache_service, TournamentCache
-from app.utils.monitoring import health_checker, performance_monitor
+from app.utils.unified_cache import cache, TournamentCache
+from app.utils.unified_monitoring import health_checker, performance_monitor
 from datetime import datetime
 import json
 import csv

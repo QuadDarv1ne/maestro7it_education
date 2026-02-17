@@ -320,3 +320,144 @@
     });
     
 })();
+
+
+// ============================================
+// CARD BUTTONS FUNCTIONALITY
+// ============================================
+function initCardButtons() {
+    // Favorite buttons - integrated with FavoritesManager
+    document.querySelectorAll('.card-favorite-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const tournamentId = this.getAttribute('data-tournament-id');
+            
+            if (window.favoritesManager) {
+                const isActive = window.favoritesManager.toggle(tournamentId);
+                const icon = this.querySelector('i');
+                
+                if (isActive) {
+                    this.classList.add('active');
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill');
+                    window.showToast('Добавлено в избранное', 'success', 2000);
+                } else {
+                    this.classList.remove('active');
+                    icon.classList.remove('bi-heart-fill');
+                    icon.classList.add('bi-heart');
+                    window.showToast('Удалено из избранного', 'info', 2000);
+                }
+                
+                // Update favorites count
+                if (window.updateFavoritesCount) {
+                    window.updateFavoritesCount();
+                }
+            }
+        });
+    });
+    
+    // Quick action buttons - integrated with managers
+    document.querySelectorAll('.quick-action-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const action = this.getAttribute('data-action');
+            const card = this.closest('.tournament-card-modern');
+            const tournamentId = card.querySelector('.card-favorite-btn')?.getAttribute('data-tournament-id');
+            const title = card.querySelector('.tournament-card-title')?.textContent || 'Турнир';
+            
+            switch(action) {
+                case 'share':
+                    await handleShare(card, title);
+                    break;
+                case 'export':
+                    handleExport(card, tournamentId, title);
+                    break;
+                case 'notify':
+                    handleNotify(card, tournamentId, title);
+                    break;
+            }
+        });
+    });
+}
+
+// Handle share action - integrated with ShareManager
+async function handleShare(card, title) {
+    if (window.shareManager) {
+        const tournament = extractTournamentData(card);
+        const result = await window.shareManager.share(tournament);
+        
+        if (result.success && result.method === 'native') {
+            window.showToast('Успешно поделились', 'success', 2000);
+        }
+    }
+}
+
+// Handle export to calendar - integrated with CalendarExporter
+function handleExport(card, tournamentId, title) {
+    if (window.calendarExporter) {
+        const tournament = extractTournamentData(card);
+        window.calendarExporter.exportToICS(tournament);
+        window.showToast('Файл календаря загружен', 'success', 2000);
+    } else {
+        window.showToast('Экспорт в календарь...', 'info', 2000);
+    }
+}
+
+// Handle notification - integrated with NotificationsManager
+async function handleNotify(card, tournamentId, title) {
+    if (window.notificationsManager) {
+        const tournament = extractTournamentData(card);
+        const enabled = await window.notificationsManager.enable(
+            tournamentId,
+            tournament.name,
+            tournament.startDate
+        );
+        
+        if (enabled) {
+            window.showToast('Уведомление включено для: ' + title, 'success', 3000);
+        } else {
+            window.showToast('Разрешите уведомления в настройках браузера', 'warning', 3000);
+        }
+    }
+}
+
+// Extract tournament data from card
+function extractTournamentData(card) {
+    const title = card.querySelector('.tournament-card-title')?.textContent || 'Турнир';
+    const location = card.querySelector('.tournament-info-value')?.textContent || '';
+    const dateText = card.querySelector('.tournament-info-item .tournament-info-value')?.textContent || '';
+    const description = card.querySelector('.tournament-description')?.textContent || '';
+    const tournamentId = card.querySelector('.card-favorite-btn')?.getAttribute('data-tournament-id') || '';
+    
+    // Parse dates from text (format: DD.MM.YYYY - DD.MM.YYYY)
+    const dates = dateText.split(' - ');
+    const startDate = dates[0] ? parseRussianDate(dates[0].trim()) : new Date();
+    const endDate = dates[1] ? parseRussianDate(dates[1].trim()) : new Date();
+    
+    return {
+        id: tournamentId,
+        name: title,
+        location: location,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        description: description
+    };
+}
+
+// Parse Russian date format (DD.MM.YYYY)
+function parseRussianDate(dateStr) {
+    const parts = dateStr.split('.');
+    if (parts.length === 3) {
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+    return new Date();
+}
+
+// Initialize card buttons on page load
+document.addEventListener('DOMContentLoaded', () => {
+    initCardButtons();
+});

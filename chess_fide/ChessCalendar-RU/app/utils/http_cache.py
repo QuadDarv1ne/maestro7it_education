@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def generate_etag(data: str) -> str:
     """Генерация ETag из данных"""
-    return hashlib.md5(data.encode('utf-8')).hexdigest()
+    return hashlib.md5(data.encode('utf-8'), usedforsecurity=False).hexdigest()  # nosec B324
 
 
 def etag_cache(timeout: int = 300, vary_on: Optional[list] = None):
@@ -240,13 +240,13 @@ def cached_view(timeout: int = 300, key_prefix: str = 'view'):
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from app.utils.cache_manager import cache_manager
+            from app.utils.unified_cache import cache
             
             # Генерируем ключ кэша
             cache_key = cache_key_from_request(key_prefix)
             
             # Проверяем кэш
-            cached_response = cache_manager.get(cache_key)
+            cached_response = cache.get(cache_key)
             if cached_response:
                 logger.debug(f"View cache hit: {cache_key}")
                 return cached_response
@@ -261,7 +261,7 @@ def cached_view(timeout: int = 300, key_prefix: str = 'view'):
                 status_code = 200
             
             if status_code == 200:
-                cache_manager.set(cache_key, response, timeout)
+                cache.set(cache_key, response, timeout)
                 logger.debug(f"View cached: {cache_key}")
             
             return response
@@ -277,10 +277,10 @@ def invalidate_view_cache(path_pattern: str):
     Args:
         path_pattern: Паттерн пути (например, '/api/tournaments/*')
     """
-    from app.utils.cache_manager import cache_manager
+    from app.utils.unified_cache import cache
     
     pattern = f"view:{path_pattern}"
-    cache_manager.invalidate_by_pattern(pattern)
+    cache.invalidate_by_pattern(pattern)
     logger.info(f"View cache invalidated: {path_pattern}")
 
 

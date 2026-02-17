@@ -1,0 +1,186 @@
+/**
+ * Share Modal Component
+ * Модальное окно для шаринга турниров
+ */
+
+.share-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.share-modal {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.share-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.share-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.share-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.share-modal-close:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.share-modal-body {
+    padding: 1.5rem;
+}
+
+.share-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+.share-option {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.share-option:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.share-option i {
+    font-size: 2rem;
+}
+
+.share-option span {
+    font-size: 0.875rem;
+}
+
+/* Specific colors for social networks */
+.share-option[data-method="telegram"]:hover {
+    background: #0088cc;
+    border-color: #0088cc;
+}
+
+.share-option[data-method="whatsapp"]:hover {
+    background: #25d366;
+    border-color: #25d366;
+}
+
+.share-option[data-method="vk"]:hover {
+    background: #0077ff;
+    border-color: #0077ff;
+}
+
+.share-option[data-method="email"]:hover {
+    background: #ea4335;
+    border-color: #ea4335;
+}
+
+.share-option[data-method="copy"]:hover {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .share-modal-overlay {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+    .share-modal {
+        width: 95%;
+        max-width: none;
+    }
+    
+    .share-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .share-modal-header {
+        padding: 1rem;
+    }
+    
+    .share-modal-body {
+        padding: 1rem;
+    }
+    
+    .share-option {
+        padding: 1rem 0.75rem;
+    }
+    
+    .share-option i {
+        font-size: 1.75rem;
+    }
+}

@@ -1,0 +1,168 @@
+<footer class="footer-enhanced">
+    <div class="container">
+        <div class="footer-grid">
+            <!-- About Column -->
+            <div class="footer-column footer-about">
+                <h3>
+                    <i class="bi bi-trophy-fill"></i>
+                    ChessCalendar-RU
+                </h3>
+                <p>
+                    Крупнейшая база шахматных турниров России и мира. Мы помогаем шахматистам 
+                    находить турниры, следить за расписанием и быть в курсе всех событий.
+                </p>
+                <div class="footer-badge">
+                    <i class="bi bi-star-fill"></i>
+                    <span>605M+ игроков доверяют нам</span>
+                </div>
+                <div class="footer-social-links mt-3">
+                    <a href="#" class="footer-social-link" title="Telegram">
+                        <i class="bi bi-telegram"></i>
+                    </a>
+                    <a href="#" class="footer-social-link" title="VK">
+                        <i class="bi bi-vk"></i>
+                    </a>
+                    <a href="#" class="footer-social-link" title="YouTube">
+                        <i class="bi bi-youtube"></i>
+                    </a>
+                    <a href="#" class="footer-social-link" title="Email">
+                        <i class="bi bi-envelope-fill"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Quick Links Column -->
+            <div class="footer-column">
+                <h3>
+                    <i class="bi bi-link-45deg"></i>
+                    Навигация
+                </h3>
+                <ul class="footer-links-list">
+                    <li>
+                        <a href="{{ url_for('main.index') }}">
+                            <i class="bi bi-chevron-right"></i>
+                            Турниры
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.calendar') }}">
+                            <i class="bi bi-chevron-right"></i>
+                            Календарь
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.tournament_map') }}">
+                            <i class="bi bi-chevron-right"></i>
+                            Карта турниров
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.statistics_dashboard') }}">
+                            <i class="bi bi-chevron-right"></i>
+                            Статистика
+                        </a>
+                    </li>
+                    {% if 'user_id' in session %}
+                    <li>
+                        <a href="{{ url_for('user.favorites') }}">
+                            <i class="bi bi-chevron-right"></i>
+                            Избранное
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <!-- Resources Column -->
+            <div class="footer-column">
+                <h3>
+                    <i class="bi bi-book"></i>
+                    Ресурсы
+                </h3>
+                <ul class="footer-links-list">
+                    <li>
+                        <a href="https://fide.com" target="_blank" rel="noopener">
+                            <i class="bi bi-chevron-right"></i>
+                            ФИДЕ
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://ruchess.ru" target="_blank" rel="noopener">
+                            <i class="bi bi-chevron-right"></i>
+                            РШФ
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/api/docs">
+                            <i class="bi bi-chevron-right"></i>
+                            API Документация
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.widget_docs') }}">
+                            <i class="bi bi-chevron-right"></i>
+                            Виджет для сайта
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('main.export_csv') }}">
+                            <i class="bi bi-chevron-right"></i>
+                            Экспорт данных
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Contact Column -->
+            <div class="footer-column">
+                <h3>
+                    <i class="bi bi-envelope"></i>
+                    Контакты
+                </h3>
+                <ul class="footer-contact-info">
+                    <li class="footer-contact-item">
+                        <div class="footer-contact-icon">
+                            <i class="bi bi-envelope-at-fill"></i>
+                        </div>
+                        <div class="footer-contact-text">
+                            <div class="footer-contact-label">Email</div>
+                            <div class="footer-contact-value">info@chesscalendar.ru</div>
+                        </div>
+                    </li>
+                    <li class="footer-contact-item">
+                        <div class="footer-contact-icon">
+                            <i class="bi bi-telephone-fill"></i>
+                        </div>
+                        <div class="footer-contact-text">
+                            <div class="footer-contact-label">Телефон</div>
+                            <div class="footer-contact-value">+7 (495) 123-45-67</div>
+                        </div>
+                    </li>
+                    <li class="footer-contact-item">
+                        <div class="footer-contact-icon">
+                            <i class="bi bi-clock-fill"></i>
+                        </div>
+                        <div class="footer-contact-text">
+                            <div class="footer-contact-label">Поддержка</div>
+                            <div class="footer-contact-value">Пн-Пт 9:00-18:00</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+            <div class="footer-copyright">
+                <i class="bi bi-c-circle"></i> 2026 ChessCalendar-RU. Все права защищены.
+                <br class="d-sm-none">
+                Сделано с <i class="bi bi-heart-fill" style="color: #ef4444;"></i> для шахматного сообщества
+            </div>
+            <div class="footer-bottom-links">
+                <a href="#">Политика конфиденциальности</a>
+                <a href="#">Условия использования</a>
+                <a href="#">Поддержка</a>
+            </div>
+        </div>
+    </div>
+</footer>

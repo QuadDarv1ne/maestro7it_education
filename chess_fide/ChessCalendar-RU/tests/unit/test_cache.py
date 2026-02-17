@@ -3,16 +3,16 @@ Unit tests for cache manager
 """
 import pytest
 import time
-from app.utils.cache_manager import MultiLevelCache, cached, invalidate_cache
+from app.utils.unified_cache import UnifiedCache, cached, invalidate_cache
 
 
-class TestMultiLevelCache:
-    """Tests for MultiLevelCache"""
+class TestUnifiedCache:
+    """Tests for UnifiedCache"""
     
     @pytest.fixture
     def cache(self):
         """Create cache instance"""
-        return MultiLevelCache(l1_max_size=10)
+        return UnifiedCache(l1_max_size=10)
     
     def test_set_and_get(self, cache):
         """Test basic set and get"""

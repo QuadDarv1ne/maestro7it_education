@@ -340,7 +340,7 @@ class FIDEParses:
         for strategy in strategies:
             try:
                 return strategy(date_str)
-            except:
+            except (ValueError, AttributeError, TypeError):
                 continue
         
         # If all strategies fail, try to extract date from string
@@ -359,9 +359,9 @@ class FIDEParses:
                     for strategy in strategies[:2]:  # Try dateutil and ISO format
                         try:
                             return strategy(extracted_date)
-                        except:
+                        except (ValueError, AttributeError, TypeError):
                             continue
-        except:
+        except (ValueError, AttributeError, TypeError):
             pass
         
         logger.error(f"Could not parse date string: {date_str}")
@@ -516,7 +516,7 @@ class FIDEParses:
                     import dateutil.parser
                     start_date = dateutil.parser.parse(date_string.strip())
                     return start_date.date(), start_date.date()
-        except:
+        except (ValueError, AttributeError, TypeError):
             return None, None
 
     def _is_valid_russian_tournament(self, tournament_data):

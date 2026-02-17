@@ -11,37 +11,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Mobile CSS -->
-    <link href="{{ url_for('static', filename='css/utilities/mobile.css') }}" rel="stylesheet">
-    <!-- Enhanced Mobile CSS -->
-    <link href="{{ url_for('static', filename='css/utilities/mobile-enhanced.css') }}" rel="stylesheet">
-    <!-- Responsive Enhanced CSS -->
-    <link href="{{ url_for('static', filename='css/utilities/responsive-enhanced.css') }}" rel="stylesheet">
-    <!-- Dark Theme CSS -->
-    <link href="{{ url_for('static', filename='css/themes/dark-theme.css') }}" rel="stylesheet">
-    <!-- UI Improvements CSS -->
-    <link href="{{ url_for('static', filename='css/improvements.css') }}" rel="stylesheet">
-    <!-- Print Optimization CSS -->
-    <link href="{{ url_for('static', filename='css/utilities/print-optimization.css') }}" rel="stylesheet">
-    <!-- Layout Fixes CSS -->
-    <link href="{{ url_for('static', filename='css/layout-fixes.css') }}" rel="stylesheet">
-    <!-- Composition Fixes CSS - ВАЖНО: загружается последним -->
-    <link href="{{ url_for('static', filename='css/composition-fixes.css') }}" rel="stylesheet">
-    <!-- Spacing Utilities CSS -->
-    <link href="{{ url_for('static', filename='css/utilities/spacing-utilities.css') }}" rel="stylesheet">
-    <!-- Cards Final Fix CSS - ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ -->
-    <link href="{{ url_for('static', filename='css/cards-final-fix.css') }}" rel="stylesheet">
-    <!-- Navbar Fixes CSS - ИСПРАВЛЕНИЯ НАВИГАЦИИ -->
-    <link href="{{ url_for('static', filename='css/navbar-fixes.css') }}" rel="stylesheet">
-    <!-- No Overlap Fix CSS - ПРЕДОТВРАЩЕНИЕ НАЛОЖЕНИЯ -->
-    <link href="{{ url_for('static', filename='css/no-overlap-fix.css') }}" rel="stylesheet">
-    <!-- OVERRIDE ALL - МАКСИМАЛЬНЫЙ ПРИОРИТЕТ -->
-    <link href="{{ url_for('static', filename='css/override-all.css') }}?v=3" rel="stylesheet">
     
-    <!-- Modern Design System -->
+    <!-- Core Styles -->
     <link href="{{ url_for('static', filename='css/modern-design.css') }}" rel="stylesheet">
-    <!-- Modern Components -->
-    <link href="{{ url_for('static', filename='css/components/hero-section.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/themes/dark-theme.css') }}" rel="stylesheet">
+    
+    <!-- Component Styles -->
     <link href="{{ url_for('static', filename='css/components/feature-cards.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/components/filter-panel.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/components/tournament-cards.css') }}" rel="stylesheet">
@@ -52,14 +27,29 @@
     <link href="{{ url_for('static', filename='css/components/navbar-modern.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/components/footer-modern.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/components/toast.css') }}" rel="stylesheet">
-    <!-- Enhanced Components -->
+    <link href="{{ url_for('static', filename='css/components/share-modal.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/comparison-bar.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/header-enhanced.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/features-section.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/filter-card-enhanced.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/chess-facts.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/info-sections.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/footer-enhanced-v2.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/components/cards-enhanced.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/components/buttons-enhanced.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/components/card-buttons.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/components/navigation-enhanced.css') }}" rel="stylesheet">
-    <!-- Utilities -->
+    
+    <!-- Utility Styles -->
+    <link href="{{ url_for('static', filename='css/utilities/mobile.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/utilities/mobile-enhanced.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/utilities/responsive-enhanced.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/utilities/animations.css') }}" rel="stylesheet">
-    <!-- Fixes - ВАЖНО: загружается последним для исправления конфликтов -->
-    <link href="{{ url_for('static', filename='css/fixes.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/utilities/print-optimization.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/utilities/spacing-utilities.css') }}" rel="stylesheet">
+    
+    <!-- Unified Styles - ЗАГРУЖАЕТСЯ ПОСЛЕДНИМ для исправления конфликтов -->
+    <link href="{{ url_for('static', filename='css/unified-styles.css') }}?v=1" rel="stylesheet">
     
     <style>
         :root {
@@ -556,115 +546,141 @@
     <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Перейти к основному содержанию</a>
     
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+    <!-- Enhanced Navigation -->
+    <nav class="navbar-enhanced">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">
-                <i class="bi bi-trophy"></i> ChessCalendar-RU
+            <a class="navbar-brand-enhanced" href="{{ url_for('main.index') }}">
+                <div class="navbar-brand-icon">
+                    <i class="bi bi-trophy-fill"></i>
+                </div>
+                <div class="navbar-brand-text">
+                    <div class="navbar-brand-title">ChessCalendar</div>
+                    <div class="navbar-brand-subtitle">RUSSIA & WORLD</div>
+                </div>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <div class="navbar-nav-enhanced d-none d-lg-flex">
+                <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.index' else '' }}" href="{{ url_for('main.index') }}">
+                    <i class="bi bi-calendar-check-fill"></i>
+                    <span>Турниры</span>
+                </a>
+                <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.calendar' else '' }}" href="{{ url_for('main.calendar') }}">
+                    <i class="bi bi-calendar-month-fill"></i>
+                    <span>Календарь</span>
+                </a>
+                <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.tournament_map' else '' }}" href="{{ url_for('main.tournament_map') }}">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>Карта</span>
+                </a>
+                {% if 'user_id' in session %}
+                <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'user.favorites' else '' }}" href="{{ url_for('user.favorites') }}">
+                    <i class="bi bi-heart-fill"></i>
+                    <span>Избранное</span>
+                    <span class="nav-badge favorites-count-badge" style="display: none;">0</span>
+                </a>
+                {% endif %}
+            </div>
             
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.index') }}">
-                            <i class="bi bi-calendar-check"></i> Турниры
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.calendar') }}">
-                            <i class="bi bi-calendar-month"></i> Календарь
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.tournament_map') }}">
-                            <i class="bi bi-geo-alt"></i> Карта
-                        </a>
-                    </li>
-                    {% if 'user_id' in session %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.recommendations') }}">
-                            <i class="bi bi-lightbulb"></i> Рекомендации
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('user.favorites') }}">
-                            <i class="bi bi-heart"></i> Избранное
-                        </a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.notifications') }}">
-                            <i class="bi bi-bell"></i> Уведомления
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.statistics_dashboard') }}">
-                            <i class="bi bi-graph-up"></i> Статистика
-                        </a>
-                    </li>
-                </ul>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Search Bar -->
+                <div class="navbar-search-enhanced d-none d-md-block">
+                    <i class="bi bi-search navbar-search-icon"></i>
+                    <input type="text" class="navbar-search-input" placeholder="Поиск турниров..." id="navbarSearchInput">
+                    <button class="navbar-search-clear" id="navbarSearchClear">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
                 
-                <div class="d-flex align-items-center">
-                    <!-- Search Bar -->
-                    <div class="search-container me-3">
-                        <form action="{{ url_for('main.index') }}" method="GET" class="d-flex">
-                            <input type="text" name="search" class="form-control" placeholder="Поиск турниров..." 
-                                   value="{{ request.args.get('search', '') }}" id="searchInput">
-                            <button class="btn btn-outline-light" type="submit">
-                                <i class="bi bi-search"></i>
+                <!-- User Menu -->
+                <div class="navbar-user-menu">
+                    {% if 'user_id' in session %}
+                        <div class="dropdown">
+                            <button class="navbar-user-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <div class="navbar-user-avatar">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                                <span class="d-none d-sm-inline">{{ session.username }}</span>
                             </button>
-                        </form>
-                        <div class="search-results" id="searchResults"></div>
-                    </div>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('user.profile') }}">
+                                    <i class="bi bi-person"></i> Профиль
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.achievements') }}">
+                                    <i class="bi bi-trophy"></i> Достижения
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.recommendations') }}">
+                                    <i class="bi bi-lightbulb"></i> Рекомендации
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('user.logout') }}">
+                                    <i class="bi bi-box-arrow-right"></i> Выйти
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('user.login') }}" class="navbar-user-btn">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            <span class="d-none d-sm-inline">Войти</span>
+                        </a>
+                    {% endif %}
                     
-                    <ul class="navbar-nav">
-                        {% if 'user_id' in session %}
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                    <i class="bi bi-person-circle"></i> {{ session.username }}
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ url_for('user.profile') }}">
-                                        <i class="bi bi-person"></i> Профиль
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('main.achievements') }}">
-                                        <i class="bi bi-trophy"></i> Достижения
-                                    </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('user.logout') }}">
-                                        <i class="bi bi-box-arrow-right"></i> Выйти
-                                    </a></li>
-                                </ul>
-                            </li>
-                        {% else %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('user.login') }}">Войти</a>
-                            </li>
-                        {% endif %}
-                        
-                        <!-- Theme Toggle -->
-                        <li class="nav-item">
-                            <button class="nav-link btn btn-link" id="themeToggle" onclick="toggleTheme()">
-                                <i class="bi bi-moon-fill" id="themeIcon"></i>
-                            </button>
-                        </li>
-                        
-                        {% if 'user_id' in session and current_user.is_admin %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                                    <i class="bi bi-gear"></i> Админ
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
+                    <!-- Theme Toggle -->
+                    <button class="theme-toggle-btn" id="themeToggle" onclick="toggleTheme()" title="Переключить тему">
+                        <i class="bi bi-moon-fill" id="themeIcon"></i>
+                    </button>
+                    
+                    <!-- Mobile Menu Toggle -->
+                    <button class="navbar-toggle-enhanced d-lg-none" id="mobileMenuToggle">
+                        <i class="bi bi-list"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
+    
+    <!-- Mobile Menu -->
+    <div class="navbar-mobile-menu-enhanced" id="mobileMenu">
+        <!-- Search in mobile -->
+        <div class="navbar-search-enhanced">
+            <i class="bi bi-search navbar-search-icon"></i>
+            <input type="text" class="navbar-search-input" placeholder="Поиск турниров..." id="mobileSearchInput">
+            <button class="navbar-search-clear" id="mobileSearchClear">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <!-- Navigation links -->
+        <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.index' else '' }}" href="{{ url_for('main.index') }}">
+            <i class="bi bi-calendar-check-fill"></i>
+            <span>Турниры</span>
+        </a>
+        <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.calendar' else '' }}" href="{{ url_for('main.calendar') }}">
+            <i class="bi bi-calendar-month-fill"></i>
+            <span>Календарь</span>
+        </a>
+        <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.tournament_map' else '' }}" href="{{ url_for('main.tournament_map') }}">
+            <i class="bi bi-geo-alt-fill"></i>
+            <span>Карта</span>
+        </a>
+        {% if 'user_id' in session %}
+        <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'user.favorites' else '' }}" href="{{ url_for('user.favorites') }}">
+            <i class="bi bi-heart-fill"></i>
+            <span>Избранное</span>
+        </a>
+        <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.recommendations' else '' }}" href="{{ url_for('main.recommendations') }}">
+            <i class="bi bi-lightbulb-fill"></i>
+            <span>Рекомендации</span>
+        </a>
+        {% endif %}
+        <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.notifications' else '' }}" href="{{ url_for('main.notifications') }}">
+            <i class="bi bi-bell-fill"></i>
+            <span>Уведомления</span>
+        </a>
+        <a class="nav-link-enhanced {{ 'active' if request.endpoint == 'main.statistics_dashboard' else '' }}" href="{{ url_for('main.statistics_dashboard') }}">
+            <i class="bi bi-graph-up"></i>
+            <span>Статистика</span>
+        </a>
+    </div>
 
     <!-- Main Content -->
     <main class="container-fluid mt-4" id="main-content">
@@ -773,6 +789,10 @@
     <script src="{{ url_for('static', filename='js/lazy-loader.js') }}"></script>
     <!-- Modern UI -->
     <script src="{{ url_for('static', filename='js/modern-ui.js') }}"></script>
+    <!-- Tournament Actions -->
+    <script src="{{ url_for('static', filename='js/tournament-actions.js') }}"></script>
+    <!-- Enhanced Navbar -->
+    <script src="{{ url_for('static', filename='js/navbar-enhanced.js') }}"></script>
     
     <!-- Feature Scripts - Now handled by lazy loader -->
     <script>
@@ -875,6 +895,8 @@
     
     <!-- Service Worker Registration -->
     <script>
+        // Временно отключаем Service Worker для разработки
+        /*
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/static/sw.js')
@@ -902,6 +924,16 @@
                 // Handle controller change
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     window.location.reload();
+                });
+            });
+        }
+        */
+        
+        // Unregister existing service workers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(registration => {
+                    registration.unregister();
                 });
             });
         }

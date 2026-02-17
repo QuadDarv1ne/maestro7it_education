@@ -429,7 +429,7 @@ class CFRParser:
                         end_date = self._parse_date_flexible(f"{end_part} {year}")
                         if start_date and end_date:
                             return start_date, end_date
-                    except:
+                    except (ValueError, AttributeError, TypeError):
                         pass
             
             if '.' in date_string:
@@ -478,7 +478,7 @@ class CFRParser:
                 parsed_date = self._parse_date_flexible(f"{date_string} {year}")
                 if parsed_date:
                     return parsed_date, parsed_date
-            except:
+            except (ValueError, AttributeError, TypeError):
                 pass
                 
             # If all parsing attempts fail
@@ -507,7 +507,7 @@ class CFRParser:
         for strategy in strategies:
             try:
                 return strategy(date_str)
-            except:
+            except (ValueError, AttributeError, TypeError):
                 continue
         
         # If all strategies fail, try to extract date from string
@@ -526,9 +526,9 @@ class CFRParser:
                     for strategy in strategies[:2]:  # Try dateutil and ISO format
                         try:
                             return strategy(extracted_date)
-                        except:
+                        except (ValueError, AttributeError, TypeError):
                             continue
-        except:
+        except (ValueError, AttributeError, TypeError):
             pass
         
         self.logger.error(f"Could not parse date string: {date_str}")

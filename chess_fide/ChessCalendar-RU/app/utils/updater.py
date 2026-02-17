@@ -16,8 +16,7 @@ from urllib3.util.retry import Retry
 logger = logging.getLogger('app.scheduler')
 
 try:
-    from app.utils.backup import DatabaseBackupManager
-    backup_manager = DatabaseBackupManager("chess_calendar.db")
+    from app.utils.unified_backup import backup_manager
 except ImportError:
     # Mock backup manager if backup module not available
     class MockBackupManager:
@@ -136,11 +135,12 @@ class TournamentUpdater:
                         if filtered_data:
                             tournament = Tournament(**filtered_data)
                             # Run validation before adding to session
-                            if tournament.validate():
+                            validation_errors = tournament.validate()
+                            if not validation_errors:
                                 db.session.add(tournament)
                                 added_count += 1
                             else:
-                                logger.warning(f"Турнир не прошел валидацию: {tournament.name}")
+                                logger.warning(f"Турнир не прошел валидацию: {tournament.name}, ошибки: {validation_errors}")
                     processed_count += 1
                 except KeyError as ke:
                     logger.error(f"Ошибка при обработке турнира с FIDE: отсутствует поле {ke}")
@@ -190,11 +190,12 @@ class TournamentUpdater:
                         if filtered_data:
                             tournament = Tournament(**filtered_data)
                             # Run validation before adding to session
-                            if tournament.validate():
+                            validation_errors = tournament.validate()
+                            if not validation_errors:
                                 db.session.add(tournament)
                                 added_count += 1
                             else:
-                                logger.warning(f"Турнир не прошел валидацию: {tournament.name}")
+                                logger.warning(f"Турнир не прошел валидацию: {tournament.name}, ошибки: {validation_errors}")
                     processed_count += 1
                 except KeyError as ke:
                     logger.error(f"Ошибка при обработке турнира с CFR: отсутствует поле {ke}")

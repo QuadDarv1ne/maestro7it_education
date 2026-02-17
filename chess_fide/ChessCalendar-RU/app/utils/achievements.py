@@ -5,8 +5,8 @@ User achievements and gamification system
 from datetime import datetime, timedelta
 from typing import List, Dict
 from app.models.user import User
-from app.models.favorite import Favorite
-from app.models.rating import Rating
+from app.models.favorite import FavoriteTournament
+from app.models.rating import TournamentRating
 from app.models.tournament_subscription import TournamentSubscription
 
 
@@ -61,7 +61,7 @@ class FirstFavoriteAchievement(Achievement):
         self.progress_max = 1
     
     def check(self, user_id: int) -> bool:
-        count = Favorite.query.filter_by(user_id=user_id).count()
+        count = FavoriteTournament.query.filter_by(user_id=user_id).count()
         self.progress = min(count, self.progress_max)
         
         if count >= 1:
@@ -85,7 +85,7 @@ class FavoriteCollectorAchievement(Achievement):
         self.progress_max = 10
     
     def check(self, user_id: int) -> bool:
-        count = Favorite.query.filter_by(user_id=user_id).count()
+        count = FavoriteTournament.query.filter_by(user_id=user_id).count()
         self.progress = min(count, self.progress_max)
         
         if count >= 10:
@@ -109,7 +109,7 @@ class FirstRatingAchievement(Achievement):
         self.progress_max = 1
     
     def check(self, user_id: int) -> bool:
-        count = Rating.query.filter_by(user_id=user_id).count()
+        count = TournamentRating.query.filter_by(user_id=user_id).count()
         self.progress = min(count, self.progress_max)
         
         if count >= 1:
@@ -133,7 +133,7 @@ class CriticAchievement(Achievement):
         self.progress_max = 20
     
     def check(self, user_id: int) -> bool:
-        count = Rating.query.filter_by(user_id=user_id).count()
+        count = TournamentRating.query.filter_by(user_id=user_id).count()
         self.progress = min(count, self.progress_max)
         
         if count >= 20:
@@ -255,7 +255,7 @@ class PerfectionistAchievement(Achievement):
         self.progress_max = 5
     
     def check(self, user_id: int) -> bool:
-        count = Rating.query.filter_by(user_id=user_id, rating=5).count()
+        count = TournamentRating.query.filter_by(user_id=user_id, rating=5).count()
         self.progress = min(count, self.progress_max)
         
         if count >= 5:

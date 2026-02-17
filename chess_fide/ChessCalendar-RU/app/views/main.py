@@ -6,7 +6,7 @@ from app.models.rating import TournamentRating
 from app.models.favorite import FavoriteTournament
 from app.models.report import Report
 from app.models.audit_log import AuditLog
-from app.utils.cache import TournamentCache
+from app.utils.unified_cache import TournamentCache
 from app.utils.performance_monitor import track_performance
 from app.utils.http_cache import set_cache_headers
 from datetime import datetime, timedelta
@@ -53,11 +53,19 @@ def index():
         )
         
         # Статистика для отображения
-        stats = {
-            'total_tournaments': TournamentCache.get_tournaments_stats()['total'],
-            'categories': TournamentCache.get_categories_list()[:5],  # Топ-5 категорий
-            'locations': TournamentCache.get_locations_list()[:5]     # Топ-5 локаций
-        }
+        try:
+            stats = {
+                'total_tournaments': TournamentCache.get_tournaments_stats().get('total', 0),
+                'categories': TournamentCache.get_categories_list()[:5] if TournamentCache.get_categories_list() else [],  # Топ-5 категорий
+                'locations': TournamentCache.get_locations_list()[:5] if TournamentCache.get_locations_list() else []     # Топ-5 локаций
+            }
+        except Exception as stats_error:
+            logger.warning(f"Failed to load stats: {stats_error}")
+            stats = {
+                'total_tournaments': 0,
+                'categories': [],
+                'locations': []
+            }
         
         # Логирование просмотра главной страницы
         if 'user_id' in session:
@@ -362,19 +370,15 @@ def export_json():
     })
 
 @main_bp.route('/widget')
-def widget():
-    """Виджет для встраивания на другие сайты"""
+@main_bp.route('/widget/documentation')
+def widget_docs():
+    """Документация по виджету"""
     # Простой виджет с последними турнирами
     recent_tournaments = Tournament.query.order_by(
         Tournament.start_date.desc()
     ).limit(5).all()
     
-    return render_template('widget_docs.html', tournaments=recent_tournaments)
-
-@main_bp.route('/widget/documentation')
-def widget_docs():
-    """Документация по виджету"""
-    return render_template('widget_documentation.html')
+    return render_template('widget_documentation.html', tournaments=recent_tournaments)
 
 @main_bp.route('/statistics')
 def statistics_dashboard():

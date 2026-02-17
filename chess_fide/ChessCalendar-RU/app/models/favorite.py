@@ -1,7 +1,5 @@
 from app import db
 from datetime import datetime
-from app.models.user import User
-from app.models.tournament import Tournament
 
 
 class FavoriteTournament(db.Model):

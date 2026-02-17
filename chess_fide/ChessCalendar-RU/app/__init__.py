@@ -1,10 +1,8 @@
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect, generate_csrf
-from flask_socketio import SocketIO
-import os
 
 db = SQLAlchemy()
 csrf = CSRFProtect()
@@ -201,7 +199,7 @@ def create_app(config_name='default'):
             from datetime import datetime
             try:
                 date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
-            except:
+            except (ValueError, AttributeError):
                 return date_obj
         return date_obj.strftime('%d.%m.%Y')
     
@@ -214,7 +212,7 @@ def create_app(config_name='default'):
             from datetime import datetime
             try:
                 date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
-            except:
+            except (ValueError, AttributeError):
                 return ''
         return date_obj.strftime('%d')
     
@@ -227,7 +225,7 @@ def create_app(config_name='default'):
             from datetime import datetime
             try:
                 date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
-            except:
+            except (ValueError, AttributeError):
                 return ''
         months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 
                   'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']

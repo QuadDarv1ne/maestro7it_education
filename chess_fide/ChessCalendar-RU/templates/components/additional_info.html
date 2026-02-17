@@ -1,0 +1,229 @@
+<!-- Why Choose Us Section -->
+<section class="why-choose-section">
+    <div class="section-header">
+        <h2 class="section-title">Почему выбирают нас?</h2>
+        <p class="section-subtitle">
+            ChessCalendar-RU — ваш надежный помощник в мире шахмат
+        </p>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="bi bi-database-fill"></i>
+                </div>
+                <div class="benefit-content">
+                    <h4>Полная база турниров</h4>
+                    <p>
+                        Самая большая база шахматных турниров России и мира. Мы собираем информацию 
+                        из официальных источников и обновляем её ежедневно.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                </div>
+                <div class="benefit-content">
+                    <h4>Быстрый поиск</h4>
+                    <p>
+                        Удобные фильтры и мощный поиск помогут найти нужный турнир за секунды. 
+                        Фильтруйте по категории, месту, дате и статусу.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+                <div class="benefit-content">
+                    <h4>Умные уведомления</h4>
+                    <p>
+                        Получайте напоминания о предстоящих турнирах, изменениях в расписании 
+                        и важных событиях. Никогда не пропустите интересный турнир!
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="bi bi-phone-fill"></i>
+                </div>
+                <div class="benefit-content">
+                    <h4>Работает везде</h4>
+                    <p>
+                        Адаптивный дизайн обеспечивает комфортную работу на любом устройстве — 
+                        компьютере, планшете или смартфоне.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="bi bi-calendar-plus-fill"></i>
+                </div>
+                <div class="benefit-content">
+                    <h4>Экспорт в календарь</h4>
+                    <p>
+                        Добавляйте турниры в свой календарь одним кликом. Поддержка Google Calendar, 
+                        Outlook, Apple Calendar и других.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="bi bi-shield-check-fill"></i>
+                </div>
+                <div class="benefit-content">
+                    <h4>Проверенная информация</h4>
+                    <p>
+                        Вся информация проверяется и обновляется нашей командой. Мы работаем 
+                        с официальными источниками и организаторами турниров.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action Section -->
+<section class="cta-section">
+    <div class="cta-content">
+        <h2 class="cta-title">Готовы начать?</h2>
+        <p class="cta-description">
+            Присоединяйтесь к тысячам шахматистов, которые уже используют ChessCalendar-RU
+        </p>
+        <div class="cta-buttons">
+            <a href="{{ url_for('user.register') if 'user_id' not in session else url_for('main.index') }}" class="cta-btn cta-btn-primary">
+                <i class="bi bi-person-plus-fill"></i>
+                <span>{{ 'Зарегистрироваться' if 'user_id' not in session else 'Найти турнир' }}</span>
+            </a>
+            <a href="{{ url_for('main.calendar') }}" class="cta-btn cta-btn-secondary">
+                <i class="bi bi-calendar-month-fill"></i>
+                <span>Открыть календарь</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter Section -->
+<section class="newsletter-section">
+    <h2 class="newsletter-title">
+        <i class="bi bi-envelope-fill"></i> Подпишитесь на рассылку
+    </h2>
+    <p class="newsletter-description">
+        Получайте еженедельную подборку самых интересных турниров и новости шахматного мира
+    </p>
+    <form class="newsletter-form" id="newsletterForm">
+        <input 
+            type="email" 
+            class="newsletter-input" 
+            placeholder="Ваш email" 
+            required
+            id="newsletterEmail"
+        >
+        <button type="submit" class="newsletter-btn">
+            <i class="bi bi-send-fill"></i> Подписаться
+        </button>
+    </form>
+    <p class="mt-3 text-muted" style="font-size: 0.875rem;">
+        Мы уважаем вашу конфиденциальность. Отписаться можно в любой момент.
+    </p>
+</section>
+
+<!-- Partners Section -->
+<section class="partners-section">
+    <div class="section-header">
+        <h2 class="section-title">Наши партнёры</h2>
+        <p class="section-subtitle">
+            Мы сотрудничаем с ведущими шахматными организациями
+        </p>
+    </div>
+    
+    <div class="partners-grid">
+        <div class="partner-logo">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                ФИДЕ
+            </div>
+        </div>
+        <div class="partner-logo">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                РШФ
+            </div>
+        </div>
+        <div class="partner-logo">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                Chess.com
+            </div>
+        </div>
+        <div class="partner-logo">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                Lichess
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Newsletter form handler
+document.getElementById('newsletterForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('newsletterEmail').value;
+    const btn = this.querySelector('.newsletter-btn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Подписываем...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/notifications/subscribe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: email,
+                preferences: {
+                    weekly_digest: true,
+                    tournament_updates: true
+                }
+            })
+        });
+        
+        if (response.ok) {
+            if (window.showToast) {
+                window.showToast('Спасибо за подписку! Проверьте email для подтверждения.', 'success', 5000);
+            } else {
+                alert('Спасибо за подписку! Проверьте email для подтверждения.');
+            }
+            this.reset();
+        } else {
+            throw new Error('Subscription failed');
+        }
+    } catch (error) {
+        if (window.showToast) {
+            window.showToast('Произошла ошибка. Попробуйте позже.', 'error', 3000);
+        } else {
+            alert('Произошла ошибка. Попробуйте позже.');
+        }
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+</script>

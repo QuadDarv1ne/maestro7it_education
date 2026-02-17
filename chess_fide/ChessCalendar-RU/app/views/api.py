@@ -5,11 +5,14 @@ from app.models.user import User
 from app.models.rating import TournamentRating
 from app.models.favorite import FavoriteTournament
 from app.models.notification import Subscription
-from app.utils.cache import TournamentCache
+from app.utils.unified_cache import TournamentCache
 from app.utils.performance_monitor import track_performance
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
+import logging
+
+logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -211,12 +214,17 @@ def get_categories():
     try:
         categories = TournamentCache.get_categories_list()
         return jsonify({
-            'categories': categories,
-            'total': len(categories)
+            'categories': categories if categories else [],
+            'total': len(categories) if categories else 0
         }), 200
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting categories: {e}")
+        return jsonify({
+            'categories': [],
+            'total': 0,
+            'error': 'Failed to load categories'
+        }), 500
 
 @api_bp.route('/tournaments/locations', methods=['GET'])
 def get_locations():
@@ -224,12 +232,17 @@ def get_locations():
     try:
         locations = TournamentCache.get_locations_list()
         return jsonify({
-            'locations': locations,
-            'total': len(locations)
+            'locations': locations if locations else [],
+            'total': len(locations) if locations else 0
         }), 200
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting locations: {e}")
+        return jsonify({
+            'locations': [],
+            'total': 0,
+            'error': 'Failed to load locations'
+        }), 500
 
 @api_bp.route('/tournaments/statuses', methods=['GET'])
 def get_statuses():
@@ -340,7 +353,7 @@ def login_user():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/tournaments/<int:tournament_id>/rate', methods=['POST'])
-def rate_tournament():
+def rate_tournament(tournament_id):
     """Rate a tournament"""
     try:
         data = request.get_json()
@@ -408,7 +421,7 @@ def rate_tournament():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/tournaments/<int:tournament_id>/favorite', methods=['POST'])
-def add_favorite():
+def add_favorite(tournament_id):
     """Add tournament to favorites"""
     try:
         data = request.get_json()
@@ -457,7 +470,7 @@ def add_favorite():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/tournaments/<int:tournament_id>/favorite', methods=['DELETE'])
-def remove_favorite():
+def remove_favorite(tournament_id):
     """Remove tournament from favorites"""
     try:
         data = request.get_json()
@@ -1113,3 +1126,164 @@ def get_tournament_statistics():
         from app.utils.logger import logger
         logger.error(f"Tournament statistics error: {str(e)}")
         return jsonify({'error': 'Failed to get tournament statistics'}), 500
+
+
+@api_bp.route('/favorites', methods=['POST'])
+def manage_favorites():
+    """Manage user favorites (add/remove)"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        tournament_id = data.get('tournament_id')
+        action = data.get('action')  # 'add' or 'remove'
+        user_id = session.get('user_id')  # Get from session if logged in
+        
+        if not tournament_id:
+            return jsonify({'error': 'Tournament ID is required'}), 400
+        
+        if not action or action not in ['add', 'remove']:
+            return jsonify({'error': 'Action must be "add" or "remove"'}), 400
+        
+        # If user is logged in, sync with database
+        if user_id:
+            tournament = Tournament.query.get(tournament_id)
+            if not tournament:
+                return jsonify({'error': 'Tournament not found'}), 404
+            
+            if action == 'add':
+                # Check if already favorited
+                existing_favorite = FavoriteTournament.query.filter_by(
+                    user_id=user_id,
+                    tournament_id=tournament_id
+                ).first()
+                
+                if not existing_favorite:
+                    favorite = FavoriteTournament(user_id=user_id, tournament_id=tournament_id)
+                    db.session.add(favorite)
+                    db.session.commit()
+                    
+                return jsonify({
+                    'success': True,
+                    'message': 'Tournament added to favorites',
+                    'tournament_id': tournament_id
+                }), 200
+                
+            elif action == 'remove':
+                favorite = FavoriteTournament.query.filter_by(
+                    user_id=user_id,
+                    tournament_id=tournament_id
+                ).first()
+                
+                if favorite:
+                    db.session.delete(favorite)
+                    db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Tournament removed from favorites',
+                    'tournament_id': tournament_id
+                }), 200
+        else:
+            # User not logged in, just acknowledge the request (client handles localStorage)
+            return jsonify({
+                'success': True,
+                'message': f'Favorite {action}ed (local only)',
+                'tournament_id': tournament_id
+            }), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        from app.utils.logger import logger
+        logger.error(f"Favorites management error: {str(e)}")
+        return jsonify({'error': 'Failed to manage favorites'}), 500
+
+
+@api_bp.route('/notifications', methods=['POST'])
+def manage_notifications():
+    """Manage tournament notifications (enable/disable)"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        tournament_id = data.get('tournament_id')
+        action = data.get('action')  # 'enable' or 'disable'
+        user_id = session.get('user_id')  # Get from session if logged in
+        
+        if not tournament_id:
+            return jsonify({'error': 'Tournament ID is required'}), 400
+        
+        if not action or action not in ['enable', 'disable']:
+            return jsonify({'error': 'Action must be "enable" or "disable"'}), 400
+        
+        # If user is logged in, sync with database
+        if user_id:
+            user = User.query.get(user_id)
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+                
+            tournament = Tournament.query.get(tournament_id)
+            if not tournament:
+                return jsonify({'error': 'Tournament not found'}), 404
+            
+            if action == 'enable':
+                # Check if subscription already exists
+                existing_subscription = Subscription.query.filter_by(
+                    email=user.email
+                ).first()
+                
+                if not existing_subscription:
+                    # Create subscription
+                    subscription = Subscription(
+                        email=user.email,
+                        preferences={
+                            'new_tournaments': True,
+                            'tournament_updates': True,
+                            'reminders': True
+                        }
+                    )
+                    subscription.active = True
+                    db.session.add(subscription)
+                    db.session.commit()
+                else:
+                    # Reactivate if exists
+                    existing_subscription.active = True
+                    db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Notification enabled for tournament',
+                    'tournament_id': tournament_id
+                }), 200
+                
+            elif action == 'disable':
+                subscription = Subscription.query.filter_by(
+                    email=user.email
+                ).first()
+                
+                if subscription:
+                    subscription.active = False
+                    db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Notification disabled for tournament',
+                    'tournament_id': tournament_id
+                }), 200
+        else:
+            # User not logged in, just acknowledge the request (client handles localStorage)
+            return jsonify({
+                'success': True,
+                'message': f'Notification {action}d (local only)',
+                'tournament_id': tournament_id
+            }), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        from app.utils.logger import logger
+        logger.error(f"Notifications management error: {str(e)}")
+        return jsonify({'error': 'Failed to manage notifications'}), 500

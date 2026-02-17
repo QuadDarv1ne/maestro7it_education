@@ -5,7 +5,7 @@ from app.celery_app import celery_app
 from app import create_app, db
 from app.models.tournament import Tournament
 from app.models.user import User
-from app.utils.cache_manager import cache_manager
+from app.utils.unified_cache import cache
 from app.utils.metrics import track_celery_task
 from datetime import datetime, timedelta
 import logging
@@ -71,7 +71,7 @@ def update_recommendations_cache():
     
     with app.app_context():
         try:
-            from app.utils.recommendations import recommendation_service
+            from app.utils.recommendations import RecommendationEngine
             
             active_users = User.query.filter_by(is_active=True).all()
             updated_count = 0
@@ -79,7 +79,7 @@ def update_recommendations_cache():
             for user in active_users:
                 try:
                     # Генерируем рекомендации
-                    recommendations = recommendation_service.get_recommendations(user.id)
+                    recommendations = RecommendationEngine.get_user_recommendations(user.id)
                     
                     # Кэшируем
                     cache_key = f'recommendations:user:{user.id}'
@@ -111,7 +111,7 @@ def calculate_tournament_statistics(tournament_id):
     with app.app_context():
         try:
             from app.models.rating import TournamentRating
-            from app.models.favorite import Favorite
+            from app.models.favorite import FavoriteTournament
             
             tournament = Tournament.query.get(tournament_id)
             if not tournament:
@@ -122,7 +122,7 @@ def calculate_tournament_statistics(tournament_id):
             avg_rating = sum(r.rating for r in ratings) / len(ratings) if ratings else 0
             
             # Избранное
-            favorites_count = Favorite.query.filter_by(tournament_id=tournament_id).count()
+            favorites_count = FavoriteTournament.query.filter_by(tournament_id=tournament_id).count()
             
             # Просмотры (если есть модель)
             # views_count = TournamentView.query.filter_by(tournament_id=tournament_id).count()
@@ -154,7 +154,7 @@ def generate_user_activity_report(user_id):
     
     with app.app_context():
         try:
-            from app.models.favorite import Favorite
+            from app.models.favorite import FavoriteTournament
             from app.models.rating import TournamentRating
             
             user = User.query.get(user_id)
@@ -162,7 +162,7 @@ def generate_user_activity_report(user_id):
                 return {'status': 'error', 'message': 'User not found'}
             
             # Избранные турниры
-            favorites = Favorite.query.filter_by(user_id=user_id).count()
+            favorites = FavoriteTournament.query.filter_by(user_id=user_id).count()
             
             # Оценки
             ratings = TournamentRating.query.filter_by(user_id=user_id).count()

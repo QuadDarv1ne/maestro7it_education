@@ -16,7 +16,7 @@ from app import create_app, db
 from app.models.tournament import Tournament
 from app.models.user import User
 from app.models.notification import Notification, Subscription
-from app.utils.backup import DatabaseBackupManager, DataExportManager
+from app.utils.unified_backup import backup_manager
 from app.utils.notifications import notification_service
 from app.utils.fide_parser import FIDEParses
 from app.utils.cfr_parser import CFRParser

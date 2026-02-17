@@ -4,7 +4,7 @@ Celery задачи для обслуживания системы
 from app.celery_app import celery_app
 from app import create_app, db
 from app.models.notification import Notification
-from app.utils.backup import DatabaseBackupManager
+from app.utils.unified_backup import backup_manager
 from datetime import datetime, timedelta
 import logging
 import os
@@ -135,7 +135,7 @@ def check_system_health():
     
     with app.app_context():
         try:
-            from app.utils.cache_manager import cache_manager
+            from app.utils.unified_cache import cache
             
             # Проверка БД
             db_healthy = True

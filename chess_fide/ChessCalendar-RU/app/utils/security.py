@@ -438,8 +438,8 @@ def require_auth(f):
             return jsonify({'error': 'Invalid or expired token'}), 401
         
         # Проверка отзыва токена
-        from app.utils.cache_manager import cache_manager
-        if JWTManager.is_token_revoked(payload.get('jti'), cache_manager.redis_client):
+        from app.utils.unified_cache import cache
+        if JWTManager.is_token_revoked(payload.get('jti'), cache.redis_client):
             return jsonify({'error': 'Token has been revoked'}), 401
         
         # Добавляем данные пользователя в request
@@ -472,12 +472,12 @@ def rate_limit(max_attempts: int = 5, window: int = 300):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            from app.utils.cache_manager import cache_manager
+            from app.utils.unified_cache import cache
             
             # Используем IP адрес как ключ
             key = request.remote_addr
             
-            limiter = RateLimiter(cache_manager.redis_client)
+            limiter = RateLimiter(cache.redis_client)
             is_limited, remaining = limiter.is_rate_limited(key, max_attempts, window)
             
             if is_limited:

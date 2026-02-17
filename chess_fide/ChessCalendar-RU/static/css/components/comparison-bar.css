@@ -1,0 +1,211 @@
+/**
+ * Comparison Bar Component
+ * Панель сравнения турниров
+ */
+
+.comparison-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border-top: 2px solid var(--primary-color);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    animation: slideUpBar 0.3s ease;
+}
+
+@keyframes slideUpBar {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+.comparison-bar-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.comparison-bar-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+.comparison-bar-title i {
+    font-size: 1.25rem;
+}
+
+.comparison-bar-items {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    overflow-x: auto;
+    padding: 0.25rem 0;
+}
+
+.comparison-bar-items::-webkit-scrollbar {
+    height: 4px;
+}
+
+.comparison-bar-items::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 2px;
+}
+
+.comparison-bar-items::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+.comparison-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    animation: fadeInScale 0.2s ease;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.comparison-bar-item span {
+    color: var(--text-primary);
+    font-weight: 600;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.comparison-bar-remove {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.comparison-bar-remove:hover {
+    background: var(--danger-color);
+    color: white;
+}
+
+.comparison-bar-remove i {
+    font-size: 1rem;
+}
+
+.comparison-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comparison-bar-actions .btn-enhanced {
+    white-space: nowrap;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .comparison-bar-content {
+        padding: 0.75rem 1rem;
+        gap: 1rem;
+    }
+    
+    .comparison-bar-title {
+        font-size: 0.875rem;
+        width: 100%;
+    }
+    
+    .comparison-bar-items {
+        width: 100%;
+        flex: none;
+    }
+    
+    .comparison-bar-item span {
+        max-width: 150px;
+    }
+    
+    .comparison-bar-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+    
+    .comparison-bar-actions .btn-enhanced {
+        flex: 1;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .comparison-bar-content {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .comparison-bar-title {
+        font-size: 0.8rem;
+    }
+    
+    .comparison-bar-item {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .comparison-bar-item span {
+        max-width: 120px;
+    }
+    
+    .comparison-bar-actions .btn-enhanced {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .comparison-bar {
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure it doesn't overlap with mobile bottom nav */
+@media (max-width: 576px) {
+    body.has-comparison-bar {
+        padding-bottom: 140px;
+    }
+    
+    .mobile-bottom-nav {
+        bottom: 80px;
+    }
+}

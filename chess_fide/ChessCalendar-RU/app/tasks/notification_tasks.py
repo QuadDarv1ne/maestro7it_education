@@ -29,12 +29,12 @@ def send_notification(self, user_id, title, message, notification_type='info'):
             
             # Создаем уведомление
             notification = Notification(
-                user_id=user_id,
                 title=title,
                 message=message,
                 type=notification_type,
-                is_read=False
+                recipient_email=user.email if hasattr(user, 'email') else None
             )
+            notification.is_read = False
             db.session.add(notification)
             db.session.commit()
             

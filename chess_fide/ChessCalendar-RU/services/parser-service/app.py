@@ -9,7 +9,7 @@ from functools import wraps
 try:
     redis_client = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
     redis_available = True
-except:
+except (redis.ConnectionError, redis.RedisError):
     redis_available = False
     redis_client = None
 

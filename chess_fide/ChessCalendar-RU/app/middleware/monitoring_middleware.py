@@ -3,7 +3,7 @@ Middleware для автоматического мониторинга запр
 """
 
 from flask import request, g
-from app.utils.advanced_monitoring import performance_monitor
+from app.utils.unified_monitoring import performance_monitor
 
 
 class MonitoringMiddleware:
