@@ -1,0 +1,314 @@
+version: '3.8'
+
+# Оптимизированная production конфигурация
+# Использование: docker-compose -f docker-compose.prod.optimized.yml up -d
+
+services:
+  # PostgreSQL вместо SQLite для production
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: chess_calendar_prod
+      POSTGRES_USER: ${POSTGRES_USER:-chess_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chess_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Redis с персистентностью
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis-data:/data
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  # API Gateway с Gunicorn
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+      args:
+        PYTHON_VERSION: 3.11
+    command: >
+      gunicorn
+      --bind 0.0.0.0:5000
+      --workers 4
+      --threads 2
+      --worker-class gthread
+      --timeout 120
+      --keepalive 5
+      --max-requests 1000
+      --max-requests-jitter 50
+      --access-logfile -
+      --error-logfile -
+      --log-level info
+      app:app
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/chess_calendar_prod
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_ENV=production
+      - TOURNAMENT_SERVICE_URL=http://tournament-service:5001
+      - USER_SERVICE_URL=http://user-service:5002
+      - PARSER_SERVICE_URL=http://parser-service:5003
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Tournament Service
+  tournament-service:
+    build: ./services/tournament-service
+    command: gunicorn --bind 0.0.0.0:5001 --workers 2 app:app
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/chess_calendar_prod
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # User Service
+  user-service:
+    build: ./services/user-service
+    command: gunicorn --bind 0.0.0.0:5002 --workers 2 app:app
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/chess_calendar_prod
+    depends_on:
+      - postgres
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Parser Service
+  parser-service:
+    build: ./services/parser-service
+    command: gunicorn --bind 0.0.0.0:5003 --workers 2 --timeout 300 app:app
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  # Celery Worker с автомасштабированием
+  celery-worker:
+    build: .
+    command: >
+      celery -A app.celery_app worker
+      --loglevel=info
+      --concurrency=4
+      --max-tasks-per-child=1000
+      --time-limit=600
+      --soft-time-limit=300
+      --queues=parser,notifications,analytics,maintenance
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/chess_calendar_prod
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - celery-data:/app/data
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  # Celery Beat
+  celery-beat:
+    build: .
+    command: celery -A app.celery_app beat --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-chess_user}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/chess_calendar_prod
+    volumes:
+      - celery-beat-data:/app/data
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - chess-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Flower для мониторинга Celery
+  celery-flower:
+    build: .
+    command: >
+      celery -A app.celery_app flower
+      --port=5555
+      --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
+      --url_prefix=flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - chess-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  # Nginx с оптимизацией
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx-performance.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/var/www/static:ro
+      - nginx-cache:/var/cache/nginx
+      - nginx-logs:/var/log/nginx
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api-gateway
+    networks:
+      - chess-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+networks:
+  chess-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  celery-data:
+    driver: local
+  celery-beat-data:
+    driver: local
+  nginx-cache:
+    driver: local
+  nginx-logs:
+    driver: local
