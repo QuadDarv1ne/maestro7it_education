@@ -171,7 +171,6 @@ def get_trending_tournaments():
     """Get trending tournaments based on recent activity"""
     try:
         from app.models.preference import UserInteraction
-        from datetime import datetime, timedelta
         from sqlalchemy import func
         
         # Get tournaments that had interactions in the last 7 days
@@ -796,7 +795,6 @@ def track_analytics():
 def get_analytics_summary():
     """Get analytics summary for dashboard"""
     try:
-        from datetime import datetime, timedelta
         from app.models.preference import UserInteraction
         
         # Get time period from query params
@@ -926,7 +924,6 @@ def search_tournaments():
             search_query = search_query.filter(Tournament.status == status)
         
         if start_date:
-            from datetime import datetime
             try:
                 start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
                 search_query = search_query.filter(Tournament.start_date >= start_dt)
@@ -934,7 +931,6 @@ def search_tournaments():
                 pass  # Invalid date format, ignore filter
         
         if end_date:
-            from datetime import datetime
             try:
                 end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
                 search_query = search_query.filter(Tournament.end_date <= end_dt)
@@ -1023,7 +1019,6 @@ def export_tournaments_ical():
             query = query.filter(Tournament.location.ilike(f'%{location}%'))
         
         # Date range
-        from datetime import datetime, timedelta
         start_date = datetime.now().date()
         end_date = start_date + timedelta(days=days)
         
@@ -1205,7 +1200,6 @@ def get_similar_tournaments(tournament_id):
 def get_upcoming_by_category():
     """Get upcoming tournaments grouped by category"""
     try:
-        from datetime import datetime
         
         # Get all upcoming tournaments
         upcoming_tournaments = Tournament.query.filter(
@@ -1437,3 +1431,138 @@ def manage_notifications():
         from app.utils.logger import logger
         logger.error(f"Notifications management error: {str(e)}")
         return jsonify({'error': 'Failed to manage notifications'}), 500
+
+
+@api_bp.route('/tournaments/reactions', methods=['POST'])
+def manage_tournament_reactions():
+    """Manage tournament reactions (like, love, fire, star, thinking)"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        tournament_id = data.get('tournament_id')
+        reaction = data.get('reaction')  # 'like', 'love', 'fire', 'star', 'thinking', or None to remove
+        user_id = session.get('user_id')  # Get from session if logged in
+        
+        if not tournament_id:
+            return jsonify({'error': 'Tournament ID is required'}), 400
+        
+        # Validate reaction type
+        valid_reactions = ['like', 'love', 'fire', 'star', 'thinking', None]
+        if reaction not in valid_reactions:
+            return jsonify({'error': 'Invalid reaction type'}), 400
+        
+        # Check if tournament exists
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        # If user is logged in, sync with database
+        if user_id:
+            from app.models.preference import UserInteraction
+            
+            # Find existing reaction
+            existing_reaction = UserInteraction.query.filter_by(
+                user_id=user_id,
+                tournament_id=tournament_id,
+                interaction_type='reaction'
+            ).first()
+            
+            if reaction:
+                # Add or update reaction
+                if existing_reaction:
+                    existing_reaction.interaction_value = reaction
+                    existing_reaction.created_at = datetime.utcnow()
+                else:
+                    new_reaction = UserInteraction(
+                        user_id=user_id,
+                        tournament_id=tournament_id,
+                        interaction_type='reaction',
+                        interaction_value=reaction
+                    )
+                    db.session.add(new_reaction)
+                
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Reaction "{reaction}" added',
+                    'tournament_id': tournament_id,
+                    'reaction': reaction
+                }), 200
+            else:
+                # Remove reaction
+                if existing_reaction:
+                    db.session.delete(existing_reaction)
+                    db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Reaction removed',
+                    'tournament_id': tournament_id,
+                    'reaction': None
+                }), 200
+        else:
+            # User not logged in, just acknowledge the request (client handles localStorage)
+            return jsonify({
+                'success': True,
+                'message': f'Reaction {reaction or "removed"} (local only)',
+                'tournament_id': tournament_id,
+                'reaction': reaction
+            }), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        from app.utils.logger import logger
+        logger.error(f"Reactions management error: {str(e)}")
+        return jsonify({'error': 'Failed to manage reactions'}), 500
+
+
+@api_bp.route('/tournaments/<int:tournament_id>/reactions/stats', methods=['GET'])
+def get_tournament_reaction_stats(tournament_id):
+    """Get reaction statistics for a tournament"""
+    try:
+        from app.models.preference import UserInteraction
+        
+        # Check if tournament exists
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        # Get reaction counts
+        reaction_stats = db.session.query(
+            UserInteraction.interaction_value,
+            db.func.count(UserInteraction.id)
+        ).filter(
+            UserInteraction.tournament_id == tournament_id,
+            UserInteraction.interaction_type == 'reaction'
+        ).group_by(
+            UserInteraction.interaction_value
+        ).all()
+        
+        stats = {
+            'like': 0,
+            'love': 0,
+            'fire': 0,
+            'star': 0,
+            'thinking': 0
+        }
+        
+        for reaction, count in reaction_stats:
+            if reaction in stats:
+                stats[reaction] = count
+        
+        total_reactions = sum(stats.values())
+        
+        return jsonify({
+            'tournament_id': tournament_id,
+            'reactions': stats,
+            'total': total_reactions
+        }), 200
+    
+    except Exception as e:
+        from app.utils.logger import logger
+        logger.error(f"Reaction stats error: {str(e)}")
+        return jsonify({'error': 'Failed to get reaction stats'}), 500

@@ -242,6 +242,17 @@ def create_app(config_name='default'):
         response.headers['Expires'] = '0'
         return response
     
+    # Автоматическая инициализация и проверка базы данных
+    try:
+        from app.utils.db_init import init_database
+        db_initialized = init_database(app, db)
+        if not db_initialized:
+            logger.error("Failed to initialize database! Application may not work correctly.")
+    except Exception as e:
+        logger.error(f"Critical error during database initialization: {e}")
+        import traceback
+        traceback.print_exc()
+    
     # Регистрация blueprint'ов
     from app.views.main import main_bp
     from app.views.admin import admin_bp

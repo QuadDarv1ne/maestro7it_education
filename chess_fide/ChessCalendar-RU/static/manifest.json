@@ -1,8 +1,8 @@
 {
-  "name": "ChessCalendar-RU",
+  "name": "ChessCalendar-RU - Календарь шахматных турниров",
   "short_name": "ChessCalendar",
-  "description": "Календарь шахматных турниров России",
-  "start_url": "/",
+  "description": "Полный календарь шахматных турниров России и мира. Следите за событиями, добавляйте в избранное, получайте уведомления.",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
@@ -26,9 +26,92 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["sports", "chess", "calendar"],
+  "categories": ["sports", "chess", "calendar", "events"],
   "lang": "ru-RU",
   "dir": "ltr",
   "scope": "/",
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "/static/img/screenshot-1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "label": "Главная страница с турнирами"
+    },
+    {
+      "src": "/static/img/screenshot-2.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "label": "Календарь турниров"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Все турниры",
+      "short_name": "Турниры",
+      "description": "Просмотр всех турниров",
+      "url": "/?utm_source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/static/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Календарь",
+      "short_name": "Календарь",
+      "description": "Календарь турниров",
+      "url": "/calendar?utm_source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/static/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Избранное",
+      "short_name": "Избранное",
+      "description": "Мои избранные турниры",
+      "url": "/favorites?utm_source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/static/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Карта",
+      "short_name": "Карта",
+      "description": "Карта турниров",
+      "url": "/map?utm_source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/static/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "related_applications": [],
+  "iarc_rating_id": "",
+  "protocol_handlers": [
+    {
+      "protocol": "web+chess",
+      "url": "/tournament?id=%s"
+    }
+  ]
 }
+
