@@ -328,4 +328,5 @@ def invalidate_parser_cache(parser_name: str = None, year: int = None, source: s
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5003, debug=True)
+    debug_mode = os.environ.get('DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=5003, debug=debug_mode)

@@ -458,27 +458,7 @@ def achievements():
     if 'user_id' not in session:
         return redirect(url_for('user.login'))
     
-    # Временно отключено
-    return render_template('error/500.html', error="Функция в разработке"), 500
-    
-    # try:
-    #     from app.utils.achievements import AchievementSystem
-    #     
-    #     user_id = session['user_id']
-    #     user_achievements = AchievementSystem.get_user_achievements(user_id)
-    #     user_stats = AchievementSystem.get_user_stats(user_id)
-    #     
-    #     # Получаем топ пользователей по достижениям
-    #     leaderboard = AchievementSystem.get_leaderboard(10)
-    #     
-    #     return render_template('user/achievements.html',
-    #                          user_achievements=user_achievements,
-    #                          user_stats=user_stats,
-    #                          leaderboard=leaderboard)
-    #                          
-    # except Exception as e:
-    #     logger.error(f"Error in achievements route: {str(e)}")
-    #     return render_template('error/500.html'), 500
+    return render_template('error/500.html', error="Функция в разработке"), 501
 
 @main_bp.route('/recommendations')
 def recommendations():

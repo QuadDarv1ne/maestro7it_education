@@ -421,7 +421,12 @@ class UnifiedBackupManager:
                 if table_name.startswith('sqlite_'):
                     continue
                 
-                # Получаем информацию о колонках
+                # Получаем информацию о колонках (безопасно, table_name из списка таблиц БД)
+                # Используем параметризованный запрос невозможен для PRAGMA, но table_name валидирован
+                if not table_name.replace('_', '').isalnum():
+                    logger.warning(f"Skipping invalid table name: {table_name}")
+                    continue
+                    
                 table_info = cursor.execute(f"PRAGMA table_info('{table_name}')").fetchall()
                 columns = []
                 

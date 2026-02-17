@@ -133,7 +133,11 @@ def cache_response(timeout=300):
             cached = redis_client.get(cache_key)
             if cached:
                 logger.info(f"Cache hit for {cache_key}")
-                return jsonify(eval(cached.decode()))
+                try:
+                    import json
+                    return jsonify(json.loads(cached.decode() if isinstance(cached, bytes) else cached))
+                except (json.JSONDecodeError, AttributeError):
+                    logger.warning(f"Invalid cache data for {cache_key}")
             
             # Выполняем функцию
             response = f(*args, **kwargs)

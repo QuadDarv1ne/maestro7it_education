@@ -216,4 +216,5 @@ def cdn_status():
     }
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5004, debug=True)
+    debug_mode = os.environ.get('DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=5004, debug=debug_mode)

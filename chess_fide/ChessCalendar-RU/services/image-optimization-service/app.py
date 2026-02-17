@@ -220,4 +220,5 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5005, debug=True)
+    debug_mode = os.environ.get('DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=5005, debug=debug_mode)

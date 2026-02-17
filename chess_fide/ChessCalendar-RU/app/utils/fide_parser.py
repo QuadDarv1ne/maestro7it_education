@@ -9,7 +9,6 @@ from urllib.parse import urljoin
 from dateutil import parser as date_parser
 import time
 import random
-import time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By

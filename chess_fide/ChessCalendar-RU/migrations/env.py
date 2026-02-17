@@ -11,7 +11,18 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app import db
-from app.models import *  # Import all models
+# Import all models explicitly
+from app.models.user import User
+from app.models.tournament import Tournament
+from app.models.notification import Notification, Subscription
+from app.models.favorite import FavoriteTournament
+from app.models.rating import TournamentRating
+from app.models.report import Report
+from app.models.forum import ForumThread, ForumPost
+from app.models.preference import UserPreference, UserInteraction
+from app.models.audit_log import AuditLog
+from app.models.ab_test_event import ABTestEvent
+from app.models.tournament_subscription import TournamentSubscription
 
 # Alembic Config object
 config = context.config
