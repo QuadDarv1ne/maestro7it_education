@@ -168,8 +168,7 @@ def create_app(config_name='default'):
         
         # Инициализация health check системы
         try:
-            from app.utils.health_check import init_health_check
-            init_health_check(app, db)
+            from app.utils.unified_monitoring import health_checker
             logger.info("Health check system initialized")
         except Exception as e:
             logger.warning(f"Failed to initialize health check: {e}")

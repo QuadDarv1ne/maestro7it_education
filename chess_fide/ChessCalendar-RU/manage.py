@@ -17,9 +17,6 @@ from app.models.tournament import Tournament
 from app.models.user import User
 from app.models.notification import Notification, Subscription
 from app.utils.unified_backup import backup_manager
-from app.utils.notifications import notification_service
-from app.utils.fide_parser import FIDEParses
-from app.utils.cfr_parser import CFRParser
 
 
 def create_admin_user(username, email, password):
@@ -48,8 +45,7 @@ def backup_database():
     app = create_app()
     
     with app.app_context():
-        backup_manager = DatabaseBackupManager("chess_calendar.db")
-        backup_path = backup_manager.create_compressed_backup()
+        backup_path = backup_manager.create_backup()
         print(f"Database backup created: {backup_path}")
         return backup_path
 
@@ -59,24 +55,29 @@ def export_data(format_type='json'):
     app = create_app()
     
     with app.app_context():
-        export_manager = DataExportManager("chess_calendar.db")
+        tournaments = Tournament.query.all()
+        output_path = f"tournaments_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{format_type}"
         
         if format_type.lower() == 'json':
-            output_path = f"tournaments_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            success = export_manager.export_tournaments_to_json(output_path)
+            import json
+            data = [{'id': t.id, 'name': t.name, 'start_date': str(t.start_date), 
+                     'end_date': str(t.end_date), 'location': t.location, 
+                     'category': t.category} for t in tournaments]
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
         elif format_type.lower() == 'csv':
-            output_path = f"tournaments_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            success = export_manager.export_tournaments_to_csv(output_path)
+            import csv
+            with open(output_path, 'w', encoding='utf-8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['ID', 'Name', 'Start Date', 'End Date', 'Location', 'Category'])
+                for t in tournaments:
+                    writer.writerow([t.id, t.name, t.start_date, t.end_date, t.location, t.category])
         else:
             print(f"Unsupported format: {format_type}")
             return False
         
-        if success:
-            print(f"Data exported successfully to: {output_path}")
-            return output_path
-        else:
-            print("Failed to export data")
-            return False
+        print(f"Data exported successfully to: {output_path}")
+        return output_path
 
 
 def clean_old_notifications(days=30):

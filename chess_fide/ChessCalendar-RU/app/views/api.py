@@ -6,7 +6,7 @@ from app.models.rating import TournamentRating
 from app.models.notification import Subscription
 from app.repositories import TournamentRepository, FavoriteRepository
 from app.utils.unified_cache import TournamentCache
-from app.utils.performance_monitor import track_performance
+from app.utils.unified_monitoring import track_performance
 from datetime import datetime, date, timedelta
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
@@ -146,7 +146,7 @@ def get_upcoming_tournaments():
 def get_performance_metrics():
     """Get performance metrics for the application"""
     try:
-        from app.utils.performance_monitor import perf_monitor
+        from app.utils.unified_monitoring import performance_monitor
         
         # Get performance summary
         summary = perf_monitor.get_performance_summary()

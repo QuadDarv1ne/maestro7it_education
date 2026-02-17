@@ -1,181 +1,27 @@
 version: '3.8'
 
 services:
-  # API Gateway - единая точка входа
-  api-gateway:
-    build: ./services/api-gateway
+  # Flask приложение
+  app:
+    build: .
     ports:
       - "5000:5000"
     environment:
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
       - REDIS_URL=redis://redis:6379/0
-      - TOURNAMENT_SERVICE_URL=http://tournament-service:5001
-      - USER_SERVICE_URL=http://user-service:5002
-      - PARSER_SERVICE_URL=http://parser-service:5003
-      - CDN_SERVICE_URL=http://cdn-service:5004
-      - IMAGE_SERVICE_URL=http://image-optimization-service:5005
-      - CALENDAR_SERVICE_URL=http://calendar-service:5006
-      - NOTIFICATION_SERVICE_URL=http://notification-service:5007
-      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:5008
-      - FAVORITES_SERVICE_URL=http://favorites-service:5009
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///chess_calendar.db}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - app-data:/app/instance
     depends_on:
       - redis
-      - tournament-service
-      - user-service
     networks:
       - chess-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  tournament-service:
-    build: ./services/tournament-service
-    ports:
-      - "5001:5001"
-    environment:
-      - DATABASE_URL=sqlite:///tournaments.db
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    volumes:
-      - tournaments-data:/app/instance
-    networks:
-      - chess-network
-    depends_on:
-      - redis
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  user-service:
-    build: ./services/user-service
-    ports:
-      - "5002:5002"
-    environment:
-      - DATABASE_URL=sqlite:///users.db
-    volumes:
-      - users-data:/app/instance
-    networks:
-      - chess-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  parser-service:
-    build: ./services/parser-service
-    ports:
-      - "5003:5003"
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - redis
-    networks:
-      - chess-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  cdn-service:
-    build: ./services/cdn-service
-    ports:
-      - "5004:5004"
-    volumes:
-      - ./static:/app/static
-    networks:
-      - chess-network
-    environment:
-      - CDN_PROVIDER=cloudflare
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5004/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  image-optimization-service:
-    build: ./services/image-optimization-service
-    ports:
-      - "5005:5005"
-    networks:
-      - chess-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5005/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  calendar-service:
-    build: ./services/calendar-service
-    ports:
-      - "5006:5006"
-    networks:
-      - chess-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5006/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  notification-service:
-    build: ./services/notification-service
-    ports:
-      - "5007:5007"
-    networks:
-      - chess-network
-    depends_on:
-      - redis
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5007/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  recommendation-service:
-    build: ./services/recommendation-service
-    ports:
-      - "5008:5008"
-    networks:
-      - chess-network
-    depends_on:
-      - redis
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5008/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  favorites-service:
-    build: ./services/favorites-service
-    ports:
-      - "5009:5009"
-    networks:
-      - chess-network
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - redis
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5009/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -187,7 +33,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - DATABASE_URL=sqlite:///chess_calendar.db
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///chess_calendar.db}
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - .:/app
@@ -210,7 +56,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - DATABASE_URL=sqlite:///chess_calendar.db
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///chess_calendar.db}
     volumes:
       - .:/app
       - celery-beat-data:/app/data
@@ -242,6 +88,7 @@ services:
       timeout: 10s
       retries: 3
 
+  # Nginx reverse proxy
   nginx:
     image: nginx:alpine
     ports:
@@ -252,7 +99,7 @@ services:
       - ./static:/var/www/static:ro
       - nginx-cache:/var/cache/nginx
     depends_on:
-      - api-gateway
+      - app
     networks:
       - chess-network
     restart: unless-stopped
@@ -262,6 +109,7 @@ services:
       timeout: 10s
       retries: 3
 
+  # Redis для кэширования и Celery
   redis:
     image: redis:7-alpine
     ports:
@@ -284,8 +132,7 @@ networks:
 
 volumes:
   redis-data:
-  tournaments-data:
-  users-data:
+  app-data:
   celery-data:
   celery-beat-data:
   nginx-cache:

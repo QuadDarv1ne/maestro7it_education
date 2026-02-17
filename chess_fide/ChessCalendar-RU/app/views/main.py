@@ -7,7 +7,7 @@ from app.models.report import Report
 from app.models.audit_log import AuditLog
 from app.repositories import TournamentRepository, FavoriteRepository
 from app.utils.unified_cache import TournamentCache
-from app.utils.performance_monitor import track_performance
+from app.utils.unified_monitoring import track_performance
 from app.utils.http_cache import set_cache_headers
 from datetime import datetime, timedelta, date
 import bleach
