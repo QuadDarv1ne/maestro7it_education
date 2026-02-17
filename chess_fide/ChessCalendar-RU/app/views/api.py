@@ -3,8 +3,8 @@ from app import db, csrf
 from app.models.tournament import Tournament
 from app.models.user import User
 from app.models.rating import TournamentRating
-from app.models.favorite import FavoriteTournament
 from app.models.notification import Subscription
+from app.repositories import TournamentRepository, FavoriteRepository
 from app.utils.unified_cache import TournamentCache
 from app.utils.performance_monitor import track_performance
 from datetime import datetime, date, timedelta
@@ -434,7 +434,7 @@ def add_favorite(tournament_id):
         if not user_id:
             return jsonify({'error': 'User ID is required'}), 400
         
-        tournament = Tournament.query.get(tournament_id)
+        tournament = TournamentRepository.get_by_id(tournament_id)
         if not tournament:
             return jsonify({'error': 'Tournament not found'}), 404
         
@@ -442,19 +442,15 @@ def add_favorite(tournament_id):
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Check if already favorited
-        existing_favorite = FavoriteTournament.query.filter_by(
-            user_id=user_id,
-            tournament_id=tournament_id
-        ).first()
+        # Check if already favorited and add
+        favorite = FavoriteRepository.add_favorite(user_id, tournament_id)
         
-        if existing_favorite:
+        if not favorite:
+            return jsonify({'error': 'Failed to add to favorites'}), 500
+        
+        # Check if it was already in favorites
+        if favorite.created_at < datetime.utcnow() - timedelta(seconds=1):
             return jsonify({'error': 'Tournament already in favorites'}), 409
-        
-        # Create new favorite
-        favorite = FavoriteTournament(user_id=user_id, tournament_id=tournament_id)
-        db.session.add(favorite)
-        db.session.commit()
         
         return jsonify({
             'message': 'Tournament added to favorites',
@@ -483,17 +479,11 @@ def remove_favorite(tournament_id):
         if not user_id:
             return jsonify({'error': 'User ID is required'}), 400
         
-        # Find and delete favorite
-        favorite = FavoriteTournament.query.filter_by(
-            user_id=user_id,
-            tournament_id=tournament_id
-        ).first()
+        # Remove favorite using repository
+        success = FavoriteRepository.remove_favorite(user_id, tournament_id)
         
-        if not favorite:
+        if not success:
             return jsonify({'error': 'Favorite not found'}), 404
-        
-        db.session.delete(favorite)
-        db.session.commit()
         
         return jsonify({
             'message': 'Tournament removed from favorites'
@@ -511,7 +501,7 @@ def get_user_favorites(user_id):
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        favorites = FavoriteTournament.query.filter_by(user_id=user_id).all()
+        favorites = FavoriteRepository.get_user_favorites(user_id)
         favorite_tournaments = []
         
         for fav in favorites:
@@ -525,6 +515,57 @@ def get_user_favorites(user_id):
         return jsonify({
             'favorites': favorite_tournaments,
             'total': len(favorite_tournaments)
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tournaments/<int:tournament_id>/unfavorite', methods=['POST'])
+def unfavorite_tournament(tournament_id):
+    """Remove tournament from favorites (POST version for consistency)"""
+    try:
+        data = request.get_json() or {}
+        user_id = data.get('user_id') or session.get('user_id')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID is required'}), 401
+        
+        success = FavoriteRepository.remove_favorite(user_id, tournament_id)
+        
+        if not success:
+            return jsonify({'error': 'Favorite not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tournament removed from favorites',
+            'is_favorite': False
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tournaments/<int:tournament_id>/toggle-favorite', methods=['POST'])
+def toggle_favorite(tournament_id):
+    """Toggle tournament favorite status"""
+    try:
+        data = request.get_json() or {}
+        user_id = data.get('user_id') or session.get('user_id')
+        
+        if not user_id:
+            return jsonify({'error': 'User ID is required'}), 401
+        
+        # Check if tournament exists
+        tournament = TournamentRepository.get_by_id(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        # Toggle favorite using repository
+        is_favorite, message = FavoriteRepository.toggle_favorite(user_id, tournament_id)
+        
+        return jsonify({
+            'success': True,
+            'is_favorite': is_favorite,
+            'message': message
         }), 200
     
     except Exception as e:

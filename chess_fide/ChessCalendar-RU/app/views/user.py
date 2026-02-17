@@ -3,6 +3,7 @@ from app import db
 from app.models.user import User
 from app.models.tournament import Tournament
 from app.models.favorite import FavoriteTournament
+from app.repositories import TournamentRepository, FavoriteRepository
 from app.utils.notifications import notification_service
 from datetime import datetime
 import re
@@ -223,8 +224,8 @@ def favorites():
         flash('Доступ запрещен', 'error')
         return redirect(url_for('main.index'))
     
-    # Получаем избранные турниры пользователя
-    favorite_tournaments = db.session.query(FavoriteTournament).filter_by(user_id=user.id).all()
+    # Получаем избранные турниры пользователя через репозиторий
+    favorite_tournaments = FavoriteRepository.get_user_favorite_tournaments(user.id)
     
     return render_template('user/favorites.html', favorite_tournaments=favorite_tournaments)
 
@@ -239,31 +240,23 @@ def toggle_favorite(tournament_id):
         return jsonify({'status': 'error', 'message': 'Access denied'}), 403
     
     try:
-        tournament = Tournament.query.get(tournament_id)
+        # Проверяем существование турнира через репозиторий
+        tournament = TournamentRepository.get_by_id(tournament_id)
         if not tournament:
             return jsonify({'status': 'error', 'message': 'Турнир не найден'}), 404
         
-        # Проверяем, есть ли уже этот турнир в избранном у пользователя
-        existing_favorite = FavoriteTournament.query.filter_by(
-            user_id=user.id,
-            tournament_id=tournament_id
-        ).first()
+        # Используем метод toggle из репозитория
+        is_favorite, message = FavoriteRepository.toggle_favorite(user.id, tournament_id)
         
-        if existing_favorite:
-            # Удаляем из избранного
-            db.session.delete(existing_favorite)
-            db.session.commit()
-            return jsonify({'status': 'success', 'message': 'Турнир удален из избранного', 'is_favorite': False})
-        else:
-            # Добавляем в избранное
-            favorite = FavoriteTournament(user_id=user.id, tournament_id=tournament_id)
-            db.session.add(favorite)
-            db.session.commit()
-            return jsonify({'status': 'success', 'message': 'Турнир добавлен в избранное', 'is_favorite': True})
+        return jsonify({
+            'status': 'success',
+            'message': message,
+            'is_favorite': is_favorite
+        })
     
     except Exception as e:
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': f'Ошибка при работе с избранным: {e}'}), 500
+        return jsonify({'status': 'error', 'message': f'Ошибка при работе с избранным: {str(e)}'}), 500
 
 @user_bp.route('/favorites/check/<int:tournament_id>')
 def check_favorite(tournament_id):
@@ -275,9 +268,7 @@ def check_favorite(tournament_id):
     if not user or not user.is_regular_user:
         return jsonify({'is_favorite': False}), 200
     
-    favorite = FavoriteTournament.query.filter_by(
-        user_id=user.id,
-        tournament_id=tournament_id
-    ).first()
+    # Используем метод репозитория для проверки
+    is_favorite = FavoriteRepository.is_favorite(user.id, tournament_id)
     
-    return jsonify({'is_favorite': favorite is not None}), 200
+    return jsonify({'is_favorite': is_favorite}), 200

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app import db
 from app.models.tournament import Tournament
 from app.models.user import User
+from app.repositories import TournamentRepository, FavoriteRepository
 from app.utils.analytics import analytics_service
 from app.utils.notifications import notification_service
 from app.utils.unified_cache import cache, TournamentCache
@@ -29,9 +30,10 @@ def admin_required():
 @admin_bp.route('/')
 def dashboard():
     """Админ-панель"""
-    # Статистика
-    total_tournaments = Tournament.query.count()
-    recent_tournaments = Tournament.query.order_by(Tournament.created_at.desc()).limit(5).all()
+    # Статистика через репозиторий
+    stats = TournamentRepository.get_statistics()
+    total_tournaments = stats['total']
+    recent_tournaments = TournamentRepository.get_all(limit=5)
     
     # Статистика кэша
     cache_stats = cache_service.get_stats()
@@ -72,28 +74,22 @@ def add_tournament():
     """Добавить турнир вручную"""
     if request.method == 'POST':
         try:
-            tournament = Tournament(
-                name=request.form['name'],
-                start_date=datetime.strptime(request.form['start_date'], '%Y-%m-%d').date(),
-                end_date=datetime.strptime(request.form['end_date'], '%Y-%m-%d').date(),
-                location=request.form['location'],
-                category=request.form['category'],
-                status=request.form.get('status', 'Scheduled'),
-                description=request.form.get('description'),
-                prize_fund=request.form.get('prize_fund'),
-                organizer=request.form.get('organizer'),
-                fide_id=request.form.get('fide_id'),
-                source_url=request.form.get('source_url')
-            )
+            tournament_data = {
+                'name': request.form['name'],
+                'start_date': datetime.strptime(request.form['start_date'], '%Y-%m-%d').date(),
+                'end_date': datetime.strptime(request.form['end_date'], '%Y-%m-%d').date(),
+                'location': request.form['location'],
+                'category': request.form['category'],
+                'status': request.form.get('status', 'Scheduled'),
+                'description': request.form.get('description'),
+                'prize_fund': request.form.get('prize_fund'),
+                'organizer': request.form.get('organizer'),
+                'fide_id': request.form.get('fide_id'),
+                'source_url': request.form.get('source_url')
+            }
             
-            # Validate the tournament data
-            validation_errors = tournament.validate()
-            if validation_errors:
-                flash(f'Ошибка валидации данных турнира: {"; ".join(validation_errors)}', 'error')
-                return render_template('admin/add_tournament.html')
-            
-            db.session.add(tournament)
-            db.session.commit()
+            # Создаем турнир через репозиторий
+            tournament = TournamentRepository.create(tournament_data)
             
             # Инвалидируем кэш
             TournamentCache.invalidate_tournaments_cache()
@@ -104,15 +100,20 @@ def add_tournament():
             flash('Турнир успешно добавлен', 'success')
             return redirect(url_for('admin.tournaments'))
             
+        except ValueError as e:
+            flash(f'Ошибка валидации данных турнира: {str(e)}', 'error')
         except Exception as e:
-            flash(f'Ошибка при добавлении турнира: {e}', 'error')
+            flash(f'Ошибка при добавлении турнира: {str(e)}', 'error')
     
     return render_template('admin/add_tournament.html')
 
 @admin_bp.route('/tournaments/<int:id>/edit', methods=['GET', 'POST'])
 def edit_tournament(id):
     """Редактировать турнир"""
-    tournament = Tournament.query.get_or_404(id)
+    tournament = TournamentRepository.get_by_id(id)
+    if not tournament:
+        flash('Турнир не найден', 'error')
+        return redirect(url_for('admin.tournaments'))
     
     if request.method == 'POST':
         try:
@@ -126,27 +127,22 @@ def edit_tournament(id):
                 'status': tournament.status
             }
             
-            # Обновляем значения
-            tournament.name = request.form['name']
-            tournament.start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d').date()
-            tournament.end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
-            tournament.location = request.form['location']
-            tournament.category = request.form['category']
-            tournament.status = request.form.get('status', 'Scheduled')
-            tournament.description = request.form.get('description')
-            tournament.prize_fund = request.form.get('prize_fund')
-            tournament.organizer = request.form.get('organizer')
-            tournament.fide_id = request.form.get('fide_id')
-            tournament.source_url = request.form.get('source_url')
-            tournament.updated_at = datetime.utcnow()
+            # Обновляем через репозиторий
+            update_data = {
+                'name': request.form['name'],
+                'start_date': datetime.strptime(request.form['start_date'], '%Y-%m-%d').date(),
+                'end_date': datetime.strptime(request.form['end_date'], '%Y-%m-%d').date(),
+                'location': request.form['location'],
+                'category': request.form['category'],
+                'status': request.form.get('status', 'Scheduled'),
+                'description': request.form.get('description'),
+                'prize_fund': request.form.get('prize_fund'),
+                'organizer': request.form.get('organizer'),
+                'fide_id': request.form.get('fide_id'),
+                'source_url': request.form.get('source_url')
+            }
             
-            # Validate the tournament data
-            validation_errors = tournament.validate()
-            if validation_errors:
-                flash(f'Ошибка валидации данных турнира: {"; ".join(validation_errors)}', 'error')
-                return render_template('admin/edit_tournament.html', tournament=tournament)
-            
-            db.session.commit()
+            tournament = TournamentRepository.update(tournament, update_data)
             
             # Инвалидируем кэш
             TournamentCache.invalidate_tournaments_cache()
@@ -165,8 +161,10 @@ def edit_tournament(id):
             flash('Турнир успешно обновлен', 'success')
             return redirect(url_for('admin.tournaments'))
             
+        except ValueError as e:
+            flash(f'Ошибка валидации данных турнира: {str(e)}', 'error')
         except Exception as e:
-            flash(f'Ошибка при обновлении турнира: {e}', 'error')
+            flash(f'Ошибка при обновлении турнира: {str(e)}', 'error')
     
     return render_template('admin/edit_tournament.html', tournament=tournament)
 
@@ -174,16 +172,19 @@ def edit_tournament(id):
 def delete_tournament(id):
     """Удалить турнир"""
     try:
-        tournament = Tournament.query.get_or_404(id)
-        db.session.delete(tournament)
-        db.session.commit()
+        tournament = TournamentRepository.get_by_id(id)
+        if not tournament:
+            flash('Турнир не найден', 'error')
+            return redirect(url_for('admin.tournaments'))
+        
+        TournamentRepository.delete(tournament)
         
         # Инвалидируем кэш
         TournamentCache.invalidate_tournaments_cache()
         
         flash('Турнир успешно удален', 'success')
     except Exception as e:
-        flash(f'Ошибка при удалении турнира: {e}', 'error')
+        flash(f'Ошибка при удалении турнира: {str(e)}', 'error')
     
     return redirect(url_for('admin.tournaments'))
 
@@ -231,33 +232,32 @@ def _import_csv_tournaments(file):
             # Проверяем, существует ли уже турнир с таким FIDE ID
             fide_id = row.get('fide_id') or row.get('FIDE ID')
             if fide_id:
-                existing = Tournament.query.filter_by(fide_id=fide_id).first()
+                existing = TournamentRepository.get_by_fide_id(fide_id)
                 if existing:
                     continue  # Пропускаем дубликаты
             
-            # Создаем новый турнир
-            tournament = Tournament(
-                name=row.get('name') or row.get('Название'),
-                start_date=datetime.strptime(row.get('start_date') or row.get('start_date'), '%Y-%m-%d').date(),
-                end_date=datetime.strptime(row.get('end_date') or row.get('end_date'), '%Y-%m-%d').date(),
-                location=row.get('location') or row.get('Место'),
-                category=row.get('category') or row.get('Категория') or 'National',
-                status=row.get('status') or row.get('Статус') or 'Scheduled',
-                description=row.get('description') or row.get('Описание'),
-                prize_fund=row.get('prize_fund') or row.get('Призовой фонд'),
-                organizer=row.get('organizer') or row.get('Организатор'),
-                fide_id=fide_id,
-                source_url=row.get('source_url') or row.get('source_url')
-            )
+            # Создаем новый турнир через репозиторий
+            tournament_data = {
+                'name': row.get('name') or row.get('Название'),
+                'start_date': datetime.strptime(row.get('start_date') or row.get('start_date'), '%Y-%m-%d').date(),
+                'end_date': datetime.strptime(row.get('end_date') or row.get('end_date'), '%Y-%m-%d').date(),
+                'location': row.get('location') or row.get('Место'),
+                'category': row.get('category') or row.get('Категория') or 'National',
+                'status': row.get('status') or row.get('Статус') or 'Scheduled',
+                'description': row.get('description') or row.get('Описание'),
+                'prize_fund': row.get('prize_fund') or row.get('Призовой фонд'),
+                'organizer': row.get('organizer') or row.get('Организатор'),
+                'fide_id': fide_id,
+                'source_url': row.get('source_url') or row.get('source_url')
+            }
             
-            db.session.add(tournament)
+            TournamentRepository.create(tournament_data)
             imported_count += 1
             
-        except Exception as e:
+        except Exception:
             # Пропускаем строки с ошибками
             continue
     
-    db.session.commit()
     TournamentCache.invalidate_tournaments_cache()
     return imported_count
 
@@ -274,33 +274,32 @@ def _import_json_tournaments(file):
             # Проверяем, существует ли уже турнир с таким FIDE ID
             fide_id = item.get('fide_id')
             if fide_id:
-                existing = Tournament.query.filter_by(fide_id=fide_id).first()
+                existing = TournamentRepository.get_by_fide_id(fide_id)
                 if existing:
                     continue  # Пропускаем дубликаты
             
-            # Создаем новый турнир
-            tournament = Tournament(
-                name=item.get('name'),
-                start_date=datetime.strptime(item.get('start_date'), '%Y-%m-%d').date(),
-                end_date=datetime.strptime(item.get('end_date'), '%Y-%m-%d').date(),
-                location=item.get('location'),
-                category=item.get('category', 'National'),
-                status=item.get('status', 'Scheduled'),
-                description=item.get('description'),
-                prize_fund=item.get('prize_fund'),
-                organizer=item.get('organizer'),
-                fide_id=fide_id,
-                source_url=item.get('source_url')
-            )
+            # Создаем новый турнир через репозиторий
+            tournament_data = {
+                'name': item.get('name'),
+                'start_date': datetime.strptime(item.get('start_date'), '%Y-%m-%d').date(),
+                'end_date': datetime.strptime(item.get('end_date'), '%Y-%m-%d').date(),
+                'location': item.get('location'),
+                'category': item.get('category', 'National'),
+                'status': item.get('status', 'Scheduled'),
+                'description': item.get('description'),
+                'prize_fund': item.get('prize_fund'),
+                'organizer': item.get('organizer'),
+                'fide_id': fide_id,
+                'source_url': item.get('source_url')
+            }
             
-            db.session.add(tournament)
+            TournamentRepository.create(tournament_data)
             imported_count += 1
             
-        except Exception as e:
+        except Exception:
             # Пропускаем записи с ошибками
             continue
     
-    db.session.commit()
     TournamentCache.invalidate_tournaments_cache()
     return imported_count
 
@@ -392,14 +391,14 @@ def api_metrics():
 def export_tournaments():
     """Экспорт всех турниров"""
     try:
-        tournaments = Tournament.query.all()
+        tournaments = TournamentRepository.get_all()
         data = [t.to_dict() for t in tournaments]
         
         return jsonify(data), 200, {
             'Content-Disposition': 'attachment; filename=all_tournaments.json'
         }
     except Exception as e:
-        flash(f'Ошибка при экспорте: {e}', 'error')
+        flash(f'Ошибка при экспорте: {str(e)}', 'error')
         return redirect(url_for('admin.tournaments'))
 
 @admin_bp.route('/tournaments/bulk-delete', methods=['POST'])
@@ -415,14 +414,13 @@ def bulk_delete_tournaments():
         deleted_count = 0
         for tournament_id in tournament_ids:
             try:
-                tournament = Tournament.query.get(tournament_id)
+                tournament = TournamentRepository.get_by_id(tournament_id)
                 if tournament:
-                    db.session.delete(tournament)
+                    TournamentRepository.delete(tournament)
                     deleted_count += 1
             except Exception:
                 continue
         
-        db.session.commit()
         TournamentCache.invalidate_tournaments_cache()
         
         return jsonify({
@@ -447,16 +445,13 @@ def bulk_update_status():
         updated_count = 0
         for tournament_id in tournament_ids:
             try:
-                tournament = Tournament.query.get(tournament_id)
+                tournament = TournamentRepository.get_by_id(tournament_id)
                 if tournament:
-                    old_status = tournament.status
-                    tournament.status = new_status
-                    tournament.updated_at = datetime.utcnow()
+                    TournamentRepository.update(tournament, {'status': new_status})
                     updated_count += 1
             except Exception:
                 continue
         
-        db.session.commit()
         TournamentCache.invalidate_tournaments_cache()
         
         return jsonify({

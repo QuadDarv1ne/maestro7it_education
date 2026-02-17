@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% if 'user_id' in session %}
+    <meta name="user-id" content="{{ session['user_id'] }}">
+    {% endif %}
     <title>{% block title %}Шахматный календарь - ChessCalendar-RU{% endblock %}</title>
     
     <!-- Bootstrap 5 CSS -->
@@ -791,6 +795,14 @@
     <script src="{{ url_for('static', filename='js/modern-ui.js') }}"></script>
     <!-- Tournament Actions -->
     <script src="{{ url_for('static', filename='js/tournament-actions.js') }}"></script>
+    <!-- Enhanced Tournament Cards -->
+    <script src="{{ url_for('static', filename='js/tournament-card-enhanced.js') }}"></script>
+    <!-- Lazy Loading & Performance -->
+    <script src="{{ url_for('static', filename='js/lazy-loading.js') }}"></script>
+    <!-- Tournament Filters -->
+    <script src="{{ url_for('static', filename='js/tournament-filters.js') }}"></script>
+    <!-- Tournament Comparison -->
+    <script src="{{ url_for('static', filename='js/tournament-comparison.js') }}"></script>
     <!-- Enhanced Navbar -->
     <script src="{{ url_for('static', filename='js/navbar-enhanced.js') }}"></script>
     

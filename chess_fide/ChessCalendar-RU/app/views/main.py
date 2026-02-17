@@ -3,13 +3,13 @@ from app import db
 from app.models.tournament import Tournament
 from app.models.user import User
 from app.models.rating import TournamentRating
-from app.models.favorite import FavoriteTournament
 from app.models.report import Report
 from app.models.audit_log import AuditLog
+from app.repositories import TournamentRepository, FavoriteRepository
 from app.utils.unified_cache import TournamentCache
 from app.utils.performance_monitor import track_performance
 from app.utils.http_cache import set_cache_headers
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import bleach
 import logging
 
@@ -30,39 +30,54 @@ def index():
         location = request.args.get('location', '')
         search_query = request.args.get('search', '').strip()
         
-        # Получаем турниры с фильтрацией
-        tournaments = Tournament.query
-        
-        if category:
-            tournaments = tournaments.filter(Tournament.category == category)
-        if status:
-            tournaments = tournaments.filter(Tournament.status == status)
-        if location:
-            tournaments = tournaments.filter(Tournament.location.contains(location))
-        if search_query:
-            tournaments = tournaments.filter(
-                db.or_(
-                    Tournament.name.contains(search_query),
-                    Tournament.location.contains(search_query),
-                    Tournament.description.contains(search_query)
-                )
-            )
-        
-        tournaments = tournaments.order_by(Tournament.start_date.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
+        # Используем репозиторий для поиска турниров
+        tournaments_list = TournamentRepository.search(
+            query_text=search_query if search_query else None,
+            category=category if category else None,
+            status=status if status else None,
+            location=location if location else None,
+            limit=per_page,
+            offset=(page - 1) * per_page
         )
+        
+        # Подсчет общего количества для пагинации
+        total = TournamentRepository.count_all()
+        
+        # Создаем объект пагинации вручную
+        class Pagination:
+            def __init__(self, items, page, per_page, total):
+                self.items = items
+                self.page = page
+                self.per_page = per_page
+                self.total = total
+                self.pages = (total + per_page - 1) // per_page
+                self.has_prev = page > 1
+                self.has_next = page < self.pages
+                self.prev_num = page - 1 if self.has_prev else None
+                self.next_num = page + 1 if self.has_next else None
+            
+            def iter_pages(self, left_edge=2, left_current=2, right_current=3, right_edge=2):
+                last = 0
+                for num in range(1, self.pages + 1):
+                    if num <= left_edge or \
+                       (num > self.page - left_current - 1 and num < self.page + right_current) or \
+                       num > self.pages - right_edge:
+                        if last + 1 != num:
+                            yield None
+                        yield num
+                        last = num
+        
+        tournaments = Pagination(tournaments_list, page, per_page, total)
         
         # Статистика для отображения
         try:
-            stats = {
-                'total_tournaments': TournamentCache.get_tournaments_stats().get('total', 0),
-                'categories': TournamentCache.get_categories_list()[:5] if TournamentCache.get_categories_list() else [],  # Топ-5 категорий
-                'locations': TournamentCache.get_locations_list()[:5] if TournamentCache.get_locations_list() else []     # Топ-5 локаций
-            }
+            stats = TournamentRepository.get_statistics()
+            stats['categories'] = list(stats.get('by_category', {}).keys())[:5]
+            stats['locations'] = []  # Можно добавить позже
         except Exception as stats_error:
             logger.warning(f"Failed to load stats: {stats_error}")
             stats = {
-                'total_tournaments': 0,
+                'total': 0,
                 'categories': [],
                 'locations': []
             }
@@ -96,17 +111,17 @@ def offline():
 def calendar():
     """Календарь турниров"""
     try:
-        # Получаем турниры для календаря
-        start_date = request.args.get('start_date', '')
-        end_date = request.args.get('end_date', '')
+        # Получаем турниры для календаря через репозиторий
+        start_date_str = request.args.get('start_date', '')
+        end_date_str = request.args.get('end_date', '')
         
-        tournaments = Tournament.query
-        if start_date:
-            tournaments = tournaments.filter(Tournament.start_date >= start_date)
-        if end_date:
-            tournaments = tournaments.filter(Tournament.end_date <= end_date)
-        
-        tournaments = tournaments.order_by(Tournament.start_date).all()
+        if start_date_str and end_date_str:
+            from datetime import datetime
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            tournaments = TournamentRepository.get_by_date_range(start_date, end_date)
+        else:
+            tournaments = TournamentRepository.get_upcoming(limit=100)
         
         # Подготовка данных для календаря
         calendar_data = []
@@ -132,7 +147,7 @@ def calendar():
 def tournament_detail(tournament_id):
     """Детали турнира"""
     try:
-        tournament = TournamentCache.get_tournament_by_id(tournament_id)
+        tournament = TournamentRepository.get_by_id(tournament_id)
         if not tournament:
             return render_template('error/404.html'), 404
         
@@ -144,11 +159,7 @@ def tournament_detail(tournament_id):
         is_favorite = False
         if 'user_id' in session:
             user_id = session['user_id']
-            favorite = FavoriteTournament.query.filter_by(
-                user_id=user_id, 
-                tournament_id=tournament_id
-            ).first()
-            is_favorite = favorite is not None
+            is_favorite = FavoriteRepository.is_favorite(user_id, tournament_id)
         
         # Логируем просмотр турнира
         if 'user_id' in session:
@@ -188,28 +199,21 @@ def add_tournament():
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
             
-            # Создание нового турнира
-            tournament = Tournament(
-                name=name,
-                start_date=start_date,
-                end_date=end_date,
-                location=location,
-                category=category,
-                description=description,
-                prize_fund=prize_fund,
-                organizer=organizer,
-                fide_id=request.form.get('fide_id', ''),
-                source_url=request.form.get('source_url', '')
-            )
+            # Создание нового турнира через репозиторий
+            tournament_data = {
+                'name': name,
+                'start_date': start_date,
+                'end_date': end_date,
+                'location': location,
+                'category': category,
+                'description': description,
+                'prize_fund': prize_fund,
+                'organizer': organizer,
+                'fide_id': request.form.get('fide_id', ''),
+                'source_url': request.form.get('source_url', '')
+            }
             
-            # Валидация данных турнира
-            errors = tournament.validate()
-            if errors:
-                return render_template('rating_form.html', errors=errors, tournament=tournament), 400
-            
-            # Сохранение в базу данных
-            db.session.add(tournament)
-            db.session.commit()
+            tournament = TournamentRepository.create(tournament_data)
             
             # Логирование аудита
             AuditLog.log_activity(
@@ -222,22 +226,14 @@ def add_tournament():
             from app.utils.unified_cache import TournamentCache
             TournamentCache.invalidate_tournament(tournament.id)
             
-            # Создание уведомления для администраторов
-            # create_notification(
-            #     user_id=None,  # Для всех администраторов
-            #     title='Новый турнир',
-            #     message=f'Добавлен новый турнир: {tournament.name}',
-            #     notification_type='info'
-            # )
             logger.info(f"New tournament created: {tournament.name}")
             
             return redirect(url_for('main.tournament_detail', tournament_id=tournament.id))
             
         except ValueError as ve:
             return render_template('rating_form.html', 
-                                 errors=['Неверный формат даты']), 400
+                                 errors=['Неверный формат даты или данных турнира']), 400
         except Exception as e:
-            db.session.rollback()
             logger.error(f"Error adding tournament: {str(e)}")
             return render_template('error/500.html'), 500
     
@@ -249,7 +245,9 @@ def report_tournament(tournament_id):
     if 'user_id' not in session:
         return redirect(url_for('user.login'))
     
-    tournament = Tournament.query.get_or_404(tournament_id)
+    tournament = TournamentRepository.get_by_id(tournament_id)
+    if not tournament:
+        return render_template('error/404.html'), 404
     
     if request.method == 'POST':
         reason = request.form.get('reason')
@@ -289,28 +287,34 @@ def search():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 12, type=int), 50)
     
-    tournaments = Tournament.query
-    
-    if query:
-        tournaments = tournaments.filter(
-            db.or_(
-                Tournament.name.contains(query),
-                Tournament.location.contains(query),
-                Tournament.description.contains(query)
-            )
-        )
-    
-    if category:
-        tournaments = tournaments.filter(Tournament.category == category)
-    
-    if location:
-        tournaments = tournaments.filter(Tournament.location.contains(location))
-    
-    tournaments = tournaments.order_by(Tournament.start_date.desc()).paginate(
-        page=page, per_page=per_page, error_out=False
+    # Используем метод search из репозитория
+    tournaments = TournamentRepository.search(
+        query=query if query else None,
+        category=category if category else None,
+        location=location if location else None,
+        limit=per_page,
+        offset=(page - 1) * per_page
     )
     
-    return render_template('index.html', tournaments=tournaments, search_query=query)
+    # Получаем общее количество для пагинации
+    total = TournamentRepository.count_all()
+    
+    # Создаем объект пагинации вручную
+    class Pagination:
+        def __init__(self, items, page, per_page, total):
+            self.items = items
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = (total + per_page - 1) // per_page
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1 if self.has_prev else None
+            self.next_num = page + 1 if self.has_next else None
+    
+    tournaments_paginated = Pagination(tournaments, page, per_page, total)
+    
+    return render_template('index.html', tournaments=tournaments_paginated, search_query=query)
 
 @main_bp.route('/export/csv')
 def export_csv():
@@ -319,7 +323,7 @@ def export_csv():
     import csv
     from flask import Response
     
-    tournaments = Tournament.query.limit(1000).all()  # Ограничение для производительности
+    tournaments = TournamentRepository.get_all(limit=1000)  # Ограничение для производительности
     
     output = StringIO()
     writer = csv.writer(output)
@@ -345,7 +349,7 @@ def export_csv():
 @main_bp.route('/export/json')
 def export_json():
     """Экспорт турниров в JSON"""
-    tournaments = Tournament.query.limit(1000).all()
+    tournaments = TournamentRepository.get_all(limit=1000)
     
     data = []
     for t in tournaments:
@@ -498,10 +502,8 @@ def tournament_map():
     try:
         import json
         
-        # Получаем турниры с геоданными (упрощенная версия)
-        tournaments = Tournament.query.filter(
-            Tournament.location.isnot(None)
-        ).limit(100).all()
+        # Получаем турниры с геоданными через репозиторий
+        tournaments = TournamentRepository.get_with_location(limit=100)
         
         # Форматируем данные для карты (в реальной реализации здесь будет геокодирование)
         map_data = []
