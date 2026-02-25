@@ -1,6 +1,9 @@
 # Школа программирования Maestro7IT
 
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0007--7605--539X-green?logo=orcid&logoColor=white)](https://orcid.org/0009-0007-7605-539X)
+[![ru](https://img.shields.io/badge/lang-ru-green.svg)](https://github.com/QuadDarv1ne/maestro7it_education/blob/main/README.md)
+
+
 
 <!-- ![maestro7it](img/logo_maestro7it.jpg) -->
 
