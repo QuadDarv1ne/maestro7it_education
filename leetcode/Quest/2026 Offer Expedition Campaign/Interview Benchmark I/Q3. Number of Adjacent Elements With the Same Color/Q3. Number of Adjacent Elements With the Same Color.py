@@ -14,7 +14,7 @@ GitHub: https://github.com/QuadDarv1ne/
 '''
 
 class Solution:
-    def colorTheArray(self, n: int, queries):
+    def colorTheArray(self, n, queries):
         colors = [0] * n
         count = 0
         result = []
