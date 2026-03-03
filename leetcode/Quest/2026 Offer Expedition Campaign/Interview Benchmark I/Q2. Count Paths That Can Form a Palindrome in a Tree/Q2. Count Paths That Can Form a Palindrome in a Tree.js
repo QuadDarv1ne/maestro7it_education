@@ -13,3 +13,35 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {number[]} parent
+ * @param {string} s
+ * @return {number}
+ */
+var countPalindromePaths = function(parent, s) {
+    const n = parent.length;
+    const tree = Array.from({ length: n }, () => []);
+    for (let i = 1; i < n; i++) {
+        tree[parent[i]].push(i);
+    }
+    
+    let ans = 0;
+    const maskCount = new Map();
+    
+    const dfs = (node, mask) => {
+        ans += maskCount.get(mask) || 0;
+        for (let i = 0; i < 26; i++) {
+            ans += maskCount.get(mask ^ (1 << i)) || 0;
+        }
+        
+        maskCount.set(mask, (maskCount.get(mask) || 0) + 1);
+        
+        for (const child of tree[node]) {
+            const childMask = mask ^ (1 << (s.charCodeAt(child) - 97));
+            dfs(child, childMask);
+        }
+    };
+    
+    dfs(0, 0);
+    return ans;
+};

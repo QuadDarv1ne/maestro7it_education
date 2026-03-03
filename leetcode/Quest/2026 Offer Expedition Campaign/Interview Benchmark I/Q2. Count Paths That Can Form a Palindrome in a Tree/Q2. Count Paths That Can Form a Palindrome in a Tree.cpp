@@ -13,3 +13,33 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+public:
+    long long countPalindromePaths(vector<int>& parent, string s) {
+        int n = parent.size();
+        vector<vector<int>> tree(n);
+        for (int i = 1; i < n; i++) {
+            tree[parent[i]].push_back(i);
+        }
+        
+        long long ans = 0;
+        unordered_map<int, int> maskCount;
+        
+        function<void(int, int)> dfs = [&](int node, int mask) {
+            ans += maskCount[mask];
+            for (int i = 0; i < 26; i++) {
+                ans += maskCount[mask ^ (1 << i)];
+            }
+            
+            maskCount[mask]++;
+            
+            for (int child : tree[node]) {
+                int childMask = mask ^ (1 << (s[child] - 'a'));
+                dfs(child, childMask);
+            }
+        };
+        
+        dfs(0, 0);
+        return ans;
+    }
+};

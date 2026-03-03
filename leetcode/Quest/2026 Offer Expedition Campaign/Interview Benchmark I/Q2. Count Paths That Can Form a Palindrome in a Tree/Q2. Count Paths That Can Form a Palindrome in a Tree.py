@@ -13,3 +13,29 @@ GitHub: https://github.com/QuadDarv1ne/
 7. ВК группа: https://vk.com/science_geeks
 '''
 
+from collections import defaultdict
+
+class Solution:
+    def countPalindromePaths(self, parent, s):
+        n = len(parent)
+        tree = defaultdict(list)
+        for i in range(1, n):
+            tree[parent[i]].append(i)
+        
+        self.ans = 0
+        mask_count = defaultdict(int)
+        
+        def dfs(node, mask):
+            # Count pairs with previously seen nodes
+            self.ans += mask_count[mask]
+            for i in range(26):
+                self.ans += mask_count[mask ^ (1 << i)]
+            
+            mask_count[mask] += 1
+            
+            for child in tree[node]:
+                child_mask = mask ^ (1 << (ord(s[child]) - ord('a')))
+                dfs(child, child_mask)
+        
+        dfs(0, 0)
+        return self.ans
