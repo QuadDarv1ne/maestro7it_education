@@ -13,3 +13,30 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+var RandomizedSet = function() {
+    this.values = [];
+    this.indexMap = new Map();
+};
+
+RandomizedSet.prototype.insert = function(val) {
+    if (this.indexMap.has(val)) return false;
+    this.indexMap.set(val, this.values.length);
+    this.values.push(val);
+    return true;
+};
+
+RandomizedSet.prototype.remove = function(val) {
+    if (!this.indexMap.has(val)) return false;
+    const idx = this.indexMap.get(val);
+    const lastVal = this.values[this.values.length - 1];
+    this.values[idx] = lastVal;
+    this.indexMap.set(lastVal, idx);
+    this.values.pop();
+    this.indexMap.delete(val);
+    return true;
+};
+
+RandomizedSet.prototype.getRandom = function() {
+    const randomIndex = Math.floor(Math.random() * this.values.length);
+    return this.values[randomIndex];
+};

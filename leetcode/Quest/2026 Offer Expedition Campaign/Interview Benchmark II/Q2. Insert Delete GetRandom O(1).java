@@ -13,3 +13,38 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+import java.util.*;
+
+class RandomizedSet {
+    private List<Integer> values;
+    private Map<Integer, Integer> indexMap;
+    private Random random;
+
+    public RandomizedSet() {
+        values = new ArrayList<>();
+        indexMap = new HashMap<>();
+        random = new Random();
+    }
+    
+    public boolean insert(int val) {
+        if (indexMap.containsKey(val)) return false;
+        indexMap.put(val, values.size());
+        values.add(val);
+        return true;
+    }
+    
+    public boolean remove(int val) {
+        if (!indexMap.containsKey(val)) return false;
+        int idx = indexMap.get(val);
+        int lastVal = values.get(values.size() - 1);
+        values.set(idx, lastVal);
+        indexMap.put(lastVal, idx);
+        values.remove(values.size() - 1);
+        indexMap.remove(val);
+        return true;
+    }
+    
+    public int getRandom() {
+        return values.get(random.nextInt(values.size()));
+    }
+}

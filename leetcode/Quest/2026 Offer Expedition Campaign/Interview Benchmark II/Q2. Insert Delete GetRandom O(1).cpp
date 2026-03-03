@@ -13,3 +13,32 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class RandomizedSet {
+private:
+    vector<int> values;
+    unordered_map<int, int> indexMap;
+public:
+    RandomizedSet() {}
+    
+    bool insert(int val) {
+        if (indexMap.count(val)) return false;
+        indexMap[val] = values.size();
+        values.push_back(val);
+        return true;
+    }
+    
+    bool remove(int val) {
+        if (!indexMap.count(val)) return false;
+        int idx = indexMap[val];
+        int lastVal = values.back();
+        values[idx] = lastVal;
+        indexMap[lastVal] = idx;
+        values.pop_back();
+        indexMap.erase(val);
+        return true;
+    }
+    
+    int getRandom() {
+        return values[rand() % values.size()];
+    }
+};

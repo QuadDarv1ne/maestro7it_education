@@ -13,3 +13,36 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+public class RandomizedSet {
+    private List<int> values;
+    private Dictionary<int, int> indexMap;
+    private Random random;
+
+    public RandomizedSet() {
+        values = new List<int>();
+        indexMap = new Dictionary<int, int>();
+        random = new Random();
+    }
+    
+    public bool Insert(int val) {
+        if (indexMap.ContainsKey(val)) return false;
+        indexMap[val] = values.Count;
+        values.Add(val);
+        return true;
+    }
+    
+    public bool Remove(int val) {
+        if (!indexMap.ContainsKey(val)) return false;
+        int idx = indexMap[val];
+        int lastVal = values[values.Count - 1];
+        values[idx] = lastVal;
+        indexMap[lastVal] = idx;
+        values.RemoveAt(values.Count - 1);
+        indexMap.Remove(val);
+        return true;
+    }
+    
+    public int GetRandom() {
+        return values[random.Next(values.Count)];
+    }
+}

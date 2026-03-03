@@ -13,3 +13,32 @@ GitHub: https://github.com/QuadDarv1ne/
 7. ВК группа: https://vk.com/science_geeks
 '''
 
+import random
+
+class RandomizedSet:
+    def __init__(self):
+        self.values = []
+        self.index_map = {}
+
+    def insert(self, val):
+        if val in self.index_map:
+            return False
+        self.index_map[val] = len(self.values)
+        self.values.append(val)
+        return True
+
+    def remove(self, val):
+        if val not in self.index_map:
+            return False
+        # Move the last element to the position of the element to delete
+        last_val = self.values[-1]
+        idx = self.index_map[val]
+        self.values[idx] = last_val
+        self.index_map[last_val] = idx
+        # Remove the last element
+        self.values.pop()
+        del self.index_map[val]
+        return True
+
+    def getRandom(self):
+        return random.choice(self.values)
