@@ -13,3 +13,26 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {number[]} heights
+ * @return {number[]}
+ */
+var canSeePersonsCount = function(heights) {
+    const n = heights.length;
+    const result = new Array(n).fill(0);
+    const stack = []; // stores indices
+    
+    for (let i = n - 1; i >= 0; i--) {
+        let visible = 0;
+        while (stack.length > 0 && heights[i] > heights[stack[stack.length - 1]]) {
+            stack.pop();
+            visible++;
+        }
+        if (stack.length > 0) {
+            visible++;
+        }
+        result[i] = visible;
+        stack.push(i);
+    }
+    return result;
+};

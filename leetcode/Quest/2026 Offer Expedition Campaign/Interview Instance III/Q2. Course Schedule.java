@@ -13,3 +13,37 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        List<Integer>[] graph = new ArrayList[numCourses];
+        for (int i = 0; i < numCourses; i++) {
+            graph[i] = new ArrayList<>();
+        }
+        for (int[] pre : prerequisites) {
+            graph[pre[1]].add(pre[0]); // prereq -> course
+        }
+        
+        int[] state = new int[numCourses]; // 0 unvisited, 1 visiting, 2 visited
+        
+        for (int i = 0; i < numCourses; i++) {
+            if (hasCycle(i, graph, state)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    private boolean hasCycle(int node, List<Integer>[] graph, int[] state) {
+        if (state[node] == 1) return true;
+        if (state[node] == 2) return false;
+        
+        state[node] = 1;
+        for (int neighbor : graph[node]) {
+            if (hasCycle(neighbor, graph, state)) {
+                return true;
+            }
+        }
+        state[node] = 2;
+        return false;
+    }
+}

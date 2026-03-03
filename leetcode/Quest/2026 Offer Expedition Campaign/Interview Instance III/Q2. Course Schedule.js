@@ -13,3 +13,33 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {number} numCourses
+ * @param {number[][]} prerequisites
+ * @return {boolean}
+ */
+var canFinish = function(numCourses, prerequisites) {
+    const graph = Array.from({ length: numCourses }, () => []);
+    for (const [course, prereq] of prerequisites) {
+        graph[prereq].push(course);
+    }
+    
+    const state = new Array(numCourses).fill(0); // 0 unvisited, 1 visiting, 2 visited
+    
+    const hasCycle = (node) => {
+        if (state[node] === 1) return true;
+        if (state[node] === 2) return false;
+        
+        state[node] = 1;
+        for (const neighbor of graph[node]) {
+            if (hasCycle(neighbor)) return true;
+        }
+        state[node] = 2;
+        return false;
+    };
+    
+    for (let i = 0; i < numCourses; i++) {
+        if (hasCycle(i)) return false;
+    }
+    return true;
+};

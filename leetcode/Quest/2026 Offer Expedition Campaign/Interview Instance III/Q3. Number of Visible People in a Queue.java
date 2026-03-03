@@ -13,3 +13,24 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+    public int[] canSeePersonsCount(int[] heights) {
+        int n = heights.length;
+        int[] result = new int[n];
+        Deque<Integer> stack = new ArrayDeque<>(); // stores indices
+        
+        for (int i = n - 1; i >= 0; i--) {
+            int visible = 0;
+            while (!stack.isEmpty() && heights[i] > heights[stack.peek()]) {
+                stack.pop();
+                visible++;
+            }
+            if (!stack.isEmpty()) {
+                visible++;
+            }
+            result[i] = visible;
+            stack.push(i);
+        }
+        return result;
+    }
+}

@@ -13,3 +13,24 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+public class Solution {
+    public int[] CanSeePersonsCount(int[] heights) {
+        int n = heights.Length;
+        int[] result = new int[n];
+        Stack<int> stack = new Stack<int>(); // stores indices
+        
+        for (int i = n - 1; i >= 0; i--) {
+            int visible = 0;
+            while (stack.Count > 0 && heights[i] > heights[stack.Peek()]) {
+                stack.Pop();
+                visible++;
+            }
+            if (stack.Count > 0) {
+                visible++;
+            }
+            result[i] = visible;
+            stack.Push(i);
+        }
+        return result;
+    }
+}

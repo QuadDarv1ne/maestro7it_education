@@ -13,3 +13,25 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+public:
+    vector<int> canSeePersonsCount(vector<int>& heights) {
+        int n = heights.size();
+        vector<int> result(n);
+        stack<int> st; // stores indices
+        
+        for (int i = n - 1; i >= 0; i--) {
+            int visible = 0;
+            while (!st.empty() && heights[i] > heights[st.top()]) {
+                st.pop();
+                visible++;
+            }
+            if (!st.empty()) {
+                visible++;
+            }
+            result[i] = visible;
+            st.push(i);
+        }
+        return result;
+    }
+};

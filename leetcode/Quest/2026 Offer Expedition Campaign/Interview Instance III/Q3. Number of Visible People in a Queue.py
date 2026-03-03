@@ -13,3 +13,22 @@ GitHub: https://github.com/QuadDarv1ne/
 7. ВК группа: https://vk.com/science_geeks
 '''
 
+class Solution:
+    def canSeePersonsCount(self, heights):
+        n = len(heights)
+        result = [0] * n
+        stack = []  # Monotonic decreasing stack (stores indices with decreasing heights from left to right)
+        
+        for i in range(n - 1, -1, -1):
+            visible = 0
+            # Pop while current height is greater than stack top's height
+            while stack and heights[i] > heights[stack[-1]]:
+                stack.pop()
+                visible += 1
+            # If stack still has elements, the next taller person is visible
+            if stack:
+                visible += 1
+            result[i] = visible
+            stack.append(i)
+        
+        return result

@@ -13,3 +13,31 @@ GitHub: https://github.com/QuadDarv1ne/
 7. ВК группа: https://vk.com/science_geeks
 '''
 
+class Solution:
+    def canFinish(self, numCourses, prerequisites):
+        # Build adjacency list
+        graph = [[] for _ in range(numCourses)]
+        for course, prereq in prerequisites:
+            graph[prereq].append(course)
+        
+        # 0 = unvisited, 1 = visiting, 2 = visited
+        state = [0] * numCourses
+        
+        def has_cycle(node):
+            if state[node] == 1:  # Currently in recursion stack -> cycle
+                return True
+            if state[node] == 2:  # Already fully processed
+                return False
+            
+            state[node] = 1  # Mark as visiting
+            for neighbor in graph[node]:
+                if has_cycle(neighbor):
+                    return True
+            state[node] = 2  # Mark as fully processed
+            return False
+        
+        # Check each course for cycles
+        for course in range(numCourses):
+            if has_cycle(course):
+                return False
+        return True
