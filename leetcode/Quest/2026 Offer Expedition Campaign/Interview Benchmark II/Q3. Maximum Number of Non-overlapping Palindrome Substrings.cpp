@@ -13,3 +13,37 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+public:
+    int maxPalindromes(string s, int k) {
+        int n = s.size();
+        vector<int> earliestEnd(n, INT_MAX);
+        
+        for (int i = 0; i < n; ++i) {
+            expand(s, i, i, k, earliestEnd);      // odd
+            expand(s, i, i + 1, k, earliestEnd);  // even
+        }
+        
+        vector<int> dp(n + 1, 0);
+        for (int i = n - 1; i >= 0; --i) {
+            dp[i] = dp[i + 1];
+            if (earliestEnd[i] != INT_MAX) {
+                int j = earliestEnd[i];
+                dp[i] = max(dp[i], 1 + dp[j + 1]);
+            }
+        }
+        return dp[0];
+    }
+    
+private:
+    void expand(const string& s, int l, int r, int k, vector<int>& earliestEnd) {
+        int n = s.size();
+        while (l >= 0 && r < n && s[l] == s[r]) {
+            if (r - l + 1 >= k) {
+                earliestEnd[l] = min(earliestEnd[l], r);
+            }
+            --l;
+            ++r;
+        }
+    }
+};

@@ -13,3 +13,37 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {string} s
+ * @param {number} k
+ * @return {number}
+ */
+var maxPalindromes = function(s, k) {
+    const n = s.length;
+    const earliestEnd = new Array(n).fill(Infinity);
+    
+    const expand = (l, r) => {
+        while (l >= 0 && r < n && s[l] === s[r]) {
+            if (r - l + 1 >= k) {
+                earliestEnd[l] = Math.min(earliestEnd[l], r);
+            }
+            l--;
+            r++;
+        }
+    };
+    
+    for (let i = 0; i < n; i++) {
+        expand(i, i);      // odd
+        expand(i, i + 1);  // even
+    }
+    
+    const dp = new Array(n + 1).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+        dp[i] = dp[i + 1];
+        if (earliestEnd[i] !== Infinity) {
+            const j = earliestEnd[i];
+            dp[i] = Math.max(dp[i], 1 + dp[j + 1]);
+        }
+    }
+    return dp[0];
+};
