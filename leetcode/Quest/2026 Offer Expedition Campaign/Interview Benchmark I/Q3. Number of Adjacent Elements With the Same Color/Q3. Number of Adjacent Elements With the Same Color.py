@@ -13,3 +13,33 @@ GitHub: https://github.com/QuadDarv1ne/
 7. ВК группа: https://vk.com/science_geeks
 '''
 
+class Solution:
+    def colorTheArray(self, n: int, queries):
+        colors = [0] * n
+        count = 0
+        result = []
+        
+        for i, color in queries:
+            old = colors[i]
+            if old == color:
+                result.append(count)
+                continue
+            
+            # Undo old color's contributions
+            if i > 0 and colors[i-1] != 0 and colors[i-1] == old:
+                count -= 1
+            if i < n-1 and colors[i+1] != 0 and colors[i+1] == old:
+                count -= 1
+            
+            # Update color
+            colors[i] = color
+            
+            # Add new color's contributions
+            if i > 0 and colors[i-1] != 0 and colors[i-1] == color:
+                count += 1
+            if i < n-1 and colors[i+1] != 0 and colors[i+1] == color:
+                count += 1
+            
+            result.append(count)
+        
+        return result

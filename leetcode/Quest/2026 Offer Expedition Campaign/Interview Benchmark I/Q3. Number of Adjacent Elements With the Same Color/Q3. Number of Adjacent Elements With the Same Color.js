@@ -13,3 +13,31 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+/**
+ * @param {number} n
+ * @param {number[][]} queries
+ * @return {number[]}
+ */
+var colorTheArray = function(n, queries) {
+    const colors = new Array(n).fill(0);
+    const result = [];
+    let count = 0;
+    
+    for (const [i, color] of queries) {
+        const old = colors[i];
+        
+        if (old !== color) {
+            // Remove old contributions
+            if (i > 0 && colors[i-1] !== 0 && colors[i-1] === old) count--;
+            if (i < n-1 && colors[i+1] !== 0 && colors[i+1] === old) count--;
+            
+            colors[i] = color;
+            
+            // Add new contributions
+            if (i > 0 && colors[i-1] !== 0 && colors[i-1] === color) count++;
+            if (i < n-1 && colors[i+1] !== 0 && colors[i+1] === color) count++;
+        }
+        result.push(count);
+    }
+    return result;
+};

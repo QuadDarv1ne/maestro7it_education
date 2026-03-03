@@ -13,3 +13,30 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+    public int[] colorTheArray(int n, int[][] queries) {
+        int[] colors = new int[n];
+        int[] result = new int[queries.length];
+        int count = 0;
+        
+        for (int q = 0; q < queries.length; q++) {
+            int i = queries[q][0];
+            int color = queries[q][1];
+            int old = colors[i];
+            
+            if (old != color) {
+                // Remove old contributions
+                if (i > 0 && colors[i-1] != 0 && colors[i-1] == old) count--;
+                if (i < n-1 && colors[i+1] != 0 && colors[i+1] == old) count--;
+                
+                colors[i] = color;
+                
+                // Add new contributions
+                if (i > 0 && colors[i-1] != 0 && colors[i-1] == color) count++;
+                if (i < n-1 && colors[i+1] != 0 && colors[i+1] == color) count++;
+            }
+            result[q] = count;
+        }
+        return result;
+    }
+}

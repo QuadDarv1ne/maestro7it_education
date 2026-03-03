@@ -13,3 +13,30 @@
  * 7. ВК группа: https://vk.com/science_geeks
  */
 
+class Solution {
+public:
+    vector<int> colorTheArray(int n, vector<vector<int>>& queries) {
+        vector<int> colors(n, 0);
+        vector<int> result;
+        int count = 0;
+        
+        for (auto& q : queries) {
+            int i = q[0], color = q[1];
+            int old = colors[i];
+            
+            if (old != color) {
+                // Remove old
+                if (i > 0 && colors[i-1] != 0 && colors[i-1] == old) count--;
+                if (i < n-1 && colors[i+1] != 0 && colors[i+1] == old) count--;
+                
+                colors[i] = color;
+                
+                // Add new
+                if (i > 0 && colors[i-1] != 0 && colors[i-1] == color) count++;
+                if (i < n-1 && colors[i+1] != 0 && colors[i+1] == color) count++;
+            }
+            result.push_back(count);
+        }
+        return result;
+    }
+};
