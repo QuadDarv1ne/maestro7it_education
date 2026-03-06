@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGPU Image Processing Demo</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: #eee; text-align: center; padding: 20px; }
+        canvas { border: 2px solid #444; background: #000; margin-top: 20px; max-width: 100%; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebGPU Compute Shader Demo</h1>
+        <p>Обработка видео с веб-камеры в реальном времени (Grayscale).</p>
+        <canvas id="gpuCanvas" width="640" height="480"></canvas>
+        <video id="webcam" autoplay playsinline style="display:none;"></video>
+        <div id="error" style="color: red; margin-top: 20px;"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
