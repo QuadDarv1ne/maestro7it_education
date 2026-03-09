@@ -190,3 +190,10 @@ temp_*.txt
 temp_*
 TempFile*
 *.temp
+
+# Large binary files (LFS alternative)
+manuals/*.zip
+manuals/*.rar
+manuals/*.pdf
+manuals/*/*.exe
+*.exe
