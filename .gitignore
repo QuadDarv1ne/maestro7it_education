@@ -197,3 +197,15 @@ manuals/*.rar
 manuals/*.pdf
 manuals/*/*.exe
 *.exe
+
+# Secrets and credentials
+*.pem
+*.key
+secret.txt
+secrets.json
+credentials
+*.credentials
+api_keys.txt
+tokens.json
+private/
+.ssh/
