@@ -272,17 +272,18 @@ Email: {db_user.email}
                 if not test_results:
                     await query.edit_message_text("Вы еще не проходили тесты.")
                     return
-                
+
                 message = "📊 Ваши последние тесты:\n\n"
+                import ast
                 for result in test_results:
                     try:
-                        results_dict = eval(result.results) if result.results else {}
+                        results_dict = ast.literal_eval(result.results) if result.results else {}
                         dominant = results_dict.get('dominant_category', 'Не определено')
                         message += f"• {result.methodology.title()}: {dominant}\n"
                         message += f"  Дата: {result.created_at.strftime('%d.%m.%Y')}\n\n"
-                    except:
+                    except (ValueError, SyntaxError, AttributeError):
                         continue
-                
+
                 await query.edit_message_text(message)
                 
             elif query.data == "my_goals":

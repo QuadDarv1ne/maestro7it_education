@@ -130,9 +130,9 @@ class DataVisualizer:
             p = np.poly1d(z)
             plt.plot(df['price'], p(df['price']), "r--", alpha=0.8, label=f'Тренд')
             plt.legend()
-        except:
-            pass  # Игнорировать ошибки при построении тренда
-        
+        except (ValueError, np.RankWarning) as e:
+            logger.warning(f"Не удалось построить тренд: {e}")
+
         # Сохранить график
         if save_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

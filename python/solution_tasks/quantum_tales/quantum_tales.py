@@ -191,17 +191,38 @@ class StoryRunner:
                 item = condition[9:-1]
                 return self.state['inventory'].get(item, 0) > 0
             elif condition.startswith('relationship('):
-                name, comparison, value = re.match(r'relationship\((\w+)\)\s*([>=<]+)\s*(\d+)', condition).groups()
-                return eval(f"{self.state['relationships'].get(name,0)} {comparison} {value}")
+                match = re.match(r'relationship\((\w+)\)\s*([>=<]+)\s*(\d+)', condition)
+                if not match:
+                    return False
+                name, comparison, value = match.groups()
+                rel_value = self.state['relationships'].get(name, 0)
+                return self._safe_compare(rel_value, comparison, int(value))
             elif condition.startswith('visited('):
-                scene, comparison, num = re.match(r'visited\((\w+)\)\s*([>=<]+)\s*(\d+)', condition).groups()
+                match = re.match(r'visited\((\w+)\)\s*([>=<]+)\s*(\d+)', condition)
+                if not match:
+                    return False
+                scene, comparison, num = match.groups()
                 count = sum(1 for h in self.choice_history if h['target'] == scene)
-                return eval(f"{count} {comparison} {num}")
+                return self._safe_compare(count, comparison, int(num))
             elif condition.startswith('flag('):
                 return condition[5:-1] in self.state['flags']
-            return eval(condition, None, self.state['stats'])
-        except:
+            return self._eval_stats_condition(condition)
+        except Exception:
             return False
+
+    def _safe_compare(self, left, comparison: str, right: int) -> bool:
+        ops = {'>=': lambda a, b: a >= b, '<=': lambda a, b: a <= b,
+               '>': lambda a, b: a > b, '<': lambda a, b: a < b,
+               '==': lambda a, b: a == b, '!=': lambda a, b: a != b}
+        return ops.get(comparison, lambda a, b: False)(left, right)
+
+    def _eval_stats_condition(self, condition: str) -> bool:
+        match = re.match(r'stats\[([\'"])(\w+)\1\]\s*([>=<]+)\s*(\d+)', condition)
+        if not match:
+            return False
+        key, comparison, value = match.group(2), match.group(3), int(match.group(4))
+        stat_value = self.state['stats'].get(key, 0)
+        return self._safe_compare(stat_value, comparison, value)
 
     def _check_achievements(self):
         achievements = {

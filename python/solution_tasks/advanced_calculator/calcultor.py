@@ -1,77 +1,135 @@
 import math
 import re
+import ast
+import operator
 
 def calculate_expression(expression, x_value=None):
     """
     Вычисляет математическое выражение с поддержкой функций
-    
+
     Args:
         expression: строка с выражением (например, "sin(x) + cos(x)")
         x_value: значение переменной x (если есть)
-    
+
     Returns:
         Результат вычисления
     """
     try:
         # Заменяем функции на их математические эквиваленты
         expression = expression.lower()
-        
+
         # Если есть переменная x, заменяем её на значение
         if x_value is not None:
             expression = expression.replace('x', str(x_value))
-        
+
         # Обрабатываем специальные функции
         # Синус, косинус, тангенс (работают с радианами)
         expression = re.sub(r'sin\(([^)]+)\)', r'math.sin(\1)', expression)
         expression = re.sub(r'cos\(([^)]+)\)', r'math.cos(\1)', expression)
         expression = re.sub(r'tan\(([^)]+)\)', r'math.tan(\1)', expression)
-        
+
         # Синус, косинус, тангенс в градусах
         expression = re.sub(r'sind\(([^)]+)\)', r'math.sin(math.radians(\1))', expression)
         expression = re.sub(r'cosd\(([^)]+)\)', r'math.cos(math.radians(\1))', expression)
         expression = re.sub(r'tand\(([^)]+)\)', r'math.tan(math.radians(\1))', expression)
-        
+
         # Экспонента и логарифмы
         expression = re.sub(r'exp\(([^)]+)\)', r'math.exp(\1)', expression)
         expression = re.sub(r'ln\(([^)]+)\)', r'math.log(\1)', expression)
         expression = re.sub(r'log10\(([^)]+)\)', r'math.log10(\1)', expression)
         expression = re.sub(r'log\(([^)]+)\)', r'math.log(\1)', expression)
-        
+
         # Квадратный корень и модуль
         expression = re.sub(r'sqrt\(([^)]+)\)', r'math.sqrt(\1)', expression)
         expression = re.sub(r'abs\(([^)]+)\)', r'abs(\1)', expression)
-        
+
         # Степень (обработка ^ как **)
         expression = expression.replace('^', '**')
-        
+
         # Математические константы
         expression = expression.replace('pi', str(math.pi))
         expression = expression.replace('e', str(math.e))
-        
-        # Безопасное вычисление выражения
-        # Создаем безопасное окружение для eval
-        safe_dict = {
-            'math': math,
-            'abs': abs,
-            'round': round,
-            'int': int,
-            'float': float
-        }
-        
-        # Добавляем все функции из math в безопасный словарь
-        for func in dir(math):
-            if not func.startswith('_'):
-                safe_dict[func] = getattr(math, func)
-        
-        result = eval(expression, {"__builtins__": {}}, safe_dict)
+
+        # Безопасное вычисление через ast
+        result = _safe_eval(expression)
         return result
-        
+
     except ZeroDivisionError:
         raise ValueError("Ошибка: деление на ноль")
     except ValueError as e:
         raise ValueError(f"Ошибка в вычислении: {e}")
     except Exception as e:
         raise ValueError(f"Ошибка в выражении: {e}")
+
+def _safe_eval(expression: str) -> float:
+    """Безопасное вычисление выражения через AST"""
+    operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+    
+    funcs = {
+        'math': math,
+        'abs': abs,
+        'round': round,
+        'int': int,
+        'float': float,
+    }
+    
+    def _eval_node(node):
+        if isinstance(node, ast.Expression):
+            return _eval_node(node.body)
+        elif isinstance(node, ast.Num):
+            return node.n
+        elif isinstance(node, ast.Constant):
+            return node.value
+        elif isinstance(node, ast.BinOp):
+            left = _eval_node(node.left)
+            right = _eval_node(node.right)
+            return operators[type(node.op)](left, right)
+        elif isinstance(node, ast.UnaryOp):
+            operand = _eval_node(node.operand)
+            return operators[type(node.op)](operand)
+        elif isinstance(node, ast.Call):
+            func_name = _get_func_name(node.func)
+            func = funcs.get(func_name)
+            if func is None and func_name and '.' in func_name:
+                module, method = func_name.split('.', 1)
+                if module == 'math' and hasattr(math, method):
+                    func = getattr(math, method)
+            if func is None:
+                raise ValueError(f"Неизвестная функция: {func_name}")
+            args = [_eval_node(arg) for arg in node.args]
+            return func(*args)
+        elif isinstance(node, ast.Attribute):
+            return _get_attr_name(node)
+        elif isinstance(node, ast.Name):
+            return node.id
+        else:
+            raise ValueError(f"Неподдерживаемый узел: {type(node)}")
+    
+    def _get_func_name(node):
+        if isinstance(node, ast.Name):
+            return node.id
+        elif isinstance(node, ast.Attribute):
+            return _get_attr_name(node)
+        return None
+    
+    def _get_attr_name(node):
+        if isinstance(node, ast.Attribute):
+            value = _get_attr_name(node.value) if isinstance(node.value, ast.Attribute) else node.value.id
+            return f"{value}.{node.attr}"
+        return None
+    
+    tree = ast.parse(expression, mode='eval')
+    return _eval_node(tree)
 
 def calculator_with_functions():
     """
