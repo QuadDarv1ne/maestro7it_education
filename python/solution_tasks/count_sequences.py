@@ -19,10 +19,11 @@ def count_sequences(N, K):
 
     # Заполнение таблицы
     for i in range(2, N + 1):
-        for j in range(K):
-            for l in range(K):
-                if j != 0 or l != 0:
-                    dp[i][l] += dp[i-1][j]
+        for j in range(K):  # текущая позиция
+            for prev in range(K):  # предыдущая позиция
+                # Нельзя два нуля подряд
+                if not (j == 0 and prev == 0):
+                    dp[i][j] += dp[i-1][prev]
 
     # Сумма всех возможных последовательностей длины N
     total_sequences = sum(dp[N])

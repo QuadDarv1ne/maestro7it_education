@@ -116,18 +116,6 @@ func main() {
 		fmt.Println("Error: invalid mode. Use 'encrypt' or 'decrypt'")
 		return
 	}
-
-	// Запись результата
-	outputFile := *filePtr + "." + *modePtr
-	if err := os.WriteFile(outputFile, result, 0600); err != nil {
-		fmt.Printf("Error writing file: %v\n", err)
-		return
-	}
-
-	fmt.Printf("Success: %s completed\nOutput file: %s\n", 
-		*modePtr, 
-		outputFile,
-	)
 }
 
 func clear(b []byte) {

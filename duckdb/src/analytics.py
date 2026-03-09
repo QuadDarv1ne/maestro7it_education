@@ -94,17 +94,17 @@ class OzonAnalytics:
     def get_products_by_rating(self, min_rating: float = 4.5, limit: int = 10) -> pd.DataFrame:
         """
         Получить товары с рейтингом выше указанного значения.
-        
+
         Args:
             min_rating: Минимальный рейтинг
             limit: Количество товаров для возврата
-            
+
         Returns:
             DataFrame с товарами по рейтингу
         """
         logger.info(f"Получение товаров с рейтингом выше {min_rating} (лимит: {limit})")
-        query = f"""
-            SELECT 
+        query = """
+            SELECT
                 name,
                 brand,
                 category,
@@ -112,12 +112,12 @@ class OzonAnalytics:
                 rating,
                 review_count
             FROM ozon_products
-            WHERE rating >= {min_rating}
+            WHERE rating >= ?
             ORDER BY rating DESC, review_count DESC
-            LIMIT {limit};
+            LIMIT ?;
         """
         try:
-            result = self.con.execute(query).fetchdf()
+            result = self.con.execute(query, [min_rating, limit]).fetchdf()
             logger.info(f"Получено {len(result)} товаров с высоким рейтингом")
             return result
         except Exception as e:

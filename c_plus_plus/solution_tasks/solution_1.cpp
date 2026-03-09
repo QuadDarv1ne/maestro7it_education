@@ -6,12 +6,12 @@
 #include <iostream>
 
 void celsiusToFahrenheit(double celsius) {
-    double fahrenheit = (celsius * 9 / 5) + 32;
+    double fahrenheit = (celsius * 9.0 / 5.0) + 32;
     std::cout << celsius << " градусов Цельсия = " << fahrenheit << " градусов Фаренгейта" << std::endl;
 }
 
 void fahrenheitToCelsius(double fahrenheit) {
-    double celsius = (fahrenheit - 32) * 5 / 9;
+    double celsius = (fahrenheit - 32) * 5.0 / 9.0;
     std::cout << fahrenheit << " градусов Фаренгейта = " << celsius << " градусов Цельсия" << std::endl;
 }
 
