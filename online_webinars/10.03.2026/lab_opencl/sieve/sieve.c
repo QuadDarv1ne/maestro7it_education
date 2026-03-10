@@ -252,8 +252,11 @@ unsigned long sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     // 5. Инициализация массива на GPU
     // --------------------------------------------------------
+    // Преобразуем limit в uint для kernel (kernel использует uint, не ulong)
+    cl_uint limit_uint = (cl_uint)limit;
+    
     clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_init, 1, sizeof(cl_ulong), &limit);
+    clSetKernelArg(kernel_init, 1, sizeof(cl_uint), &limit_uint);
     
     size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
     
@@ -270,7 +273,7 @@ unsigned long sieve_gpu(unsigned char* is_prime, unsigned long limit,
     unsigned long sqrt_limit = (unsigned long)sqrt((double)limit);
     
     clSetKernelArg(kernel_mark, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_mark, 1, sizeof(cl_ulong), &limit);
+    clSetKernelArg(kernel_mark, 1, sizeof(cl_uint), &limit_uint);
     
     cl_ulong total_gpu_time_ns = 0;
     
@@ -281,7 +284,8 @@ unsigned long sieve_gpu(unsigned char* is_prime, unsigned long limit,
                            sizeof(unsigned char), &p_is_prime, 0, NULL, NULL);
         
         if (p_is_prime) {
-            clSetKernelArg(kernel_mark, 2, sizeof(cl_uint), &p);
+            cl_uint p_uint = (cl_uint)p;
+            clSetKernelArg(kernel_mark, 2, sizeof(cl_uint), &p_uint);
             
             // Вычисляем количество работы
             unsigned long start = p * p;
@@ -318,7 +322,7 @@ unsigned long sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // 7. Подсчёт простых чисел на GPU
     // --------------------------------------------------------
     clSetKernelArg(kernel_count, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_count, 1, sizeof(cl_ulong), &limit);
+    clSetKernelArg(kernel_count, 1, sizeof(cl_uint), &limit_uint);
     clSetKernelArg(kernel_count, 2, sizeof(cl_mem), &d_count);
     clSetKernelArg(kernel_count, 3, local_size * sizeof(cl_uint), NULL);  // local memory
     

@@ -101,7 +101,7 @@ __kernel void sha256_hash(
     }
     
     // Добавляем длину сообщения в битах (последние 2 слова)
-    uint64 bit_len = (uint64)len * 8;
+    ulong bit_len = (ulong)len * 8;
     w[14] = (uint)(bit_len >> 32);
     w[15] = (uint)bit_len;
     
