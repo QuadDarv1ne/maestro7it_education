@@ -237,9 +237,15 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     // 4. Создание буферов
     // --------------------------------------------------------
-    d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE,
-                                 (limit + 1) * sizeof(unsigned char), NULL, &err);
+    size_t buf_size = ((limit + 1 + 63) / 64) * 64;  // Выравнивание по 64 байта
+    d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE, buf_size, NULL, &err);
     CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
+
+    // Инициализация буфера нулями
+    unsigned char* h_buf = calloc(buf_size, 1);
+    err = clEnqueueWriteBuffer(queue, d_is_prime, CL_TRUE, 0, buf_size, h_buf, 0, NULL, NULL);
+    free(h_buf);
+    CHECK_CL_ERROR(err, "clEnqueueWriteBuffer init");
 
     // --------------------------------------------------------
     // 5. Инициализация массива на GPU
@@ -248,7 +254,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     clSetKernelArg(kernel_init, 1, sizeof(cl_ulong), &limit);
 
     size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
-    if (global_size_init > local_size * 256) global_size_init = local_size * 256;
+    if (global_size_init < local_size) global_size_init = local_size;
 
     err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
                                   &global_size_init, &local_size, 0, NULL, NULL);
@@ -305,12 +311,17 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     // 7. Подсчёт простых чисел (на CPU для совместимости)
     // --------------------------------------------------------
-    unsigned int h_count = 0;
-    unsigned char* h_is_prime = (unsigned char*)calloc((limit + 1), sizeof(unsigned char));
-    err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0,
-                              (limit + 1) * sizeof(unsigned char), h_is_prime, 0, NULL, NULL);
-    CHECK_CL_ERROR(err, "clEnqueueReadBuffer is_prime");
     clFinish(queue);
+    
+    unsigned int h_count = 0;
+    unsigned char* h_is_prime = (unsigned char*)malloc(buf_size);
+    memset(h_is_prime, 0, buf_size);
+    err = clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, 0, (limit + 1), h_is_prime, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка чтения буфера: %d\n", err);
+        free(h_is_prime);
+        return 0;
+    }
 
     unsigned int count = 0;
     for (unsigned long i = 2; i <= limit; i++) {
@@ -352,24 +363,13 @@ const char* get_embedded_kernel() {
     "    __global uchar* is_prime, const ulong limit, const ulong current_prime) {\n"
     "    ulong gid = get_global_id(0);\n"
     "    ulong start = current_prime * current_prime;\n"
+    "    if (start > limit) return;\n"
     "    ulong global_size = get_global_size(0);\n"
     "    ulong multiple = start + current_prime * gid;\n"
     "    while (multiple <= limit) {\n"
     "        is_prime[multiple] = 0;\n"
     "        multiple += current_prime * global_size;\n"
     "    }\n"
-    "}\n"
-    "\n"
-    "__kernel void count_primes(\n"
-    "    __global const uchar* is_prime, const ulong limit,\n"
-    "    __global uint* count) {\n"
-    "    ulong gid = get_global_id(0);\n"
-    "    ulong global_size = get_global_size(0);\n"
-    "    uint local_sum = 0;\n"
-    "    for (ulong i = gid; i <= limit; i += global_size) {\n"
-    "        local_sum += is_prime[i];\n"
-    "    }\n"
-    "    atomic_add(count, local_sum);\n"
     "}\n";
 }
 
