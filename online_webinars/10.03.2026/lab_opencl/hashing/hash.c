@@ -38,6 +38,17 @@
 #include <pthread.h>
 #endif
 
+/* strdup для систем, где его нет */
+#ifndef HAVE_STRDUP
+char* strdup(const char* s) {
+    if (s == NULL) return NULL;
+    size_t len = strlen(s) + 1;
+    char* copy = (char*)malloc(len);
+    if (copy != NULL) memcpy(copy, s, len);
+    return copy;
+}
+#endif
+
 // ============================================================
 // КОНСТАНТЫ И МАКРОСЫ
 // ============================================================
@@ -285,9 +296,9 @@ void hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
     context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
     CHECK_CL_ERROR(err, "clCreateContext");
     
-    cl_command_queue_properties props = CL_QUEUE_PROFILING_ENABLE;
-    queue = clCreateCommandQueueWithProperties(context, device, &props, &err);
-    CHECK_CL_ERROR(err, "clCreateCommandQueueWithProperties");
+    // Используем совместимый метод создания очереди команд
+    queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
+    CHECK_CL_ERROR(err, "clCreateCommandQueue");
     
     // Загрузка kernel
     size_t source_size;
@@ -476,6 +487,15 @@ int main(int argc, char** argv) {
     uint32_t* lens = (uint32_t*)malloc(num_hashes * sizeof(uint32_t));
     uint8_t* cpu_hashes = (uint8_t*)malloc(num_hashes * 32);
     uint8_t* gpu_hashes = (uint8_t*)malloc(num_hashes * 32);
+    
+    if (!data || !lens || !cpu_hashes || !gpu_hashes) {
+        fprintf(stderr, "Ошибка: Не удалось выделить память\n");
+        free(data);
+        free(lens);
+        free(cpu_hashes);
+        free(gpu_hashes);
+        return 1;
+    }
     
     // Генерация тестовых данных
     printf(">>> Генерация тестовых данных...\n");

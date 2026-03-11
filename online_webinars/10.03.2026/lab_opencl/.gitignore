@@ -1,0 +1,25 @@
+# Компилируемые файлы
+sieve
+hash
+*.o
+*.exe
+*.out
+
+# Файлы OpenCL
+*.cl~
+
+# Файлы IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS файлы
+.DS_Store
+Thumbs.db
+
+# Файлы отладки
+gmon.out
+*.gcda
+*.gcno

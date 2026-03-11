@@ -176,17 +176,18 @@ char* read_kernel_source(const char* filename, size_t* size) {
         file = fopen(full_path, "r");
     }
     
-    // Если всё ещё не удалось, пробуем текущую директорию
-    if (!file) {
-        file = fopen(filename, "r");
-    }
-    
     if (!file) {
         fprintf(stderr, "Ошибка: Не удалось открыть файл %s\n", filename);
         return NULL;
     }
 
     char* source = (char*)malloc(MAX_SOURCE_SIZE);
+    if (!source) {
+        fprintf(stderr, "Ошибка: Не удалось выделить память для kernel\n");
+        fclose(file);
+        return NULL;
+    }
+
     *size = fread(source, 1, MAX_SOURCE_SIZE - 1, file);
     source[*size] = '\0';
     fclose(file);
@@ -263,7 +264,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     } else {
         printf("Используется kernel из файла sieve.cl\n");
     }
-
+    
     program = clCreateProgramWithSource(context, 1, (const char**)&source, &source_size, &err);
     CHECK_CL_ERROR(err, "clCreateProgramWithSource");
 
@@ -520,6 +521,14 @@ int main(int argc, char** argv) {
         return 1;
     }
     
+    // Сохраняем результат CPU для сравнения
+    unsigned char* cpu_result = (unsigned char*)malloc(limit + 1);
+    if (!cpu_result) {
+        fprintf(stderr, "Ошибка: Не удалось выделить память для результата CPU\n");
+        free(g_is_prime);
+        return 1;
+    }
+    
     // --------------------------------------------------------
     // CPU VERSION
     // --------------------------------------------------------
@@ -533,7 +542,6 @@ int main(int argc, char** argv) {
     printf("    Время выполнения: %.3f мс\n\n", cpu_time_ms);
     
     // Сохраняем результат CPU для сравнения
-    unsigned char* cpu_result = (unsigned char*)malloc(limit + 1);
     memcpy(cpu_result, g_is_prime, limit + 1);
     
     // --------------------------------------------------------
