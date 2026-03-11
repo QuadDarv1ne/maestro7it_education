@@ -70,8 +70,6 @@ __kernel void sha256_hash(
     uint num_blocks = (len + 9 + 63) / 64;
     if (num_blocks < 1) num_blocks = 1;
 
-    uint processed = 0;
-
     for (uint block = 0; block < num_blocks; block++) {
         // Обнуление массива слов
         for (int i = 0; i < 64; i++) w[i] = 0;
