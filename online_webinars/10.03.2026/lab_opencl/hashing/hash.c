@@ -64,6 +64,46 @@ char* strdup(const char* s) {
         exit(1); \
     }
 
+#define SAFE_FREE(ptr) do { if (ptr) { free(ptr); ptr = NULL; } } while(0)
+
+/**
+ * @brief Получение текстового описания ошибки OpenCL
+ */
+const char* cl_error_string(cl_int err) {
+    switch (err) {
+        case CL_SUCCESS:                        return "Success";
+        case CL_DEVICE_NOT_FOUND:               return "Device not found";
+        case CL_DEVICE_NOT_AVAILABLE:           return "Device not available";
+        case CL_COMPILER_NOT_AVAILABLE:         return "Compiler not available";
+        case CL_MEM_OBJECT_ALLOCATION_FAILURE:  return "Memory allocation failure";
+        case CL_OUT_OF_RESOURCES:               return "Out of resources";
+        case CL_OUT_OF_HOST_MEMORY:             return "Out of host memory";
+        case CL_BUILD_PROGRAM_FAILURE:          return "Build program failure";
+        case CL_INVALID_VALUE:                  return "Invalid value";
+        case CL_INVALID_DEVICE:                 return "Invalid device";
+        case CL_INVALID_CONTEXT:                return "Invalid context";
+        case CL_INVALID_COMMAND_QUEUE:          return "Invalid command queue";
+        case CL_INVALID_MEM_OBJECT:             return "Invalid memory object";
+        case CL_INVALID_PROGRAM:                return "Invalid program";
+        case CL_INVALID_KERNEL:                 return "Invalid kernel";
+        case CL_INVALID_ARG_INDEX:              return "Invalid argument index";
+        case CL_INVALID_ARG_VALUE:              return "Invalid argument value";
+        case CL_INVALID_ARG_SIZE:               return "Invalid argument size";
+        case CL_INVALID_KERNEL_ARGS:            return "Invalid kernel arguments";
+        case CL_INVALID_WORK_DIMENSION:         return "Invalid work dimension";
+        case CL_INVALID_WORK_GROUP_SIZE:        return "Invalid work group size";
+        case CL_INVALID_WORK_ITEM_SIZE:         return "Invalid work item size";
+        case CL_INVALID_GLOBAL_OFFSET:          return "Invalid global offset";
+        case CL_INVALID_EVENT_WAIT_LIST:        return "Invalid event wait list";
+        case CL_INVALID_EVENT:                  return "Invalid event";
+        case CL_INVALID_OPERATION:              return "Invalid operation";
+        case CL_INVALID_GL_OBJECT:              return "Invalid GL object";
+        case CL_INVALID_BUFFER_SIZE:            return "Invalid buffer size";
+        case CL_INVALID_MIP_LEVEL:              return "Invalid MIP level";
+        default:                                return "Unknown error";
+    }
+}
+
 // ============================================================
 // SHA-256 КОНСТАНТЫ
 // ============================================================
@@ -83,6 +123,37 @@ static const uint32_t sha256_k[64] = {
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
+
+// ============================================================
+// СТРУКТУРЫ ДЛЯ OPENCL
+// ============================================================
+
+/**
+ * @brief Контекст OpenCL для управления ресурсами
+ */
+typedef struct {
+    cl_platform_id platform;
+    cl_device_id device;
+    cl_context context;
+    cl_command_queue queue;
+    cl_program program;
+    cl_kernel kernel_sha256;
+    cl_kernel kernel_djb2;
+    cl_kernel kernel_fnv1a;
+    int is_initialized;
+} OpenCLContext;
+
+/**
+ * @brief Результаты бенчмарка
+ */
+typedef struct {
+    double cpu_time_ms;
+    double gpu_kernel_time_ms;
+    double gpu_total_time_ms;
+    double speedup;
+    uint32_t matches;
+    uint32_t total;
+} BenchmarkResult;
 
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -255,112 +326,225 @@ char* read_kernel_source(const char* filename, size_t* size) {
     if (!file) return NULL;
     
     char* source = (char*)malloc(MAX_SOURCE_SIZE);
+    if (!source) {
+        fprintf(stderr, "Ошибка: Не удалось выделить память для kernel source\n");
+        fclose(file);
+        return NULL;
+    }
+    
     *size = fread(source, 1, MAX_SOURCE_SIZE - 1, file);
     source[*size] = '\0';
     fclose(file);
     return source;
 }
 
-const char* get_embedded_kernel();
+/**
+ * @brief Освобождение ресурсов OpenCL
+ */
+void cl_cleanup(OpenCLContext* ctx) {
+    if (!ctx) return;
+    
+    if (ctx->kernel_sha256) clReleaseKernel(ctx->kernel_sha256);
+    if (ctx->kernel_djb2) clReleaseKernel(ctx->kernel_djb2);
+    if (ctx->kernel_fnv1a) clReleaseKernel(ctx->kernel_fnv1a);
+    if (ctx->program) clReleaseProgram(ctx->program);
+    if (ctx->queue) clReleaseCommandQueue(ctx->queue);
+    if (ctx->context) clReleaseContext(ctx->context);
+    
+    memset(ctx, 0, sizeof(OpenCLContext));
+}
 
-// ============================================================
-// GPU ВЕРСИЯ
-// ============================================================
-
-void hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
-              uint32_t num_hashes, uint32_t max_len, size_t local_size,
-              int print_info, double* kernel_time_ms) {
+/**
+ * @brief Инициализация OpenCL с автоматическим выбором лучшего устройства
+ */
+int cl_init(OpenCLContext* ctx, int print_info) {
     cl_int err;
-    cl_platform_id platform;
-    cl_device_id device;
-    cl_context context;
-    cl_command_queue queue;
-    cl_program program;
-    cl_kernel kernel_sha256, kernel_djb2, kernel_fnv1a;
-    cl_mem d_data, d_lens, d_hashes;
+    cl_uint num_platforms, num_devices;
     
-    // Получение платформы и устройства
-    err = clGetPlatformIDs(1, &platform, NULL);
-    CHECK_CL_ERROR(err, "clGetPlatformIDs");
+    memset(ctx, 0, sizeof(OpenCLContext));
     
-    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-    if (err != CL_SUCCESS) {
-        printf("GPU не найден, используется CPU...\n");
-        err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-        CHECK_CL_ERROR(err, "clGetDeviceIDs CPU");
+    // Получение платформ
+    err = clGetPlatformIDs(1, &ctx->platform, &num_platforms);
+    if (err != CL_SUCCESS || num_platforms == 0) {
+        fprintf(stderr, "Ошибка: Не найдено OpenCL платформ\n");
+        return -1;
     }
     
-    if (print_info) print_device_info(device);
+    // Попытка найти GPU
+    err = clGetDeviceIDs(ctx->platform, CL_DEVICE_TYPE_GPU, 1, &ctx->device, &num_devices);
+    if (err != CL_SUCCESS || num_devices == 0) {
+        // Fallback на CPU
+        err = clGetDeviceIDs(ctx->platform, CL_DEVICE_TYPE_CPU, 1, &ctx->device, &num_devices);
+        if (err != CL_SUCCESS) {
+            fprintf(stderr, "Ошибка: Не найдено OpenCL устройств\n");
+            return -1;
+        }
+        printf("GPU не найден, используется CPU...\n");
+    }
     
-    // Создание контекста и очереди
-    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-    CHECK_CL_ERROR(err, "clCreateContext");
+    if (print_info) {
+        print_device_info(ctx->device);
+    }
     
-    // Используем совместимый метод создания очереди команд
-    queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
-    CHECK_CL_ERROR(err, "clCreateCommandQueue");
+    // Создание контекста
+    ctx->context = clCreateContext(NULL, 1, &ctx->device, NULL, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания контекста: %s\n", cl_error_string(err));
+        return -1;
+    }
     
-    // Загрузка kernel
+    // Создание очереди команд
+    ctx->queue = clCreateCommandQueue(ctx->context, ctx->device, CL_QUEUE_PROFILING_ENABLE, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания очереди команд: %s\n", cl_error_string(err));
+        cl_cleanup(ctx);
+        return -1;
+    }
+    
+    ctx->is_initialized = 1;
+    return 0;
+}
+
+/**
+ * @brief Компиляция kernel из файла или встроенного источника
+ */
+int cl_compile_kernel(OpenCLContext* ctx, const char* filename) {
+    cl_int err;
     size_t source_size;
-    char* source = read_kernel_source("hash.cl", &source_size);
+    char* source = read_kernel_source(filename, &source_size);
     
     if (!source) {
         printf("Используется встроенный kernel\n");
         const char* embedded = get_embedded_kernel();
         source = strdup(embedded);
         source_size = strlen(source);
+    } else {
+        printf("Используется kernel из файла %s\n", filename);
     }
     
-    program = clCreateProgramWithSource(context, 1, (const char**)&source, &source_size, &err);
-    CHECK_CL_ERROR(err, "clCreateProgramWithSource");
+    ctx->program = clCreateProgramWithSource(ctx->context, 1, (const char**)&source, &source_size, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания программы: %s\n", cl_error_string(err));
+        SAFE_FREE(source);
+        return -1;
+    }
     
-    err = clBuildProgram(program, 1, &device, "-cl-std=CL1.2", NULL, NULL);
+    // Компиляция
+    err = clBuildProgram(ctx->program, 1, &ctx->device, "-cl-std=CL1.2", NULL, NULL);
     if (err != CL_SUCCESS) {
         size_t log_size;
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+        clGetProgramBuildInfo(ctx->program, ctx->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
         char* build_log = (char*)malloc(log_size + 1);
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
+        clGetProgramBuildInfo(ctx->program, ctx->device, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
         build_log[log_size] = '\0';
         fprintf(stderr, "Ошибка компиляции kernel:\n%s\n", build_log);
-        free(build_log);
-        exit(1);
+        SAFE_FREE(build_log);
+        SAFE_FREE(source);
+        return -1;
     }
     
-    kernel_sha256 = clCreateKernel(program, "sha256_hash", &err);
-    CHECK_CL_ERROR(err, "clCreateKernel sha256_hash");
+    // Создание kernel'ов
+    ctx->kernel_sha256 = clCreateKernel(ctx->program, "sha256_hash", &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания kernel sha256_hash: %s\n", cl_error_string(err));
+        SAFE_FREE(source);
+        return -1;
+    }
     
-    // Создание буферов
-    d_data = clCreateBuffer(context, CL_MEM_READ_ONLY, 
-                            num_hashes * max_len * sizeof(uint8_t), NULL, &err);
-    CHECK_CL_ERROR(err, "clCreateBuffer data");
+    SAFE_FREE(source);
+    return 0;
+}
+
+const char* get_embedded_kernel();
+
+// ============================================================
+// GPU ВЕРСИЯ (с улучшенной обработкой ошибок)
+// ============================================================
+
+int hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
+             uint32_t num_hashes, uint32_t max_len, size_t local_size,
+             int print_info, double* kernel_time_ms) {
+    cl_int err;
+    OpenCLContext ctx;
+    cl_mem d_data = NULL, d_lens = NULL, d_hashes = NULL;
+    cl_event event = NULL;
+    int result = 0;
     
-    d_lens = clCreateBuffer(context, CL_MEM_READ_ONLY,
-                            num_hashes * sizeof(uint32_t), NULL, &err);
-    CHECK_CL_ERROR(err, "clCreateBuffer lens");
+    // Инициализация
+    if (cl_init(&ctx, print_info) != 0) {
+        return -1;
+    }
     
-    d_hashes = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
-                              num_hashes * 32 * sizeof(uint8_t), NULL, &err);
-    CHECK_CL_ERROR(err, "clCreateBuffer hashes");
+    // Компиляция kernel
+    if (cl_compile_kernel(&ctx, "hash.cl") != 0) {
+        cl_cleanup(&ctx);
+        return -1;
+    }
+    
+    // Создание буферов с проверкой размера
+    size_t data_size = (size_t)num_hashes * max_len * sizeof(uint8_t);
+    size_t lens_size = (size_t)num_hashes * sizeof(uint32_t);
+    size_t hashes_size = (size_t)num_hashes * 32 * sizeof(uint8_t);
+    
+    // Проверка на переполнение
+    if (data_size / max_len / sizeof(uint8_t) != num_hashes) {
+        fprintf(stderr, "Ошибка: Слишком большой размер данных (переполнение)\n");
+        cl_cleanup(&ctx);
+        return -1;
+    }
+    
+    d_data = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY, data_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания буфера data: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    
+    d_lens = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY, lens_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания буфера lens: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    
+    d_hashes = clCreateBuffer(ctx.context, CL_MEM_WRITE_ONLY, hashes_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания буфера hashes: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
     
     // Копирование данных на GPU
-    clEnqueueWriteBuffer(queue, d_data, CL_TRUE, 0, 
-                         num_hashes * max_len * sizeof(uint8_t), data, 0, NULL, NULL);
-    clEnqueueWriteBuffer(queue, d_lens, CL_TRUE, 0,
-                         num_hashes * sizeof(uint32_t), lens, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(ctx.queue, d_data, CL_TRUE, 0, data_size, data, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка записи данных: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    
+    err = clEnqueueWriteBuffer(ctx.queue, d_lens, CL_TRUE, 0, lens_size, lens, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка записи длин: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
     
     // Установка аргументов
-    clSetKernelArg(kernel_sha256, 0, sizeof(cl_mem), &d_data);
-    clSetKernelArg(kernel_sha256, 1, sizeof(cl_mem), &d_lens);
-    clSetKernelArg(kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
-    clSetKernelArg(kernel_sha256, 3, sizeof(cl_uint), &max_len);
+    clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
+    clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
+    clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
+    clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
     
     // Выполнение kernel
     size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
     
-    cl_event event;
-    err = clEnqueueNDRangeKernel(queue, kernel_sha256, 1, NULL,
+    err = clEnqueueNDRangeKernel(ctx.queue, ctx.kernel_sha256, 1, NULL,
                                   &global_size, &local_size, 0, NULL, &event);
-    CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel");
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка выполнения kernel: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
     
     clWaitForEvents(1, &event);
     
@@ -371,19 +555,21 @@ void hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
     *kernel_time_ms = (double)(time_end - time_start) / 1000000.0;
     
     // Чтение результатов
-    clEnqueueReadBuffer(queue, d_hashes, CL_TRUE, 0,
-                        num_hashes * 32 * sizeof(uint8_t), hashes, 0, NULL, NULL);
+    err = clEnqueueReadBuffer(ctx.queue, d_hashes, CL_TRUE, 0, hashes_size, hashes, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка чтения результатов: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+cleanup:
+    if (event) clReleaseEvent(event);
+    if (d_data) clReleaseMemObject(d_data);
+    if (d_lens) clReleaseMemObject(d_lens);
+    if (d_hashes) clReleaseMemObject(d_hashes);
+    cl_cleanup(&ctx);
     
-    // Освобождение ресурсов
-    clReleaseEvent(event);
-    clReleaseMemObject(d_data);
-    clReleaseMemObject(d_lens);
-    clReleaseMemObject(d_hashes);
-    clReleaseKernel(kernel_sha256);
-    clReleaseProgram(program);
-    clReleaseCommandQueue(queue);
-    clReleaseContext(context);
-    free(source);
+    return result;
 }
 
 // ============================================================
@@ -515,9 +701,18 @@ int main(int argc, char** argv) {
     printf(">>> Запуск GPU версии (SHA-256)...\n");
     double gpu_kernel_time = 0;
     clock_t gpu_total_start = clock();
-    hash_gpu(data, lens, gpu_hashes, num_hashes, max_len, local_size, 1, &gpu_kernel_time);
+    int gpu_result = hash_gpu(data, lens, gpu_hashes, num_hashes, max_len, local_size, 1, &gpu_kernel_time);
     clock_t gpu_total_end = clock();
     double gpu_total_time_ms = ((double)(gpu_total_end - gpu_total_start)) / CLOCKS_PER_SEC * 1000.0;
+    
+    if (gpu_result != 0) {
+        fprintf(stderr, "Ошибка выполнения GPU версии\n");
+        free(data);
+        free(lens);
+        free(cpu_hashes);
+        free(gpu_hashes);
+        return 1;
+    }
     
     printf("    Время kernel: %.3f мс\n", gpu_kernel_time);
     printf("    Общее время: %.3f мс\n", gpu_total_time_ms);

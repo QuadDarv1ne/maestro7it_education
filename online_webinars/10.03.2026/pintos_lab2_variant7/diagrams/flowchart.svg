@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 900">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333"/>
+    </marker>
+    <style>
+      .title { font: bold 18px sans-serif; }
+      .label { font: 14px sans-serif; }
+      .decision-label { font: 13px sans-serif; }
+      .code-label { font: 12px monospace; }
+    </style>
+  </defs>
+  
+  <!-- Title -->
+  <text x="350" y="30" text-anchor="middle" class="title">Блок-схема: Приоритетное планирование в Pintos</text>
+  
+  <!-- Start -->
+  <ellipse cx="350" cy="70" rx="60" ry="25" fill="#E8F5E9" stroke="#4CAF50" stroke-width="2"/>
+  <text x="350" y="75" text-anchor="middle" class="label">Начало</text>
+  
+  <!-- Arrow -->
+  <line x1="350" y1="95" x2="350" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Timer Interrupt -->
+  <rect x="250" y="120" width="200" height="40" rx="5" fill="#E3F2FD" stroke="#2196F3" stroke-width="2"/>
+  <text x="350" y="145" text-anchor="middle" class="label">Прерывание таймера</text>
+  
+  <!-- Arrow -->
+  <line x1="350" y1="160" x2="350" y2="190" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Decision: Current thread state -->
+  <polygon points="350,190 450,240 350,290 250,240" fill="#FFF3E0" stroke="#FF9800" stroke-width="2"/>
+  <text x="350" y="235" text-anchor="middle" class="decision-label">Текущий поток</text>
+  <text x="350" y="252" text-anchor="middle" class="decision-label">завершён?</text>
+  
+  <!-- Yes path -->
+  <line x1="450" y1="240" x2="520" y2="240" stroke="#333" stroke-width="2"/>
+  <text x="475" y="232" class="label" fill="#4CAF50">Да</text>
+  <line x1="520" y1="240" x2="520" y2="330" stroke="#333" stroke-width="2"/>
+  <line x1="520" y1="330" x2="450" y2="330" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- No path -->
+  <line x1="350" y1="290" x2="350" y2="320" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="365" y="308" class="label" fill="#F44336">Нет</text>
+  
+  <!-- Add to ready queue -->
+  <rect x="250" y="320" width="200" height="40" rx="5" fill="#E3F2FD" stroke="#2196F3" stroke-width="2"/>
+  <text x="350" y="345" text-anchor="middle" class="label">Добавить в ready_queue</text>
+  
+  <!-- Arrow -->
+  <line x1="350" y1="360" x2="350" y2="390" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Sort by priority -->
+  <rect x="230" y="390" width="240" height="40" rx="5" fill="#E8F5E9" stroke="#4CAF50" stroke-width="2"/>
+  <text x="350" y="415" text-anchor="middle" class="label">Сортировка по приоритету</text>
+  
+  <!-- Arrow -->
+  <line x1="350" y1="430" x2="350" y2="460" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Decision: Queue empty -->
+  <polygon points="350,460 450,510 350,560 250,510" fill="#FFF3E0" stroke="#FF9800" stroke-width="2"/>
+  <text x="350" y="505" text-anchor="middle" class="decision-label">Очередь пуста?</text>
+  
+  <!-- Yes - idle -->
+  <line x1="450" y1="510" x2="550" y2="510" stroke="#333" stroke-width="2"/>
+  <text x="490" y="500" class="label" fill="#4CAF50">Да</text>
+  <rect x="550" y="490" width="100" height="40" rx="5" fill="#FFEBEE" stroke="#F44336" stroke-width="2"/>
+  <text x="600" y="515" text-anchor="middle" class="label">Idle поток</text>
+  <line x1="600" y1="530" x2="600" y2="850" stroke="#333" stroke-width="2"/>
+  <line x1="600" y1="850" x2="350" y2="850" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- No - select highest priority -->
+  <line x1="350" y1="560" x2="350" y2="590" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="365" y="578" class="label" fill="#F44336">Нет</text>
+  
+  <!-- Select thread -->
+  <rect x="230" y="590" width="240" height="50" rx="5" fill="#E8F5E9" stroke="#4CAF50" stroke-width="2"/>
+  <text x="350" y="612" text-anchor="middle" class="label">Выбрать поток с</text>
+  <text x="350" y="630" text-anchor="middle" class="label">наивысшим приоритетом</text>
+  
+  <!-- Arrow -->
+  <line x1="350" y1="640" x2="350" y2="670" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Context switch -->
+  <rect x="230" y="670" width="240" height="40" rx="5" fill="#E3F2FD" stroke="#2196F3" stroke-width="2"/>
+  <text x="350" y="695" text-anchor="middle" class="label">Переключение контекста</text>
+  
+  <!-- Arrow -->
+  <line x1="350" y1="710" x2="350" y2="740" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Execute thread -->
+  <rect x="230" y="740" width="240" height="40" rx="5" fill="#E3F2FD" stroke="#2196F3" stroke-width="2"/>
+  <text x="350" y="765" text-anchor="middle" class="label">Выполнение потока</text>
+  
+  <!-- Arrow -->
+  <line x1="350" y1="780" x2="350" y2="810" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Time quantum expired -->
+  <polygon points="350,810 430,850 350,890 270,850" fill="#FFF3E0" stroke="#FF9800" stroke-width="2"/>
+  <text x="350" y="855" text-anchor="middle" class="decision-label">Квант времени?</text>
+  
+  <!-- Loop back -->
+  <line x1="270" y1="850" x2="100" y2="850" stroke="#333" stroke-width="2"/>
+  <text x="220" y="840" class="label" fill="#F44336">Нет</text>
+  <line x1="100" y1="850" x2="100" y2="140" stroke="#333" stroke-width="2"/>
+  <line x1="100" y1="140" x2="250" y2="140" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- End -->
+  <line x1="430" y1="850" x2="480" y2="850" stroke="#333" stroke-width="2"/>
+  <text x="450" y="840" class="label" fill="#4CAF50">Да</text>
+  <line x1="480" y1="850" x2="480" y2="890" stroke="#333" stroke-width="2"/>
+  <ellipse cx="480" cy="890" rx="50" ry="20" fill="#FFEBEE" stroke="#F44336" stroke-width="2"/>
+  <text x="480" y="895" text-anchor="middle" class="label">Конец</text>
+  
+  <!-- Priority Donation Note -->
+  <rect x="500" y="200" width="180" height="120" rx="10" fill="#F3E5F5" stroke="#9C27B0" stroke-width="2"/>
+  <text x="590" y="225" text-anchor="middle" class="label" font-weight="bold">Priority Donation</text>
+  <text x="590" y="250" text-anchor="middle" class="decision-label">При lock_acquire:</text>
+  <text x="590" y="270" text-anchor="middle" class="decision-label">• Передать приоритет</text>
+  <text x="590" y="290" text-anchor="middle" class="decision-label">  владельцу замка</text>
+  <text x="590" y="310" text-anchor="middle" class="decision-label">• Цепочное donation</text>
+</svg>

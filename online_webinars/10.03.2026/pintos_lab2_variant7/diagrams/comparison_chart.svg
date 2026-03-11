@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <style>
+      .title { font: bold 18px sans-serif; }
+      .subtitle { font: 14px sans-serif; fill: #666; }
+      .label { font: 14px sans-serif; }
+      .tick-label { font: 12px sans-serif; fill: #666; }
+      .value-label { font: bold 12px sans-serif; }
+      .process-label { font: bold 14px sans-serif; }
+    </style>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="title">Сравнение времени ожидания процессов</text>
+  <text x="400" y="50" text-anchor="middle" class="subtitle">FIFO vs Приоритетное планирование</text>
+  
+  <!-- Chart area -->
+  <rect x="100" y="80" width="650" height="350" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1"/>
+  
+  <!-- Grid lines -->
+  <line x1="100" y1="130" x2="750" y2="130" stroke="#E0E0E0" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="100" y1="180" x2="750" y2="180" stroke="#E0E0E0" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="100" y1="230" x2="750" y2="230" stroke="#E0E0E0" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="100" y1="280" x2="750" y2="280" stroke="#E0E0E0" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="100" y1="330" x2="750" y2="330" stroke="#E0E0E0" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="100" y1="380" x2="750" y2="380" stroke="#E0E0E0" stroke-width="1" stroke-dasharray="5,5"/>
+  
+  <!-- Y-axis labels -->
+  <text x="90" y="135" text-anchor="end" class="tick-label">30</text>
+  <text x="90" y="185" text-anchor="end" class="tick-label">25</text>
+  <text x="90" y="235" text-anchor="end" class="tick-label">20</text>
+  <text x="90" y="285" text-anchor="end" class="tick-label">15</text>
+  <text x="90" y="335" text-anchor="end" class="tick-label">10</text>
+  <text x="90" y="385" text-anchor="end" class="tick-label">5</text>
+  <text x="90" y="435" text-anchor="end" class="tick-label">0</text>
+  
+  <!-- Y-axis title -->
+  <text x="30" y="280" text-anchor="middle" class="label" transform="rotate(-90, 30, 280)">Время ожидания (тики)</text>
+  
+  <!-- Process labels -->
+  <text x="200" y="455" text-anchor="middle" class="process-label">Proc0</text>
+  <text x="200" y="470" text-anchor="middle" class="tick-label">(prio=27)</text>
+  
+  <text x="350" y="455" text-anchor="middle" class="process-label">Proc1</text>
+  <text x="350" y="470" text-anchor="middle" class="tick-label">(prio=7)</text>
+  
+  <text x="500" y="455" text-anchor="middle" class="process-label">Proc2</text>
+  <text x="500" y="470" text-anchor="middle" class="tick-label">(prio=8)</text>
+  
+  <text x="650" y="455" text-anchor="middle" class="process-label">Proc3</text>
+  <text x="650" y="470" text-anchor="middle" class="tick-label">(prio=18)</text>
+  
+  <!-- Bars for FIFO (blue) -->
+  <!-- Proc0: wait=0, burst=3, starts at 0 -->
+  <rect x="160" y="430" width="30" height="0" fill="#2196F3" stroke="#1565C0" stroke-width="1"/>
+  <text x="175" y="425" text-anchor="middle" class="value-label" fill="#1565C0">0</text>
+  
+  <!-- Proc1: wait=3, burst=8, starts at 3 -->
+  <rect x="310" y="380" width="30" height="50" fill="#2196F3" stroke="#1565C0" stroke-width="1"/>
+  <text x="325" y="375" text-anchor="middle" class="value-label" fill="#1565C0">3</text>
+  
+  <!-- Proc2: wait=11, burst=20, starts at 11 -->
+  <rect x="460" y="247" width="30" height="183" fill="#2196F3" stroke="#1565C0" stroke-width="1"/>
+  <text x="475" y="242" text-anchor="middle" class="value-label" fill="#1565C0">11</text>
+  
+  <!-- Proc3: wait=31, burst=1, starts at 31 -->
+  <rect x="610" y="114" width="30" height="316" fill="#2196F3" stroke="#1565C0" stroke-width="1"/>
+  <text x="625" y="109" text-anchor="middle" class="value-label" fill="#1565C0">31</text>
+  
+  <!-- Bars for Priority (green) -->
+  <!-- Proc0: wait=0, highest priority -->
+  <rect x="195" y="430" width="30" height="0" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
+  <text x="210" y="425" text-anchor="middle" class="value-label" fill="#2E7D32">0</text>
+  
+  <!-- Proc1: wait=24, lowest priority -->
+  <rect x="345" y="230" width="30" height="200" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
+  <text x="360" y="225" text-anchor="middle" class="value-label" fill="#2E7D32">24</text>
+  
+  <!-- Proc2: wait=4, priority=8 -->
+  <rect x="495" y="363" width="30" height="67" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
+  <text x="510" y="358" text-anchor="middle" class="value-label" fill="#2E7D32">4</text>
+  
+  <!-- Proc3: wait=3, priority=18 -->
+  <rect x="645" y="380" width="30" height="50" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
+  <text x="660" y="375" text-anchor="middle" class="value-label" fill="#2E7D32">3</text>
+  
+  <!-- Legend -->
+  <rect x="280" y="85" width="20" height="15" fill="#2196F3" stroke="#1565C0"/>
+  <text x="305" y="97" class="label">FIFO (порядок создания)</text>
+  
+  <rect x="450" y="85" width="20" height="15" fill="#4CAF50" stroke="#2E7D32"/>
+  <text x="475" y="97" class="label">Приоритетное планирование</text>
+  
+  <!-- Summary table -->
+  <rect x="100" y="480" width="650" height="2" fill="#333"/>
+  
+  <!-- Average wait time -->
+  <text x="200" y="495" text-anchor="middle" class="label" fill="#1565C0">Среднее FIFO: 11.25 тиков</text>
+  <text x="500" y="495" text-anchor="middle" class="label" fill="#2E7D32">Среднее Priority: 7.75 тиков</text>
+  <text x="650" y="495" text-anchor="middle" class="label" font-weight="bold" fill="#4CAF50">↓ 31%</text>
+</svg>
