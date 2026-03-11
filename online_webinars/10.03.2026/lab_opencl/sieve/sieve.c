@@ -210,34 +210,40 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
 
     // Компиляция
     err = clBuildProgram(program, 1, &device, "-cl-std=CL1.2", NULL, NULL);
-    if (err != CL_SUCCESS) {
-        size_t log_size;
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+    size_t log_size;
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+    if (log_size > 1) {
         char* build_log = (char*)malloc(log_size + 1);
         clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
         build_log[log_size] = '\0';
-        fprintf(stderr, "Ошибка компиляции kernel:\n%s\n", build_log);
+        printf("Build log: %s\n", build_log);
         free(build_log);
+    }
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка компиляции kernel\n");
         exit(1);
     }
     
     // Создаём kernel
     kernel_init = clCreateKernel(program, "init_array", &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания kernel init_array\n");
+        fprintf(stderr, "Ошибка создания kernel init_array: %d\n", err);
         exit(1);
     }
+    printf("DEBUG: kernel init_array создан\n");
 
     kernel_mark = clCreateKernel(program, "sieve_mark_multiples", &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания kernel sieve_mark_multiples\n");
+        fprintf(stderr, "Ошибка создания kernel sieve_mark_multiples: %d\n", err);
         exit(1);
     }
+    printf("DEBUG: kernel sieve_mark_multiples создан\n");
     
     // --------------------------------------------------------
     // 4. Создание буферов
     // --------------------------------------------------------
     size_t buf_size = ((limit + 1 + 63) / 64) * 64;  // Выравнивание по 64 байта
+    if (buf_size < 256) buf_size = 256;  // Минимальный размер буфера
     d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE, buf_size, NULL, &err);
     CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
 
@@ -251,15 +257,16 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // 5. Инициализация массива на GPU
     // --------------------------------------------------------
     clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_init, 1, sizeof(cl_ulong), &limit);
+    clSetKernelArg(kernel_init, 1, sizeof(cl_uint), &limit);
 
     size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
-    if (global_size_init < local_size) global_size_init = local_size;
 
     err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
-                                  &global_size_init, &local_size, 0, NULL, NULL);
+                                  &global_size_init, NULL, 0, NULL, NULL);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка запуска kernel init: %d\n", err);
+    } else {
+        printf("DEBUG: kernel init запущен, global_size=%zu\n", global_size_init);
     }
 
     clFinish(queue);
@@ -270,17 +277,18 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     unsigned long sqrt_limit = (unsigned long)sqrt((double)limit);
 
     clSetKernelArg(kernel_mark, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_mark, 1, sizeof(cl_ulong), &limit);
+    clSetKernelArg(kernel_mark, 1, sizeof(cl_uint), &limit);
 
     for (unsigned long p = 2; p <= sqrt_limit; p++) {
         // Проверяем, является ли p простым (читаем с GPU)
         unsigned char p_is_prime;
-        clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, p * sizeof(unsigned char),
+        clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, p * sizeof(unsigned char),
                            sizeof(unsigned char), &p_is_prime, 0, NULL, NULL);
+        clFinish(queue);
 
         if (p_is_prime) {
-            cl_ulong p_val = p;
-            clSetKernelArg(kernel_mark, 2, sizeof(cl_ulong), &p_val);
+            cl_uint p_val = (cl_uint)p;
+            clSetKernelArg(kernel_mark, 2, sizeof(cl_uint), &p_val);
 
             // Вычисляем количество работы
             unsigned long start = p * p;
@@ -301,8 +309,10 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
             if (mark_global_size > max_threads) mark_global_size = max_threads;
 
             err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
-                                         &mark_global_size, &local_size, 0, NULL, NULL);
-            CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel mark");
+                                         &mark_global_size, NULL, 0, NULL, NULL);
+            if (err != CL_SUCCESS) {
+                fprintf(stderr, "Ошибка запуска kernel mark: %d\n", err);
+            }
 
             clFinish(queue);
         }
@@ -316,18 +326,23 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     unsigned int h_count = 0;
     unsigned char* h_is_prime = (unsigned char*)malloc(buf_size);
     memset(h_is_prime, 0, buf_size);
-    err = clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, 0, (limit + 1), h_is_prime, 0, NULL, NULL);
-    if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка чтения буфера: %d\n", err);
-        free(h_is_prime);
-        return 0;
-    }
+    err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0, (limit + 1), h_is_prime, 0, NULL, NULL);
+    CHECK_CL_ERROR(err, "clEnqueueReadBuffer init");
+    clFinish(queue);
 
     unsigned int count = 0;
     for (unsigned long i = 2; i <= limit; i++) {
         if (h_is_prime[i]) count++;
     }
     h_count = count;
+    
+    // Отладка: вывод первых байт
+    printf("DEBUG: h_is_prime[0..10] = ");
+    for (int i = 0; i <= 10 && i <= (int)limit; i++) {
+        printf("%d ", h_is_prime[i]);
+    }
+    printf("\n");
+    
     free(h_is_prime);
     
     // --------------------------------------------------------
@@ -352,20 +367,19 @@ const char* get_embedded_kernel() {
     return
     "// OpenCL Kernel: Решето Эратосфена\n"
     "\n"
-    "__kernel void init_array(__global uchar* is_prime, const ulong limit) {\n"
-    "    ulong gid = get_global_id(0);\n"
-    "    if (gid <= limit) {\n"
-    "        is_prime[gid] = (gid >= 2) ? 1 : 0;\n"
-    "    }\n"
+    "__kernel void init_array(__global uchar* is_prime, const uint limit) {\n"
+    "    uint gid = get_global_id(0);\n"
+    "    if (gid < 2) { is_prime[gid] = 0; return; }\n"
+    "    if (gid <= limit) is_prime[gid] = 1;\n"
     "}\n"
     "\n"
     "__kernel void sieve_mark_multiples(\n"
-    "    __global uchar* is_prime, const ulong limit, const ulong current_prime) {\n"
-    "    ulong gid = get_global_id(0);\n"
-    "    ulong start = current_prime * current_prime;\n"
+    "    __global uchar* is_prime, const uint limit, const uint current_prime) {\n"
+    "    uint gid = get_global_id(0);\n"
+    "    uint start = current_prime * current_prime;\n"
     "    if (start > limit) return;\n"
-    "    ulong global_size = get_global_size(0);\n"
-    "    ulong multiple = start + current_prime * gid;\n"
+    "    uint global_size = get_global_size(0);\n"
+    "    uint multiple = start + current_prime * gid;\n"
     "    while (multiple <= limit) {\n"
     "        is_prime[multiple] = 0;\n"
     "        multiple += current_prime * global_size;\n"
