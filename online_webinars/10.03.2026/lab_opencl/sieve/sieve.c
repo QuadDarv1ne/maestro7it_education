@@ -195,14 +195,16 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     
     // Пробуем загрузить из файла
     size_t source_size;
-    char* source = read_kernel_source("sieve.cl", &source_size);
-    
+    char* source = read_kernel_source("C:/Users/maksi/OneDrive/Documents/GitHub/maestro7it_education/online_webinars/10.03.2026/lab_opencl/sieve/sieve.cl", &source_size);
+
     if (!source) {
         // Используем встроенный kernel
         printf("Используется встроенный kernel\n");
         const char* embedded = get_embedded_kernel();
         source = strdup(embedded);
         source_size = strlen(source);
+    } else {
+        printf("Используется kernel из файла sieve.cl\n");
     }
     
     program = clCreateProgramWithSource(context, 1, (const char**)&source, &source_size, &err);
@@ -244,29 +246,25 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     size_t buf_size = ((limit + 1 + 63) / 64) * 64;  // Выравнивание по 64 байта
     if (buf_size < 256) buf_size = 256;  // Минимальный размер буфера
-    d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE, buf_size, NULL, &err);
-    CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
-
-    // Инициализация буфера нулями
     unsigned char* h_buf = calloc(buf_size, 1);
-    err = clEnqueueWriteBuffer(queue, d_is_prime, CL_TRUE, 0, buf_size, h_buf, 0, NULL, NULL);
+    d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, buf_size, h_buf, &err);
     free(h_buf);
-    CHECK_CL_ERROR(err, "clEnqueueWriteBuffer init");
+    CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
 
     // --------------------------------------------------------
     // 5. Инициализация массива на GPU
     // --------------------------------------------------------
     clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_init, 1, sizeof(cl_uint), &limit);
+    clSetKernelArg(kernel_init, 1, sizeof(unsigned int), &limit);
 
     size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
 
     err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
-                                  &global_size_init, NULL, 0, NULL, NULL);
+                                  &global_size_init, &local_size, 0, NULL, NULL);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка запуска kernel init: %d\n", err);
     } else {
-        printf("DEBUG: kernel init запущен, global_size=%zu\n", global_size_init);
+        printf("DEBUG: kernel init запущен, global_size=%zu, local_size=%zu\n", global_size_init, local_size);
     }
 
     clFinish(queue);
@@ -287,8 +285,8 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         clFinish(queue);
 
         if (p_is_prime) {
-            cl_uint p_val = (cl_uint)p;
-            clSetKernelArg(kernel_mark, 2, sizeof(cl_uint), &p_val);
+            unsigned int p_val = (unsigned int)p;
+            clSetKernelArg(kernel_mark, 2, sizeof(unsigned int), &p_val);
 
             // Вычисляем количество работы
             unsigned long start = p * p;
@@ -309,7 +307,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
             if (mark_global_size > max_threads) mark_global_size = max_threads;
 
             err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
-                                         &mark_global_size, NULL, 0, NULL, NULL);
+                                         &mark_global_size, &local_size, 0, NULL, NULL);
             if (err != CL_SUCCESS) {
                 fprintf(stderr, "Ошибка запуска kernel mark: %d\n", err);
             }
@@ -367,19 +365,19 @@ const char* get_embedded_kernel() {
     return
     "// OpenCL Kernel: Решето Эратосфена\n"
     "\n"
-    "__kernel void init_array(__global uchar* is_prime, const uint limit) {\n"
-    "    uint gid = get_global_id(0);\n"
+    "__kernel void init_array(__global uchar* is_prime, unsigned int limit) {\n"
+    "    unsigned int gid = get_global_id(0);\n"
     "    if (gid < 2) { is_prime[gid] = 0; return; }\n"
     "    if (gid <= limit) is_prime[gid] = 1;\n"
     "}\n"
     "\n"
     "__kernel void sieve_mark_multiples(\n"
-    "    __global uchar* is_prime, const uint limit, const uint current_prime) {\n"
-    "    uint gid = get_global_id(0);\n"
-    "    uint start = current_prime * current_prime;\n"
+    "    __global uchar* is_prime, unsigned int limit, unsigned int current_prime) {\n"
+    "    unsigned int gid = get_global_id(0);\n"
+    "    unsigned int start = current_prime * current_prime;\n"
     "    if (start > limit) return;\n"
-    "    uint global_size = get_global_size(0);\n"
-    "    uint multiple = start + current_prime * gid;\n"
+    "    unsigned int global_size = get_global_size(0);\n"
+    "    unsigned int multiple = start + current_prime * gid;\n"
     "    while (multiple <= limit) {\n"
     "        is_prime[multiple] = 0;\n"
     "        multiple += current_prime * global_size;\n"
