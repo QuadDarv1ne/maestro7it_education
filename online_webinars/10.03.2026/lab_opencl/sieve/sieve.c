@@ -247,13 +247,14 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
     clSetKernelArg(kernel_init, 1, sizeof(cl_ulong), &limit);
 
-    size_t global_size_init = limit + 1;
-    if (global_size_init > local_size * 64) global_size_init = local_size * 64;
-    global_size_init = ((global_size_init + local_size - 1) / local_size) * local_size;
+    size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
+    if (global_size_init > local_size * 256) global_size_init = local_size * 256;
 
     err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
                                   &global_size_init, &local_size, 0, NULL, NULL);
-    CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel init");
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка запуска kernel init: %d\n", err);
+    }
 
     clFinish(queue);
     
