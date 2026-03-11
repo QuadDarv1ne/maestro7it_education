@@ -159,9 +159,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     cl_program program;
     cl_kernel kernel_init;
     cl_kernel kernel_mark;
-    cl_kernel kernel_count;
     cl_mem d_is_prime;
-    cl_mem d_count;
     
     // --------------------------------------------------------
     // 1. Получение платформы и устройства
@@ -235,12 +233,6 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         fprintf(stderr, "Ошибка создания kernel sieve_mark_multiples\n");
         exit(1);
     }
-
-    kernel_count = clCreateKernel(program, "count_primes", &err);
-    if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания kernel count_primes\n");
-        exit(1);
-    }
     
     // --------------------------------------------------------
     // 4. Создание буферов
@@ -249,18 +241,15 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
                                  (limit + 1) * sizeof(unsigned char), NULL, &err);
     CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
 
-    unsigned int h_count = 0;
-    d_count = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-                             sizeof(unsigned int), &h_count, &err);
-    CHECK_CL_ERROR(err, "clCreateBuffer count");
-    
     // --------------------------------------------------------
     // 5. Инициализация массива на GPU
     // --------------------------------------------------------
     clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
     clSetKernelArg(kernel_init, 1, sizeof(cl_ulong), &limit);
 
-    size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
+    size_t global_size_init = limit + 1;
+    if (global_size_init > local_size * 64) global_size_init = local_size * 64;
+    global_size_init = ((global_size_init + local_size - 1) / local_size) * local_size;
 
     err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
                                   &global_size_init, &local_size, 0, NULL, NULL);
@@ -313,39 +302,28 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     }
     
     // --------------------------------------------------------
-    // 7. Подсчёт простых чисел на GPU
+    // 7. Подсчёт простых чисел (на CPU для совместимости)
     // --------------------------------------------------------
-    clSetKernelArg(kernel_count, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_count, 1, sizeof(cl_ulong), &limit);
-    clSetKernelArg(kernel_count, 2, sizeof(cl_mem), &d_count);
-
-    size_t count_global_size = local_size;  // Один work-group для подсчёта
-
-    err = clEnqueueNDRangeKernel(queue, kernel_count, 1, NULL,
-                                  &count_global_size, &local_size, 0, NULL, NULL);
-    CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel count");
-
+    unsigned int h_count = 0;
+    unsigned char* h_is_prime = (unsigned char*)calloc((limit + 1), sizeof(unsigned char));
+    err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0,
+                              (limit + 1) * sizeof(unsigned char), h_is_prime, 0, NULL, NULL);
+    CHECK_CL_ERROR(err, "clEnqueueReadBuffer is_prime");
     clFinish(queue);
 
-    // --------------------------------------------------------
-    // 8. Чтение результатов
-    // --------------------------------------------------------
-    err = clEnqueueReadBuffer(queue, d_count, CL_TRUE, 0, sizeof(unsigned int),
-                              &h_count, 0, NULL, NULL);
-    CHECK_CL_ERROR(err, "clEnqueueReadBuffer count");
-
-    err = clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, 0,
-                              (limit + 1) * sizeof(unsigned char), is_prime, 0, NULL, NULL);
-    CHECK_CL_ERROR(err, "clEnqueueReadBuffer is_prime");
+    unsigned int count = 0;
+    for (unsigned long i = 2; i <= limit; i++) {
+        if (h_is_prime[i]) count++;
+    }
+    h_count = count;
+    free(h_is_prime);
     
     // --------------------------------------------------------
     // 9. Освобождение ресурсов
     // --------------------------------------------------------
     clReleaseMemObject(d_is_prime);
-    clReleaseMemObject(d_count);
     clReleaseKernel(kernel_init);
     clReleaseKernel(kernel_mark);
-    clReleaseKernel(kernel_count);
     clReleaseProgram(program);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
@@ -388,9 +366,9 @@ const char* get_embedded_kernel() {
     "    ulong global_size = get_global_size(0);\n"
     "    uint local_sum = 0;\n"
     "    for (ulong i = gid; i <= limit; i += global_size) {\n"
-    "        if (is_prime[i]) local_sum++;\n"
+    "        local_sum += is_prime[i];\n"
     "    }\n"
-    "    if (local_sum > 0) atomic_add(count, local_sum);\n"
+    "    atomic_add(count, local_sum);\n"
     "}\n";
 }
 
