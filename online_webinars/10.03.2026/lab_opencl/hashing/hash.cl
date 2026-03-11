@@ -49,6 +49,7 @@ constant uint SHA256_K[64] = {
 
 /**
  * Вычисление SHA-256 хэша для одного сообщения
+ * Корректная обработка padding для сообщений любой длины
  */
 __kernel void sha256_hash(
     __global const uchar* input,
@@ -65,24 +66,43 @@ __kernel void sha256_hash(
     uint h[8];
     for (int i = 0; i < 8; i++) h[i] = SHA256_H[i];
 
-    // Обнуление рабочего массива
-    for (int i = 0; i < 64; i++) w[i] = 0;
+    // Количество 512-битных (64-байтных) блоков
+    uint num_blocks = (len + 9 + 63) / 64;
+    if (num_blocks < 1) num_blocks = 1;
 
-    // Копирование входных данных (big-endian)
-    for (uint i = 0; i < len && i < 56; i++) {
-        uint wi = i >> 2;
-        uint bi = 3 - (i & 3);
-        w[wi] |= ((uint)input[offset + i]) << (bi << 3);
-    }
+    uint processed = 0;
 
-    // Padding: добавляем бит '1'
-    uint pad = len;
-    uint wi = pad >> 2;
-    uint bi = 3 - (pad & 3);
-    w[wi] |= ((uint)0x80) << (bi << 3);
+    for (uint block = 0; block < num_blocks; block++) {
+        // Обнуление массива слов
+        for (int i = 0; i < 64; i++) w[i] = 0;
 
-    // Если сообщение >= 56 байт, нужен второй блок
-    if (pad >= 56) {
+        // Копирование данных блока (big-endian)
+        uint bytes_in_block = 0;
+        for (uint i = 0; i < 64; i++) {
+            uint pos = block * 64 + i;
+            if (pos < len) {
+                uint wi = i >> 2;
+                uint bi = 3 - (i & 3);
+                w[wi] |= ((uint)input[offset + pos]) << (bi << 3);
+                bytes_in_block++;
+            }
+        }
+
+        // Добавление padding
+        uint pad_pos = bytes_in_block;
+        if (pad_pos < 64) {
+            uint wi = pad_pos >> 2;
+            uint bi = 3 - (pad_pos & 3);
+            w[wi] |= ((uint)0x80) << (bi << 3);
+        }
+
+        // Если это последний блок и осталось место для длины
+        if (block == num_blocks - 1) {
+            // Длина в битах (big-endian)
+            w[14] = (len >> 29) & 0x07;
+            w[15] = (len << 3) & 0xFFFFFFFF;
+        }
+
         // Расширение слов
         for (int i = 16; i < 64; i++)
             w[i] = SIG1(w[i-2]) + w[i-7] + SIG0(w[i-15]) + w[i-16];
@@ -98,35 +118,7 @@ __kernel void sha256_hash(
         }
         h[0] += a; h[1] += b; h[2] += c; h[3] += d;
         h[4] += e; h[5] += f; h[6] += g; h[7] += hv;
-
-        // Второй блок
-        for (int i = 0; i < 64; i++) w[i] = 0;
-        pad = 64;
-        wi = pad >> 2;
-        bi = 3 - (pad & 3);
-        w[wi] |= ((uint)0x80) << (bi << 3);
     }
-
-    // Добавляем длину в битах
-    ulong bl = (ulong)len << 3;
-    w[14] = (uint)(bl >> 32);
-    w[15] = (uint)bl;
-
-    // Расширение слов
-    for (int i = 16; i < 64; i++)
-        w[i] = SIG1(w[i-2]) + w[i-7] + SIG0(w[i-15]) + w[i-16];
-
-    // Основной цикл сжатия
-    uint a = h[0], b = h[1], c = h[2], d = h[3];
-    uint e = h[4], f = h[5], g = h[6], hv = h[7];
-    for (int i = 0; i < 64; i++) {
-        uint t1 = hv + EP1(e) + CH(e, f, g) + SHA256_K[i] + w[i];
-        uint t2 = EP0(a) + MAJ(a, b, c);
-        hv = g; g = f; f = e; e = d + t1;
-        d = c; c = b; b = a; a = t1 + t2;
-    }
-    h[0] += a; h[1] += b; h[2] += c; h[3] += d;
-    h[4] += e; h[5] += f; h[6] += g; h[7] += hv;
 
     // Запись результата (big-endian)
     for (int i = 0; i < 8; i++) {

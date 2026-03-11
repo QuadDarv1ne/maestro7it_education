@@ -26,6 +26,13 @@
 #include <math.h>
 #include <time.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <limits.h>
+#endif
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -120,20 +127,70 @@ void print_device_info(cl_device_id device) {
 }
 
 /**
+ * Получение пути к kernel файлу относительно исполняемого файла
+ */
+void get_kernel_path(char* out_path, size_t size, const char* kernel_name) {
+#ifdef _WIN32
+    char exe_path[MAX_PATH];
+    GetModuleFileNameA(NULL, exe_path, MAX_PATH);
+    
+    // Поиск последней обратной косой черты
+    char* last_backslash = strrchr(exe_path, '\\');
+    if (last_backslash != NULL) {
+        *last_backslash = '\0';
+        snprintf(out_path, size, "%s\\%s", exe_path, kernel_name);
+    } else {
+        snprintf(out_path, size, "%s", kernel_name);
+    }
+#else
+    char exe_path[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+    if (len > 0) {
+        exe_path[len] = '\0';
+        char* last_slash = strrchr(exe_path, '/');
+        if (last_slash != NULL) {
+            *last_slash = '\0';
+            snprintf(out_path, size, "%s/%s", exe_path, kernel_name);
+        } else {
+            snprintf(out_path, size, "%s", kernel_name);
+        }
+    } else {
+        snprintf(out_path, size, "%s", kernel_name);
+    }
+#endif
+}
+
+/**
  * Чтение исходного кода kernel из файла
  */
 char* read_kernel_source(const char* filename, size_t* size) {
-    FILE* file = fopen(filename, "r");
+    char full_path[512];
+    FILE* file;
+    
+    // Пробуем открыть по указанному пути
+    file = fopen(filename, "r");
+    
+    // Если не удалось, пробуем найти относительно исполняемого файла
+    if (!file) {
+        get_kernel_path(full_path, sizeof(full_path), filename);
+        file = fopen(full_path, "r");
+    }
+    
+    // Если всё ещё не удалось, пробуем текущую директорию
+    if (!file) {
+        file = fopen(filename, "r");
+    }
+    
     if (!file) {
         fprintf(stderr, "Ошибка: Не удалось открыть файл %s\n", filename);
         return NULL;
     }
-    
+
     char* source = (char*)malloc(MAX_SOURCE_SIZE);
     *size = fread(source, 1, MAX_SOURCE_SIZE - 1, file);
     source[*size] = '\0';
     fclose(file);
-    
+
     return source;
 }
 
@@ -192,10 +249,10 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     // 3. Загрузка и компиляция kernel
     // --------------------------------------------------------
-    
-    // Пробуем загрузить из файла
+
+    // Загрузка kernel из файла
     size_t source_size;
-    char* source = read_kernel_source("C:/Users/maksi/OneDrive/Documents/GitHub/maestro7it_education/online_webinars/10.03.2026/lab_opencl/sieve/sieve.cl", &source_size);
+    char* source = read_kernel_source("sieve.cl", &source_size);
 
     if (!source) {
         // Используем встроенный kernel
@@ -268,12 +325,30 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     clSetKernelArg(kernel_mark, 0, sizeof(cl_mem), &d_is_prime);
     clSetKernelArg(kernel_mark, 1, sizeof(cl_uint), &limit);
 
+    // Буфер для кэширования состояния простых чисел (читаем пакетно)
+    unsigned char* h_primes = (unsigned char*)calloc(limit + 1, 1);
+    const unsigned long BATCH_SIZE = 4096;  // Размер пакета для чтения
+    unsigned long next_read_limit = 0;
+
     for (unsigned long p = 2; p <= sqrt_limit; p++) {
-        // Проверяем, является ли p простым (читаем с GPU)
+        // Проверяем, является ли p простым
         unsigned char p_is_prime;
-        clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, p * sizeof(unsigned char),
-                           sizeof(unsigned char), &p_is_prime, 0, NULL, NULL);
-        clFinish(queue);
+
+        // Читаем пакетно если нужно
+        if (p >= next_read_limit) {
+            unsigned long read_start = next_read_limit;
+            unsigned long read_size = BATCH_SIZE;
+            if (read_start + read_size > limit + 1) read_size = limit + 1 - read_start;
+
+            if (read_size > 0) {
+                clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE,
+                                   read_start * sizeof(unsigned char),
+                                   read_size, h_primes + read_start,
+                                   0, NULL, NULL);
+                next_read_limit = read_start + read_size;
+            }
+        }
+        p_is_prime = h_primes[p];
 
         if (p_is_prime) {
             unsigned int p_val = (unsigned int)p;
@@ -300,10 +375,11 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
             err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
                                          &mark_global_size, &local_size, 0, NULL, NULL);
             CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel mark");
-
-            clFinish(queue);
         }
     }
+
+    clFinish(queue);
+    free(h_primes);
     
     // --------------------------------------------------------
     // 7. Подсчёт простых чисел (на CPU для совместимости)
