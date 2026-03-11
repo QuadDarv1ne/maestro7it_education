@@ -18,13 +18,12 @@ pintos_lab2_variant7/
 │   ├── new-alg.c         # Заглушка для системы тестов
 │   └── tests-integration.c  # Инструкции по интеграции
 ├── report/
-│   └── report_template.md  # Шаблон отчёта
+│   └── Лабораторная_работа_2_Отчёт.docx
 ├── diagrams/
 │   ├── gantt_original.png   # Диаграмма исходного алгоритма
 │   ├── gantt_priority.png   # Диаграмма приоритетного планирования
 │   ├── comparison_chart.png # Сравнение времени ожидания
 │   └── flowchart.png        # Блок-схема алгоритма
-├── diagrams.zip          # Все диаграммы в архиве
 └── README.md             # Этот файл
 ```
 

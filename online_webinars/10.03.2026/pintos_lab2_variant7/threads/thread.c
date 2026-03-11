@@ -96,26 +96,24 @@ void thread_tick(void)
   /* Проверка спящих процессов */
   enum intr_level old_level = intr_disable();
   lock_acquire(&sleep_lock);
-  
-  if (!list_empty(&sleep_list))
+
+  /* Пробуждение процессов с истёкшим временем сна */
+  while (!list_empty(&sleep_list))
     {
-      struct list_elem *e = list_begin(&sleep_list);
-      while (e != list_end(&sleep_list))
+      struct thread *sleeper = list_entry(list_front(&sleep_list), struct thread, sleep_elem);
+      if (sleeper->sleep_ticks <= 1)
         {
-          struct thread *sleeper = list_entry(e, struct thread, sleep_elem);
-          if (sleeper->sleep_ticks > 0)
-            sleeper->sleep_ticks--;
-          
-          if (sleeper->sleep_ticks == 0)
-            {
-              e = list_remove(e);
-              thread_unblock(sleeper);
-            }
-          else
-            e = list_next(e);
+          list_pop_front(&sleep_list);
+          sleeper->sleep_ticks = 0;
+          thread_unblock(sleeper);
+        }
+      else
+        {
+          sleeper->sleep_ticks--;
+          break;
         }
     }
-  
+
   lock_release(&sleep_lock);
   intr_set_level(old_level);
 }
@@ -127,7 +125,7 @@ void thread_print_stats(void)
          idle_ticks, kernel_ticks, total_ticks);
 }
 
-/* Функция сравнения процессов по приоритету (для сортировки по убыванию) */
+/* Сравнение процессов по приоритету (для сортировки по убыванию) */
 bool thread_priority_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct thread *ta = list_entry(a, struct thread, elem);
@@ -135,7 +133,7 @@ bool thread_priority_less(const struct list_elem *a, const struct list_elem *b, 
   return ta->effective_priority < tb->effective_priority;
 }
 
-/* Функция сравнения процессов по приоритету (для сортировки по возрастанию) */
+/* Сравнение процессов по приоритету (для сортировки по возрастанию) */
 bool thread_priority_greater(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct thread *ta = list_entry(a, struct thread, elem);
@@ -154,6 +152,8 @@ tid_t thread_create(const char *name, int priority,
   tid_t tid;
 
   ASSERT(function != NULL);
+  ASSERT(name != NULL);
+  ASSERT(priority >= PRI_MIN && priority <= PRI_MAX);
 
   /* Выделение памяти под структуру процесса */
   t = palloc_get_page(PAL_ZERO);
@@ -169,6 +169,9 @@ tid_t thread_create(const char *name, int priority,
   list_init(&t->donation_list);
   t->waiting_lock = NULL;
   t->cpu_burst = 0;
+#ifdef USERPROG
+  t->magic = THREAD_MAGIC;
+#endif
 
   /* Настройка стека для первого переключения контекста */
   kf = get_kernel_frame(t);
@@ -187,10 +190,10 @@ tid_t thread_create(const char *name, int priority,
   /* Добавление в списки */
   enum intr_level old_level = intr_disable();
   list_push_back(&all_list, &t->allelem);
-  
+
   /* Добавление в очередь готовых с учётом приоритета */
   list_insert_ordered(&ready_list, &t->elem, thread_priority_less, NULL);
-  
+
   intr_set_level(old_level);
 
   /* Если приоритет нового процесса выше текущего, вытеснить текущий */
@@ -219,11 +222,15 @@ void thread_unblock(struct thread *t)
 
   old_level = intr_disable();
   ASSERT(t->status == THREAD_BLOCKED);
-  
+
   /* Добавление в очередь готовых с учётом приоритета */
   list_insert_ordered(&ready_list, &t->elem, thread_priority_less, NULL);
   t->status = THREAD_READY;
-  
+
+  /* Если разблокированный процесс имеет приоритет выше текущего, вытеснить */
+  if (t->effective_priority > thread_current()->effective_priority)
+    thread_yield();
+
   intr_set_level(old_level);
 }
 
@@ -278,57 +285,53 @@ void thread_yield(void)
   ASSERT(!intr_context());
 
   old_level = intr_disable();
-  
-  if (cur != idle_thread)
+
+  if (cur != idle_thread && cur != initial_thread)
     {
       /* Добавление в очередь готовых с учётом приоритета */
       list_insert_ordered(&ready_list, &cur->elem, thread_priority_less, NULL);
     }
-  
+
   cur->status = THREAD_READY;
   schedule();
   intr_set_level(old_level);
 }
 
-/* Получение приоритета текущего процесса */
 int thread_get_priority(void)
 {
   return thread_current()->priority;
 }
 
-/* Установка приоритета текущего процесса */
 void thread_set_priority(int new_priority)
 {
   struct thread *cur = thread_current();
   int old_effective = cur->effective_priority;
-  
+
+  ASSERT(new_priority >= PRI_MIN && new_priority <= PRI_MAX);
+
   cur->priority = new_priority;
-  
-  /* Пересчёт эффективного приоритета */
   thread_update_effective_priority(cur);
-  
-  /* Если эффективный приоритет понизился, возможно вытеснение */
-  if (cur->effective_priority < old_effective)
+
+  /* Вытеснение если приоритет изменился */
+  if (cur->effective_priority != old_effective)
     thread_yield();
 }
 
-/* Получение эффективного приоритета процесса */
 int thread_get_effective_priority(struct thread *t)
 {
   return t->effective_priority;
 }
 
-/* Обновление эффективного приоритета процесса */
 void thread_update_effective_priority(struct thread *t)
 {
   int max_priority = t->priority;
-  
+
   /* Проверка всех полученных donations */
   if (!list_empty(&t->donation_list))
     {
       struct list_elem *e;
-      for (e = list_begin(&t->donation_list); 
-           e != list_end(&t->donation_list); 
+      for (e = list_begin(&t->donation_list);
+           e != list_end(&t->donation_list);
            e = list_next(e))
         {
           struct donation *d = list_entry(e, struct donation, elem);
@@ -336,43 +339,70 @@ void thread_update_effective_priority(struct thread *t)
             max_priority = d->priority;
         }
     }
-  
+
   t->effective_priority = max_priority;
-  
+
   /* Если процесс ожидает замок, обновить приоритет владельца */
   if (t->waiting_lock != NULL && t->waiting_lock->holder != NULL)
     {
-      thread_update_effective_priority(t->waiting_lock->holder);
+      /* Защита от циклической зависимости */
+      if (t->waiting_lock->holder != t)
+        thread_update_effective_priority(t->waiting_lock->holder);
     }
 }
 
-/* Передача приоритета (priority donation) */
+/* Priority donation - передача приоритета донора получателю */
 void donate_priority(struct thread *donor, struct thread *recipient, struct lock *lock)
 {
-  struct donation *d = malloc(sizeof(struct donation));
-  if (d == NULL)
+  /* Защита от NULL и циклической зависимости */
+  if (donor == NULL || recipient == NULL || lock == NULL)
     return;
-  
+
+  /* Не передавать самому себе */
+  if (donor == recipient)
+    return;
+
+  /* Проверка: уже есть donation для этого замка */
+  if (!list_empty(&recipient->donation_list))
+    {
+      struct list_elem *e;
+      for (e = list_begin(&recipient->donation_list);
+           e != list_end(&recipient->donation_list);
+           e = list_next(e))
+        {
+          struct donation *d = list_entry(e, struct donation, elem);
+          if (d->lock == lock)
+            return;
+        }
+    }
+
+  struct donation *d = palloc_get_page(0);
+  if (d == NULL) {
+    return;
+  }
+
   d->priority = donor->effective_priority;
   d->donor = donor;
   d->lock = lock;
-  
+
   list_push_back(&recipient->donation_list, &d->elem);
   thread_update_effective_priority(recipient);
-  
+
   /* Цепочное donation: если получатель тоже ждёт замок */
   if (recipient->waiting_lock != NULL && recipient->waiting_lock->holder != NULL)
     {
-      donate_priority(recipient, recipient->waiting_lock->holder, recipient->waiting_lock);
+      struct thread *holder = recipient->waiting_lock->holder;
+      /* Защита от циклов: не передавать обратно донору */
+      if (holder != donor && holder != recipient)
+        donate_priority(recipient, holder, recipient->waiting_lock);
     }
 }
 
-/* Удаление donation для конкретного замка */
 void remove_donation(struct thread *t, struct lock *lock)
 {
   if (list_empty(&t->donation_list))
     return;
-  
+
   struct list_elem *e = list_begin(&t->donation_list);
   while (e != list_end(&t->donation_list))
     {
@@ -380,49 +410,44 @@ void remove_donation(struct thread *t, struct lock *lock)
       if (d->lock == lock)
         {
           e = list_remove(e);
-          free(d);
+          palloc_free_page(d);
         }
       else
         e = list_next(e);
     }
-  
+
   thread_update_effective_priority(t);
 }
 
-/* Удаление всех donations процесса */
 void remove_all_donations(struct thread *t)
 {
-  if (list_empty(&t->donation_list))
-    return;
-  
-  struct list_elem *e;
-  while (!list_empty(&t->donation_list))
+  struct list_elem *e, *next;
+
+  for (e = list_begin(&t->donation_list); e != list_end(&t->donation_list); e = next)
     {
-      e = list_pop_front(&t->donation_list);
+      next = list_next(e);
       struct donation *d = list_entry(e, struct donation, elem);
-      free(d);
+      palloc_free_page(d);
     }
+
+  list_init(&t->donation_list);
 }
 
-/* Установка CPU burst */
 void thread_set_cpu_burst(int burst)
 {
   thread_current()->cpu_burst = burst;
 }
 
-/* Получение CPU burst */
 int thread_get_cpu_burst(void)
 {
   return thread_current()->cpu_burst;
 }
 
-/* Установка алгоритма планирования */
 void thread_set_scheduler(int algorithm)
 {
   scheduler_algorithm = algorithm;
 }
 
-/* Получение текущего алгоритма планирования */
 int thread_get_scheduler(void)
 {
   return scheduler_algorithm;
@@ -431,11 +456,40 @@ int thread_get_scheduler(void)
 /* Выбор следующего процесса для выполнения */
 static struct thread *next_thread_to_run(void)
 {
+  struct thread *next;
+  struct list_elem *selected_elem;
+
   if (list_empty(&ready_list))
     return idle_thread;
-  
-  /* Приоритетное планирование: процесс с наивысшим приоритетом */
-  return list_entry(list_pop_front(&ready_list), struct thread, elem);
+
+  switch (scheduler_algorithm)
+    {
+      case SCHED_PRIORITY:
+      case SCHED_RR:  /* RR с приоритетами */
+        /* Приоритетное планирование: процесс с наивысшим приоритетом */
+        /* Список отсортирован по возрастанию, поэтому берём с конца (max) */
+        selected_elem = list_back(&ready_list);
+        break;
+
+      case SCHED_FCFS:
+        /* First Come First Served: первый в очереди */
+        selected_elem = list_front(&ready_list);
+        break;
+
+      case SCHED_SJF:
+        /* Shortest Job First: процесс с наименьшим cpu_burst */
+        selected_elem = list_min(&ready_list, thread_priority_greater, NULL);
+        break;
+
+      default:
+        /* По умолчанию — приоритетное планирование */
+        selected_elem = list_back(&ready_list);
+        break;
+    }
+
+  list_remove(selected_elem);
+  next = list_entry(selected_elem, struct thread, elem);
+  return next;
 }
 
 /* Планирование процессов */
@@ -469,6 +523,7 @@ static void thread_schedule_tail(struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread)
     {
       ASSERT(prev != cur);
+      remove_all_donations(prev);
       palloc_free_page(prev);
     }
 }
@@ -490,8 +545,8 @@ static void idle(void *idle_started_)
 
   for (;;)
     {
+      /* Idle не должен вызывать thread_block — только блокировать прерывания */
       intr_disable();
-      thread_block();
       asm volatile ("sti; hlt" : : : "memory");
     }
 }

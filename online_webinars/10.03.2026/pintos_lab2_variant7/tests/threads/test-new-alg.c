@@ -4,6 +4,7 @@
 #include "devices/timer.h"
 #include "lib/kernel/list.h"
 #include <stdio.h>
+#include <debug.h>
 
 /* Вариант 7: Round Robin с приоритетным планированием */
 
@@ -35,20 +36,25 @@ process_func(void *aux_)
   struct thread *cur = thread_current();
   int remaining = args->cpu_burst;
   int ticks_worked = 0;
+  int64_t start_tick = timer_ticks();
 
   printf("[%s] Запущен (приоритет=%d, burst=%d)\n",
          args->name, args->priority, args->cpu_burst);
 
   while (remaining > 0)
     {
-      /* Симуляция работы в течение 1 тика */
-      timer_msleep(100);  /* 100 мс на тик для демонстрации */
+      int64_t current_tick = timer_ticks();
+      
+      /* Ждём 1 тик таймера */
+      while (timer_ticks() == current_tick)
+        thread_yield();
+      
       ticks_worked++;
       remaining--;
 
       /* Вывод диагностической информации */
-      printf("[%s] отработал %d тиков, осталось %d\n",
-             args->name, ticks_worked, remaining);
+      printf("[%s] отработал %d тиков, осталось %d (всего тиков: %ld)\n",
+             args->name, ticks_worked, remaining, (long)(timer_ticks() - start_tick));
 
       /* Для Round Robin: добровольная уступка процессора после каждого тика */
       /* Это позволяет другим процессам с таким же приоритетом выполняться */
@@ -65,6 +71,9 @@ process_func(void *aux_)
 void
 test_new_alg(void)
 {
+  int64_t start_tick, end_tick;
+  int actual_ticks;
+
   printf("\n");
   printf("========================================\n");
   printf("ТЕСТ: Приоритетное планирование с Round Robin\n");
@@ -102,6 +111,9 @@ test_new_alg(void)
                procs[i].name, tid, procs[i].priority, procs[i].cpu_burst);
     }
 
+  /* Запоминание начального тика */
+  start_tick = timer_ticks();
+
   printf("\n========================================\n");
   printf("Начало выполнения процессов\n");
   printf("Ожидаемый порядок: Proc0 -> Proc3 -> Proc2 -> Proc1\n");
@@ -116,12 +128,17 @@ test_new_alg(void)
   for (int i = 0; i < total_processes; i++)
     sema_down(&finish_sema);
 
+  /* Запоминание конечного тика */
+  end_tick = timer_ticks();
+  actual_ticks = (int)(end_tick - start_tick);
+
   printf("\n========================================\n");
   printf("РЕЗУЛЬТАТЫ ТЕСТА\n");
   printf("========================================\n");
   printf("Все процессы завершены: %d/%d\n", finished_count, total_processes);
-  printf("Общее время выполнения: %d тиков\n",
-         3 + 8 + 20 + 1);  /* Сумма всех CPU burst */
+  printf("Реальное время выполнения: %d тиков\n", actual_ticks);
+  printf("Теоретическое (сумма burst): %d тиков\n",
+         3 + 8 + 20 + 1);
   printf("Алгоритм: Round Robin с приоритетным планированием\n");
   printf("========================================\n\n");
 
