@@ -256,11 +256,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
 
     err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
                                   &global_size_init, &local_size, 0, NULL, NULL);
-    if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка запуска kernel init: %d\n", err);
-    } else {
-        printf("DEBUG: kernel init запущен, global_size=%zu, local_size=%zu\n", global_size_init, local_size);
-    }
+    CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel init");
 
     clFinish(queue);
     
@@ -303,9 +299,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
 
             err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
                                          &mark_global_size, &local_size, 0, NULL, NULL);
-            if (err != CL_SUCCESS) {
-                fprintf(stderr, "Ошибка запуска kernel mark: %d\n", err);
-            }
+            CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel mark");
 
             clFinish(queue);
         }
@@ -328,13 +322,6 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         if (h_is_prime[i]) count++;
     }
     h_count = count;
-    
-    // Отладка: вывод первых байт
-    printf("DEBUG: h_is_prime[0..10] = ");
-    for (int i = 0; i <= 10 && i <= (int)limit; i++) {
-        printf("%d ", h_is_prime[i]);
-    }
-    printf("\n");
     
     free(h_is_prime);
     
