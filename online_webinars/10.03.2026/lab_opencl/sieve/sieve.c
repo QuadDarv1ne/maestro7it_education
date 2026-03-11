@@ -206,23 +206,20 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     } else {
         printf("Используется kernel из файла sieve.cl\n");
     }
-    
+
     program = clCreateProgramWithSource(context, 1, (const char**)&source, &source_size, &err);
     CHECK_CL_ERROR(err, "clCreateProgramWithSource");
 
     // Компиляция
     err = clBuildProgram(program, 1, &device, "-cl-std=CL1.2", NULL, NULL);
-    size_t log_size;
-    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
-    if (log_size > 1) {
+    if (err != CL_SUCCESS) {
+        size_t log_size;
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
         char* build_log = (char*)malloc(log_size + 1);
         clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
         build_log[log_size] = '\0';
-        printf("Build log: %s\n", build_log);
+        fprintf(stderr, "Ошибка компиляции kernel:\n%s\n", build_log);
         free(build_log);
-    }
-    if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка компиляции kernel\n");
         exit(1);
     }
     
@@ -232,14 +229,12 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         fprintf(stderr, "Ошибка создания kernel init_array: %d\n", err);
         exit(1);
     }
-    printf("DEBUG: kernel init_array создан\n");
 
     kernel_mark = clCreateKernel(program, "sieve_mark_multiples", &err);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка создания kernel sieve_mark_multiples: %d\n", err);
         exit(1);
     }
-    printf("DEBUG: kernel sieve_mark_multiples создан\n");
     
     // --------------------------------------------------------
     // 4. Создание буферов
