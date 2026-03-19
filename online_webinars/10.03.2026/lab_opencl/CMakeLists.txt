@@ -125,6 +125,7 @@ target_compile_definitions(sieve PRIVATE
 # -----------------------------------------------------------------------------
 add_executable(hash
     ${PROJECT_SOURCE_DIR}/hashing/hash.c
+    ${PROJECT_SOURCE_DIR}/hashing/sha256.c
     ${COMMON_SOURCES}
 )
 
