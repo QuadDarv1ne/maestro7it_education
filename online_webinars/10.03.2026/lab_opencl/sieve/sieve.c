@@ -33,6 +33,9 @@
 #include <limits.h>
 #endif
 
+// Явно указываем версию OpenCL 3.0 для избежания предупреждения
+#define CL_TARGET_OPENCL_VERSION 300
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -127,57 +130,153 @@ void print_device_info(cl_device_id device) {
 }
 
 /**
- * Получение пути к kernel файлу относительно исполняемого файла
+ * Проверка существования файла
  */
-void get_kernel_path(char* out_path, size_t size, const char* kernel_name) {
-#ifdef _WIN32
-    char exe_path[MAX_PATH];
-    GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-    
-    // Поиск последней обратной косой черты
-    char* last_backslash = strrchr(exe_path, '\\');
-    if (last_backslash != NULL) {
-        *last_backslash = '\0';
-        snprintf(out_path, size, "%s\\%s", exe_path, kernel_name);
-    } else {
-        snprintf(out_path, size, "%s", kernel_name);
+int file_exists(const char* path) {
+    FILE* f = fopen(path, "r");
+    if (f) {
+        fclose(f);
+        return 1;
     }
+    return 0;
+}
+
+/**
+ * Получение пути к исполняемому файлу
+ */
+static int get_exe_path(char* out_path, size_t size) {
+#ifdef _WIN32
+    DWORD len = GetModuleFileNameA(NULL, out_path, (DWORD)size);
+    if (len == 0 || len >= size) return -1;
+    return 0;
 #else
-    char exe_path[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-    if (len > 0) {
-        exe_path[len] = '\0';
-        char* last_slash = strrchr(exe_path, '/');
-        if (last_slash != NULL) {
-            *last_slash = '\0';
-            snprintf(out_path, size, "%s/%s", exe_path, kernel_name);
+    ssize_t len = readlink("/proc/self/exe", out_path, size - 1);
+    if (len <= 0) return -1;
+    out_path[len] = '\0';
+    return 0;
+#endif
+}
+
+/**
+ * Получение директории из полного пути
+ */
+static void get_dir_from_path(const char* full_path, char* out_dir, size_t size) {
+#ifdef _WIN32
+    char* last_backslash = strrchr(full_path, '\\');
+    char* last_slash = strrchr(full_path, '/');
+    char* last_sep = (last_backslash > last_slash) ? last_backslash : last_slash;
+#else
+    char* last_slash = strrchr(full_path, '/');
+    char* last_sep = last_slash;
+#endif
+    
+    if (last_sep) {
+        size_t dir_len = last_sep - full_path;
+        if (dir_len < size) {
+            strncpy(out_dir, full_path, dir_len);
+            out_dir[dir_len] = '\0';
         } else {
-            snprintf(out_path, size, "%s", kernel_name);
+            out_dir[0] = '\0';
         }
     } else {
-        snprintf(out_path, size, "%s", kernel_name);
+        out_dir[0] = '\0';
     }
+}
+
+/**
+ * Поиск kernel файла в нескольких возможных locations
+ * Возвращает 1 если найден, 0 если нет
+ */
+int find_kernel_file(const char* kernel_name, char* out_path, size_t size) {
+    char exe_path[512];
+    char dir[512];
+    char test_path[512];
+    
+    // Стратегии поиска (в порядке приоритета):
+    const char* search_paths[8];
+    int search_count = 0;
+    
+    // 1. Текущий каталог
+    search_paths[search_count++] = kernel_name;
+    
+    // 2. Относительно расположения исполняемого файла
+    if (get_exe_path(exe_path, sizeof(exe_path)) == 0) {
+        get_dir_from_path(exe_path, dir, sizeof(dir));
+        if (dir[0]) {
+            snprintf(test_path, sizeof(test_path), "%s/%s", dir, kernel_name);
+            search_paths[search_count++] = strdup(test_path);
+            // 3. Родительская директория (bin/ -> parent/)
+            char* last_sep = strrchr(dir, '/');
+#ifdef _WIN32
+            char* last_bs = strrchr(dir, '\\');
+            if (!last_sep || (last_bs && last_bs > last_sep)) last_sep = last_bs;
 #endif
+            if (last_sep) {
+                size_t parent_len = last_sep - dir;
+                if (parent_len < sizeof(dir)) {
+                    strncpy(dir, dir, parent_len);
+                    dir[parent_len] = '\0';
+                    snprintf(test_path, sizeof(test_path), "%s/%s", dir, kernel_name);
+                    search_paths[search_count++] = strdup(test_path);
+                }
+            }
+        }
+    }
+    
+    // 4. Рабочая директория (cwd) + kernel_name
+    #ifdef _WIN32
+        char cwd[MAX_PATH];
+        if (GetCurrentDirectoryA(sizeof(cwd), cwd)) {
+            snprintf(test_path, sizeof(test_path), "%s\\%s", cwd, kernel_name);
+            search_paths[search_count++] = strdup(test_path);
+        }
+    #else
+        char cwd[PATH_MAX];
+        if (getcwd(cwd, sizeof(cwd))) {
+            snprintf(test_path, sizeof(test_path), "%s/%s", cwd, kernel_name);
+            search_paths[search_count++] = strdup(test_path);
+        }
+    #endif
+    
+    // Поиск первого существующего файла
+    for (int i = 0; i < search_count; i++) {
+        if (file_exists(search_paths[i])) {
+            snprintf(out_path, size, "%s", search_paths[i]);
+            printf("    Найден kernel: %s\n", search_paths[i]);
+            // Освобождаем выделенную память
+            for (int j = 1; j < search_count; j++) {
+                free((void*)search_paths[j]);
+            }
+            return 1;
+        }
+    }
+    
+    // Освобождаем память
+    for (int j = 1; j < search_count; j++) {
+        free((void*)search_paths[j]);
+    }
+    
+    return 0;
 }
 
 /**
  * Чтение исходного кода kernel из файла
  */
-char* read_kernel_source(const char* filename, size_t* size) {
+char* read_kernel_source(const char* kernel_name, size_t* size) {
     char full_path[512];
-    FILE* file;
+    FILE* file = NULL;
     
-    // Пробуем открыть по указанному пути
-    file = fopen(filename, "r");
-    
-    // Если не удалось, пробуем найти относительно исполняемого файла
-    if (!file) {
-        get_kernel_path(full_path, sizeof(full_path), filename);
+    // Пробуем найти файл несколькими способами
+    if (find_kernel_file(kernel_name, full_path, sizeof(full_path))) {
         file = fopen(full_path, "r");
     }
     
+    // Если не найден, пробуем просто по имени (текущий каталог)
     if (!file) {
-        fprintf(stderr, "Ошибка: Не удалось открыть файл %s\n", filename);
+        file = fopen(kernel_name, "r");
+    }
+
+    if (!file) {
         return NULL;
     }
 
@@ -243,8 +342,13 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
     CHECK_CL_ERROR(err, "clCreateContext");
     
-    // Создаём очередь с профилированием для измерения времени
-    queue = clCreateCommandQueue(context, device, 0, &err);
+    // Создаём очередь команд (современный API)
+    // Используем clCreateCommandQueueWithProperties для OpenCL 2.0+
+    #if defined(CL_VERSION_2_0)
+        queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
+    #else
+        queue = clCreateCommandQueue(context, device, 0, &err);
+    #endif
     CHECK_CL_ERROR(err, "clCreateCommandQueue");
     
     // --------------------------------------------------------
