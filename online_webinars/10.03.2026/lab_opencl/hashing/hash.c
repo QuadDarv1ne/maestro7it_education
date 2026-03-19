@@ -691,14 +691,12 @@ int hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
         goto cleanup;
     }
     
-    // Установка аргументов kernel
-    cl_uint num_hashes_arg = num_hashes;
+    // Установка аргументов kernel (4 аргумента для sha256_hash)
     clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
     clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
     clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
     clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
-    clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes_arg);
-    
+
     // Выполнение kernel
     size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
     
@@ -752,25 +750,118 @@ const char* get_embedded_kernel() {
     "#define EP1(x) (ROTR(x,6)^ROTR(x,11)^ROTR(x,25))\n"
     "#define SIG0(x) (ROTR(x,7)^ROTR(x,18)^((x)>>3))\n"
     "#define SIG1(x) (ROTR(x,17)^ROTR(x,19)^((x)>>10))\n"
-    "__kernel void sha256_hash(__global const uchar* input,__global const uint* input_lens,__global uchar* output,const uint max_len){\n"
-    "uint gid=get_global_id(0);uint offset=gid*max_len;uint len=input_lens[gid];uint w[64];uint h[8];for(int i=0;i<8;i++)h[i]=SHA256_H[i];\n"
-    "uint num_blocks=(len+9+63)/64;if(num_blocks<1)num_blocks=1;\n"
-    "for(uint block=0;block<num_blocks;block++){\n"
-    "for(int i=0;i<64;i++)w[i]=0;\n"
-    "uint bytes_in_block=0;for(uint i=0;i<64;i++){uint pos=block*64+i;if(pos<len){uint wi=i>>2;uint bi=3-(i&3);w[wi]|=((uint)input[offset+pos])<<(bi<<3);bytes_in_block++;}}\n"
-    "if(bytes_in_block<64){uint wi=bytes_in_block>>2;uint bi=3-(bytes_in_block&3);w[wi]|=((uint)0x80)<<(bi<<3);}\n"
-    "if(block==num_blocks-1){w[14]=(len>>29)&0x07;w[15]=(len<<3)&0xFFFFFFFF;}\n"
-    "for(int i=16;i<64;i++)w[i]=SIG1(w[i-2])+w[i-7]+SIG0(w[i-15])+w[i-16];\n"
-    "uint a=h[0],b=h[1],c=h[2],d=h[3],e=h[4],f=h[5],g=h[6],hv=h[7];\n"
-    "for(int i=0;i<64;i++){uint t1=hv+EP1(e)+CH(e,f,g)+SHA256_K[i]+w[i];uint t2=EP0(a)+MAJ(a,b,c);hv=g;g=f;f=e;e=d+t1;d=c;c=b;b=a;a=t1+t2;}\n"
-    "h[0]+=a;h[1]+=b;h[2]+=c;h[3]+=d;h[4]+=e;h[5]+=f;h[6]+=g;h[7]+=hv;}\n"
-    "for(int i=0;i<8;i++){output[gid*32+(i<<2)+0]=(h[i]>>24)&0xFF;output[gid*32+(i<<2)+1]=(h[i]>>16)&0xFF;output[gid*32+(i<<2)+2]=(h[i]>>8)&0xFF;output[gid*32+(i<<2)+3]=h[i]&0xFF;}}\n"
-    "__kernel void djb2_hash(__global const uchar* input,__global const uint* input_lens,__global uint* output,const uint max_len){\n"
-    "uint gid=get_global_id(0);uint offset=gid*max_len;uint len=input_lens[gid];uint hash=5381;\n"
-    "for(uint i=0;i<len;i++)hash=((hash<<5)+hash)+input[offset+i];output[gid]=hash;}\n"
-    "__kernel void fnv1a_hash(__global const uchar* input,__global const uint* input_lens,__global uint* output,const uint max_len){\n"
-    "uint gid=get_global_id(0);uint offset=gid*max_len;uint len=input_lens[gid];uint hash=2166136261u;\n"
-    "for(uint i=0;i<len;i++){hash^=input[offset+i];hash*=16777619u;}output[gid]=hash;}\n";
+    "\n"
+    "// SHA-256 hash function - исправленная версия для корректной обработки сообщений разной длины\n"
+    "__kernel void sha256_hash(\n"
+    "    __global const uchar* input,\n"
+    "    __global const uint* input_lens,\n"
+    "    __global uchar* output,\n"
+    "    const uint max_len) {\n"
+    "    \n"
+    "    uint gid = get_global_id(0);\n"
+    "    uint len = input_lens[gid];\n"
+    "    uint offset = gid * max_len;\n"
+    "    \n"
+    "    // Инициализация хэш-значений\n"
+    "    uint h[8];\n"
+    "    for (int i = 0; i < 8; i++) h[i] = SHA256_H[i];\n"
+    "    \n"
+    "    // Вычисление количества блоков (512 бит = 64 байта)\n"
+    "    // Padding: 1 байт 0x80 + до 63 байт данных + 8 байт длина\n"
+    "    uint padded_len = ((len + 9 + 63) / 64) * 64;\n"
+    "    if (padded_len < 64) padded_len = 64;\n"
+    "    \n"
+    "    // Обработка каждого блока\n"
+    "    for (uint block = 0; block < padded_len / 64; block++) {\n"
+    "        uint w[64];\n"
+    "        \n"
+    "        // Инициализация нулями\n"
+    "        for (int i = 0; i < 64; i++) w[i] = 0;\n"
+    "        \n"
+    "        // Чтение данных блока (big-endian)\n"
+    "        uint block_offset = block * 64;\n"
+    "        for (uint i = 0; i < 64; i++) {\n"
+    "            uint pos = block_offset + i;\n"
+    "            if (pos < len) {\n"
+    "                uint word_idx = i >> 2;\n"
+    "                uint byte_idx = 3 - (i & 3);\n"
+    "                w[word_idx] |= ((uint)input[offset + pos]) << (byte_idx << 3);\n"
+    "            } else if (pos == len) {\n"
+    "                // Добавляем 0x80\n"
+    "                uint word_idx = i >> 2;\n"
+    "                uint byte_idx = 3 - (i & 3);\n"
+    "                w[word_idx] |= ((uint)0x80) << (byte_idx << 3);\n"
+    "            }\n"
+    "        }\n"
+    "        \n"
+    "        // Добавляем длину в битах в конце последнего блока\n"
+    "        if (block == (padded_len / 64) - 1) {\n"
+    "            w[14] = (len >> 29) & 0x07;\n"
+    "            w[15] = (len << 3) & 0xFFFFFFFF;\n"
+    "        }\n"
+    "        \n"
+    "        // Расширение сообщения\n"
+    "        for (int i = 16; i < 64; i++) {\n"
+    "            w[i] = SIG1(w[i-2]) + w[i-7] + SIG0(w[i-15]) + w[i-16];\n"
+    "        }\n"
+    "        \n"
+    "        // Основной цикл сжатия\n"
+    "        uint a = h[0], b = h[1], c = h[2], d = h[3];\n"
+    "        uint e = h[4], f = h[5], g = h[6], hv = h[7];\n"
+    "        \n"
+    "        for (int i = 0; i < 64; i++) {\n"
+    "            uint t1 = hv + EP1(e) + CH(e, f, g) + SHA256_K[i] + w[i];\n"
+    "            uint t2 = EP0(a) + MAJ(a, b, c);\n"
+    "            hv = g; g = f; f = e; e = d + t1;\n"
+    "            d = c; c = b; b = a; a = t1 + t2;\n"
+    "        }\n"
+    "        \n"
+    "        // Добавляем к хэш-значению\n"
+    "        h[0] += a; h[1] += b; h[2] += c; h[3] += d;\n"
+    "        h[4] += e; h[5] += f; h[6] += g; h[7] += hv;\n"
+    "    }\n"
+    "    \n"
+    "    // Запись результата (big-endian)\n"
+    "    for (int i = 0; i < 8; i++) {\n"
+    "        output[gid * 32 + (i << 2) + 0] = (h[i] >> 24) & 0xFF;\n"
+    "        output[gid * 32 + (i << 2) + 1] = (h[i] >> 16) & 0xFF;\n"
+    "        output[gid * 32 + (i << 2) + 2] = (h[i] >> 8) & 0xFF;\n"
+    "        output[gid * 32 + (i << 2) + 3] = h[i] & 0xFF;\n"
+    "    }\n"
+    "}\n"
+    "\n"
+    "// DJB2 hash function\n"
+    "__kernel void djb2_hash(\n"
+    "    __global const uchar* input,\n"
+    "    __global const uint* input_lens,\n"
+    "    __global uint* output,\n"
+    "    const uint max_len) {\n"
+    "    uint gid = get_global_id(0);\n"
+    "    uint offset = gid * max_len;\n"
+    "    uint len = input_lens[gid];\n"
+    "    uint hash = 5381;\n"
+    "    for (uint i = 0; i < len; i++) {\n"
+    "        hash = ((hash << 5) + hash) + input[offset + i];\n"
+    "    }\n"
+    "    output[gid] = hash;\n"
+    "}\n"
+    "\n"
+    "// FNV-1a hash function\n"
+    "__kernel void fnv1a_hash(\n"
+    "    __global const uchar* input,\n"
+    "    __global const uint* input_lens,\n"
+    "    __global uint* output,\n"
+    "    const uint max_len) {\n"
+    "    uint gid = get_global_id(0);\n"
+    "    uint offset = gid * max_len;\n"
+    "    uint len = input_lens[gid];\n"
+    "    uint hash = 2166136261u;\n"
+    "    for (uint i = 0; i < len; i++) {\n"
+    "        hash ^= input[offset + i];\n"
+    "        hash *= 16777619u;\n"
+    "    }\n"
+    "    output[gid] = hash;\n"
+    "}\n";
 }
 
 // ============================================================
@@ -864,6 +955,12 @@ int validate_inputs(uint32_t* num_hashes, uint32_t* max_len, size_t* local_size)
 // ============================================================
 
 int main(int argc, char** argv) {
+    // Установка UTF-8 кодировки для Windows
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+
     uint32_t num_hashes = DEFAULT_NUM_HASHES;
     uint32_t max_len = DEFAULT_DATA_LEN;
     size_t local_size = DEFAULT_LOCAL_SIZE;

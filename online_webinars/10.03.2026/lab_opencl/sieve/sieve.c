@@ -593,6 +593,12 @@ int validate_sieve_inputs(unsigned long* limit, size_t* local_size) {
 unsigned char* g_is_prime = NULL;  // Глобальный массив
 
 int main(int argc, char** argv) {
+    // Установка UTF-8 кодировки для Windows
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+
     unsigned long limit = DEFAULT_N;
     size_t local_size = DEFAULT_LOCAL_SIZE;
 
