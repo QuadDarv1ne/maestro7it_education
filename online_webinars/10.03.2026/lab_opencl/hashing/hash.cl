@@ -197,55 +197,45 @@ __kernel void sha256_hash(
     __global const uchar* input,
     __global const uint* input_lens,
     __global uchar* output,
-    const uint max_len,
-    const uint num_hashes
+    const uint max_len
 )
 {
     uint gid = get_global_id(0);
-    if (gid >= num_hashes) return;
-    
     uint offset = gid * max_len;
     uint len = input_lens[gid];
-    
+
     uint w[64];
     uint h[8];
     for (int i = 0; i < 8; i++) h[i] = SHA256_H[i];
-    
-    // Количество 512-битных (64-байтных) блоков
-    uint num_blocks = (len + 9 + 63) / 64;
-    if (num_blocks < 1) num_blocks = 1;
 
-    for (uint block = 0; block < num_blocks; block++) {
+    // Вычисление длины с padding: len + 1 (0x80) + 8 (длина)
+    // Округляем до кратного 64
+    uint padded_len = ((len + 9 + 63) / 64) * 64;
+    if (padded_len < 64) padded_len = 64;
+
+    // Обработка каждого блока
+    for (uint block = 0; block < padded_len / 64; block++) {
         // Обнуление массива слов
         for (int i = 0; i < 64; i++) w[i] = 0;
 
         // Копирование данных блока (big-endian)
-        uint bytes_in_block = 0;
+        uint block_offset = block * 64;
         for (uint i = 0; i < 64; i++) {
-            uint pos = block * 64 + i;
+            uint pos = block_offset + i;
             if (pos < len) {
                 uint wi = i >> 2;
                 uint bi = 3 - (i & 3);
                 w[wi] |= ((uint)input[offset + pos]) << (bi << 3);
-                bytes_in_block++;
-            }
-        }
-
-        // Добавление padding (только в последний блок, если хватит места для длины)
-        if (block == num_blocks - 1) {
-            uint pad_pos = bytes_in_block;
-            // Нужно место для 0x80 (1 байт) + длина (8 байт) = 9 байт
-            // 64 - 9 = 55, поэтому добавляем если < 56
-            if (pad_pos < 56) {
-                uint wi = pad_pos >> 2;
-                uint bi = 3 - (pad_pos & 3);
+            } else if (pos == len) {
+                // Добавляем 0x80
+                uint wi = i >> 2;
+                uint bi = 3 - (i & 3);
                 w[wi] |= ((uint)0x80) << (bi << 3);
             }
         }
 
-        // Если это последний блок и осталось место для длины
-        if (block == num_blocks - 1) {
-            // Длина в битах (big-endian)
+        // Добавляем длину в битах в конце последнего блока
+        if (block == (padded_len / 64) - 1) {
             w[14] = (len >> 29) & 0x07;
             w[15] = (len << 3) & 0xFFFFFFFF;
         }
