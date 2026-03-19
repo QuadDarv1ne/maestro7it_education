@@ -371,15 +371,18 @@ make macos
 
 ## 📊 Сравнение версий
 
-| Функция | Версия 1.0 | Версия 1.1 |
-|---------|------------|------------|
-| Сборка | Makefile | Makefile + CMake |
-| Тесты | 2 unit-теста | 6 тестов (unit + integration) |
-| CI/CD | ❌ | ✅ GitHub Actions |
-| Общие модули | ❌ | ✅ include/ + src/ |
-| Оптимизированные kernel'ы | ❌ | ✅ sha256_hash_optimized |
-| Обработка ошибок | Базовая | Расширенная (macro) |
-| CHANGELOG | ❌ | ✅ |
+| Функция | Версия 1.0 | Версия 1.1 | Версия 1.3 |
+|---------|------------|------------|------------|
+| Сборка | Makefile | Makefile + CMake | CMake 3.16+ |
+| Тесты | 2 unit-теста | 6 тестов | 6 тестов + coverage |
+| CI/CD | ❌ | ✅ GitHub Actions | ✅ GitHub Actions |
+| Общие модули | ❌ | ✅ include/ + src/ | ✅ Улучшенные |
+| Оптимизированные kernel'ы | ❌ | ✅ sha256_hash_optimized | ✅ |
+| Обработка ошибок | Базовая | Расширенная (macro) | ✅ + cl_get_error_description |
+| Скрипты автоматизации | ❌ | ❌ | ✅ build_and_test |
+| Документация | ❌ | ✅ CHANGELOG | ✅ Doxygen + README |
+| Docker | ❌ | ❌ | ✅ Dockerfile |
+| Покрытие кода | ❌ | ❌ | ✅ Опционально |
 
 ---
 
@@ -413,3 +416,17 @@ make macos
 1. OpenCL Specification: https://www.khronos.org/opencl/
 2. FIPS 180-4: Secure Hash Standard (SHA-256)
 3. Sieve of Eratosthenes: https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes
+4. Docker Documentation: https://docs.docker.com/
+5. CMake Documentation: https://cmake.org/cmake/help/latest/
+
+---
+
+## 📞 Контакты
+
+**Вопросы и предложения:** Создайте issue в репозитории проекта
+
+---
+
+## 📝 Лицензия
+
+Проект распространяется в образовательных целях.
