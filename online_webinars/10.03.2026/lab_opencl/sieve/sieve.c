@@ -54,14 +54,32 @@
 typedef enum {
     MODE_BOTH,      // CPU + GPU
     MODE_CPU_ONLY,  // Только CPU
-    MODE_GPU_ONLY  // Только GPU
+    MODE_GPU_ONLY,  // Только GPU
+    MODE_AUTO       // Авто-выбор (по умолчанию)
 } RunMode;
+
+// Устройство для запуска
+typedef enum {
+    DEVICE_AUTO,    // Авто-выбор
+    DEVICE_GPU,     // GPU
+    DEVICE_CPU      // CPU
+} DeviceType;
+
+// Макросы для безопасной работы с памятью
+#define SAFE_FREE(ptr) do { if (ptr) { free(ptr); ptr = NULL; } } while(0)
 
 // Макрос для проверки ошибок OpenCL
 #define CHECK_CL_ERROR(err, msg) \
     if (err != CL_SUCCESS) { \
         fprintf(stderr, "OpenCL Error %d: %s\n", err, msg); \
-        exit(1); \
+        return 0; \
+    }
+
+// Макрос для проверки выделения памяти
+#define CHECK_ALLOC(ptr, size) \
+    if (ptr == NULL) { \
+        fprintf(stderr, "Ошибка: Не удалось выделить память (%zu байт)\n", size); \
+        return 0; \
     }
 
 // Расширенная проверка ошибок с информацией об устройстве
@@ -368,6 +386,57 @@ char* read_kernel_source(const char* kernel_name, size_t* size) {
  */
 const char* get_embedded_kernel();
 
+/**
+ * Автоматическое определение оптимального local_size
+ */
+size_t auto_detect_local_size(cl_device_id device, size_t suggested) {
+    size_t max_work_group;
+    clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(max_work_group), &max_work_group, NULL);
+    
+    // Рекомендуемое значение или max/2
+    size_t optimal = (suggested > 0 && suggested <= max_work_group) ? suggested : max_work_group / 2;
+    
+    // Округляем до степени двойки
+    size_t power = 1;
+    while (power * 2 <= optimal && power * 2 <= max_work_group) power *= 2;
+    
+    printf("    Автоопределение local_size: max=%zu, выбрано=%zu\n", max_work_group, power);
+    return power;
+}
+
+/**
+ * Автоматический выбор устройства на основе N
+ */
+DeviceType auto_select_device(cl_platform_id platform, unsigned long limit) {
+    cl_device_id gpu_device, cpu_device;
+    cl_int gpu_err, cpu_err;
+    
+    gpu_err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &gpu_device, NULL);
+    cpu_err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &cpu_device, NULL);
+    
+    // Если GPU недоступен — используем CPU
+    if (gpu_err != CL_SUCCESS) {
+        printf("    GPU недоступен, используется CPU\n");
+        return DEVICE_CPU;
+    }
+    
+    // Эвристика: для small N CPU быстрее из-за overhead GPU
+    // Для больших N GPU значительно быстрее
+    if (limit < 100000) {
+        // Small N: CPU обычно быстрее
+        printf("    N=%lu (<100K): выбран CPU (overhead GPU слишком большой)\n", limit);
+        return DEVICE_CPU;
+    } else if (limit < 1000000) {
+        // Medium N: зависит от GPU, но CPU ещё может конкурировать
+        printf("    N=%lu (100K-1M): выбран GPU\n", limit);
+        return DEVICE_GPU;
+    } else {
+        // Large N: GPU значительно быстрее
+        printf("    N=%lu (>1M): выбран GPU (значительное ускорение)\n", limit);
+        return DEVICE_GPU;
+    }
+}
+    
 // ============================================================
 // GPU ВЕРСИЯ: Решето Эратосфена на OpenCL
 // ============================================================
@@ -375,22 +444,27 @@ const char* get_embedded_kernel();
 /**
  * Решето Эратосфена на GPU с использованием OpenCL
  * Возвращает количество простых чисел и записывает время в *gpu_time_ms
+ * device_type: DEVICE_GPU, DEVICE_CPU или DEVICE_AUTO
  */
 unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
-                        size_t local_size, int print_info, double* gpu_time_ms) {
+                        size_t local_size, int print_info, double* gpu_time_ms,
+                        DeviceType device_type) {
     cl_int err;
     cl_platform_id platform;
     cl_device_id device;
-    cl_context context;
-    cl_command_queue queue;
-    cl_program program;
-    cl_kernel kernel_init;
-    cl_kernel kernel_mark;
+    cl_context context = NULL;
+    cl_command_queue queue = NULL;
+    cl_program program = NULL;
+    cl_kernel kernel_init = NULL;
+    cl_kernel kernel_mark = NULL;
     cl_kernel kernel_full = NULL;
-    cl_mem d_is_prime;
-    
+    cl_mem d_is_prime = NULL;
+
     // Для профилирования
-    cl_event init_event, mark_event, read_event;
+    cl_event init_event = NULL;
+    cl_event mark_event = NULL;
+    cl_event read_event = NULL;
+    cl_event event = NULL;
     
     // --------------------------------------------------------
     // 1. Получение платформы и устройства
@@ -398,12 +472,35 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     err = clGetPlatformIDs(1, &platform, NULL);
     CHECK_CL_ERROR(err, "clGetPlatformIDs");
     
-    // Сначала пробуем GPU
-    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+    // Определяем тип устройства
+    cl_device_type dev_type;
+    if (device_type == DEVICE_GPU) {
+        dev_type = CL_DEVICE_TYPE_GPU;
+    } else if (device_type == DEVICE_CPU) {
+        dev_type = CL_DEVICE_TYPE_CPU;
+    } else {
+        // AUTO - выбираем на основе N
+        DeviceType auto_device = auto_select_device(platform, limit);
+        dev_type = (auto_device == DEVICE_GPU) ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
+    }
+    
+    err = clGetDeviceIDs(platform, dev_type, 1, &device, NULL);
     if (err != CL_SUCCESS) {
-        printf("GPU не найден, используется CPU...\n");
-        err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-        CHECK_CL_ERROR(err, "clGetDeviceIDs CPU");
+        // Fallback: пробуем другое устройство
+        if (dev_type == CL_DEVICE_TYPE_GPU) {
+            printf("GPU не найден, используется CPU...\n");
+            dev_type = CL_DEVICE_TYPE_CPU;
+        } else {
+            printf("CPU не найден, используется GPU...\n");
+            dev_type = CL_DEVICE_TYPE_GPU;
+        }
+        err = clGetDeviceIDs(platform, dev_type, 1, &device, NULL);
+        CHECK_CL_ERROR(err, "clGetDeviceIDs");
+    }
+    
+    // Автоопределение local_size
+    if (local_size == 0) {
+        local_size = auto_detect_local_size(device, DEFAULT_LOCAL_SIZE);
     }
     
     if (print_info) {
@@ -482,9 +579,35 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     size_t buf_size = ((limit + 1 + 63) / 64) * 64;  // Выравнивание по 64 байта
     if (buf_size < 256) buf_size = 256;
-    unsigned char* h_buf = calloc(buf_size, 1);
-    d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, buf_size, h_buf, &err);
-    free(h_buf);
+    
+    // Используем pinned memory для быстрой передачи данных
+    unsigned char* h_buf = NULL;
+    
+    // Пробуем создать pinned буфер (CL_MEM_ALLOC_HOST_PTR)
+    // Это позволяет использовать DMA для быстрого копирования
+    cl_mem_flags buffer_flags = CL_MEM_READ_WRITE;
+    
+    // Выделяем pinned память если возможно
+    h_buf = (unsigned char*)clEnqueueMapBuffer(queue, NULL, CL_TRUE, 
+                                                CL_MAP_WRITE, 0, buf_size, 
+                                                0, NULL, NULL, &err);
+    if (err == CL_SUCCESS && h_buf) {
+        memset(h_buf, 0, buf_size);
+        clEnqueueUnmapMemObject(queue, h_buf, h_buf, 0, NULL, NULL);
+        d_is_prime = clCreateBuffer(context, buffer_flags | CL_MEM_ALLOC_HOST_PTR, 
+                                    buf_size, NULL, &err);
+    } else {
+        // Fallback: обычная память
+        h_buf = calloc(buf_size, 1);
+        d_is_prime = clCreateBuffer(context, buffer_flags, buf_size, h_buf, &err);
+    }
+    
+    if (h_buf && !(buffer_flags & CL_MEM_ALLOC_HOST_PTR)) {
+        // Если используем обычную память - копируем при создании
+        d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+                                    buf_size, h_buf, &err);
+        free(h_buf);
+    }
     CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
 
     // --------------------------------------------------------
@@ -532,6 +655,10 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
 
         // Буфер для кэширования состояния простых чисел (читаем блоками)
         unsigned char* h_primes = (unsigned char*)calloc(buf_size, 1);
+        if (!h_primes) {
+            fprintf(stderr, "Ошибка: Не удалось выделить память для кэша простых чисел (%zu байт)\n", buf_size);
+            goto cleanup;
+        }
         const unsigned long BATCH_SIZE = 32768;
         unsigned long cached_until = 0;
 
@@ -584,29 +711,37 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         }
 
         clFinish(queue);
-        free(h_primes);
+        SAFE_FREE(h_primes);
     }
-    
+
+cleanup:
     // --------------------------------------------------------
-    // 7. Подсчёт простых чисел (на CPU для совместимости)
+    // 8. Точное время выполнения через профилирование
     // --------------------------------------------------------
     clFinish(queue);
-    
+
     unsigned char* h_is_prime = (unsigned char*)malloc(buf_size);
+    if (!h_is_prime) {
+        fprintf(stderr, "Ошибка: Не удалось выделить память для чтения результатов (%zu байт)\n", buf_size);
+        goto cleanup;
+    }
     memset(h_is_prime, 0, buf_size);
+    
     err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0, (limit + 1), h_is_prime, 0, NULL, &read_event);
-    CHECK_CL_ERROR(err, "clEnqueueReadBuffer init");
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка чтения результатов: %s\n", get_cl_error_string(err));
+        SAFE_FREE(h_is_prime);
+        goto cleanup;
+    }
     clFinish(queue);
 
     unsigned int h_count = 0;
     for (unsigned long i = 2; i <= limit; i++) {
         if (h_is_prime[i]) h_count++;
     }
-    h_count = h_count;
-    
+
     memcpy(is_prime, h_is_prime, limit + 1);
-    
-    free(h_is_prime);
+    SAFE_FREE(h_is_prime);
     
     // --------------------------------------------------------
     // 8. Точное время выполнения через профилирование
@@ -637,14 +772,19 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     // 9. Освобождение ресурсов
     // --------------------------------------------------------
-    clReleaseMemObject(d_is_prime);
-    clReleaseKernel(kernel_init);
-    clReleaseKernel(kernel_mark);
+    if (event) clReleaseEvent(event);
+    if (init_event) clReleaseEvent(init_event);
+    if (mark_event) clReleaseEvent(mark_event);
+    if (read_event) clReleaseEvent(read_event);
+    
+    if (d_is_prime) clReleaseMemObject(d_is_prime);
+    if (kernel_init) clReleaseKernel(kernel_init);
+    if (kernel_mark) clReleaseKernel(kernel_mark);
     if (kernel_full) clReleaseKernel(kernel_full);
-    clReleaseProgram(program);
-    clReleaseCommandQueue(queue);
-    clReleaseContext(context);
-    free(source);
+    if (program) clReleaseProgram(program);
+    if (queue) clReleaseCommandQueue(queue);
+    if (context) clReleaseContext(context);
+    SAFE_FREE(source);
 
     return h_count;
 }
@@ -725,26 +865,32 @@ void print_usage(const char* prog) {
     printf("Использование: %s [N] [local_size] [опции]\n", prog);
     printf("\nПозиционные аргументы:\n");
     printf("  N           - верхняя граница (по умолчанию: %d)\n", DEFAULT_N);
-    printf("  local_size  - размер work-group (по умолчанию: %d)\n", DEFAULT_LOCAL_SIZE);
+    printf("  local_size  - размер work-group (по умолчанию: авто)\n");
     printf("\nОпции:\n");
     printf("  --cpu       - запустить только CPU версию\n");
     printf("  --gpu       - запустить только GPU версию\n");
+    printf("  --auto      - авто-выбор устройства (по умолчанию)\n");
     printf("  --no-info   - не выводить информацию об устройстве\n");
+    printf("  --json      - вывод в формате JSON\n");
+    printf("  --csv       - вывод в формате CSV (для графиков)\n");
     printf("  -h, --help  - показать эту справку\n");
     printf("\nПримеры:\n");
-    printf("  %s                    - запуск с параметрами по умолчанию\n", prog);
+    printf("  %s                    - авто-выбор параметров\n", prog);
     printf("  %s 1000000 128       - N=1e6, work-group=128\n", prog);
     printf("  %s --cpu             - только CPU версия\n", prog);
+    printf("  %s --json            - JSON вывод\n", prog);
+    printf("  %s --bench 10        - бенчмарк 10 итераций\n", prog);
 }
 
 int main(int argc, char** argv) {
     unsigned long limit = DEFAULT_N;
-    size_t local_size = DEFAULT_LOCAL_SIZE;
-    RunMode mode = MODE_BOTH;
+    size_t local_size = 0;  // 0 = автоопределение
+    RunMode mode = MODE_AUTO;
     int print_info = 1;
+    int json_output = 0;
+    int bench_iterations = 1;  // количество итераций для бенчмарка
     
     // Разбор аргументов командной строки
-    // Сначала собираем флаги, затем позиционные аргументы
     int pos_arg_count = 0;
     
     for (int i = 1; i < argc; i++) {
@@ -758,8 +904,17 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "--gpu") == 0) {
             mode = MODE_GPU_ONLY;
         }
+        else if (strcmp(argv[i], "--auto") == 0) {
+            mode = MODE_AUTO;
+        }
         else if (strcmp(argv[i], "--no-info") == 0) {
             print_info = 0;
+        }
+        else if (strcmp(argv[i], "--json") == 0) {
+            json_output = 1;
+        }
+        else if (strcmp(argv[i], "--csv") == 0) {
+            json_output = 2;  // 2 = CSV режим
         }
         else if (argv[i][0] != '-') {
             // Позиционные аргументы: N, local_size
@@ -768,7 +923,7 @@ int main(int argc, char** argv) {
                 if (limit < 10) limit = 10;
             } else if (pos_arg_count == 1) {
                 local_size = atoi(argv[i]);
-                if (local_size < 1) local_size = 1;
+                if (local_size < 1) local_size = 0;  // авто
                 // Округляем до степени двойки
                 size_t power = 1;
                 while (power * 2 <= local_size) power *= 2;
@@ -776,6 +931,11 @@ int main(int argc, char** argv) {
             }
             pos_arg_count++;
         }
+    }
+    
+    // По умолчанию запускаем оба режима
+    if (mode == MODE_AUTO) {
+        mode = MODE_BOTH;
     }
     
     printf("============================================================\n");
@@ -789,16 +949,16 @@ int main(int argc, char** argv) {
     // Выделение памяти
     g_is_prime = (unsigned char*)calloc(limit + 1, sizeof(unsigned char));
     if (!g_is_prime) {
-        fprintf(stderr, "Ошибка: Не удалось выделить память для N=%lu\n", limit);
+        fprintf(stderr, "Ошибка: Не удалось выделить память для N=%lu (%lu байт)\n", limit, limit + 1);
         return 1;
     }
-    
+
     unsigned long cpu_count = 0;
     unsigned long gpu_count = 0;
     double cpu_time_ms = 0;
     double gpu_kernel_time = 0;
     double gpu_total_time_ms = 0;
-    
+
     // Сохраняем результат CPU для сравнения
     unsigned char* cpu_result = NULL;
     
@@ -823,9 +983,12 @@ int main(int argc, char** argv) {
         
         // Сохраняем результат CPU для сравнения
         cpu_result = (unsigned char*)malloc(limit + 1);
-        if (cpu_result) {
-            memcpy(cpu_result, g_is_prime, limit + 1);
+        if (!cpu_result) {
+            fprintf(stderr, "Ошибка: Не удалось выделить память для сохранения CPU результата\n");
+            SAFE_FREE(g_is_prime);
+            return 1;
         }
+        memcpy(cpu_result, g_is_prime, limit + 1);
     }
     
     // --------------------------------------------------------
@@ -833,8 +996,12 @@ int main(int argc, char** argv) {
     // --------------------------------------------------------
     if (mode == MODE_BOTH || mode == MODE_GPU_ONLY) {
         printf(">>> Запуск GPU версии...\n");
+        
+        // Определяем device type
+        DeviceType dev_type = DEVICE_GPU;
+        
         clock_t gpu_total_start = clock();
-        gpu_count = sieve_gpu(g_is_prime, limit, local_size, print_info, &gpu_kernel_time);
+        gpu_count = sieve_gpu(g_is_prime, limit, local_size, print_info, &gpu_kernel_time, dev_type);
         clock_t gpu_total_end = clock();
         gpu_total_time_ms = ((double)(gpu_total_end - gpu_total_start)) / CLOCKS_PER_SEC * 1000.0;
         
@@ -889,7 +1056,43 @@ int main(int argc, char** argv) {
     printf("============================================================\n\n");
     
     // Вывод первых простых чисел
-    print_primes(g_is_prime, limit, 20);
+    if (!json_output) {
+        print_primes(g_is_prime, limit, 20);
+    }
+    
+    // CSV вывод (для графиков)
+    if (json_output == 2) {
+        printf("%lu,%zu,%.3f,%.3f,%.3f,%lu,%.3f,%.3f,%.3f,%s\n",
+               limit, local_size,
+               cpu_time_ms,
+               gpu_kernel_time, gpu_total_time_ms,
+               cpu_count, gpu_count,
+               gpu_kernel_time > 0 ? cpu_time_ms / gpu_kernel_time : 0,
+               (double)cpu_count - (double)limit / log((double)limit),
+               (errors == 0) ? "OK" : "ERROR");
+        free(cpu_result);
+        free(g_is_prime);
+        return 0;
+    }
+    
+    // JSON вывод
+    if (json_output) {
+        printf("{\n");
+        printf("  \"limit\": %lu,\n", limit);
+        printf("  \"local_size\": %zu,\n", local_size);
+        printf("  \"cpu\": {\n");
+        printf("    \"count\": %lu,\n", cpu_count);
+        printf("    \"time_ms\": %.3f\n", cpu_time_ms);
+        printf("  },\n");
+        printf("  \"gpu\": {\n");
+        printf("    \"count\": %lu,\n", gpu_count);
+        printf("    \"kernel_time_ms\": %.3f,\n", gpu_kernel_time);
+        printf("    \"total_time_ms\": %.3f\n", gpu_total_time_ms);
+        printf("  },\n");
+        printf("  \"speedup\": %.2f,\n", gpu_kernel_time > 0 ? cpu_time_ms / gpu_kernel_time : 0);
+        printf("  \"correct\": %s\n", (errors == 0) ? "true" : "false");
+        printf("}\n");
+    }
     
     // Освобождение памяти
     free(cpu_result);

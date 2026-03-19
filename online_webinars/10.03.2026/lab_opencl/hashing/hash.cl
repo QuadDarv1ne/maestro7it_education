@@ -1,9 +1,14 @@
 /*
  * OpenCL Kernel: Параллельное хэширование
  * Вычисление SHA-256 хэшей для множества данных одновременно
- * 
+ *
  * SHA-256 - криптографический алгоритм хэширования
  * Параллелизм: каждый поток вычисляет хэш для своего блока данных
+ *
+ * ОПТИМИЗАЦИИ (версия 1.1):
+ * - Использование локальной памяти для констант
+ * - Loop unrolling для 64 раундов
+ * - Оптимизированный доступ к глобальной памяти
  */
 
 // ============================================================
@@ -44,7 +49,144 @@ constant uint SHA256_K[64] = {
 #define SIG1(x)      (ROTR(x, 17) ^ ROTR(x, 19) ^ ((x) >> 10))
 
 // ============================================================
-// ОСНОВНОЙ KERNEL SHA-256
+// OPTIMIZED: Вспомогательная функция для загрузки данных
+// ============================================================
+
+/**
+ * Быстрая загрузка 4 байт в слово (little-endian для OpenCL)
+ */
+inline uint load_word_be(__global const uchar* data, uint offset) {
+    return ((uint)data[offset + 0] << 24) |
+           ((uint)data[offset + 1] << 16) |
+           ((uint)data[offset + 2] << 8) |
+           ((uint)data[offset + 3]);
+}
+
+// ============================================================
+// OPTIMIZED: ОСНОВНОЙ KERNEL SHA-256 С LOCAL MEMORY
+// ============================================================
+
+/**
+ * Вычисление SHA-256 хэша для одного сообщения
+ * Оптимизации:
+ * - Загрузка констант в локальную память (shared между потоками work-group)
+ * - Loop unrolling для 64 раундов
+ * - Минимизация доступа к глобальной памяти
+ */
+__kernel void sha256_hash_optimized(
+    __global const uchar* input,
+    __global const uint* input_lens,
+    __global uchar* output,
+    const uint max_len,
+    __local uint* local_k  // Локальная память для констант K (64 * 4 = 256 байт)
+) {
+    uint gid = get_global_id(0);
+    uint lid = get_local_id(0);
+    uint group_size = get_local_size(0);
+    
+    uint offset = gid * max_len;
+    uint len = input_lens[gid];
+
+    // Загрузка констант K в локальную память (кооперативно)
+    // Каждый поток загружает несколько констант
+    for (uint i = lid; i < 64; i += group_size) {
+        local_k[i] = SHA256_K[i];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    uint w[64];
+    uint h[8];
+    for (int i = 0; i < 8; i++) h[i] = SHA256_H[i];
+
+    // Количество 512-битных (64-байтных) блоков
+    uint num_blocks = (len + 9 + 63) / 64;
+    if (num_blocks < 1) num_blocks = 1;
+
+    for (uint block = 0; block < num_blocks; block++) {
+        // Обнуление массива слов
+        for (int i = 0; i < 64; i++) w[i] = 0;
+
+        // Копирование данных блока (big-endian)
+        uint bytes_in_block = 0;
+        for (uint i = 0; i < 64; i++) {
+            uint pos = block * 64 + i;
+            if (pos < len) {
+                uint wi = i >> 2;
+                uint bi = 3 - (i & 3);
+                w[wi] |= ((uint)input[offset + pos]) << (bi << 3);
+                bytes_in_block++;
+            }
+        }
+
+        // Добавление padding
+        uint pad_pos = bytes_in_block;
+        if (pad_pos < 64) {
+            uint wi = pad_pos >> 2;
+            uint bi = 3 - (pad_pos & 3);
+            w[wi] |= ((uint)0x80) << (bi << 3);
+        }
+
+        // Если это последний блок - добавляем длину
+        if (block == num_blocks - 1) {
+            w[14] = (len >> 29) & 0x07;
+            w[15] = (len << 3) & 0xFFFFFFFF;
+        }
+
+        // Расширение слов (unrolled для производительности)
+        #pragma unroll
+        for (int i = 16; i < 64; i++) {
+            w[i] = SIG1(w[i-2]) + w[i-7] + SIG0(w[i-15]) + w[i-16];
+        }
+
+        // Основной цикл сжатия (полностью развернут для производительности)
+        uint a = h[0], b = h[1], c = h[2], d = h[3];
+        uint e = h[4], f = h[5], g = h[6], hv = h[7];
+
+        // Раунды 0-15: используем w[i] напрямую
+        #define ROUND(i) \
+            do { \
+                uint t1 = hv + EP1(e) + CH(e, f, g) + local_k[i] + w[i]; \
+                uint t2 = EP0(a) + MAJ(a, b, c); \
+                hv = g; g = f; f = e; e = d + t1; \
+                d = c; c = b; b = a; a = t1 + t2; \
+            } while(0)
+
+        ROUND(0);  ROUND(1);  ROUND(2);  ROUND(3);
+        ROUND(4);  ROUND(5);  ROUND(6);  ROUND(7);
+        ROUND(8);  ROUND(9);  ROUND(10); ROUND(11);
+        ROUND(12); ROUND(13); ROUND(14); ROUND(15);
+
+        // Раунды 16-63: используем расширенные w[i]
+        ROUND(16); ROUND(17); ROUND(18); ROUND(19);
+        ROUND(20); ROUND(21); ROUND(22); ROUND(23);
+        ROUND(24); ROUND(25); ROUND(26); ROUND(27);
+        ROUND(28); ROUND(29); ROUND(30); ROUND(31);
+        ROUND(32); ROUND(33); ROUND(34); ROUND(35);
+        ROUND(36); ROUND(37); ROUND(38); ROUND(39);
+        ROUND(40); ROUND(41); ROUND(42); ROUND(43);
+        ROUND(44); ROUND(45); ROUND(46); ROUND(47);
+        ROUND(48); ROUND(49); ROUND(50); ROUND(51);
+        ROUND(52); ROUND(53); ROUND(54); ROUND(55);
+        ROUND(56); ROUND(57); ROUND(58); ROUND(59);
+        ROUND(60); ROUND(61); ROUND(62); ROUND(63);
+
+        #undef ROUND
+
+        h[0] += a; h[1] += b; h[2] += c; h[3] += d;
+        h[4] += e; h[5] += f; h[6] += g; h[7] += hv;
+    }
+
+    // Запись результата (big-endian)
+    for (int i = 0; i < 8; i++) {
+        output[gid * 32 + (i << 2) + 0] = (h[i] >> 24) & 0xFF;
+        output[gid * 32 + (i << 2) + 1] = (h[i] >> 16) & 0xFF;
+        output[gid * 32 + (i << 2) + 2] = (h[i] >> 8) & 0xFF;
+        output[gid * 32 + (i << 2) + 3] = h[i] & 0xFF;
+    }
+}
+
+// ============================================================
+// ОСНОВНОЙ KERNEL SHA-256 (оригинальная версия)
 // ============================================================
 
 /**

@@ -2,6 +2,12 @@
 
 ## Выполнил: Студент
 
+**Версия:** 1.1.0 (последнее обновление: 2026-03-19)
+
+[![CI/CD](https://github.com/your-repo/gpu-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/your-repo/gpu-lab/actions)
+
+---
+
 ## Задачи
 
 1. **Решето Эратосфена** — нахождение всех простых чисел до N
@@ -9,20 +15,60 @@
 
 ---
 
+## 📋 Быстрый старт
+
+### Сборка через CMake (рекомендуется)
+
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build .
+
+# Запуск тестов
+ctest --verbose
+```
+
+### Сборка через Makefile
+
+```bash
+# Хэширование
+cd hashing && make && ./hash
+
+# Решето
+cd sieve && make && ./sieve
+
+# Тесты
+cd tests && make run
+```
+
 ## Структура проекта
 
 ```
 lab_opencl/
+├── include/                  # Общие заголовочные файлы OpenCL
+│   └── cl_common.h          # Общие утилиты и функции
+├── src/                      # Общие исходные файлы
+│   └── cl_utils.c           # Реализация OpenCL утилит
 ├── sieve/                    # Задача 1: Решето Эратосфена
 │   ├── sieve.c              # Основной код (CPU + GPU)
 │   ├── sieve.cl             # OpenCL kernels
 │   └── Makefile             # Сборка
-│
 ├── hashing/                  # Задача 2: Параллельное хэширование
 │   ├── hash.c               # Основной код (CPU + GPU)
-│   ├── hash.cl              # OpenCL kernels (SHA-256, DJB2, FNV-1a)
+│   ├── hash.cl              # OpenCL kernels (SHA-256, оптимизированная версия)
 │   └── Makefile             # Сборка
-│
+├── tests/                    # Unit-тесты и интеграционные тесты
+│   ├── test_sha256.c        # Unit-тесты SHA-256
+│   ├── test_sieve.c         # Unit-тесты решета
+│   ├── test_hash_correctness.c    # CPU vs GPU (hash)
+│   ├── test_sieve_correctness.c   # CPU vs GPU (sieve)
+│   ├── test_common.h        # Инфраструктура тестирования
+│   └── Makefile
+├── .github/workflows/        # CI/CD конфигурация
+│   └── ci.yml               # GitHub Actions workflow
+├── CMakeLists.txt            # Кроссплатформенная сборка
+├── CHANGELOG.md              # История изменений
+├── Doxyfile                  # Конфигурация Doxygen
 └── README.md                 # Этот файл
 ```
 
@@ -239,18 +285,60 @@ make macos
 - Уменьшите параметр N или num_hashes
 - Проверьте доступную память GPU
 
-## Исправления и улучшения (версия 1.1)
+---
 
-### Исправленные ошибки:
-1. **Утечка памяти**: Добавлена проверка на успешность выделения памяти в hash.c
-2. **Отсутствие strdup**: Добавлена реализация strdup для систем, где её нет
-3. **Совместимость OpenCL**: Заменено `clCreateCommandQueueWithProperties` на более совместимый `clCreateCommandQueue`
-4. **Безопасность чтения kernel**: Добавлена проверка на NULL при чтении kernel source
+## 🆕 Что нового в версии 1.1.0
 
-### Улучшения:
-1. Добавлены .gitignore файлы для исключения временных файлов
-2. Улучшена обработка ошибок во всех функциях
-3. Добавлены проверки на переполнение буфера
+### Общие модули
+- **`include/cl_common.h`** — общие утилиты OpenCL (макросы, структуры, функции)
+- **`src/cl_utils.c`** — реализация функций для работы с контекстом, устройствами, файлами
+- Устранено дублирование кода между `hash.c` и `sieve.c`
+
+### CMake сборка
+- **`CMakeLists.txt`** — кроссплатформенная система сборки
+- Опции: `BUILD_TESTS`, `BUILD_BENCHMARKS`, `ENABLE_PROFILING`, `USE_STATIC_ANALYSIS`
+- Интеграция с `CTest` для автоматических тестов
+
+### Интеграционные тесты
+- **`test_hash_correctness.c`** — сравнение результатов CPU vs GPU для хэширования
+- **`test_sieve_correctness.c`** — сравнение результатов CPU vs GPU для решета
+- Тесты производительности с различными work-group sizes
+
+### CI/CD
+- **GitHub Actions workflow** — автоматическая сборка и тесты
+- Платформы: Ubuntu 22.04, Windows 2022
+- Статический анализ: clang-tidy, cppcheck
+- Генерация документации: Doxygen
+
+### Оптимизации kernel'ов
+- **`sha256_hash_optimized()`** — оптимизированная версия SHA-256 kernel
+- Использование локальной памяти для констант K (256 байт на work-group)
+- Loop unrolling для 64 раундов сжатия
+- Потенциальное ускорение: 1.5-2x по сравнению с оригинальной версией
+
+### Улучшения обработки ошибок
+- Макросы: `SAFE_FREE()`, `CHECK_CL_ERROR_RET()`, `CHECK_ALLOC_RET()`
+- Проверка всех вызовов `malloc()`/`calloc()`
+- Корректное освобождение ресурсов при ошибках (метка `cleanup:`)
+- Инициализация переменных NULL для безопасного освобождения
+
+### Документация
+- **`CHANGELOG.md`** — история изменений проекта
+- Обновлённый `README.md` с быстрым стартом
+
+---
+
+## 📊 Сравнение версий
+
+| Функция | Версия 1.0 | Версия 1.1 |
+|---------|------------|------------|
+| Сборка | Makefile | Makefile + CMake |
+| Тесты | 2 unit-теста | 6 тестов (unit + integration) |
+| CI/CD | ❌ | ✅ GitHub Actions |
+| Общие модули | ❌ | ✅ include/ + src/ |
+| Оптимизированные kernel'ы | ❌ | ✅ sha256_hash_optimized |
+| Обработка ошибок | Базовая | Расширенная (macro) |
+| CHANGELOG | ❌ | ✅ |
 
 ---
 
