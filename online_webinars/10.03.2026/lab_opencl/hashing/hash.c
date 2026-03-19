@@ -58,11 +58,59 @@ char* strdup(const char* s) {
 #define DEFAULT_DATA_LEN 64
 #define DEFAULT_LOCAL_SIZE 256
 
-#define CHECK_CL_ERROR(err, msg) \
-    if (err != CL_SUCCESS) { \
-        fprintf(stderr, "OpenCL Error %d: %s\n", err, msg); \
-        exit(1); \
-    }
+/**
+ * @brief Расширенная проверка ошибок OpenCL с детальной информацией
+ * @param err Код ошибки
+ * @param msg Сообщение
+ * @param file Имя файла
+ * @param line Номер строки
+ */
+#define CHECK_CL_ERROR_EX(err, msg, file, line) \
+    do { \
+        if (err != CL_SUCCESS) { \
+            fprintf(stderr, "\n[OpenCL Error] %s\n", msg); \
+            fprintf(stderr, "  Файл: %s, Строка: %d\n", file, line); \
+            fprintf(stderr, "  Код ошибки: %d (%s)\n", err, cl_error_string(err)); \
+            fprintf(stderr, "  Платформа: %s\n", get_platform_name()); \
+            fprintf(stderr, "  Устройство: %s\n", get_device_name(device)); \
+            exit(1); \
+        } \
+    } while(0)
+
+/**
+ * @brief Проверка ошибок с возвратом значения (для функций)
+ */
+#define CHECK_CL_ERROR_RET(err, msg, ret) \
+    do { \
+        if (err != CL_SUCCESS) { \
+            fprintf(stderr, "[OpenCL Error] %s: %s\n", msg, cl_error_string(err)); \
+            return ret; \
+        } \
+    } while(0)
+
+/**
+ * @brief Проверка выделения памяти с детальным сообщением
+ */
+#define CHECK_ALLOC_EX(ptr, size, file, line) \
+    do { \
+        if (ptr == NULL) { \
+            fprintf(stderr, "\n[Memory Error] Не удалось выделить память\n"); \
+            fprintf(stderr, "  Файл: %s, Строка: %d\n", file, line); \
+            fprintf(stderr, "  Запрошено байт: %zu\n", size); \
+            exit(1); \
+        } \
+    } while(0)
+
+/**
+ * @brief Проверка валидности указателя
+ */
+#define CHECK_PTR(ptr, msg) \
+    do { \
+        if (ptr == NULL) { \
+            fprintf(stderr, "[Error] NULL pointer: %s\n", msg); \
+            return -1; \
+        } \
+    } while(0)
 
 #define SAFE_FREE(ptr) do { if (ptr) { free(ptr); ptr = NULL; } } while(0)
 
@@ -294,6 +342,37 @@ void generate_test_data(uint8_t* data, uint32_t* lens,
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ OpenCL
 // ============================================================
 
+/**
+ * @brief Получение названия платформы
+ */
+const char* get_platform_name(void) {
+    static char platform_name[128] = {0};
+    cl_platform_id platform;
+    cl_int err = clGetPlatformIDs(1, &platform, NULL);
+    if (err == CL_SUCCESS) {
+        clGetPlatformInfo(platform, CL_PLATFORM_NAME, sizeof(platform_name), platform_name, NULL);
+    } else {
+        snprintf(platform_name, sizeof(platform_name), "Unknown");
+    }
+    return platform_name;
+}
+
+/**
+ * @brief Получение названия устройства
+ */
+const char* get_device_name(cl_device_id device) {
+    static char device_name[128] = {0};
+    if (device) {
+        clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(device_name), device_name, NULL);
+    } else {
+        snprintf(device_name, sizeof(device_name), "Unknown");
+    }
+    return device_name;
+}
+
+/**
+ * @brief Вывод информации об устройстве
+ */
 void print_device_info(cl_device_id device) {
     char name[128], vendor[128], version[128];
     cl_uint compute_units;
@@ -321,18 +400,31 @@ void print_device_info(cl_device_id device) {
     printf("========================================\n\n");
 }
 
+/**
+ * @brief Чтение kernel source из файла с обработкой ошибок
+ */
 char* read_kernel_source(const char* filename, size_t* size) {
     FILE* file = fopen(filename, "r");
-    if (!file) return NULL;
-    
+    if (!file) {
+        fprintf(stderr, "[Warning] Не удалось открыть файл kernel: %s\n", filename);
+        return NULL;
+    }
+
     char* source = (char*)malloc(MAX_SOURCE_SIZE);
     if (!source) {
-        fprintf(stderr, "Ошибка: Не удалось выделить память для kernel source\n");
+        fprintf(stderr, "[Error] Не удалось выделить память для kernel source (%d байт)\n", MAX_SOURCE_SIZE);
+        fclose(file);
+        return NULL;
+    }
+
+    *size = fread(source, 1, MAX_SOURCE_SIZE - 1, file);
+    if (*size == 0) {
+        fprintf(stderr, "[Error] Пустой файл kernel: %s\n", filename);
+        SAFE_FREE(source);
         fclose(file);
         return NULL;
     }
     
-    *size = fread(source, 1, MAX_SOURCE_SIZE - 1, file);
     source[*size] = '\0';
     fclose(file);
     return source;
@@ -389,18 +481,19 @@ int cl_init(OpenCLContext* ctx, int print_info) {
     // Создание контекста
     ctx->context = clCreateContext(NULL, 1, &ctx->device, NULL, NULL, &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания контекста: %s\n", cl_error_string(err));
+        fprintf(stderr, "[Error] Не удалось создать OpenCL контекст: %s\n", cl_error_string(err));
+        fprintf(stderr, "  Проверьте установку драйверов GPU и OpenCL runtime\n");
         return -1;
     }
-    
+
     // Создание очереди команд
     ctx->queue = clCreateCommandQueue(ctx->context, ctx->device, CL_QUEUE_PROFILING_ENABLE, &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания очереди команд: %s\n", cl_error_string(err));
+        fprintf(stderr, "[Error] Не удалось создать очередь команд: %s\n", cl_error_string(err));
         cl_cleanup(ctx);
         return -1;
     }
-    
+
     ctx->is_initialized = 1;
     return 0;
 }
@@ -412,45 +505,53 @@ int cl_compile_kernel(OpenCLContext* ctx, const char* filename) {
     cl_int err;
     size_t source_size;
     char* source = read_kernel_source(filename, &source_size);
-    
+
     if (!source) {
-        printf("Используется встроенный kernel\n");
+        printf("[Info] Используем встроенный kernel\n");
         const char* embedded = get_embedded_kernel();
         source = strdup(embedded);
+        if (!source) {
+            fprintf(stderr, "[Error] Не удалось выделить память для встроенного kernel\n");
+            return -1;
+        }
         source_size = strlen(source);
     } else {
-        printf("Используется kernel из файла %s\n", filename);
+        printf("[Info] Используем kernel из файла %s\n", filename);
     }
-    
+
     ctx->program = clCreateProgramWithSource(ctx->context, 1, (const char**)&source, &source_size, &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания программы: %s\n", cl_error_string(err));
+        fprintf(stderr, "[Error] Не удалось создать программу: %s\n", cl_error_string(err));
         SAFE_FREE(source);
         return -1;
     }
-    
+
     // Компиляция
     err = clBuildProgram(ctx->program, 1, &ctx->device, "-cl-std=CL1.2", NULL, NULL);
     if (err != CL_SUCCESS) {
         size_t log_size;
         clGetProgramBuildInfo(ctx->program, ctx->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
         char* build_log = (char*)malloc(log_size + 1);
-        clGetProgramBuildInfo(ctx->program, ctx->device, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
-        build_log[log_size] = '\0';
-        fprintf(stderr, "Ошибка компиляции kernel:\n%s\n", build_log);
-        SAFE_FREE(build_log);
+        if (build_log) {
+            clGetProgramBuildInfo(ctx->program, ctx->device, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
+            build_log[log_size] = '\0';
+            fprintf(stderr, "[Error] Ошибка компиляции kernel:\n%s\n", build_log);
+            SAFE_FREE(build_log);
+        } else {
+            fprintf(stderr, "[Error] Ошибка компиляции kernel (не удалось получить лог)\n");
+        }
         SAFE_FREE(source);
         return -1;
     }
-    
+
     // Создание kernel'ов
     ctx->kernel_sha256 = clCreateKernel(ctx->program, "sha256_hash", &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания kernel sha256_hash: %s\n", cl_error_string(err));
+        fprintf(stderr, "[Error] Не удалось создать kernel sha256_hash: %s\n", cl_error_string(err));
         SAFE_FREE(source);
         return -1;
     }
-    
+
     SAFE_FREE(source);
     return 0;
 }

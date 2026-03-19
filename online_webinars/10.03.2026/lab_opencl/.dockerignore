@@ -1,0 +1,96 @@
+# =============================================================================
+# .dockerignore — файлы, исключаемые из Docker образа
+# =============================================================================
+
+# Build директории
+build/
+*/build/
+*/*/build/
+
+# Бинарные файлы
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.a
+*.lib
+
+# Временные файлы
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak
+
+# OS файлы
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+appveyor.yml
+
+# Документация (не нужна для сборки)
+docs/
+*.md
+!README.md
+CHANGELOG.md
+CONTRIBUTING.md
+
+# Тесты (можно исключить для уменьшения размера)
+tests/
+test_*.c
+test_*.exe
+
+# Скрипты (опционально)
+scripts/
+*.sh
+*.bat
+*.ps1
+
+# Python кэш
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Результаты бенчмарков
+benchmark_results/
+*.csv
+*.png
+
+# Логи
+*.log
+
+# Docker файлы (не нужны внутри образа)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Конфигурационные файлы (не критичные)
+.clang-format
+.editorconfig
+Doxyfile
+
+# Архивы
+*.zip
+*.tar
+*.tar.gz
+*.rar

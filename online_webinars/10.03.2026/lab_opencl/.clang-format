@@ -1,0 +1,85 @@
+# =============================================================================
+# .clang-format — конфигурация для автоматического форматирования кода
+# =============================================================================
+# Использование:
+#   clang-format -i <файл>           # Форматировать файл
+#   clang-format -i <директория>     # Форматировать все файлы в директории
+#   clang-format -style=file <файл>  # Проверка стиля
+#
+# Для форматирования всего проекта:
+#   find . -name "*.c" -o -name "*.h" | xargs clang-format -i
+# =============================================================================
+
+# Базовый стиль
+BasedOnStyle: LLVM
+
+# Отступы
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+
+# Ширина строки
+ColumnLimit: 100
+
+# Выравнивание
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Right
+AlignOperands: Align
+AlignTrailingComments: true
+
+# Скобки
+BreakBeforeBraces: Attach
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+
+# Перенос строк
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: true
+BinPackParameters: true
+
+# Пробелы
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Разрывы строк
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+BreakStringLiterals: true
+
+# Другое
+CompactNamespaces: false
+DerivePointerAlignment: false
+PointerAlignment: Right
+ReflowComments: true
+SortIncludes: true
+SortUsingDeclarations: true
+Standard: c99
+
+# Макросы
+IfMacros: []
+MacroBlockBegin: ''
+MacroBlockEnd: ''
+
+# Исключения для форматирования
+# Для OpenCL kernel'ов можно отключить некоторые правила
+DisableFormat: false

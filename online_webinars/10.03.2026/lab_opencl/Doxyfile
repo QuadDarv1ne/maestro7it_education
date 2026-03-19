@@ -1,13 +1,15 @@
 # Doxyfile 1.9.1
 # Конфигурация для генерации документации lab_opencl
+# Версия проекта: 1.1.0
 
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
 
-PROJECT_NAME           = "Lab OpenCL - GPU Computing"
-PROJECT_NUMBER         = "1.0"
-PROJECT_BRIEF          = "Решето Эратосфена и SHA-256 на GPU с OpenCL"
+PROJECT_NAME           = "GPU Lab - Вычисления на GPU"
+PROJECT_NUMBER         = "1.1.0"
+PROJECT_BRIEF          = "Решето Эратосфена и хэширование (SHA-256/512) на GPU с OpenCL"
+PROJECT_LOGO           = ""
 OUTPUT_DIRECTORY       = docs
 
 #---------------------------------------------------------------------------
@@ -15,23 +17,32 @@ OUTPUT_DIRECTORY       = docs
 #---------------------------------------------------------------------------
 
 EXTRACT_ALL            = YES
-EXTRACT_PRIVATE        = YES
+EXTRACT_PRIVATE        = NO
 EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = NO
+CASE_SENSE_NAMES       = NO
 
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
 
-INPUT                  = sieve hashing tests README.md
+INPUT                  = sieve hashing tests include src README.md CHANGELOG.md
+INPUT_ENCODING         = UTF-8
 RECURSIVE              = YES
 FILE_PATTERNS          = *.c *.cl *.h *.md
+EXAMPLE_PATH           = .
+EXAMPLE_PATTERNS       = *.c *.cl
+EXAMPLE_RECURSIVE      = NO
 
 #---------------------------------------------------------------------------
 # Configuration options related to source browsing
 #---------------------------------------------------------------------------
 
 SOURCE_BROWSER         = YES
-INLINE_SOURCES         = NO
+INLINE_SOURCES         = YES
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
 
 #---------------------------------------------------------------------------
 # Configuration options related to the HTML output
@@ -39,15 +50,61 @@ INLINE_SOURCES         = NO
 
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
-HTML_COLORSTYLE_HUE    = 200
-HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 255
 HTML_COLORSTYLE_GAMMA  = 80
+HTML_TIMESTAMP         = YES
+HTML_DYNAMIC_MENUS     = YES
+HTML_DYNAMIC_SECTIONS  = YES
+HTML_CODE_FOLDING      = YES
 
 #---------------------------------------------------------------------------
 # Configuration options related to the LaTeX output
 #---------------------------------------------------------------------------
 
 GENERATE_LATEX         = NO
+
+#---------------------------------------------------------------------------
+# Configuration options related to other output files
+#---------------------------------------------------------------------------
+
+GENERATE_XML           = NO
+GENERATE_DOCBOOK       = NO
+GENERATE_RTF           = NO
+
+#---------------------------------------------------------------------------
+# Configuration options related to the preprocessor
+#---------------------------------------------------------------------------
+
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = __CL__=1
+
+#---------------------------------------------------------------------------
+# Configuration options related to external references
+#---------------------------------------------------------------------------
+
+USE_MDFILE_AS_MAINPAGE = README.md
+
+#---------------------------------------------------------------------------
+# Configuration options related to the dot tool
+#---------------------------------------------------------------------------
+
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 4
+DOT_FONTNAME           = FreeSans
+DOT_FONTPATH           = 
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+UML_LOOK               = NO
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+DOT_IMAGE_FORMAT       = png
+INTERACTIVE_SVG        = YES
 
 #---------------------------------------------------------------------------
 # Configuration options related to the preprocessor
