@@ -6,6 +6,7 @@
  * Исправленная версия с правильной обработкой множественных блоков
  */
 
+#include "sha256.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -142,5 +143,25 @@ void sha256_cpu(const uint8_t* data, size_t len, uint8_t* hash) {
         hash[i*4 + 1] = (h[i] >> 16) & 0xFF;
         hash[i*4 + 2] = (h[i] >> 8) & 0xFF;
         hash[i*4 + 3] = h[i] & 0xFF;
+    }
+}
+
+/**
+ * @brief Вычисление SHA-256 хэша для строки
+ */
+void sha256_string(const char* str, uint8_t* hash) {
+    if (str == NULL || hash == NULL) return;
+    sha256_cpu((const uint8_t*)str, strlen(str), hash);
+}
+
+/**
+ * @brief Вычисление SHA-256 хэшей для массива данных фиксированного размера
+ */
+void sha256_hash_all(const uint8_t* data, uint32_t num_elements,
+                     uint32_t element_size, uint8_t* hashes) {
+    if (data == NULL || hashes == NULL || num_elements == 0) return;
+    
+    for (uint32_t i = 0; i < num_elements; i++) {
+        sha256_cpu(data + i * element_size, element_size, hashes + i * 32);
     }
 }
