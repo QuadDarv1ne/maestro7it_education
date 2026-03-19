@@ -100,26 +100,23 @@ static void sha256_transform(uint32_t h[8], const uint8_t block[64]) {
 void sha256_cpu(const uint8_t* data, size_t len, uint8_t* hash) {
     uint32_t h[8];
     memcpy(h, sha256_h_init, sizeof(h));
-    
+
     // Вычисляем размер с padding
-    // Формула: сообщение + 0x80 + нули + длина (8 байт)
-    // Минимум 64 байта, максимум кратен 64
-    size_t padded_len;
-    if (len < 56) {
-        padded_len = 64;
-    } else {
-        padded_len = ((len - 56) / 64 + 2) * 64;
-    }
-    
+    // Сообщение + 0x80 (1 байт) + нули + длина (8 байт) = len + 9 минимум
+    // Padding добавляется до кратности 64
+    size_t min_len = len + 9;  // Минимальный размер с padding
+    size_t padded_len = ((min_len + 63) / 64) * 64;  // Округление вверх до кратного 64
+    if (padded_len < 64) padded_len = 64;
+
     uint8_t* padded = (uint8_t*)calloc(padded_len, 1);
     if (!padded) return;
-    
+
     // Копируем данные
     memcpy(padded, data, len);
-    
+
     // Ставим 0x80 после данных
     padded[len] = 0x80;
-    
+
     // Длина в битах в последних 8 байтах (big-endian)
     uint64_t bit_len = (uint64_t)len * 8;
     padded[padded_len - 8] = (bit_len >> 56) & 0xFF;
@@ -130,15 +127,15 @@ void sha256_cpu(const uint8_t* data, size_t len, uint8_t* hash) {
     padded[padded_len - 3] = (bit_len >> 16) & 0xFF;
     padded[padded_len - 2] = (bit_len >> 8) & 0xFF;
     padded[padded_len - 1] = bit_len & 0xFF;
-    
+
     // Обрабатываем каждый блок
     size_t num_blocks = padded_len / 64;
     for (size_t block = 0; block < num_blocks; block++) {
         sha256_transform(h, padded + block * 64);
     }
-    
+
     free(padded);
-    
+
     // Запись результата (big-endian)
     for (int i = 0; i < 8; i++) {
         hash[i*4 + 0] = (h[i] >> 24) & 0xFF;
