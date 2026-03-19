@@ -17,7 +17,7 @@
  *   Например: ./sieve 10000000 256
  * 
  * Автор: Студент
- * Дата: 2024
+ * Дата: 2026
  */
 
 #include <stdio.h>
@@ -298,10 +298,14 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         exit(1);
     }
 
-    kernel_mark = clCreateKernel(program, "sieve_mark_multiples", &err);
+    kernel_mark = clCreateKernel(program, "sieve_mark_cyclic", &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Ошибка создания kernel sieve_mark_multiples: %d\n", err);
-        exit(1);
+        // Fallback на старую версию если нет cyclic
+        kernel_mark = clCreateKernel(program, "sieve_mark_multiples", &err);
+        if (err != CL_SUCCESS) {
+            fprintf(stderr, "Ошибка создания kernel sieve_mark: %d\n", err);
+            exit(1);
+        }
     }
     
     // --------------------------------------------------------
@@ -388,19 +392,10 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
             unsigned long start = p * p;
             if (start > limit) continue;
 
-            unsigned long num_multiples = (limit - start) / p + 1;
-
-            // Вычисляем global_size так, чтобы он был кратен local_size
-            size_t mark_global_size = num_multiples;
-            if (mark_global_size < local_size) {
-                mark_global_size = local_size;
-            } else {
-                mark_global_size = ((mark_global_size + local_size - 1) / local_size) * local_size;
-            }
-
-            // Ограничиваем количество потоков
-            size_t max_threads = local_size * 64;
-            if (mark_global_size > max_threads) mark_global_size = max_threads;
+            // Для cyclic kernel: каждый поток обрабатывает несколько кратных
+            // Используем фиксированное количество потоков для эффективности
+            size_t mark_global_size = local_size * 4;  // 4 work-groups
+            if (mark_global_size < local_size) mark_global_size = local_size;
 
             err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
                                          &mark_global_size, &local_size, 0, NULL, NULL);
@@ -440,6 +435,9 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         if (h_is_prime[i]) count++;
     }
     h_count = count;
+    
+    // Копируем результат обратно в переданный буфер для корректного сравнения в main
+    memcpy(is_prime, h_is_prime, limit + 1);
     
     free(h_is_prime);
     
