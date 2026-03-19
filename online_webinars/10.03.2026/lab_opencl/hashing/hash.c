@@ -240,17 +240,17 @@ uint32_t fnv1a_cpu(const uint8_t* data, size_t len) {
 // ГЕНЕРАЦИЯ ТЕСТОВЫХ ДАННЫХ
 // ============================================================
 
-void generate_test_data(uint8_t* data, uint32_t* lens, 
+void generate_test_data(uint8_t* data, uint32_t* lens,
                         uint32_t num_hashes, uint32_t max_len) {
     srand(42);  // Фиксированный seed для воспроизводимости
-    
+
     for (uint32_t i = 0; i < num_hashes; i++) {
         // Случайная длина от 8 до max_len
-        lens[i] = 8 + (rand() % (max_len - 7));
-        
+        lens[i] = 8u + (uint32_t)(rand() % (int)(max_len - 7u));
+
         // Генерируем данные
         for (uint32_t j = 0; j < lens[i]; j++) {
-            data[i * max_len + j] = rand() % 256;
+            data[i * max_len + j] = (uint8_t)(rand() % 256);
         }
     }
 }
@@ -858,7 +858,7 @@ void compare_hashes(const uint8_t* cpu, const uint8_t* gpu, uint32_t num_hashes)
     for (uint32_t i = 0; i < num_hashes; i++) {
         int match = 1;
         for (int j = 0; j < 32; j++) {
-            if (cpu[i*32 + j] != gpu[i*32 + j]) {
+            if (cpu[i*32u + (uint32_t)j] != gpu[i*32u + (uint32_t)j]) {
                 match = 0;
                 break;
             }
@@ -1015,6 +1015,177 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
 
     clWaitForEvents(1, &read_event);
     clReleaseEvent(read_event);
+
+cleanup:
+    if (event) clReleaseEvent(event);
+    if (d_data) clReleaseMemObject(d_data);
+    if (d_lens) clReleaseMemObject(d_lens);
+    if (d_hashes) clReleaseMemObject(d_hashes);
+    cl_cleanup(&ctx);
+
+    return result;
+}
+
+// ============================================================
+// GPU ВЕРСИЯ С ZERO-COPY ПАМЯТЬЮ (оптимизированная)
+// ============================================================
+
+/**
+ * @brief Вычисление хэшей на GPU с использованием zero-copy памяти
+ * 
+ * Zero-copy память позволяет избежать лишнего копирования данных между
+ * хостом и устройством. Данные выделяются в общей памяти и отображаются
+ * в адресное пространство GPU.
+ * 
+ * @param data Входные данные
+ * @param lens Длины данных
+ * @param hashes Выходные хэши
+ * @param num_hashes Количество хэшей
+ * @param max_len Максимальная длина данных
+ * @param local_size Размер work-group
+ * @param print_info Выводить информацию
+ * @param kernel_time_ms Время выполнения kernel
+ * @return 0 при успехе, -1 при ошибке
+ */
+int hash_gpu_zero_copy(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
+             uint32_t num_hashes, uint32_t max_len, size_t local_size,
+             int print_info, double* kernel_time_ms) {
+    cl_int err;
+    OpenCLContext ctx;
+    cl_mem d_data = NULL, d_lens = NULL, d_hashes = NULL;
+    cl_event event = NULL;
+    int result = 0;
+
+    // Инициализация
+    if (cl_init(&ctx, print_info) != 0) {
+        return -1;
+    }
+
+    // Компиляция kernel
+    if (cl_compile_kernel(&ctx, "hash.cl") != 0) {
+        cl_cleanup(&ctx);
+        return -1;
+    }
+
+    // Создание буферов с zero-copy памятью
+    // CL_MEM_ALLOC_HOST_PTR выделяет память в адресном пространстве хоста
+    // CL_MEM_COPY_HOST_PTR копирует данные при создании (опционально)
+    size_t data_size = (size_t)num_hashes * max_len * sizeof(uint8_t);
+    size_t lens_size = (size_t)num_hashes * sizeof(uint32_t);
+    size_t hashes_size = (size_t)num_hashes * 32 * sizeof(uint8_t);
+
+    // Проверка на переполнение
+    if (data_size / max_len / sizeof(uint8_t) != num_hashes) {
+        fprintf(stderr, "Ошибка: Слишком большой размер данных (переполнение)\n");
+        cl_cleanup(&ctx);
+        return -1;
+    }
+
+    // Zero-copy буферы с CL_MEM_ALLOC_HOST_PTR для прямого доступа
+    d_data = clCreateBuffer(ctx.context, 
+                            CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, 
+                            data_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания zero-copy буфера data: %s\n", cl_error_string(err));
+        // Fallback на обычный буфер
+        if (print_info) {
+            printf("[Info] Zero-copy не поддерживается, используем обычный буфер\n");
+        }
+        d_data = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY, data_size, NULL, &err);
+        if (err != CL_SUCCESS) {
+            result = -1;
+            goto cleanup;
+        }
+    }
+
+    d_lens = clCreateBuffer(ctx.context, 
+                            CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, 
+                            lens_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания zero-copy буфера lens: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    d_hashes = clCreateBuffer(ctx.context, 
+                              CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, 
+                              hashes_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания zero-copy буфера hashes: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    // Отображение буферов в адресное пространство хоста для прямой записи
+    uint8_t* mapped_data = NULL;
+    uint32_t* mapped_lens = NULL;
+    uint8_t* mapped_hashes = NULL;
+
+    // Отображение и копирование данных
+    mapped_data = (uint8_t*)clEnqueueMapBuffer(ctx.queue, d_data, CL_TRUE, 
+                                                CL_MAP_WRITE_INVALIDATE_REGION,
+                                                0, data_size, 0, NULL, NULL, &err);
+    if (err != CL_SUCCESS || !mapped_data) {
+        fprintf(stderr, "Ошибка отображения буфера data: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    memcpy(mapped_data, data, data_size);
+    clEnqueueUnmapMemObject(ctx.queue, d_data, mapped_data, 0, NULL, NULL);
+
+    mapped_lens = (uint32_t*)clEnqueueMapBuffer(ctx.queue, d_lens, CL_TRUE, 
+                                                 CL_MAP_WRITE_INVALIDATE_REGION,
+                                                 0, lens_size, 0, NULL, NULL, &err);
+    if (err != CL_SUCCESS || !mapped_lens) {
+        fprintf(stderr, "Ошибка отображения буфера lens: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    memcpy(mapped_lens, lens, lens_size);
+    clEnqueueUnmapMemObject(ctx.queue, d_lens, mapped_lens, 0, NULL, NULL);
+
+    // Установка аргументов kernel
+    clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
+    clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
+    clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
+    clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
+    clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes);
+
+    // Выполнение kernel
+    size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
+
+    err = clEnqueueNDRangeKernel(ctx.queue, ctx.kernel_sha256, 1, NULL,
+                                  &global_size, &local_size, 0, NULL, &event);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка выполнения kernel: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    clWaitForEvents(1, &event);
+
+    // Получение времени выполнения
+    cl_ulong time_start, time_end;
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
+    *kernel_time_ms = (double)(time_end - time_start) / 1000000.0;
+
+    // Чтение результатов через отображение
+    mapped_hashes = (uint8_t*)clEnqueueMapBuffer(ctx.queue, d_hashes, CL_TRUE, 
+                                                  CL_MAP_READ,
+                                                  0, hashes_size, 0, NULL, NULL, &err);
+    if (err != CL_SUCCESS || !mapped_hashes) {
+        fprintf(stderr, "Ошибка отображения буфера hashes: %s\n", cl_error_string(err));
+        // Fallback на обычное чтение
+        err = clEnqueueReadBuffer(ctx.queue, d_hashes, CL_TRUE, 0, hashes_size, hashes, 0, NULL, NULL);
+        if (err != CL_SUCCESS) {
+            result = -1;
+            goto cleanup;
+        }
+    } else {
+        memcpy(hashes, mapped_hashes, hashes_size);
+        clEnqueueUnmapMemObject(ctx.queue, d_hashes, mapped_hashes, 0, NULL, NULL);
+    }
 
 cleanup:
     if (event) clReleaseEvent(event);
@@ -1210,7 +1381,7 @@ int main(int argc, char** argv) {
         for (uint32_t i = 0; i < num_hashes; i++) {
             int match = 1;
             for (int j = 0; j < 32; j++) {
-                if (gpu_hashes[i*32 + j] != gpu_hashes_opt[i*32 + j]) {
+                if (gpu_hashes[i*32u + (uint32_t)j] != gpu_hashes_opt[i*32u + (uint32_t)j]) {
                     match = 0;
                     break;
                 }

@@ -42,6 +42,37 @@ ctest --verbose
 ./hash 100000 64 256
 ```
 
+### 🎯 CMake Presets (рекомендуется)
+
+**CMake 3.19+:**
+```bash
+# Конфигурация и сборка
+cmake --preset release
+cmake --build --preset release
+
+# Запуск тестов
+ctest --preset release
+
+# Debug сборка
+cmake --preset debug
+cmake --build --preset debug
+
+# Сборка с AddressSanitizer
+cmake --preset asan
+cmake --build --preset asan
+
+# Сборка с покрытием кода
+cmake --preset coverage
+cmake --build --preset coverage
+```
+
+**Доступные пресеты:**
+- `release` — Release сборка с оптимизациями
+- `debug` — Debug сборка с отладочной информацией
+- `asan` — Debug + AddressSanitizer для поиска ошибок памяти
+- `coverage` — Debug + покрытие кода
+- `windows-release` — Windows Release (MSVC)
+
 ### 🧹 Очистка от мусора
 
 **PowerShell (Windows):**

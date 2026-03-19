@@ -146,6 +146,27 @@ if(ENABLE_COVERAGE)
 endif()
 
 # =============================================================================
+# AddressSanitizer (опционально)
+# =============================================================================
+
+if(ENABLE_ASAN)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        message(STATUS "AddressSanitizer включён")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        if(CMAKE_BUILD_TYPE STREQUAL "Release")
+            message(WARNING "AddressSanitizer не рекомендуется использовать в Release сборке")
+        endif()
+    elseif(MSVC)
+        # MSVC имеет встроенный AddressSanitizer (начиная с VS 2019 16.9)
+        message(STATUS "AddressSanitizer включён (MSVC)")
+        add_compile_options(/fsanitize=address)
+    else()
+        message(WARNING "AddressSanitizer не поддерживается для этого компилятора")
+    endif()
+endif()
+
+# =============================================================================
 # Общие исходные файлы
 # =============================================================================
 

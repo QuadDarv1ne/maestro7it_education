@@ -1,0 +1,47 @@
+# Установка окончаний строк для разных типов файлов
+# https://git-scm.com/docs/gitattributes
+
+# Текстовые файлы - LF (Unix)
+*.text eol=lf
+*.c eol=lf
+*.h eol=lf
+*.cpp eol=lf
+*.hpp eol=lf
+*.cmake eol=lf
+*.json eol=lf
+*.md eol=lf
+*.sh eol=lf
+*.py eol=lf
+*.yml eol=lf
+*.yaml eol=lf
+*.txt eol=lf
+Doxyfile eol=lf
+.editorconfig eol=lf
+.gitignore eol=lf
+.gitattributes eol=lf
+
+# Скрипты Windows - CRLF
+*.bat eol=crlf
+*.cmd eol=crlf
+*.ps1 eol=lf
+*.reg eol=crlf
+
+# Файлы OpenCL
+*.cl eol=lf
+Makefile eol=lf
+
+# Документы - бинарные (без нормализации)
+*.docx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Архивы - бинарные
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.rar binary
