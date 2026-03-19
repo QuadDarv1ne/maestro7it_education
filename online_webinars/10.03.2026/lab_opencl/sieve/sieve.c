@@ -54,6 +54,16 @@
         exit(1); \
     }
 
+// Безопасное освобождение памяти
+#define SAFE_FREE(ptr) do { if (ptr) { free(ptr); ptr = NULL; } } while(0)
+
+// Макрос для проверки выделения памяти
+#define CHECK_ALLOC(ptr, size) \
+    if (ptr == NULL) { \
+        fprintf(stderr, "Memory allocation failed: %zu bytes\n", (size_t)(size)); \
+        goto cleanup; \
+    }
+
 // ============================================================
 // CPU ВЕРСИЯ: Классическое решето Эратосфена
 // ============================================================
@@ -300,6 +310,14 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     size_t buf_size = ((limit + 1 + 63) / 64) * 64;  // Выравнивание по 64 байта
     if (buf_size < 256) buf_size = 256;  // Минимальный размер буфера
     unsigned char* h_buf = calloc(buf_size, 1);
+    if (!h_buf) {
+        fprintf(stderr, "Memory allocation failed for h_buf (%zu bytes)\n", buf_size);
+        clReleaseProgram(program);
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
+        free(source);
+        return 0;
+    }
     d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, buf_size, h_buf, &err);
     free(h_buf);
     CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
@@ -328,6 +346,17 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
 
     // Буфер для кэширования состояния простых чисел (читаем пакетно)
     unsigned char* h_primes = (unsigned char*)calloc(limit + 1, 1);
+    if (!h_primes) {
+        fprintf(stderr, "Memory allocation failed for h_primes (%lu bytes)\n", limit + 1);
+        clReleaseMemObject(d_is_prime);
+        clReleaseKernel(kernel_init);
+        clReleaseKernel(kernel_mark);
+        clReleaseProgram(program);
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
+        free(source);
+        return 0;
+    }
     const unsigned long BATCH_SIZE = 4096;  // Размер пакета для чтения
     unsigned long next_read_limit = 0;
 
@@ -389,6 +418,18 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     
     unsigned int h_count = 0;
     unsigned char* h_is_prime = (unsigned char*)malloc(buf_size);
+    if (!h_is_prime) {
+        fprintf(stderr, "Memory allocation failed for h_is_prime (%zu bytes)\n", buf_size);
+        free(h_primes);
+        clReleaseMemObject(d_is_prime);
+        clReleaseKernel(kernel_init);
+        clReleaseKernel(kernel_mark);
+        clReleaseProgram(program);
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
+        free(source);
+        return 0;
+    }
     memset(h_is_prime, 0, buf_size);
     err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0, (limit + 1), h_is_prime, 0, NULL, NULL);
     CHECK_CL_ERROR(err, "clEnqueueReadBuffer init");
@@ -422,21 +463,35 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
 
 const char* get_embedded_kernel() {
     return
-    "// OpenCL Kernel: Решето Эратосфена\n"
+    "// OpenCL Kernel: Решето Эратосфена (оптимизированная версия)\n"
     "\n"
-    "__kernel void init_array(__global uchar* is_prime, unsigned int limit) {\n"
-    "    unsigned int gid = get_global_id(0);\n"
-    "    if (gid < 2) { is_prime[gid] = 0; return; }\n"
-    "    if (gid <= limit) is_prime[gid] = 1;\n"
+    "// Инициализация массива: все числа >= 2 помечаются как простые\n"
+    "__kernel void init_array(__global uchar* is_prime, const uint limit) {\n"
+    "    uint gid = get_global_id(0);\n"
+    "    if (gid > limit) return;\n"
+    "    is_prime[gid] = (gid >= 2) ? 1 : 0;\n"
     "}\n"
     "\n"
+    "// Маркировка кратных простого числа\n"
     "__kernel void sieve_mark_multiples(\n"
-    "    __global uchar* is_prime, unsigned int limit, unsigned int current_prime) {\n"
-    "    unsigned int gid = get_global_id(0);\n"
-    "    unsigned int start = current_prime * current_prime;\n"
+    "    __global uchar* is_prime, const uint limit, const uint current_prime) {\n"
+    "    uint gid = get_global_id(0);\n"
+    "    uint start = current_prime * current_prime;\n"
     "    if (start > limit) return;\n"
-    "    unsigned int global_size = get_global_size(0);\n"
-    "    unsigned int multiple = start + current_prime * gid;\n"
+    "    uint idx = start + current_prime * gid;\n"
+    "    if (idx <= limit) {\n"
+    "        is_prime[idx] = 0;\n"
+    "    }\n"
+    "}\n"
+    "\n"
+    "// Альтернативная версия с циклическим распределением\n"
+    "__kernel void sieve_mark_cyclic(\n"
+    "    __global uchar* is_prime, const uint limit, const uint current_prime) {\n"
+    "    uint gid = get_global_id(0);\n"
+    "    uint start = current_prime * current_prime;\n"
+    "    if (start > limit) return;\n"
+    "    uint global_size = get_global_size(0);\n"
+    "    uint multiple = start + current_prime * gid;\n"
     "    while (multiple <= limit) {\n"
     "        is_prime[multiple] = 0;\n"
     "        multiple += current_prime * global_size;\n"
