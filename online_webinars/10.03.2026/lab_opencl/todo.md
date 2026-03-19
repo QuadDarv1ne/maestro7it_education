@@ -7,67 +7,52 @@
   - Добавлена функция `open_kernel_file()` с поиском в нескольких путях
   - Копирование .cl файлов в build директорию через CMake
 - [x] Устранено предупреждение deprecated `clCreateCommandQueue`
-  - Замена на `clCreateCommandQueueWithProperties` в `cl_utils.c`, `sieve.c`, `sieve_debug.c`
-  - **Осталось в `hashing/hash.c`** (требуется исправление)
+  - Замена на `clCreateCommandQueueWithProperties` во всех файлах
 - [x] Починены unit-тесты
   - Созданы `hashing/sha256.c` и `sieve/sieve_cpu.c` без main()
-  - **5/5 тестов проходят (100%)**
+  - 5/5 тестов проходят (100%)
 - [x] Добавлены поля в `OpenCLContext` (kernel_sha256, kernel_djb2, kernel_fnv1a)
+- [x] **Исправлен Hash_Integration_Test**
+  - Добавлен 5-й аргумент `num_hashes` для kernel `sha256_hash`
+  - Все интеграционные тесты проходят (4/4)
 
 ### Сборка и тесты
 - [x] CMake сборка работает (sieve, hash, test_sha256, test_sieve)
-- [x] Интеграционные тесты через CTest:
+- [x] Интеграционные тесты через CTest: **100% (4/4 passed)**
   - ✅ SHA256_Unit_Test (5/5 passed)
   - ✅ Sieve_Unit_Test (37/37 passed)
+  - ✅ Hash_Integration_Test (CPU vs GPU совпадают)
   - ✅ Sieve_Integration_Test (CPU vs GPU совпадают)
-  - ❌ Hash_Integration_Test (Invalid kernel arguments)
 - [x] Kernel файлы загружаются из файлов, а не встроенные
 
-### Предупреждения компиляции (исправлено частично)
+### Предупреждения компиляции (исправлено)
 - [x] `snprintf output may be truncated` в `cl_utils.c`
   - Увеличен буфер `kernel_path` до `MAX_PATH * 2`
   - Добавлена проверка возвращаемого значения `snprintf`
-- [ ] `clCreateCommandQueue is deprecated` в `hashing/hash.c:545`
-  - Требуется замена на `clCreateCommandQueueWithProperties`
-- [ ] `unused variable 'g_is_prime'` в `sieve.c:528`
-  - Удалить неиспользуемую переменную
-- [ ] `pointer 'h_primes' may be used after 'free'` в `sieve.c:427`
-  - Переместить `free()` после использования
-- [ ] `nonnull argument compared to NULL` в `hash.c:49`
-  - Убрать проверку или изменить реализацию `strdup`
+- [x] `clCreateCommandQueue is deprecated` в `hashing/hash.c`
+  - Замена на `clCreateCommandQueueWithProperties`
+- [x] `unused variable 'g_is_prime'` в `sieve.c`
+  - Удалена неиспользуемая переменная
+- [x] `pointer 'h_primes' may be used after 'free'` в `sieve.c`
+  - Добавлено `h_primes = NULL` после `free()`
+- [x] `nonnull argument compared to NULL` в `hash.c`
+  - Убрана избыточная проверка в `strdup`
 
 ---
 
 ## 🔧 В работе (dev)
 
 ### Критические проблемы
-- [ ] **GPU kernel hash.cl - Invalid kernel arguments**
-  - Проблема: ошибка выполнения GPU kernel в интеграционном тесте
-  - Тест `Hash_Integration_Test` падает с ошибкой `clInvalidKernelArgs`
-  - Встречается даже в оригинальном коде
-  - Требуется: отладка kernel аргументов в hash.cl
-  - Файлы: `hashing/hash.cl`, `hashing/hash.c`
-  - Workaround: CPU версия работает корректно
-  - **Статус:** требуется исследование kernel аргументов
-
 - [ ] **SHA-256 для множественных блоков**
   - Проблема: неправильный хэш для сообщений > 512 бит (1000 'a')
   - Тест `test_sha256_very_long()` отключен (#if 0)
   - Требуется: отладка алгоритма padding для множественных блоков
   - Файлы: `hashing/sha256.c`
-  - Статус: реализация исправлена, но требует дополнительной проверки
+  - Статус: требует исследования корректности реализации
 
 ### Предупреждения компиляции
-- [x] `snprintf output may be truncated` в `cl_utils.c` (строки 403, 408)
-  - Решение: увеличен буфер и добавлена проверка
-- [ ] `clCreateCommandQueue is deprecated` в `hashing/hash.c:545`
-  - Решение: замена на `clCreateCommandQueueWithProperties`
-- [ ] `unused variable 'g_is_prime'` в `sieve.c:528`
-  - Решение: удалить неиспользуемую переменную
-- [ ] `pointer 'h_primes' may be used after 'free'` в `sieve.c:427`
-  - Решение: переместить free() после использования
-- [ ] `nonnull argument compared to NULL` в `hash.c:49`
-  - Решение: убрать проверку или изменить strdup
+- [x] Все основные предупреждения исправлены
+- [ ] `print_hash defined but not used` в `tests/test_sha256.c:26` (не критично, тестовая функция)
 
 ---
 
@@ -126,29 +111,27 @@
 
 | Категория | Выполнено | В работе | Запланировано |
 |-----------|-----------|----------|---------------|
-| Критические баги | 3 | 2 | 0 |
-| Предупреждения | 2 | 5 | 0 |
-| Тесты | 6 | 1 | 3 |
+| Критические баги | 4 | 1 | 0 |
+| Предупреждения | 6 | 1 | 0 |
+| Тесты | 7 | 0 | 3 |
 | Оптимизации | 0 | 0 | 3 |
 | Документация | 3 | 0 | 2 |
 
-**Всего:** 14 ✅ | 8 🔧 | 8 📋
+**Всего:** 20 ✅ | 2 🔧 | 8 📋
 
 ---
 
 ## 📝 Заметки
 
 ### Текущий статус (2026-03-19)
-- **Ветка:** dev (готов к merge в main после исправления предупреждений)
+- **Ветка:** dev
 - **Сборка:** CMake ✓ (все цели собираются)
 - **Unit-тесты:** 100% (42/42 passed)
-- **Интеграционные тесты:** 75% (3/4 passed)
-  - ❌ Hash_Integration_Test — Invalid kernel arguments (требует исследования)
+- **Интеграционные тесты:** 100% (4/4 passed) ✅
 
 ### Известные проблемы для v1.1.1
-1. **hash.cl kernel** — ошибка аргументов при выполнении на GPU
-2. **Предупреждения компиляции** — 5 предупреждений (не критичны)
-3. **hash.c** — использует deprecated clCreateCommandQueue
+1. **SHA-256 для >512 бит** — требует исправления обработки множественных блоков
+2. **print_hash unused** — не критично (тестовая функция)
 
 ### Сборка через CMake (рекомендуется)
 ```bash
@@ -183,12 +166,11 @@ ctest -R SHA256  # конкретный тест
 - SHA-256 для сообщений > 512 бит требует исправления
 - В CI/CD тесты выполняются только на CPU (нет GPU)
 - Windows: требуется shlwapi.lib для PathRemoveFileSpecA
-- Hash kernel требует отладки аргументов (Invalid kernel arguments)
 
 ---
 
 **Последнее обновление:** 2026-03-19
 **Версия:** 1.1.0 (dev)
-**Статус:** 
-- dev: 5 предупреждений компиляции, 1 интеграционный тест падает
-- main: готов к обновлению после исправления предупреждений
+**Статус:**
+- dev: ✅ Все тесты проходят (100%), сборка без критичных предупреждений
+- main: готов к обновлению после merge

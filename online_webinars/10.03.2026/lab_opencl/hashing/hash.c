@@ -691,11 +691,13 @@ int hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
         goto cleanup;
     }
     
-    // Установка аргументов
+    // Установка аргументов kernel
+    cl_uint num_hashes_arg = num_hashes;
     clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
     clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
     clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
     clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
+    clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes_arg);
     
     // Выполнение kernel
     size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
