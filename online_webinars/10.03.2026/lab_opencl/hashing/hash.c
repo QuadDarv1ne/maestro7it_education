@@ -734,22 +734,24 @@ int hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
         result = -1;
         goto cleanup;
     }
-    
-    // Копирование данных на GPU
-    err = clEnqueueWriteBuffer(ctx.queue, d_data, CL_TRUE, 0, data_size, data, 0, NULL, NULL);
+
+    // Копирование данных на GPU (асинхронно для параллелизма)
+    cl_event write_events[2];
+    err = clEnqueueWriteBuffer(ctx.queue, d_data, CL_FALSE, 0, data_size, data, 0, NULL, &write_events[0]);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка записи данных: %s\n", cl_error_string(err));
         result = -1;
         goto cleanup;
     }
-    
-    err = clEnqueueWriteBuffer(ctx.queue, d_lens, CL_TRUE, 0, lens_size, lens, 0, NULL, NULL);
+
+    err = clEnqueueWriteBuffer(ctx.queue, d_lens, CL_FALSE, 0, lens_size, lens, 0, NULL, &write_events[1]);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка записи длин: %s\n", cl_error_string(err));
+        clReleaseEvent(write_events[0]);
         result = -1;
         goto cleanup;
     }
-    
+
     // Установка аргументов kernel (5 аргументов для sha256_hash)
     clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
     clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
@@ -757,32 +759,39 @@ int hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
     clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
     clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes);
 
-    // Выполнение kernel
+    // Выполнение kernel после завершения записи данных
     size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
-    
+
     err = clEnqueueNDRangeKernel(ctx.queue, ctx.kernel_sha256, 1, NULL,
-                                  &global_size, &local_size, 0, NULL, &event);
+                                  &global_size, &local_size, 2, write_events, &event);
+    clReleaseEvent(write_events[0]);
+    clReleaseEvent(write_events[1]);
+    
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка выполнения kernel: %s\n", cl_error_string(err));
         result = -1;
         goto cleanup;
     }
-    
+
     clWaitForEvents(1, &event);
-    
+
     // Получение времени выполнения
     cl_ulong time_start, time_end;
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
     *kernel_time_ms = (double)(time_end - time_start) / 1000000.0;
-    
-    // Чтение результатов
-    err = clEnqueueReadBuffer(ctx.queue, d_hashes, CL_TRUE, 0, hashes_size, hashes, 0, NULL, NULL);
+
+    // Чтение результатов (асинхронно)
+    cl_event read_event;
+    err = clEnqueueReadBuffer(ctx.queue, d_hashes, CL_FALSE, 0, hashes_size, hashes, 0, NULL, &read_event);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка чтения результатов: %s\n", cl_error_string(err));
         result = -1;
         goto cleanup;
     }
+    
+    clWaitForEvents(1, &read_event);
+    clReleaseEvent(read_event);
 
 cleanup:
     if (event) clReleaseEvent(event);
@@ -1005,17 +1014,19 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
         goto cleanup;
     }
 
-    // Копирование данных на GPU
-    err = clEnqueueWriteBuffer(ctx.queue, d_data, CL_TRUE, 0, data_size, data, 0, NULL, NULL);
+    // Копирование данных на GPU (асинхронно для параллелизма)
+    cl_event write_events[2];
+    err = clEnqueueWriteBuffer(ctx.queue, d_data, CL_FALSE, 0, data_size, data, 0, NULL, &write_events[0]);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка записи данных: %s\n", cl_error_string(err));
         result = -1;
         goto cleanup;
     }
 
-    err = clEnqueueWriteBuffer(ctx.queue, d_lens, CL_TRUE, 0, lens_size, lens, 0, NULL, NULL);
+    err = clEnqueueWriteBuffer(ctx.queue, d_lens, CL_FALSE, 0, lens_size, lens, 0, NULL, &write_events[1]);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка записи длин: %s\n", cl_error_string(err));
+        clReleaseEvent(write_events[0]);
         result = -1;
         goto cleanup;
     }
@@ -1027,11 +1038,14 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
     clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
     clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes);  // 5-й аргумент
 
-    // Выполнение kernel
+    // Выполнение kernel после завершения записи данных
     size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
 
     err = clEnqueueNDRangeKernel(ctx.queue, ctx.kernel_sha256, 1, NULL,
-                                  &global_size, &local_size, 0, NULL, &event);
+                                  &global_size, &local_size, 2, write_events, &event);
+    clReleaseEvent(write_events[0]);
+    clReleaseEvent(write_events[1]);
+    
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка выполнения kernel: %s\n", cl_error_string(err));
         result = -1;
@@ -1046,13 +1060,17 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
     *kernel_time_ms = (double)(time_end - time_start) / 1000000.0;
 
-    // Чтение результатов
-    err = clEnqueueReadBuffer(ctx.queue, d_hashes, CL_TRUE, 0, hashes_size, hashes, 0, NULL, NULL);
+    // Чтение результатов (асинхронно)
+    cl_event read_event;
+    err = clEnqueueReadBuffer(ctx.queue, d_hashes, CL_FALSE, 0, hashes_size, hashes, 0, NULL, &read_event);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка чтения результатов: %s\n", cl_error_string(err));
         result = -1;
         goto cleanup;
     }
+    
+    clWaitForEvents(1, &read_event);
+    clReleaseEvent(read_event);
 
 cleanup:
     if (event) clReleaseEvent(event);
