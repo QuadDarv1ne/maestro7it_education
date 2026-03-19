@@ -548,6 +548,9 @@ int cl_init(OpenCLContext* ctx, int print_info) {
     return 0;
 }
 
+// Forward declaration
+const char* get_embedded_kernel();
+
 /**
  * @brief Компиляция kernel из файла или встроенного источника
  */
@@ -605,8 +608,6 @@ int cl_compile_kernel(OpenCLContext* ctx, const char* filename) {
     SAFE_FREE(source);
     return 0;
 }
-
-const char* get_embedded_kernel();
 
 // ============================================================
 // GPU ВЕРСИЯ (с улучшенной обработкой ошибок)
