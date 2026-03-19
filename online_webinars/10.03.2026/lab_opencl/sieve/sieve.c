@@ -91,9 +91,9 @@ typedef enum {
         exit(1); \
     }
 
-// Глобальные переменные для расширенной диагностики
-static cl_platform_id g_platform;
-static cl_device_id g_device;
+// Глобальные переменные для расширенной диагностики (используются в CHECK_CL_ERROR_EX)
+// static cl_platform_id g_platform;  // Удалено как неиспользуемое
+// static cl_device_id g_device;  // Удалено как неиспользуемое
 
 static const char* get_cl_error_string(cl_int err) {
     switch (err) {
@@ -301,9 +301,10 @@ int find_kernel_file(const char* kernel_name, char* out_path, size_t size) {
             if (last_sep) {
                 size_t parent_len = last_sep - dir;
                 if (parent_len < sizeof(dir)) {
-                    strncpy(dir, dir, parent_len);
-                    dir[parent_len] = '\0';
-                    snprintf(test_path, sizeof(test_path), "%s/%s", dir, kernel_name);
+                    char parent_dir[512];
+                    memcpy(parent_dir, dir, parent_len);
+                    parent_dir[parent_len] = '\0';
+                    snprintf(test_path, sizeof(test_path), "%s/%s", parent_dir, kernel_name);
                     search_paths[search_count++] = strdup(test_path);
                 }
             }
@@ -409,10 +410,10 @@ size_t auto_detect_local_size(cl_device_id device, size_t suggested) {
  */
 DeviceType auto_select_device(cl_platform_id platform, unsigned long limit) {
     cl_device_id gpu_device, cpu_device;
-    cl_int gpu_err, cpu_err;
-    
+    cl_int gpu_err, cpu_err_unused;
+
     gpu_err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &gpu_device, NULL);
-    cpu_err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &cpu_device, NULL);
+    cpu_err_unused = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &cpu_device, NULL);
     
     // Если GPU недоступен — используем CPU
     if (gpu_err != CL_SUCCESS) {
@@ -586,29 +587,20 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // Пробуем создать pinned буфер (CL_MEM_ALLOC_HOST_PTR)
     // Это позволяет использовать DMA для быстрого копирования
     cl_mem_flags buffer_flags = CL_MEM_READ_WRITE;
-    
-    // Выделяем pinned память если возможно
-    h_buf = (unsigned char*)clEnqueueMapBuffer(queue, NULL, CL_TRUE, 
-                                                CL_MAP_WRITE, 0, buf_size, 
-                                                0, NULL, NULL, &err);
-    if (err == CL_SUCCESS && h_buf) {
-        memset(h_buf, 0, buf_size);
-        clEnqueueUnmapMemObject(queue, h_buf, h_buf, 0, NULL, NULL);
-        d_is_prime = clCreateBuffer(context, buffer_flags | CL_MEM_ALLOC_HOST_PTR, 
-                                    buf_size, NULL, &err);
-    } else {
-        // Fallback: обычная память
-        h_buf = calloc(buf_size, 1);
-        d_is_prime = clCreateBuffer(context, buffer_flags, buf_size, h_buf, &err);
+
+    // Выделяем обычную память (упрощённый вариант)
+    h_buf = (unsigned char*)calloc(buf_size, 1);
+    if (!h_buf) {
+        fprintf(stderr, "[Error] Не удалось выделить память для буфера (%zu байт)\n", buf_size);
+        return 0;
     }
     
-    if (h_buf && !(buffer_flags & CL_MEM_ALLOC_HOST_PTR)) {
-        // Если используем обычную память - копируем при создании
-        d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
-                                    buf_size, h_buf, &err);
+    d_is_prime = clCreateBuffer(context, buffer_flags, buf_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "[Error] Не удалось создать буфер: %s\n", get_cl_error_string(err));
         free(h_buf);
+        return 0;
     }
-    CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
 
     // --------------------------------------------------------
     // 5. Выбор стратегии: объединенный kernel или классический
@@ -826,17 +818,13 @@ const char* get_embedded_kernel() {
  */
 void verify_result(unsigned long count, unsigned long limit) {
     printf("\nПроверка результата:\n");
-    
+
     // Теоретическое количество простых чисел (приближённо)
     double approx = (double)limit / log((double)limit);
     printf("  Найдено простых чисел: %lu\n", count);
     printf("  Приближённое ожидаемое (n/ln(n)): %.0f\n", approx);
-    printf("  Отклонение: %.2f%%\n", 
+    printf("  Отклонение: %.2f%%\n",
            fabs((double)count - approx) / approx * 100);
-    
-    // Вывод первых 20 простых чисел
-    printf("  Первые 20 простых чисел: ");
-    extern unsigned char* g_is_prime;  // Глобальный массив для вывода
 }
 
 /**
@@ -888,8 +876,7 @@ int main(int argc, char** argv) {
     RunMode mode = MODE_AUTO;
     int print_info = 1;
     int json_output = 0;
-    int bench_iterations = 1;  // количество итераций для бенчмарка
-    
+
     // Разбор аргументов командной строки
     int pos_arg_count = 0;
     
@@ -1062,7 +1049,7 @@ int main(int argc, char** argv) {
     
     // CSV вывод (для графиков)
     if (json_output == 2) {
-        printf("%lu,%zu,%.3f,%.3f,%.3f,%lu,%.3f,%.3f,%.3f,%s\n",
+        printf("%lu,%zu,%.3f,%.3f,%.3f,%lu,%lu,%.3f,%.3f,%s\n",
                limit, local_size,
                cpu_time_ms,
                gpu_kernel_time, gpu_total_time_ms,

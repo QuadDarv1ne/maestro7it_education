@@ -548,6 +548,9 @@ int cl_init(OpenCLContext* ctx, int print_info) {
     return 0;
 }
 
+// Forward declaration
+const char* get_embedded_kernel(void);
+
 /**
  * @brief Компиляция kernel из файла или встроенного источника
  */
@@ -817,7 +820,7 @@ int validate_inputs(uint32_t* num_hashes, uint32_t* max_len, size_t* local_size)
         return -1;
     }
     if (*max_len > MAX_DATA_LEN) {
-        fprintf(stderr, "[Error] max_len слишком большой (максимум %zu)\n", MAX_DATA_LEN);
+        fprintf(stderr, "[Error] max_len слишком большой (максимум %u)\n", (unsigned int)MAX_DATA_LEN);
         *max_len = MAX_DATA_LEN;
     }
 
@@ -864,7 +867,7 @@ int main(int argc, char** argv) {
     if (validate_inputs(&num_hashes, &max_len, &local_size) != 0) {
         fprintf(stderr, "Использование: %s [num_hashes] [max_len] [local_size]\n", argv[0]);
         fprintf(stderr, "  num_hashes: 1 - %d (по умолчанию %d)\n", MAX_NUM_HASHES, DEFAULT_NUM_HASHES);
-        fprintf(stderr, "  max_len: 1 - %zu (по умолчанию %d)\n", MAX_DATA_LEN, DEFAULT_DATA_LEN);
+        fprintf(stderr, "  max_len: 1 - %u (по умолчанию %d)\n", (unsigned int)MAX_DATA_LEN, DEFAULT_DATA_LEN);
         fprintf(stderr, "  local_size: 1 - %d (по умолчанию %d)\n", MAX_LOCAL_SIZE, DEFAULT_LOCAL_SIZE);
         return 1;
     }
