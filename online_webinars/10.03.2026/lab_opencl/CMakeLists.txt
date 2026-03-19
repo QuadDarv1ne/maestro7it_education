@@ -101,15 +101,20 @@ set(COMMON_SOURCES
 # -----------------------------------------------------------------------------
 # Решето Эратосфена
 # -----------------------------------------------------------------------------
-add_executable(sieve 
+add_executable(sieve
     ${PROJECT_SOURCE_DIR}/sieve/sieve.c
     ${COMMON_SOURCES}
 )
 
-target_link_libraries(sieve 
+target_link_libraries(sieve
     ${OpenCL_LIBRARIES}
     ${MATH_LIBRARY}
 )
+
+# Для Windows: shlwapi для PathRemoveFileSpec
+if(WIN32)
+    target_link_libraries(sieve shlwapi)
+endif()
 
 target_compile_definitions(sieve PRIVATE
     $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
@@ -132,6 +137,11 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(hash Threads::Threads)
 endif()
 
+# Для Windows: shlwapi для PathRemoveFileSpec
+if(WIN32)
+    target_link_libraries(hash shlwapi)
+endif()
+
 target_compile_definitions(hash PRIVATE
     $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
 )
@@ -142,39 +152,38 @@ target_compile_definitions(hash PRIVATE
 
 if(BUILD_TESTS)
     enable_testing()
-    
-    # Тест SHA-256
+
+    # Unit-тест SHA-256 (использует только sha256.c без main())
     add_executable(test_sha256
         ${PROJECT_SOURCE_DIR}/tests/test_sha256.c
-        ${PROJECT_SOURCE_DIR}/hashing/hash.c
-        ${COMMON_SOURCES}
+        ${PROJECT_SOURCE_DIR}/hashing/sha256.c
     )
     target_link_libraries(test_sha256
-        ${OpenCL_LIBRARIES}
         ${MATH_LIBRARY}
     )
     target_include_directories(test_sha256 PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 
-    # Тест Sieve
+    # Unit-тест Sieve (использует только sieve_cpu.c без main())
     add_executable(test_sieve
         ${PROJECT_SOURCE_DIR}/tests/test_sieve.c
-        ${PROJECT_SOURCE_DIR}/sieve/sieve.c
-        ${COMMON_SOURCES}
+        ${PROJECT_SOURCE_DIR}/sieve/sieve_cpu.c
     )
     target_link_libraries(test_sieve
-        ${OpenCL_LIBRARIES}
         ${MATH_LIBRARY}
     )
     target_include_directories(test_sieve PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 
     # Регистрация тестов в CTest
-    add_test(NAME SHA256_Test COMMAND test_sha256)
-    add_test(NAME Sieve_Test COMMAND test_sieve 1000000)
+    add_test(NAME SHA256_Unit_Test COMMAND test_sha256)
+    add_test(NAME Sieve_Unit_Test COMMAND test_sieve)
+
+    # Интеграционные тесты через запуск основных программ
+    # Примечание: unit-тесты требуют рефакторинга для разделения main() и функций
     
-    # Интеграционный тест: сравнение CPU vs GPU для hashing
+    # Интеграционный тест: проверка работы hashing
     add_test(NAME Hash_Integration_Test COMMAND hash 10000 64 256)
-    
-    # Интеграционный тест: сравнение CPU vs GPU для sieve
+
+    # Интеграционный тест: проверка работы sieve
     add_test(NAME Sieve_Integration_Test COMMAND sieve 1000000 256)
 endif()
 
@@ -212,7 +221,7 @@ install(TARGETS sieve hash
     RUNTIME DESTINATION bin
 )
 
-install(FILES 
+install(FILES
     ${PROJECT_SOURCE_DIR}/sieve/sieve.cl
     ${PROJECT_SOURCE_DIR}/hashing/hash.cl
     DESTINATION share/gpu_lab/kernels
@@ -221,6 +230,13 @@ install(FILES
 install(FILES ${PROJECT_SOURCE_DIR}/README.md
     DESTINATION share/doc/gpu_lab
 )
+
+# Копирование kernel файлов в директорию сборки для отладки
+# Это нужно для того, чтобы программы могли найти .cl файлы при запуске из build/
+file(COPY ${PROJECT_SOURCE_DIR}/sieve/sieve.cl
+     DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${PROJECT_SOURCE_DIR}/hashing/hash.cl
+     DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # =============================================================================
 # Вывод информации о сборке

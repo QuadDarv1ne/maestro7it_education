@@ -97,7 +97,11 @@ int cl_context_init(OpenCLContext* ctx, cl_device_type device_type, int print_in
     }
 
     // Создание очереди команд с профилированием
-    ctx->queue = clCreateCommandQueue(ctx->context, ctx->device, CL_QUEUE_PROFILING_ENABLE, &err);
+    // Для OpenCL 3.0 используем новый API clCreateCommandQueueWithProperties
+    cl_queue_properties queue_props[] = {
+        CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    ctx->queue = clCreateCommandQueueWithProperties(ctx->context, ctx->device, queue_props, &err);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка создания очереди команд: %s\n", cl_get_error_string(err));
         cl_context_cleanup(ctx);
@@ -376,13 +380,67 @@ size_t cl_auto_detect_local_size(cl_device_id device, size_t suggested) {
 // ФУНКЦИИ РАБОТЫ С ФАЙЛАМИ
 // ============================================================
 
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#endif
+
+/**
+ * @brief Попытка открыть файл из нескольких возможных мест
+ * Сначала ищет в текущей директории, затем рядом с exe, затем в стандартных путях
+ */
+static FILE* open_kernel_file(const char* filename) {
+    FILE* f = NULL;
+    
+    // 1. Пробуем открыть в текущей рабочей директории
+    f = fopen(filename, "r");
+    if (f) return f;
+    
+#ifdef _WIN32
+    // 2. Пробуем открыть в директории исполняемого файла
+    char exe_path[MAX_PATH];
+    char kernel_path[MAX_PATH];
+    
+    if (GetModuleFileNameA(NULL, exe_path, MAX_PATH) > 0) {
+        // Получаем директорию exe файла
+        PathRemoveFileSpecA(exe_path);
+        snprintf(kernel_path, MAX_PATH, "%s\\%s", exe_path, filename);
+        f = fopen(kernel_path, "r");
+        if (f) return f;
+        
+        // 3. Для CMake сборки: kernel может быть в share/gpu_lab/kernels
+        snprintf(kernel_path, MAX_PATH, "%s\\..\\share\\gpu_lab\\kernels\\%s", exe_path, filename);
+        f = fopen(kernel_path, "r");
+        if (f) return f;
+    }
+#else
+    // 3. Для Linux/Mac: ищем в стандартных путях
+    const char* std_paths[] = {
+        "./",
+        "../share/gpu_lab/kernels/",
+        "/usr/local/share/gpu_lab/kernels/",
+        "/usr/share/gpu_lab/kernels/",
+        NULL
+    };
+    
+    char kernel_path[512];
+    for (int i = 0; std_paths[i] != NULL; i++) {
+        snprintf(kernel_path, sizeof(kernel_path), "%s%s", std_paths[i], filename);
+        f = fopen(kernel_path, "r");
+        if (f) return f;
+    }
+#endif
+    
+    return NULL;
+}
+
 char* cl_read_kernel_file(const char* filename, size_t* size) {
     FILE* file = NULL;
     char* source = NULL;
 
     if (!filename || !size) return NULL;
 
-    file = fopen(filename, "r");
+    file = open_kernel_file(filename);
     if (!file) {
         return NULL;
     }

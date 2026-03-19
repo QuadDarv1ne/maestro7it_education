@@ -95,6 +95,9 @@ typedef struct {
     cl_context context;                /**< Контекст */
     cl_command_queue queue;            /**< Очередь команд */
     cl_program program;                /**< Программа */
+    cl_kernel kernel_sha256;           /**< Kernel для SHA-256 */
+    cl_kernel kernel_djb2;             /**< Kernel для DJB2 */
+    cl_kernel kernel_fnv1a;            /**< Kernel для FNV-1a */
     int is_initialized;                /**< Флаг инициализации */
 } OpenCLContext;
 

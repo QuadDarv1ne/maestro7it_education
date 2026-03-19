@@ -197,17 +197,20 @@ __kernel void sha256_hash(
     __global const uchar* input,
     __global const uint* input_lens,
     __global uchar* output,
-    const uint max_len
+    const uint max_len,
+    const uint num_hashes
 )
 {
     uint gid = get_global_id(0);
+    if (gid >= num_hashes) return;
+    
     uint offset = gid * max_len;
     uint len = input_lens[gid];
-
+    
     uint w[64];
     uint h[8];
     for (int i = 0; i < 8; i++) h[i] = SHA256_H[i];
-
+    
     // Количество 512-битных (64-байтных) блоков
     uint num_blocks = (len + 9 + 63) / 64;
     if (num_blocks < 1) num_blocks = 1;
@@ -228,12 +231,16 @@ __kernel void sha256_hash(
             }
         }
 
-        // Добавление padding
-        uint pad_pos = bytes_in_block;
-        if (pad_pos < 64) {
-            uint wi = pad_pos >> 2;
-            uint bi = 3 - (pad_pos & 3);
-            w[wi] |= ((uint)0x80) << (bi << 3);
+        // Добавление padding (только в последний блок, если хватит места для длины)
+        if (block == num_blocks - 1) {
+            uint pad_pos = bytes_in_block;
+            // Нужно место для 0x80 (1 байт) + длина (8 байт) = 9 байт
+            // 64 - 9 = 55, поэтому добавляем если < 56
+            if (pad_pos < 56) {
+                uint wi = pad_pos >> 2;
+                uint bi = 3 - (pad_pos & 3);
+                w[wi] |= ((uint)0x80) << (bi << 3);
+            }
         }
 
         // Если это последний блок и осталось место для длины
@@ -287,7 +294,7 @@ __kernel void djb2_hash(
     uint gid = get_global_id(0);
     uint offset = gid * max_len;
     uint len = input_lens[gid];
-    
+
     uint hash = 5381;
     
     for (uint i = 0; i < len; i++) {
@@ -443,11 +450,11 @@ __kernel void password_hash(
             h_val = g; g = f; f = e; e = d + t1;
             d = c; c = b; b = a; a = t1 + t2;
         }
-        
+
         h[0] += a; h[1] += b; h[2] += c; h[3] += d;
         h[4] += e; h[5] += f; h[6] += g; h[7] += h_val;
     }
-    
+
     // Записываем результат
     for (int i = 0; i < 8; i++) {
         output[gid * 32 + i * 4 + 0] = (h[i] >> 24) & 0xFF;

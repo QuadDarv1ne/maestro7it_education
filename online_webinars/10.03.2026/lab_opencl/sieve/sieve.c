@@ -252,9 +252,13 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
     CHECK_CL_ERROR(err, "clCreateContext");
-    
+
     // Создаём очередь с профилированием для измерения времени
-    queue = clCreateCommandQueue(context, device, 0, &err);
+    // Для OpenCL 3.0 используем новый API clCreateCommandQueueWithProperties
+    cl_queue_properties queue_props[] = {
+        CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    queue = clCreateCommandQueueWithProperties(context, device, queue_props, &err);
     CHECK_CL_ERROR(err, "clCreateCommandQueue");
     
     // --------------------------------------------------------
