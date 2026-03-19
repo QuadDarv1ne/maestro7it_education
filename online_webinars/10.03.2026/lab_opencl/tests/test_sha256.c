@@ -90,7 +90,7 @@ void test_sha256_long(void) {
 }
 
 /* Тест: SHA-256 очень длинной строки (множественные блоки) */
-/* ОТКЛЮЧЕН: Требуется исправление реализации для множественных блоков */
+/* ВРЕМЕННО ОТКЛЮЧЕН: требуется отладка */
 #if 0
 void test_sha256_very_long(void) {
     TEST_BEGIN("SHA-256 very long string (multiple blocks)");
@@ -110,14 +110,6 @@ void test_sha256_very_long(void) {
 
     uint8_t hash[32];
     sha256_cpu((const uint8_t*)input, 1000, hash);
-    
-    // Отладочный вывод
-    printf("  Computed hash: ");
-    for (int i = 0; i < 32; i++) printf("%02x", hash[i]);
-    printf("\n");
-    printf("  Expected hash: ");
-    for (int i = 0; i < 32; i++) printf("%02x", expected[i]);
-    printf("\n");
 
     TEST_ASSERT(hash_equal(hash, expected), "1000 'a' hash should match");
     TEST_END();
@@ -175,8 +167,7 @@ int main(void) {
     test_sha256_abc();
     test_sha256_long();
 #if 0
-    // ОТКЛЮЧЕН: Требуется исправление реализации для множественных блоков
-    test_sha256_very_long();
+    test_sha256_very_long();  // ОТКЛЮЧЕН: требуется отладка
 #endif
     test_sha256_deterministic();
     test_sha256_avalanche();
