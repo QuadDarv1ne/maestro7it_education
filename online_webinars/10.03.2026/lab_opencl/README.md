@@ -42,6 +42,29 @@ ctest --verbose
 ./hash 100000 64 256
 ```
 
+### 🧹 Очистка от мусора
+
+**PowerShell (Windows):**
+```powershell
+./scripts/clean.ps1          # Очистка
+./scripts/clean.ps1 -DryRun  # Просмотр без удаления
+```
+
+**Bash (Linux/macOS):**
+```bash
+./scripts/clean.sh           # Очистка
+./scripts/clean.sh --dry-run # Просмотр без удаления
+```
+
+**CMake цели:**
+```bash
+cmake --build build --target clean_all      # Очистка build
+cmake --build build --target clean_project  # Полная очистка
+```
+
+**Что сохраняется:** Все `.exe` файлы  
+**Что удаляется:** `.o`, `.obj`, `.a`, `.lib`, `.dll`, `.pyc`, `CMakeFiles/`, `Testing/`, `__pycache__/`
+
 ## Структура проекта
 
 ```
