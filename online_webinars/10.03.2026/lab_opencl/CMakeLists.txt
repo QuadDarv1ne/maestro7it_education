@@ -227,6 +227,11 @@ install(FILES
     DESTINATION share/gpu_lab/kernels
 )
 
+install(FILES
+    ${PROJECT_SOURCE_DIR}/hashing/sha256.h
+    DESTINATION include/gpu_lab
+)
+
 install(FILES ${PROJECT_SOURCE_DIR}/README.md
     DESTINATION share/doc/gpu_lab
 )
