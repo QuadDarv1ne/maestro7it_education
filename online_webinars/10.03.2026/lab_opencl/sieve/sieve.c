@@ -624,7 +624,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     } else {
         // Классический подход: init + итерации mark
         printf("    Используется классический подход (init + mark)\n");
-        
+
         // 5a. Инициализация массива на GPU
         clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
         clSetKernelArg(kernel_init, 1, sizeof(unsigned int), &limit);
@@ -636,45 +636,23 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel init");
 
         clFinish(queue);
-        
+
         // --------------------------------------------------------
-        // 6. Основной цикл решета
+        // 6. Основной цикл решета (упрощённый - без кэширования)
         // --------------------------------------------------------
         unsigned long sqrt_limit = (unsigned long)sqrt((double)limit);
 
         clSetKernelArg(kernel_mark, 0, sizeof(cl_mem), &d_is_prime);
         clSetKernelArg(kernel_mark, 1, sizeof(cl_uint), &limit);
 
-        // Буфер для кэширования состояния простых чисел (читаем блоками)
-        unsigned char* h_primes = (unsigned char*)calloc(buf_size, 1);
-        if (!h_primes) {
-            fprintf(stderr, "Ошибка: Не удалось выделить память для кэша простых чисел (%zu байт)\n", buf_size);
-            goto cleanup;
-        }
-        const unsigned long BATCH_SIZE = 32768;
-        unsigned long cached_until = 0;
-
-        // Первоначальная загрузка
-        size_t first_read = (limit + 1 > BATCH_SIZE) ? BATCH_SIZE : limit + 1;
-        clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, 0, first_read, h_primes, 0, NULL, NULL);
-        cached_until = first_read;
-
+        // Буфер для чтения состояния
+        unsigned char p_status = 0;
+        
         for (unsigned long p = 2; p <= sqrt_limit; p++) {
-            // Читаем новый блок если p выходит за кэш
-            if (p >= cached_until && cached_until < limit + 1) {
-                unsigned long read_size = BATCH_SIZE;
-                if (cached_until + read_size > limit + 1) read_size = limit + 1 - cached_until;
-                
-                clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE,
-                                   cached_until,
-                                   read_size, h_primes + cached_until,
-                                   0, NULL, NULL);
-                cached_until += read_size;
-            }
+            // Читаем состояние текущего числа с GPU
+            clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, p, 1, &p_status, 0, NULL, NULL);
             
-            unsigned char p_is_prime = h_primes[p];
-
-            if (p_is_prime) {
+            if (p_status) {  // Если простое
                 unsigned int p_val = (unsigned int)p;
                 clSetKernelArg(kernel_mark, 2, sizeof(unsigned int), &p_val);
 
@@ -698,12 +676,14 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
 
                 err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
                                              &mark_global_size, &local_size, 0, NULL, &mark_event);
-                CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel mark");
+                if (err != CL_SUCCESS) {
+                    fprintf(stderr, "[Error] clEnqueueNDRangeKernel mark failed: %s\n", get_cl_error_string(err));
+                    goto cleanup;
+                }
             }
         }
 
         clFinish(queue);
-        SAFE_FREE(h_primes);
     }
 
 cleanup:
