@@ -1,6 +1,13 @@
 /**
  * @file cl_utils.c
  * @brief Реализация общих утилит для работы с OpenCL
+ *
+ * Этот файл содержит функции для:
+ * - Инициализации и управления контекстом OpenCL
+ * - Компиляции kernel'ов из файлов и источников
+ * - Получения информации об устройствах и платформах
+ * - Работы с файлами (загрузка kernel source)
+ * - Бенчмаркинга и профилирования
  */
 
 #include "cl_common.h"
@@ -46,8 +53,24 @@ const char* cl_get_error_string(cl_int err) {
         case CL_INVALID_EVENT:                  return "Invalid event";
         case CL_INVALID_OPERATION:              return "Invalid operation";
         case CL_INVALID_BUFFER_SIZE:            return "Invalid buffer size";
+        case CL_INVALID_MIP_LEVEL:              return "Invalid MIP level";
+        case CL_INVALID_GL_OBJECT:              return "Invalid GL object";
         default:                                return "Unknown OpenCL error";
     }
+}
+
+/**
+ * @brief Получение расширенного описания ошибки с кодом
+ * @param err Код ошибки
+ * @param buffer Буфер для результата
+ * @param buffer_size Размер буфера
+ * @return Строка с описанием ошибки
+ */
+void cl_get_error_description(cl_int err, char* buffer, size_t buffer_size) {
+    if (!buffer || buffer_size == 0) return;
+
+    const char* error_str = cl_get_error_string(err);
+    snprintf(buffer, buffer_size, "Error %d (%s)", err, error_str);
 }
 
 // ============================================================
@@ -388,10 +411,17 @@ size_t cl_auto_detect_local_size(cl_device_id device, size_t suggested) {
 /**
  * @brief Попытка открыть файл из нескольких возможных мест
  * Сначала ищет в текущей директории, затем рядом с exe, затем в стандартных путях
+ * 
+ * Пути поиска:
+ * 1. Текущая рабочая директория (./)
+ * 2. Директория исполняемого файла
+ * 3. Директория сборки (../build/)
+ * 4. Директория исходников (../../hashing/, ../../sieve/)
+ * 5. Системные директории (/usr/local/share/gpu_lab/kernels/)
  */
 static FILE* open_kernel_file(const char* filename) {
     FILE* f = NULL;
-    
+
     // 1. Пробуем открыть в текущей рабочей директории
     f = fopen(filename, "r");
     if (f) return f;
@@ -404,7 +434,7 @@ static FILE* open_kernel_file(const char* filename) {
     if (GetModuleFileNameA(NULL, exe_path, MAX_PATH) > 0) {
         // Получаем директорию exe файла
         PathRemoveFileSpecA(exe_path);
-        
+
         // Копируем путь с проверкой на переполнение
         int written = snprintf(kernel_path, sizeof(kernel_path), "%s\\%s", exe_path, filename);
         if (written > 0 && (size_t)written < sizeof(kernel_path)) {
@@ -412,8 +442,29 @@ static FILE* open_kernel_file(const char* filename) {
             if (f) return f;
         }
 
-        // 3. Для CMake сборки: kernel может быть в share/gpu_lab/kernels
+        // 3. Для CMake сборки: kernel может быть в build директории
+        written = snprintf(kernel_path, sizeof(kernel_path), "%s\\..\\%s", exe_path, filename);
+        if (written > 0 && (size_t)written < sizeof(kernel_path)) {
+            f = fopen(kernel_path, "r");
+            if (f) return f;
+        }
+
+        // 4. Для CMake сборки: kernel может быть в share/gpu_lab/kernels
         written = snprintf(kernel_path, sizeof(kernel_path), "%s\\..\\share\\gpu_lab\\kernels\\%s", exe_path, filename);
+        if (written > 0 && (size_t)written < sizeof(kernel_path)) {
+            f = fopen(kernel_path, "r");
+            if (f) return f;
+        }
+        
+        // 5. Директория исходников hashing/
+        written = snprintf(kernel_path, sizeof(kernel_path), "%s\\..\\..\\hashing\\%s", exe_path, filename);
+        if (written > 0 && (size_t)written < sizeof(kernel_path)) {
+            f = fopen(kernel_path, "r");
+            if (f) return f;
+        }
+        
+        // 6. Директория исходников sieve/
+        written = snprintf(kernel_path, sizeof(kernel_path), "%s\\..\\..\\sieve\\%s", exe_path, filename);
         if (written > 0 && (size_t)written < sizeof(kernel_path)) {
             f = fopen(kernel_path, "r");
             if (f) return f;
@@ -423,6 +474,10 @@ static FILE* open_kernel_file(const char* filename) {
     // 3. Для Linux/Mac: ищем в стандартных путях
     const char* std_paths[] = {
         "./",
+        "../",
+        "../build/",
+        "../../hashing/",
+        "../../sieve/",
         "../share/gpu_lab/kernels/",
         "/usr/local/share/gpu_lab/kernels/",
         "/usr/share/gpu_lab/kernels/",

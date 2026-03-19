@@ -20,9 +20,9 @@
 #   cmake --install . --prefix /usr/local
 # =============================================================================
 
-cmake_minimum_required(VERSION 3.10)
-project(GPU_Lab 
-    VERSION 1.1.0
+cmake_minimum_required(VERSION 3.16)
+project(GPU_Lab
+    VERSION 1.3.0
     DESCRIPTION "Лабораторная работа: Вычисления на GPU с OpenCL"
     LANGUAGES C
 )
@@ -34,6 +34,8 @@ option(BUILD_TESTS "Сборка тестов" ON)
 option(BUILD_BENCHMARKS "Сборка бенчмарков" ON)
 option(ENABLE_PROFILING "Включить профилирование" ON)
 option(USE_STATIC_ANALYSIS "Включить статический анализ" OFF)
+option(ENABLE_COVERAGE "Включить покрытие кода" OFF)
+option(BUILD_SHARED_LIBS "Построить общие библиотеки" OFF)
 
 # =============================================================================
 # Поиск зависимостей
@@ -62,6 +64,16 @@ if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
 endif()
 
+# Поиск Doxygen для генерации документации
+find_package(Doxygen QUIET)
+if(DOXYGEN_FOUND)
+    message(STATUS "Doxygen найден: ${DOXYGEN_EXECUTABLE}")
+    set(DOXYGEN_AVAILABLE TRUE)
+else()
+    message(STATUS "Doxygen не найден, документация не будет сгенерирована")
+    set(DOXYGEN_AVAILABLE FALSE)
+endif()
+
 # =============================================================================
 # Общие настройки компиляции
 # =============================================================================
@@ -75,9 +87,21 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${OpenCL_INCLUDE_DIRS})
 
 # Флаги компиляции
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic")
 set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+
+# Дополнительные предупреждения для gcc/clang
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wformat -Wformat-security -Wconversion -Wshadow")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wnull-dereference -Wstack-protector")
+endif()
+
+# Для Windows: дополнительные флаги
+if(WIN32)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions(-DNOMINMAX)
+endif()
 
 # По умолчанию Release сборка
 if(NOT CMAKE_BUILD_TYPE)
@@ -85,6 +109,20 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 message(STATUS "Тип сборки: ${CMAKE_BUILD_TYPE}")
+
+# =============================================================================
+# Покрытие кода (опционально)
+# =============================================================================
+
+if(ENABLE_COVERAGE)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        message(STATUS "Покрытие кода включено")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -fprofile-arcs -ftest-coverage")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+    else()
+        message(WARNING "Покрытие кода поддерживается только для gcc/clang")
+    endif()
+endif()
 
 # =============================================================================
 # Общие исходные файлы
@@ -230,6 +268,7 @@ install(FILES
 
 install(FILES
     ${PROJECT_SOURCE_DIR}/hashing/sha256.h
+    ${PROJECT_SOURCE_DIR}/include/cl_common.h
     DESTINATION include/gpu_lab
 )
 
@@ -245,6 +284,39 @@ file(COPY ${PROJECT_SOURCE_DIR}/hashing/hash.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # =============================================================================
+# Генерация документации (опционально)
+# =============================================================================
+
+if(DOXYGEN_AVAILABLE)
+    set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/docs)
+    set(DOXYGEN_GENERATE_HTML YES)
+    set(DOXYGEN_GENERATE_MAN NO)
+
+    doxygen_add_docs(docs
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/hashing
+        ${PROJECT_SOURCE_DIR}/sieve
+        COMMENT "Генерация документации Doxygen"
+    )
+endif()
+
+# =============================================================================
+# Цель для очистки всех артефактов сборки
+# =============================================================================
+
+add_custom_target(clean_all
+    COMMAND ${CMAKE_BUILD_TOOL} clean
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/CMakeFiles
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/Testing
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/CMakeCache.txt
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/cmake_install.cmake
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/Makefile
+    COMMENT "Полная очистка артефактов сборки"
+    VERBATIM
+)
+
+# =============================================================================
 # Вывод информации о сборке
 # =============================================================================
 
@@ -255,9 +327,24 @@ message(STATUS "=============================================")
 message(STATUS "  Версия проекта:    ${PROJECT_VERSION}")
 message(STATUS "  Тип сборки:        ${CMAKE_BUILD_TYPE}")
 message(STATUS "  OpenCL:            ${OpenCL_LIBRARIES}")
+message(STATUS "  Компилятор:        ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
 message(STATUS "  Сборка тестов:     ${BUILD_TESTS}")
 message(STATUS "  Сборка бенчмарков: ${BUILD_BENCHMARKS}")
 message(STATUS "  Профилирование:    ${ENABLE_PROFILING}")
 message(STATUS "  Стат. анализ:      ${USE_STATIC_ANALYSIS}")
+message(STATUS "  Покрытие кода:     ${ENABLE_COVERAGE}")
+message(STATUS "  Doxygen:           ${DOXYGEN_AVAILABLE}")
+message(STATUS "=============================================")
+message(STATUS "")
+message(STATUS "Цели для сборки:")
+message(STATUS "  cmake --build .           - собрать все цели")
+message(STATUS "  cmake --build . --target sieve/hash")
+message(STATUS "  cmake --build . --target test_sha256/test_sieve")
+message(STATUS "  cmake --build . --target docs  - генерация документации")
+message(STATUS "")
+message(STATUS "Запуск тестов:")
+message(STATUS "  ctest --verbose           - все тесты")
+message(STATUS "  ctest -R SHA256           - только SHA-256 тесты")
+message(STATUS "  ctest -R Sieve            - только Sieve тесты")
 message(STATUS "=============================================")
 message(STATUS "")
