@@ -58,6 +58,12 @@ char* strdup(const char* s) {
 #define DEFAULT_DATA_LEN 64
 #define DEFAULT_LOCAL_SIZE 256
 
+// Максимальные значения для валидации
+#define MAX_NUM_HASHES (100 * 1000 * 1000)  // 100 миллионов
+#define MAX_DATA_LEN (1024 * 1024)           // 1 MB
+#define MAX_LOCAL_SIZE 4096
+#define MIN_LOCAL_SIZE 1
+
 /**
  * @brief Расширенная проверка ошибок OpenCL с детальной информацией
  * @param err Код ошибки
@@ -371,6 +377,40 @@ const char* get_device_name(cl_device_id device) {
 }
 
 /**
+ * @brief Проверка версии OpenCL
+ * @param device Устройство OpenCL
+ * @param min_major Минимальная требуемая мажорная версия
+ * @param min_minor Минимальная требуемая минорная версия
+ * @return 1 если версия подходит, 0 если нет
+ */
+int check_opencl_version(cl_device_id device, int min_major, int min_minor) {
+    char version_str[128];
+    cl_int err;
+    
+    err = clGetDeviceInfo(device, CL_DEVICE_VERSION, sizeof(version_str), version_str, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "[Error] Не удалось получить версию OpenCL\n");
+        return 0;
+    }
+    
+    // Парсинг версии формата "OpenCL X.Y ..."
+    int major = 0, minor = 0;
+    if (sscanf(version_str, "OpenCL %d.%d", &major, &minor) != 2) {
+        fprintf(stderr, "[Warning] Не удалось распарсить версию OpenCL: %s\n", version_str);
+        // Предполагаем минимальную совместимость
+        return 1;
+    }
+    
+    if (major > min_major || (major == min_major && minor >= min_minor)) {
+        return 1;
+    }
+    
+    fprintf(stderr, "[Error] Требуется OpenCL %d.%d или выше, найдено %d.%d\n",
+            min_major, min_minor, major, minor);
+    return 0;
+}
+
+/**
  * @brief Вывод информации об устройстве
  */
 void print_device_info(cl_device_id device) {
@@ -477,7 +517,17 @@ int cl_init(OpenCLContext* ctx, int print_info) {
     if (print_info) {
         print_device_info(ctx->device);
     }
-    
+
+    // Проверка версии OpenCL (требуется 1.2+)
+    if (!check_opencl_version(ctx->device, 1, 2)) {
+        fprintf(stderr, "[Error] Требуется OpenCL 1.2 или выше\n");
+        fprintf(stderr, "  Обновите драйверы GPU или используйте другое устройство\n");
+        return -1;
+    }
+    if (print_info) {
+        printf("[OK] Версия OpenCL соответствует требованиям (1.2+)\n\n");
+    }
+
     // Создание контекста
     ctx->context = clCreateContext(NULL, 1, &ctx->device, NULL, NULL, &err);
     if (err != CL_SUCCESS) {
@@ -739,6 +789,64 @@ void compare_hashes(const uint8_t* cpu, const uint8_t* gpu, uint32_t num_hashes)
 }
 
 // ============================================================
+// ВАЛИДАЦИЯ ВХОДНЫХ ДАННЫХ
+// ============================================================
+
+/**
+ * @brief Валидация входных параметров программы
+ * @param num_hashes Количество хэшей
+ * @param max_len Максимальная длина данных
+ * @param local_size Размер work-group
+ * @return 0 при успехе, -1 при ошибке
+ */
+int validate_inputs(uint32_t* num_hashes, uint32_t* max_len, size_t* local_size) {
+    // Проверка num_hashes
+    if (*num_hashes < 1) {
+        fprintf(stderr, "[Error] num_hashes должен быть >= 1\n");
+        return -1;
+    }
+    if (*num_hashes > MAX_NUM_HASHES) {
+        fprintf(stderr, "[Error] num_hashes слишком большой (максимум %d)\n", MAX_NUM_HASHES);
+        fprintf(stderr, "  Установлено значение: %d\n", MAX_NUM_HASHES);
+        *num_hashes = MAX_NUM_HASHES;
+    }
+
+    // Проверка max_len
+    if (*max_len < 1) {
+        fprintf(stderr, "[Error] max_len должен быть >= 1\n");
+        return -1;
+    }
+    if (*max_len > MAX_DATA_LEN) {
+        fprintf(stderr, "[Error] max_len слишком большой (максимум %zu)\n", MAX_DATA_LEN);
+        *max_len = MAX_DATA_LEN;
+    }
+
+    // Проверка local_size
+    if (*local_size < MIN_LOCAL_SIZE) {
+        fprintf(stderr, "[Error] local_size должен быть >= %d\n", MIN_LOCAL_SIZE);
+        return -1;
+    }
+    if (*local_size > MAX_LOCAL_SIZE) {
+        fprintf(stderr, "[Warning] local_size слишком большой, уменьшено до %d\n", MAX_LOCAL_SIZE);
+        *local_size = MAX_LOCAL_SIZE;
+    }
+
+    // Округляем local_size до степени двойки
+    size_t power = 1;
+    while (power * 2 <= *local_size) power *= 2;
+    *local_size = power;
+
+    // Проверка на переполнение при вычислении размера памяти
+    size_t data_size = (size_t)*num_hashes * *max_len;
+    if (data_size / *max_len != *num_hashes) {
+        fprintf(stderr, "[Error] Переполнение при вычислении размера данных\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+// ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ
 // ============================================================
 
@@ -746,19 +854,20 @@ int main(int argc, char** argv) {
     uint32_t num_hashes = DEFAULT_NUM_HASHES;
     uint32_t max_len = DEFAULT_DATA_LEN;
     size_t local_size = DEFAULT_LOCAL_SIZE;
-    
-    if (argc >= 2) num_hashes = atoi(argv[1]);
-    if (argc >= 3) max_len = atoi(argv[2]);
-    if (argc >= 4) local_size = atoi(argv[3]);
-    
-    if (num_hashes < 1) num_hashes = 1;
-    if (max_len < 8) max_len = 8;
-    if (max_len > 1024) max_len = 1024;
-    
-    // Округляем local_size до степени двойки
-    size_t power = 1;
-    while (power * 2 <= local_size) power *= 2;
-    local_size = power;
+
+    // Парсинг аргументов
+    if (argc >= 2) num_hashes = (uint32_t)atol(argv[1]);
+    if (argc >= 3) max_len = (uint32_t)atol(argv[2]);
+    if (argc >= 4) local_size = (size_t)atol(argv[3]);
+
+    // Валидация входных данных
+    if (validate_inputs(&num_hashes, &max_len, &local_size) != 0) {
+        fprintf(stderr, "Использование: %s [num_hashes] [max_len] [local_size]\n", argv[0]);
+        fprintf(stderr, "  num_hashes: 1 - %d (по умолчанию %d)\n", MAX_NUM_HASHES, DEFAULT_NUM_HASHES);
+        fprintf(stderr, "  max_len: 1 - %zu (по умолчанию %d)\n", MAX_DATA_LEN, DEFAULT_DATA_LEN);
+        fprintf(stderr, "  local_size: 1 - %d (по умолчанию %d)\n", MAX_LOCAL_SIZE, DEFAULT_LOCAL_SIZE);
+        return 1;
+    }
     
     printf("============================================================\n");
     printf("  ЛАБОРАТОРНАЯ РАБОТА: Параллельное хэширование на GPU\n");

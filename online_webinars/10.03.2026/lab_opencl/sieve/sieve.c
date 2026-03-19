@@ -483,6 +483,53 @@ void print_primes(unsigned char* is_prime, unsigned long limit, int max_print) {
 }
 
 // ============================================================
+// ВАЛИДАЦИЯ ВХОДНЫХ ДАННЫХ
+// ============================================================
+
+#define MAX_SIEVE_N (1000UL * 1000UL * 1000UL)  // 1 миллиард
+#define MIN_SIEVE_N 10
+
+/**
+ * @brief Валидация входных параметров для решета
+ */
+int validate_sieve_inputs(unsigned long* limit, size_t* local_size) {
+    // Проверка limit
+    if (*limit < MIN_SIEVE_N) {
+        fprintf(stderr, "[Error] N должен быть >= %d\n", MIN_SIEVE_N);
+        return -1;
+    }
+    if (*limit > MAX_SIEVE_N) {
+        fprintf(stderr, "[Warning] N слишком большой (%lu), уменьшено до %lu\n", 
+                *limit, MAX_SIEVE_N);
+        *limit = MAX_SIEVE_N;
+    }
+
+    // Проверка размера памяти
+    size_t mem_size = (*limit + 1) * sizeof(unsigned char);
+    if (mem_size / sizeof(unsigned char) != (*limit + 1)) {
+        fprintf(stderr, "[Error] Переполнение при вычислении размера памяти\n");
+        return -1;
+    }
+
+    // Проверка local_size
+    if (*local_size < 1) {
+        fprintf(stderr, "[Error] local_size должен быть >= 1\n");
+        return -1;
+    }
+    if (*local_size > 4096) {
+        fprintf(stderr, "[Warning] local_size слишком большой, уменьшено до 4096\n");
+        *local_size = 4096;
+    }
+
+    // Округляем до степени двойки
+    size_t power = 1;
+    while (power * 2 <= *local_size) power *= 2;
+    *local_size = power;
+
+    return 0;
+}
+
+// ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ
 // ============================================================
 
@@ -491,19 +538,22 @@ unsigned char* g_is_prime = NULL;  // Глобальный массив
 int main(int argc, char** argv) {
     unsigned long limit = DEFAULT_N;
     size_t local_size = DEFAULT_LOCAL_SIZE;
-    
+
     // Разбор аргументов командной строки
     if (argc >= 2) {
-        limit = atol(argv[1]);
-        if (limit < 10) limit = 10;
+        limit = (unsigned long)atol(argv[1]);
     }
     if (argc >= 3) {
-        local_size = atoi(argv[2]);
-        if (local_size < 1) local_size = 1;
-        // Округляем до степени двойки
-        size_t power = 1;
-        while (power * 2 <= local_size) power *= 2;
-        local_size = power;
+        local_size = (size_t)atol(argv[2]);
+    }
+
+    // Валидация входных данных
+    if (validate_sieve_inputs(&limit, &local_size) != 0) {
+        fprintf(stderr, "Использование: %s [N] [local_size]\n", argv[0]);
+        fprintf(stderr, "  N: %d - %lu (по умолчанию %d)\n", 
+                MIN_SIEVE_N, MAX_SIEVE_N, DEFAULT_N);
+        fprintf(stderr, "  local_size: 1 - 4096 (по умолчанию %d)\n", DEFAULT_LOCAL_SIZE);
+        return 1;
     }
     
     printf("============================================================\n");

@@ -1,0 +1,35 @@
+# =============================================================================
+# GPU_LabConfig.cmake.in — CMake конфигурация для поиска пакета GPU_Lab
+# =============================================================================
+#
+# Использование в других проектах:
+#   find_package(GPU_Lab REQUIRED)
+#   target_link_libraries(my_target PRIVATE GPU_Lab::sieve GPU_Lab::hash)
+#
+# Переменные:
+#   GPU_Lab_FOUND       — пакет найден
+#   GPU_Lab_INCLUDE_DIRS — заголовочные файлы
+#   GPU_Lab_LIBRARIES   — библиотеки
+# =============================================================================
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Зависимости
+find_dependency(OpenCL)
+find_dependency(Threads)
+
+# Пути
+set(GPU_Lab_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@/gpu_lab")
+set(GPU_Lab_LIBRARIES OpenCL::OpenCL Threads::Threads)
+
+# Проверка существования файлов
+check_required_components(GPU_Lab)
+
+# Импорт целей (если доступны)
+if(NOT TARGET GPU_Lab::sieve)
+    include("${CMAKE_CURRENT_LIST_DIR}/GPU_LabTargets.cmake")
+endif()
+
+message(STATUS "GPU_Lab найден: ${GPU_Lab_INCLUDE_DIRS}")

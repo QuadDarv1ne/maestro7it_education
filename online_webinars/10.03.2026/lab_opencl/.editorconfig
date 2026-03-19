@@ -1,0 +1,96 @@
+# =============================================================================
+# .editorconfig — Согласованный стиль кода для всех редакторов
+# =============================================================================
+# Подробнее: https://editorconfig.org
+# 
+# Поддерживаемые редакторы:
+# - Visual Studio / VS Code
+# - CLion / IntelliJ IDEA
+# - Vim / Neovim
+# - Emacs
+# - Sublime Text
+# - Atom
+# =============================================================================
+
+root = true
+
+# Общие настройки для всех файлов
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# C/C++/H файлы
+[*.{c,h,cpp,hpp}]
+indent_size = 4
+indent_style = space
+trim_trailing_whitespace = true
+
+# OpenCL kernel файлы
+[*.cl]
+indent_size = 4
+indent_style = space
+trim_trailing_whitespace = true
+
+# Makefile
+[Makefile]
+indent_style = tab
+
+# Shell скрипты
+[*.sh]
+indent_size = 2
+indent_style = space
+
+# Python скрипты
+[*.py]
+indent_size = 4
+indent_style = space
+max_line_length = 100
+
+# Batch файлы (Windows)
+[*.bat]
+indent_size = 4
+indent_style = space
+end_of_line = crlf
+
+# CMake файлы
+[CMakeLists.txt, *.cmake]
+indent_size = 2
+indent_style = space
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 120
+
+# YAML
+[*.yml, *.yaml]
+indent_size = 2
+indent_style = space
+
+# JSON
+[*.json]
+indent_size = 2
+indent_style = space
+
+# Doxygen конфигурация
+[Doxyfile, *.dox]
+indent_size = 2
+indent_style = space
+
+# Git файлы
+[.gitignore, .gitattributes]
+indent_size = 4
+indent_style = space
+
+# Исключения
+[**/build/**]
+trim_trailing_whitespace = false
+insert_final_newline = false
+
+[**/vendor/**]
+trim_trailing_whitespace = false
+insert_final_newline = false
