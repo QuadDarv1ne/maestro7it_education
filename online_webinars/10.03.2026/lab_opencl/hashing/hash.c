@@ -60,6 +60,10 @@ char* strdup(const char* s) {
 // КОНСТАНТЫ И МАКРОСЫ
 // ============================================================
 
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
+
 #define MAX_SOURCE_SIZE (0x100000)
 #define DEFAULT_NUM_HASHES 100000
 #define DEFAULT_DATA_LEN 64
@@ -349,6 +353,7 @@ void print_device_info(cl_device_id device) {
 
 /**
  * @brief Чтение kernel source из файла с обработкой ошибок
+ * Примечание: используется общая функция cl_read_kernel_file() из cl_utils.c
  */
 char* read_kernel_source(const char* filename, size_t* size) {
     FILE* file = fopen(filename, "r");
@@ -371,7 +376,7 @@ char* read_kernel_source(const char* filename, size_t* size) {
         fclose(file);
         return NULL;
     }
-    
+
     source[*size] = '\0';
     fclose(file);
     return source;
@@ -469,7 +474,7 @@ char* cl_read_kernel_file(const char* filename, size_t* size);
 int cl_compile_kernel(OpenCLContext* ctx, const char* filename) {
     cl_int err;
     size_t source_size;
-    char* source = read_kernel_source(filename, &source_size);
+    char* source = cl_read_kernel_file(filename, &source_size);
 
     if (!source) {
         printf("[Info] Используем встроенный kernel\n");

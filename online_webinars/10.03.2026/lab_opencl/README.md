@@ -2,43 +2,44 @@
 
 ## Выполнил: Студент
 
-**Версия:** 1.1.0 (последнее обновление: 2026-03-19)
+**Версия:** 1.3.0 (последнее обновление: 2026-03-19)
 
 [![CI/CD](https://github.com/your-repo/gpu-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/your-repo/gpu-lab/actions)
 
 ---
 
-## Задачи
-
-1. **Решето Эратосфена** — нахождение всех простых чисел до N
-2. **Параллельное хэширование** — вычисление SHA-256 хэшей для множества данных
-
----
-
 ## 📋 Быстрый старт
 
-### Сборка через CMake (рекомендуется)
+### 🚀 Автоматическая сборка (рекомендуется)
+
+**Linux/macOS:**
+```bash
+chmod +x scripts/build_and_test.sh
+./scripts/build_and_test.sh          # Сборка + тесты
+./scripts/build_and_test.sh -c -b    # Очистка + сборка + бенчмарки
+./scripts/build_and_test.sh --debug  # Debug сборка
+```
+
+**Windows:**
+```cmd
+scripts\build_and_test.bat           # Сборка + тесты
+scripts\build_and_test.bat -c -b     # Очистка + сборка + бенчмарки
+scripts\build_and_test.bat --debug   # Debug сборка
+```
+
+### 🔧 Ручная сборка через CMake
 
 ```bash
 mkdir build && cd build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build .
 
 # Запуск тестов
 ctest --verbose
-```
 
-### Сборка через Makefile
-
-```bash
-# Хэширование
-cd hashing && make && ./hash
-
-# Решето
-cd sieve && make && ./sieve
-
-# Тесты
-cd tests && make run
+# Запуск программ
+./sieve 10000000 256
+./hash 100000 64 256
 ```
 
 ## Структура проекта
@@ -52,10 +53,13 @@ lab_opencl/
 ├── sieve/                    # Задача 1: Решето Эратосфена
 │   ├── sieve.c              # Основной код (CPU + GPU)
 │   ├── sieve.cl             # OpenCL kernels
+│   ├── sieve_cpu.c          # CPU версия для тестов
 │   └── Makefile             # Сборка
 ├── hashing/                  # Задача 2: Параллельное хэширование
 │   ├── hash.c               # Основной код (CPU + GPU)
-│   ├── hash.cl              # OpenCL kernels (SHA-256, оптимизированная версия)
+│   ├── hash.cl              # OpenCL kernels (SHA-256)
+│   ├── sha256.c             # CPU реализация SHA-256
+│   ├── sha256.h             # Заголовок SHA-256
 │   └── Makefile             # Сборка
 ├── tests/                    # Unit-тесты и интеграционные тесты
 │   ├── test_sha256.c        # Unit-тесты SHA-256
@@ -64,13 +68,25 @@ lab_opencl/
 │   ├── test_sieve_correctness.c   # CPU vs GPU (sieve)
 │   ├── test_common.h        # Инфраструктура тестирования
 │   └── Makefile
+├── scripts/                  # Скрипты автоматизации
+│   ├── build_and_test.sh    # Автосборка и тесты (Linux/macOS)
+│   ├── build_and_test.bat   # Автосборка и тесты (Windows)
+│   ├── benchmark.sh         # Бенчмарки
+│   ├── setup_linux.sh       # Установка зависимостей
+│   └── clean.py             # Очистка артефактов
 ├── .github/workflows/        # CI/CD конфигурация
 │   └── ci.yml               # GitHub Actions workflow
 ├── CMakeLists.txt            # Кроссплатформенная сборка
 ├── CHANGELOG.md              # История изменений
 ├── Doxyfile                  # Конфигурация Doxygen
+├── Dockerfile                # Docker образ для сборки
 └── README.md                 # Этот файл
 ```
+
+## Задачи
+
+1. **Решето Эратосфена** — нахождение всех простых чисел до N
+2. **Параллельное хэширование** — вычисление SHA-256 хэшей для множества данных
 
 ---
 
@@ -287,6 +303,31 @@ make macos
 
 ---
 
+## 🆕 Что нового в версии 1.3.0
+
+### Улучшения сборки
+- **CMake 3.16+** — обновлённая версия CMake с новыми возможностями
+- **Расширенные опции компиляции** — дополнительные предупреждения для gcc/clang
+- **Покрытие кода** — опция `ENABLE_COVERAGE` для анализа тестирования
+- **Генерация документации** — цель `docs` для Doxygen (при наличии Doxygen)
+- **Очистка сборки** — цель `clean_all` для полной очистки артефактов
+
+### Скрипты автоматизации
+- **build_and_test.sh/bat** — кроссплатформенные скрипты для сборки и тестов
+- **Автоматическое определение ядер** — параллельная сборка с оптимальным числом потоков
+- **Цветной вывод** — наглядное отображение статуса операций
+
+### Улучшения обработки ошибок
+- **cl_get_error_description()** — расширенное описание ошибок OpenCL
+- **Дополнительные ошибки** — поддержка CL_INVALID_MIP_LEVEL, CL_INVALID_GL_OBJECT
+
+### Обновлённая документация
+- **Актуализированный README** — быстрый старт с автосборкой
+- **Структура проекта** — полное описание всех файлов
+- **Примеры запуска** — подробные инструкции для всех платформ
+
+---
+
 ## 🆕 Что нового в версии 1.1.0
 
 ### Общие модули
@@ -330,15 +371,18 @@ make macos
 
 ## 📊 Сравнение версий
 
-| Функция | Версия 1.0 | Версия 1.1 |
-|---------|------------|------------|
-| Сборка | Makefile | Makefile + CMake |
-| Тесты | 2 unit-теста | 6 тестов (unit + integration) |
-| CI/CD | ❌ | ✅ GitHub Actions |
-| Общие модули | ❌ | ✅ include/ + src/ |
-| Оптимизированные kernel'ы | ❌ | ✅ sha256_hash_optimized |
-| Обработка ошибок | Базовая | Расширенная (macro) |
-| CHANGELOG | ❌ | ✅ |
+| Функция | Версия 1.0 | Версия 1.1 | Версия 1.3 |
+|---------|------------|------------|------------|
+| Сборка | Makefile | Makefile + CMake | CMake 3.16+ |
+| Тесты | 2 unit-теста | 6 тестов | 6 тестов + coverage |
+| CI/CD | ❌ | ✅ GitHub Actions | ✅ GitHub Actions |
+| Общие модули | ❌ | ✅ include/ + src/ | ✅ Улучшенные |
+| Оптимизированные kernel'ы | ❌ | ✅ sha256_hash_optimized | ✅ |
+| Обработка ошибок | Базовая | Расширенная (macro) | ✅ + cl_get_error_description |
+| Скрипты автоматизации | ❌ | ❌ | ✅ build_and_test |
+| Документация | ❌ | ✅ CHANGELOG | ✅ Doxygen + README |
+| Docker | ❌ | ❌ | ✅ Dockerfile |
+| Покрытие кода | ❌ | ❌ | ✅ Опционально |
 
 ---
 
@@ -372,3 +416,17 @@ make macos
 1. OpenCL Specification: https://www.khronos.org/opencl/
 2. FIPS 180-4: Secure Hash Standard (SHA-256)
 3. Sieve of Eratosthenes: https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes
+4. Docker Documentation: https://docs.docker.com/
+5. CMake Documentation: https://cmake.org/cmake/help/latest/
+
+---
+
+## 📞 Контакты
+
+**Вопросы и предложения:** Создайте issue в репозитории проекта
+
+---
+
+## 📝 Лицензия
+
+Проект распространяется в образовательных целях.

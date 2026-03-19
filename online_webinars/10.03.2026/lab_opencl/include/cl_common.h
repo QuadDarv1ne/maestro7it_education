@@ -144,6 +144,14 @@ typedef struct {
  */
 const char* cl_get_error_string(cl_int err);
 
+/**
+ * @brief Получение расширенного описания ошибки с кодом
+ * @param err Код ошибки
+ * @param buffer Буфер для результата
+ * @param buffer_size Размер буфера
+ */
+void cl_get_error_description(cl_int err, char* buffer, size_t buffer_size);
+
 // ============================================================
 // ФУНКЦИИ УПРАВЛЕНИЯ КОНТЕКСТОМ
 // ============================================================
