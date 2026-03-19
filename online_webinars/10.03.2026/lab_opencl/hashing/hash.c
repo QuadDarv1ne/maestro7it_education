@@ -686,6 +686,7 @@ int hash_gpu(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
     clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
     clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
     clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
+    clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes);
     
     // Выполнение kernel
     size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
@@ -740,13 +741,13 @@ const char* get_embedded_kernel() {
     "#define EP1(x) (ROTR(x,6)^ROTR(x,11)^ROTR(x,25))\n"
     "#define SIG0(x) (ROTR(x,7)^ROTR(x,18)^((x)>>3))\n"
     "#define SIG1(x) (ROTR(x,17)^ROTR(x,19)^((x)>>10))\n"
-    "__kernel void sha256_hash(__global const uchar* input,__global const uint* input_lens,__global uchar* output,const uint max_len){\n"
-    "uint gid=get_global_id(0);uint offset=gid*max_len;uint len=input_lens[gid];uint w[64];uint h[8];for(int i=0;i<8;i++)h[i]=SHA256_H[i];\n"
-    "uint num_blocks=(len+9+63)/64;if(num_blocks<1)num_blocks=1;\n"
+    "__kernel void sha256_hash(__global const uchar* input,__global const uint* input_lens,__global uchar* output,const uint max_len,const uint num_hashes){\n"
+    "uint gid=get_global_id(0);if(gid>=num_hashes)return;uint offset=gid*max_len;uint len=input_lens[gid];uint w[64];uint h[8];for(int i=0;i<8;i++)h[i]=SHA256_H[i];\n"
+    "uint total_msg_len=len+9;uint num_blocks=(total_msg_len+63)/64;if(num_blocks<1)num_blocks=1;\n"
     "for(uint block=0;block<num_blocks;block++){\n"
     "for(int i=0;i<64;i++)w[i]=0;\n"
     "uint bytes_in_block=0;for(uint i=0;i<64;i++){uint pos=block*64+i;if(pos<len){uint wi=i>>2;uint bi=3-(i&3);w[wi]|=((uint)input[offset+pos])<<(bi<<3);bytes_in_block++;}}\n"
-    "if(bytes_in_block<64){uint wi=bytes_in_block>>2;uint bi=3-(bytes_in_block&3);w[wi]|=((uint)0x80)<<(bi<<3);}\n"
+    "if(block==num_blocks-1&&bytes_in_block<56){uint wi=bytes_in_block>>2;uint bi=3-(bytes_in_block&3);w[wi]|=((uint)0x80)<<(bi<<3);}\n"
     "if(block==num_blocks-1){w[14]=(len>>29)&0x07;w[15]=(len<<3)&0xFFFFFFFF;}\n"
     "for(int i=16;i<64;i++)w[i]=SIG1(w[i-2])+w[i-7]+SIG0(w[i-15])+w[i-16];\n"
     "uint a=h[0],b=h[1],c=h[2],d=h[3],e=h[4],f=h[5],g=h[6],hv=h[7];\n"

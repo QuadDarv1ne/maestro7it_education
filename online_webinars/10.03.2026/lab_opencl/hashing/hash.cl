@@ -55,22 +55,22 @@ __kernel void sha256_hash(
     __global const uchar* input,
     __global const uint* input_lens,
     __global uchar* output,
-    const uint max_len
+    const uint max_len,
+    const uint num_hashes
 )
 {
     uint gid = get_global_id(0);
+    if (gid >= num_hashes) return;
+    
     uint offset = gid * max_len;
     uint len = input_lens[gid];
-
+    
     uint w[64];
     uint h[8];
     for (int i = 0; i < 8; i++) h[i] = SHA256_H[i];
-
+    
     // Количество 512-битных (64-байтных) блоков
-    // Нужно: len байт данных + 1 байт 0x80 + 8 байт длина = len + 9 байт
-    // Округляем до 64
-    uint total_msg_len = len + 1 + 8;  // данные + 0x80 + длина
-    uint num_blocks = (total_msg_len + 63) / 64;
+    uint num_blocks = (len + 9 + 63) / 64;
     if (num_blocks < 1) num_blocks = 1;
 
     for (uint block = 0; block < num_blocks; block++) {
