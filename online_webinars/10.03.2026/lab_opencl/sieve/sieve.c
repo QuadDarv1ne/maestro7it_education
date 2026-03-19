@@ -64,6 +64,68 @@ typedef enum {
         exit(1); \
     }
 
+// Расширенная проверка ошибок с информацией об устройстве
+#define CHECK_CL_ERROR_EX(err, msg) \
+    if (err != CL_SUCCESS) { \
+        fprintf(stderr, "OpenCL Error %d: %s\n", err, msg); \
+        fprintf(stderr, "  Platform: %s\n", get_platform_name()); \
+        fprintf(stderr, "  Device: %s\n", get_device_name(device)); \
+        exit(1); \
+    }
+
+// Глобальные переменные для расширенной диагностики
+static cl_platform_id g_platform;
+static cl_device_id g_device;
+
+static const char* get_cl_error_string(cl_int err) {
+    switch (err) {
+        case CL_SUCCESS: return "CL_SUCCESS";
+        case CL_DEVICE_NOT_FOUND: return "CL_DEVICE_NOT_FOUND";
+        case CL_DEVICE_NOT_AVAILABLE: return "CL_DEVICE_NOT_AVAILABLE";
+        case CL_COMPILER_NOT_AVAILABLE: return "CL_COMPILER_NOT_AVAILABLE";
+        case CL_MEM_OBJECT_ALLOCATION_FAILURE: return "CL_MEM_OBJECT_ALLOCATION_FAILURE";
+        case CL_OUT_OF_RESOURCES: return "CL_OUT_OF_RESOURCES";
+        case CL_OUT_OF_HOST_MEMORY: return "CL_OUT_OF_HOST_MEMORY";
+        case CL_PROFILING_INFO_NOT_AVAILABLE: return "CL_PROFILING_INFO_NOT_AVAILABLE";
+        case CL_MEM_COPY_OVERLAP: return "CL_MEM_COPY_OVERLAP";
+        case CL_IMAGE_FORMAT_MISMATCH: return "CL_IMAGE_FORMAT_MISMATCH";
+        case CL_IMAGE_FORMAT_NOT_SUPPORTED: return "CL_IMAGE_FORMAT_NOT_SUPPORTED";
+        case CL_BUILD_PROGRAM_FAILURE: return "CL_BUILD_PROGRAM_FAILURE";
+        case CL_MAP_FAILURE: return "CL_MAP_FAILURE";
+        case CL_INVALID_VALUE: return "CL_INVALID_VALUE";
+        case CL_INVALID_DEVICE_TYPE: return "CL_INVALID_DEVICE_TYPE";
+        case CL_INVALID_PLATFORM: return "CL_INVALID_PLATFORM";
+        case CL_INVALID_DEVICE: return "CL_INVALID_DEVICE";
+        case CL_INVALID_CONTEXT: return "CL_INVALID_CONTEXT";
+        case CL_INVALID_QUEUE_PROPERTIES: return "CL_INVALID_QUEUE_PROPERTIES";
+        case CL_INVALID_COMMAND_QUEUE: return "CL_INVALID_COMMAND_QUEUE";
+        case CL_INVALID_HOST_PTR: return "CL_INVALID_HOST_PTR";
+        case CL_INVALID_MEM_OBJECT: return "CL_INVALID_MEM_OBJECT";
+        case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR: return "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR";
+        case CL_INVALID_IMAGE_SIZE: return "CL_INVALID_IMAGE_SIZE";
+        case CL_INVALID_SAMPLER: return "CL_INVALID_SAMPLER";
+        case CL_INVALID_BINARY: return "CL_INVALID_BINARY";
+        case CL_INVALID_BUILD_OPTIONS: return "CL_INVALID_BUILD_OPTIONS";
+        case CL_INVALID_PROGRAM: return "CL_INVALID_PROGRAM";
+        case CL_INVALID_PROGRAM_EXECUTABLE: return "CL_INVALID_PROGRAM_EXECUTABLE";
+        case CL_INVALID_KERNEL_NAME: return "CL_INVALID_KERNEL_NAME";
+        case CL_INVALID_KERNEL: return "CL_INVALID_KERNEL";
+        case CL_INVALID_ARG_INDEX: return "CL_INVALID_ARG_INDEX";
+        case CL_INVALID_ARG_VALUE: return "CL_INVALID_ARG_VALUE";
+        case CL_INVALID_WORK_DIMENSION: return "CL_INVALID_WORK_DIMENSION";
+        case CL_INVALID_WORK_GROUP_SIZE: return "CL_INVALID_WORK_GROUP_SIZE";
+        case CL_INVALID_WORK_ITEM_SIZE: return "CL_INVALID_WORK_ITEM_SIZE";
+        case CL_INVALID_GLOBAL_OFFSET: return "CL_INVALID_GLOBAL_OFFSET";
+        case CL_INVALID_EVENT_WAIT_LIST: return "CL_INVALID_EVENT_WAIT_LIST";
+        case CL_INVALID_EVENT: return "CL_INVALID_EVENT";
+        case CL_INVALID_OPERATION: return "CL_INVALID_OPERATION";
+        case CL_INVALID_GL_OBJECT: return "CL_INVALID_GL_OBJECT";
+        case CL_INVALID_BUFFER_SIZE: return "CL_INVALID_BUFFER_SIZE";
+        case CL_INVALID_MIP_LEVEL: return "CL_INVALID_MIP_LEVEL";
+        default: return "Unknown OpenCL error";
+    }
+}
+
 // ============================================================
 // CPU ВЕРСИЯ: Классическое решето Эратосфена
 // ============================================================
@@ -419,7 +481,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // 4. Создание буферов
     // --------------------------------------------------------
     size_t buf_size = ((limit + 1 + 63) / 64) * 64;  // Выравнивание по 64 байта
-    if (buf_size < 256) buf_size = 256;  // Минимальный размер буфера
+    if (buf_size < 256) buf_size = 256;
     unsigned char* h_buf = calloc(buf_size, 1);
     d_is_prime = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, buf_size, h_buf, &err);
     free(h_buf);
@@ -469,17 +531,14 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         clSetKernelArg(kernel_mark, 1, sizeof(cl_uint), &limit);
 
         // Буфер для кэширования состояния простых чисел (читаем блоками)
-        unsigned char* h_primes = (unsigned char*)calloc(limit + 1, 1);
-        const unsigned long BATCH_SIZE = 32768;  // Увеличенный размер блока
+        unsigned char* h_primes = (unsigned char*)calloc(buf_size, 1);
+        const unsigned long BATCH_SIZE = 32768;
         unsigned long cached_until = 0;
 
         // Первоначальная загрузка
-        if (limit + 1 > 0) {
-            clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, 0, 
-                               (limit + 1 > BATCH_SIZE ? BATCH_SIZE : limit + 1), 
-                               h_primes, 0, NULL, NULL);
-            cached_until = (limit + 1 > BATCH_SIZE ? BATCH_SIZE : limit + 1);
-        }
+        size_t first_read = (limit + 1 > BATCH_SIZE) ? BATCH_SIZE : limit + 1;
+        clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, 0, first_read, h_primes, 0, NULL, NULL);
+        cached_until = first_read;
 
         for (unsigned long p = 2; p <= sqrt_limit; p++) {
             // Читаем новый блок если p выходит за кэш
@@ -488,7 +547,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
                 if (cached_until + read_size > limit + 1) read_size = limit + 1 - cached_until;
                 
                 clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE,
-                                   cached_until * sizeof(unsigned char),
+                                   cached_until,
                                    read_size, h_primes + cached_until,
                                    0, NULL, NULL);
                 cached_until += read_size;
@@ -533,20 +592,18 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     // --------------------------------------------------------
     clFinish(queue);
     
-    unsigned int h_count = 0;
     unsigned char* h_is_prime = (unsigned char*)malloc(buf_size);
     memset(h_is_prime, 0, buf_size);
     err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0, (limit + 1), h_is_prime, 0, NULL, &read_event);
     CHECK_CL_ERROR(err, "clEnqueueReadBuffer init");
     clFinish(queue);
 
-    unsigned int count = 0;
+    unsigned int h_count = 0;
     for (unsigned long i = 2; i <= limit; i++) {
-        if (h_is_prime[i]) count++;
+        if (h_is_prime[i]) h_count++;
     }
-    h_count = count;
+    h_count = h_count;
     
-    // Копируем результат обратно в переданный буфер
     memcpy(is_prime, h_is_prime, limit + 1);
     
     free(h_is_prime);
