@@ -42,11 +42,32 @@ option(BUILD_SHARED_LIBS "Построить общие библиотеки" OF
 # =============================================================================
 
 # Поиск OpenCL
-find_package(OpenCL REQUIRED)
+# Для MinGW/MSYS2 используем find_package с указанием имён библиотек
+if(WIN32 AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    # MinGW: ищем libOpenCL.dll.a
+    find_library(OpenCL_LIBRARY
+        NAMES OpenCL libOpenCL.dll.a
+        PATHS
+            C:/msys64/ucrt64/lib
+            C:/msys64/mingw64/lib
+            $ENV{OCL_ROOT}/lib
+    )
+    find_path(OpenCL_INCLUDE_DIR
+        NAMES CL/cl.h
+        PATHS
+            C:/msys64/ucrt64/include
+            C:/msys64/mingw64/include
+            $ENV{OCL_ROOT}/include
+    )
+    set(OpenCL_LIBRARIES ${OpenCL_LIBRARY})
+    set(OpenCL_INCLUDE_DIRS ${OpenCL_INCLUDE_DIR})
+else()
+    find_package(OpenCL REQUIRED)
+endif()
 
-if(OpenCL_FOUND)
-    message(STATUS "OpenCL найден: ${OpenCL_INCLUDE_DIRS}")
-    message(STATUS "OpenCL библиотеки: ${OpenCL_LIBRARIES}")
+if(OpenCL_LIBRARY AND OpenCL_INCLUDE_DIR)
+    message(STATUS "OpenCL найден: ${OpenCL_INCLUDE_DIR}")
+    message(STATUS "OpenCL библиотеки: ${OpenCL_LIBRARY}")
 else()
     message(FATAL_ERROR "OpenCL не найден! Установите OpenCL SDK или драйверы GPU.")
 endif()
