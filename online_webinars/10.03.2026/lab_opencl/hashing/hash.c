@@ -891,10 +891,17 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
         return -1;
     }
 
-    // Создание буферов
+    // Создание буферов с проверкой размеров
     size_t data_size = (size_t)num_hashes * max_len * sizeof(uint8_t);
     size_t lens_size = (size_t)num_hashes * sizeof(uint32_t);
     size_t hashes_size = (size_t)num_hashes * 32 * sizeof(uint8_t);
+
+    // Проверка на переполнение
+    if (data_size / max_len / sizeof(uint8_t) != num_hashes) {
+        fprintf(stderr, "Ошибка: Слишком большой размер данных (переполнение)\n");
+        cl_cleanup(&ctx);
+        return -1;
+    }
 
     d_data = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY, data_size, NULL, &err);
     if (err != CL_SUCCESS) {
@@ -934,12 +941,41 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
         goto cleanup;
     }
 
-    // Установка аргументов kernel (5 аргументов для sha256_hash_optimized)
-    clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
-    clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
-    clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
-    clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
-    clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes);  // 5-й аргумент
+    // Установка аргументов kernel с проверкой ошибок
+    err = clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка установки аргумента kernel 0 (data): %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    
+    err = clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка установки аргумента kernel 1 (lens): %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    
+    err = clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка установки аргумента kernel 2 (hashes): %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    
+    err = clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка установки аргумента kernel 3 (max_len): %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+    
+    err = clSetKernelArg(ctx.kernel_sha256, 4, sizeof(cl_uint), &num_hashes);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка установки аргумента kernel 4 (num_hashes): %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
 
     // Выполнение kernel после завершения записи данных
     size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
@@ -948,7 +984,7 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
                                   &global_size, &local_size, 2, write_events, &event);
     clReleaseEvent(write_events[0]);
     clReleaseEvent(write_events[1]);
-    
+
     if (err != CL_SUCCESS) {
         fprintf(stderr, "Ошибка выполнения kernel: %s\n", cl_error_string(err));
         result = -1;
@@ -971,7 +1007,7 @@ int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashe
         result = -1;
         goto cleanup;
     }
-    
+
     clWaitForEvents(1, &read_event);
     clReleaseEvent(read_event);
 
