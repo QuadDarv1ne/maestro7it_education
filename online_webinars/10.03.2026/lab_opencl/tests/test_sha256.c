@@ -22,14 +22,6 @@ static int hash_equal(const uint8_t* a, const uint8_t* b) {
     return 1;
 }
 
-/* Вспомогательная функция для вывода хэша */
-static void print_hash(const uint8_t* hash) {
-    for (int i = 0; i < 32; i++) {
-        printf("%02x", hash[i]);
-    }
-    printf("\n");
-}
-
 /* Тест: SHA-256 пустой строки */
 void test_sha256_empty(void) {
     TEST_BEGIN("SHA-256 empty string");
