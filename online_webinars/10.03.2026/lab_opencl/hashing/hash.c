@@ -26,6 +26,11 @@
 #include <time.h>
 #include <stdint.h>
 
+// Определение версии OpenCL перед включением заголовков
+#ifndef CL_TARGET_OPENCL_VERSION
+#define CL_TARGET_OPENCL_VERSION 300
+#endif
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -41,7 +46,6 @@
 /* strdup для систем, где его нет */
 #ifndef HAVE_STRDUP
 char* strdup(const char* s) {
-    if (s == NULL) return NULL;
     size_t len = strlen(s) + 1;
     char* copy = (char*)malloc(len);
     if (copy != NULL) memcpy(copy, s, len);
@@ -536,8 +540,12 @@ int cl_init(OpenCLContext* ctx, int print_info) {
         return -1;
     }
 
-    // Создание очереди команд
-    ctx->queue = clCreateCommandQueue(ctx->context, ctx->device, CL_QUEUE_PROFILING_ENABLE, &err);
+    // Создание очереди команд с профилированием
+    // Для OpenCL 3.0 используем новый API clCreateCommandQueueWithProperties
+    cl_queue_properties queue_props[] = {
+        CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    ctx->queue = clCreateCommandQueueWithProperties(ctx->context, ctx->device, queue_props, &err);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "[Error] Не удалось создать очередь команд: %s\n", cl_error_string(err));
         cl_cleanup(ctx);

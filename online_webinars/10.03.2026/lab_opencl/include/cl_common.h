@@ -17,6 +17,11 @@
 #include <string.h>
 #include <stdint.h>
 
+// Определение версии OpenCL перед включением заголовков
+#ifndef CL_TARGET_OPENCL_VERSION
+#define CL_TARGET_OPENCL_VERSION 300
+#endif
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else

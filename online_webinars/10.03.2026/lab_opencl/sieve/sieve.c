@@ -33,6 +33,11 @@
 #include <limits.h>
 #endif
 
+// Определение версии OpenCL перед включением заголовков
+#ifndef CL_TARGET_OPENCL_VERSION
+#define CL_TARGET_OPENCL_VERSION 300
+#endif
+
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
 #else
@@ -407,14 +412,13 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         }
     }
 
-    clFinish(queue);
-    free(h_primes);
-    
     // --------------------------------------------------------
     // 7. Подсчёт простых чисел (на CPU для совместимости)
     // --------------------------------------------------------
     clFinish(queue);
-    
+    free(h_primes);
+    h_primes = NULL;  // Предотвращаем использование после free
+
     unsigned int h_count = 0;
     unsigned char* h_is_prime = (unsigned char*)malloc(buf_size);
     if (!h_is_prime) {
@@ -510,17 +514,13 @@ const char* get_embedded_kernel() {
  */
 void verify_result(unsigned long count, unsigned long limit) {
     printf("\nПроверка результата:\n");
-    
+
     // Теоретическое количество простых чисел (приближённо)
     double approx = (double)limit / log((double)limit);
     printf("  Найдено простых чисел: %lu\n", count);
     printf("  Приближённое ожидаемое (n/ln(n)): %.0f\n", approx);
-    printf("  Отклонение: %.2f%%\n", 
+    printf("  Отклонение: %.2f%%\n",
            fabs((double)count - approx) / approx * 100);
-    
-    // Вывод первых 20 простых чисел
-    printf("  Первые 20 простых чисел: ");
-    extern unsigned char* g_is_prime;  // Глобальный массив для вывода
 }
 
 /**

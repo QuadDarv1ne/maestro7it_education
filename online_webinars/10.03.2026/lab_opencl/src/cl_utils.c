@@ -395,23 +395,29 @@ static FILE* open_kernel_file(const char* filename) {
     // 1. Пробуем открыть в текущей рабочей директории
     f = fopen(filename, "r");
     if (f) return f;
-    
+
 #ifdef _WIN32
     // 2. Пробуем открыть в директории исполняемого файла
     char exe_path[MAX_PATH];
-    char kernel_path[MAX_PATH];
-    
+    char kernel_path[MAX_PATH * 2];  // Увеличенный буфер для полного пути
+
     if (GetModuleFileNameA(NULL, exe_path, MAX_PATH) > 0) {
         // Получаем директорию exe файла
         PathRemoveFileSpecA(exe_path);
-        snprintf(kernel_path, MAX_PATH, "%s\\%s", exe_path, filename);
-        f = fopen(kernel_path, "r");
-        if (f) return f;
         
+        // Копируем путь с проверкой на переполнение
+        int written = snprintf(kernel_path, sizeof(kernel_path), "%s\\%s", exe_path, filename);
+        if (written > 0 && (size_t)written < sizeof(kernel_path)) {
+            f = fopen(kernel_path, "r");
+            if (f) return f;
+        }
+
         // 3. Для CMake сборки: kernel может быть в share/gpu_lab/kernels
-        snprintf(kernel_path, MAX_PATH, "%s\\..\\share\\gpu_lab\\kernels\\%s", exe_path, filename);
-        f = fopen(kernel_path, "r");
-        if (f) return f;
+        written = snprintf(kernel_path, sizeof(kernel_path), "%s\\..\\share\\gpu_lab\\kernels\\%s", exe_path, filename);
+        if (written > 0 && (size_t)written < sizeof(kernel_path)) {
+            f = fopen(kernel_path, "r");
+            if (f) return f;
+        }
     }
 #else
     // 3. Для Linux/Mac: ищем в стандартных путях
@@ -422,15 +428,17 @@ static FILE* open_kernel_file(const char* filename) {
         "/usr/share/gpu_lab/kernels/",
         NULL
     };
-    
-    char kernel_path[512];
+
+    char kernel_path[1024];  // Увеличенный буфер
     for (int i = 0; std_paths[i] != NULL; i++) {
-        snprintf(kernel_path, sizeof(kernel_path), "%s%s", std_paths[i], filename);
-        f = fopen(kernel_path, "r");
-        if (f) return f;
+        int written = snprintf(kernel_path, sizeof(kernel_path), "%s%s", std_paths[i], filename);
+        if (written > 0 && (size_t)written < sizeof(kernel_path)) {
+            f = fopen(kernel_path, "r");
+            if (f) return f;
+        }
     }
 #endif
-    
+
     return NULL;
 }
 
