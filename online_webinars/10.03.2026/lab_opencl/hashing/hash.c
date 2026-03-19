@@ -556,8 +556,9 @@ int cl_init(OpenCLContext* ctx, int print_info) {
     return 0;
 }
 
-// Forward declaration
+// Forward declarations
 const char* get_embedded_kernel(void);
+char* cl_read_kernel_file(const char* filename, size_t* size);
 
 /**
  * @brief Компиляция kernel из файла или встроенного источника
@@ -609,6 +610,64 @@ int cl_compile_kernel(OpenCLContext* ctx, const char* filename) {
     ctx->kernel_sha256 = clCreateKernel(ctx->program, "sha256_hash", &err);
     if (err != CL_SUCCESS) {
         fprintf(stderr, "[Error] Не удалось создать kernel sha256_hash: %s\n", cl_error_string(err));
+        SAFE_FREE(source);
+        return -1;
+    }
+
+    SAFE_FREE(source);
+    return 0;
+}
+
+/**
+ * @brief Компиляция kernel с выбором версии (обычная или оптимизированная)
+ */
+int cl_compile_kernel_opt(OpenCLContext* ctx, const char* filename, const char* kernel_name) {
+    cl_int err;
+    size_t source_size;
+    char* source = cl_read_kernel_file(filename, &source_size);
+
+    if (!source) {
+        printf("[Info] Используем встроенный kernel\n");
+        const char* embedded = get_embedded_kernel();
+        source = strdup(embedded);
+        if (!source) {
+            fprintf(stderr, "[Error] Не удалось выделить память для встроенного kernel\n");
+            return -1;
+        }
+        source_size = strlen(source);
+    } else {
+        printf("[Info] Используем kernel из файла %s\n", filename);
+    }
+
+    ctx->program = clCreateProgramWithSource(ctx->context, 1, (const char**)&source, &source_size, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "[Error] Не удалось создать программу: %s\n", cl_error_string(err));
+        SAFE_FREE(source);
+        return -1;
+    }
+
+    // Компиляция
+    err = clBuildProgram(ctx->program, 1, &ctx->device, "-cl-std=CL1.2", NULL, NULL);
+    if (err != CL_SUCCESS) {
+        size_t log_size;
+        clGetProgramBuildInfo(ctx->program, ctx->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+        char* build_log = (char*)malloc(log_size + 1);
+        if (build_log) {
+            clGetProgramBuildInfo(ctx->program, ctx->device, CL_PROGRAM_BUILD_LOG, log_size, build_log, NULL);
+            build_log[log_size] = '\0';
+            fprintf(stderr, "[Error] Ошибка компиляции kernel:\n%s\n", build_log);
+            SAFE_FREE(build_log);
+        } else {
+            fprintf(stderr, "[Error] Ошибка компиляции kernel (не удалось получить лог)\n");
+        }
+        SAFE_FREE(source);
+        return -1;
+    }
+
+    // Создание kernel'а с указанным именем
+    ctx->kernel_sha256 = clCreateKernel(ctx->program, kernel_name, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "[Error] Не удалось создать kernel %s: %s\n", kernel_name, cl_error_string(err));
         SAFE_FREE(source);
         return -1;
     }
@@ -888,8 +947,124 @@ void compare_hashes(const uint8_t* cpu, const uint8_t* gpu, uint32_t num_hashes)
         }
         if (match) matches++;
     }
-    printf("  Совпадений: %u / %u (%.1f%%)\n", matches, num_hashes, 
+    printf("  Совпадений: %u / %u (%.1f%%)\n", matches, num_hashes,
            100.0 * matches / num_hashes);
+}
+
+// ============================================================
+// БЕНЧМАРК: СРАВНЕНИЕ KERNEL'ЕЙ
+// ============================================================
+
+/**
+ * @brief Бенчмарк для сравнения обычного и оптимизированного kernel
+ */
+int hash_gpu_optimized(const uint8_t* data, const uint32_t* lens, uint8_t* hashes,
+             uint32_t num_hashes, uint32_t max_len, size_t local_size,
+             int print_info, double* kernel_time_ms) {
+    cl_int err;
+    OpenCLContext ctx;
+    cl_mem d_data = NULL, d_lens = NULL, d_hashes = NULL;
+    cl_event event = NULL;
+    int result = 0;
+
+    // Инициализация
+    if (cl_init(&ctx, print_info) != 0) {
+        return -1;
+    }
+
+    // Компиляция оптимизированного kernel
+    if (cl_compile_kernel_opt(&ctx, "hash.cl", "sha256_hash_optimized") != 0) {
+        cl_cleanup(&ctx);
+        return -1;
+    }
+
+    // Создание буферов
+    size_t data_size = (size_t)num_hashes * max_len * sizeof(uint8_t);
+    size_t lens_size = (size_t)num_hashes * sizeof(uint32_t);
+    size_t hashes_size = (size_t)num_hashes * 32 * sizeof(uint8_t);
+    size_t local_k_size = 64 * sizeof(uint32_t);  // 256 байт для констант K
+
+    d_data = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY, data_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания буфера data: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    d_lens = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY, lens_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания буфера lens: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    d_hashes = clCreateBuffer(ctx.context, CL_MEM_WRITE_ONLY, hashes_size, NULL, &err);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка создания буфера hashes: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    // Локальная память для констант K (передаётся как аргумент kernel)
+    // Выделяется автоматически при запуске kernel через clSetKernelArg с CL_LOCAL
+
+    // Копирование данных на GPU
+    err = clEnqueueWriteBuffer(ctx.queue, d_data, CL_TRUE, 0, data_size, data, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка записи данных: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    err = clEnqueueWriteBuffer(ctx.queue, d_lens, CL_TRUE, 0, lens_size, lens, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка записи длин: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    // Установка аргументов kernel (5 аргументов для sha256_hash_optimized)
+    clSetKernelArg(ctx.kernel_sha256, 0, sizeof(cl_mem), &d_data);
+    clSetKernelArg(ctx.kernel_sha256, 1, sizeof(cl_mem), &d_lens);
+    clSetKernelArg(ctx.kernel_sha256, 2, sizeof(cl_mem), &d_hashes);
+    clSetKernelArg(ctx.kernel_sha256, 3, sizeof(cl_uint), &max_len);
+    clSetKernelArg(ctx.kernel_sha256, 4, local_k_size, NULL);  // Локальная память
+
+    // Выполнение kernel
+    size_t global_size = ((num_hashes + local_size - 1) / local_size) * local_size;
+
+    err = clEnqueueNDRangeKernel(ctx.queue, ctx.kernel_sha256, 1, NULL,
+                                  &global_size, &local_size, 0, NULL, &event);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка выполнения kernel: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+    clWaitForEvents(1, &event);
+
+    // Получение времени выполнения
+    cl_ulong time_start, time_end;
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
+    *kernel_time_ms = (double)(time_end - time_start) / 1000000.0;
+
+    // Чтение результатов
+    err = clEnqueueReadBuffer(ctx.queue, d_hashes, CL_TRUE, 0, hashes_size, hashes, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "Ошибка чтения результатов: %s\n", cl_error_string(err));
+        result = -1;
+        goto cleanup;
+    }
+
+cleanup:
+    if (event) clReleaseEvent(event);
+    if (d_data) clReleaseMemObject(d_data);
+    if (d_lens) clReleaseMemObject(d_lens);
+    if (d_hashes) clReleaseMemObject(d_hashes);
+    cl_cleanup(&ctx);
+
+    return result;
 }
 
 // ============================================================
@@ -964,11 +1139,28 @@ int main(int argc, char** argv) {
     uint32_t num_hashes = DEFAULT_NUM_HASHES;
     uint32_t max_len = DEFAULT_DATA_LEN;
     size_t local_size = DEFAULT_LOCAL_SIZE;
+    int benchmark_mode = 0;  // Режим бенчмарка kernel'ей
 
     // Парсинг аргументов
-    if (argc >= 2) num_hashes = (uint32_t)atol(argv[1]);
-    if (argc >= 3) max_len = (uint32_t)atol(argv[2]);
-    if (argc >= 4) local_size = (size_t)atol(argv[3]);
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--bench") == 0 || strcmp(argv[i], "-b") == 0) {
+            benchmark_mode = 1;
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            printf("Использование: %s [num_hashes] [max_len] [local_size] [опции]\n", argv[0]);
+            printf("  num_hashes  - количество хэшей (по умолчанию %d)\n", DEFAULT_NUM_HASHES);
+            printf("  max_len     - макс. длина данных (по умолчанию %d)\n", DEFAULT_DATA_LEN);
+            printf("  local_size  - размер work-group (по умолчанию %d)\n", DEFAULT_LOCAL_SIZE);
+            printf("\nОпции:\n");
+            printf("  --bench, -b     - режим бенчмарка (сравнение kernel'ей)\n");
+            printf("  --help, -h      - эта справка\n");
+            return 0;
+        } else {
+            // Позиционные аргументы
+            if (num_hashes == DEFAULT_NUM_HASHES) num_hashes = (uint32_t)atol(argv[i]);
+            else if (max_len == DEFAULT_DATA_LEN) max_len = (uint32_t)atol(argv[i]);
+            else if (local_size == DEFAULT_LOCAL_SIZE) local_size = (size_t)atol(argv[i]);
+        }
+    }
 
     // Валидация входных данных
     if (validate_inputs(&num_hashes, &max_len, &local_size) != 0) {
@@ -1007,7 +1199,83 @@ int main(int argc, char** argv) {
     printf(">>> Генерация тестовых данных...\n");
     generate_test_data(data, lens, num_hashes, max_len);
     printf("    Сгенерировано %u блоков данных\n\n", num_hashes);
-    
+
+    // Режим бенчмарка: сравнение kernel'ей
+    if (benchmark_mode) {
+        printf(">>> БЕНЧМАРК: Сравнение kernel'ей\n");
+        
+        double time_standard = 0, time_optimized = 0;
+        uint8_t* gpu_hashes_opt = (uint8_t*)malloc(num_hashes * 32);
+        if (!gpu_hashes_opt) {
+            fprintf(stderr, "Ошибка: Не удалось выделить память для бенчмарка\n");
+            free(data); free(lens); free(cpu_hashes); free(gpu_hashes);
+            return 1;
+        }
+
+        // Стандартный kernel
+        printf(">>> Запуск стандартного kernel (sha256_hash)...\n");
+        clock_t start = clock();
+        int res1 = hash_gpu(data, lens, gpu_hashes, num_hashes, max_len, local_size, 0, &time_standard);
+        clock_t end = clock();
+        double total_standard = ((double)(end - start)) / CLOCKS_PER_SEC * 1000.0;
+        
+        if (res1 != 0) {
+            fprintf(stderr, "Ошибка выполнения стандартного kernel\n");
+            free(gpu_hashes_opt);
+        } else {
+            printf("    Время kernel: %.3f мс\n", time_standard);
+            printf("    Общее время: %.3f мс\n\n", total_standard);
+        }
+
+        // Оптимизированный kernel
+        printf(">>> Запуск оптимизированного kernel (sha256_hash_optimized)...\n");
+        start = clock();
+        int res2 = hash_gpu_optimized(data, lens, gpu_hashes_opt, num_hashes, max_len, local_size, 0, &time_optimized);
+        end = clock();
+        double total_optimized = ((double)(end - start)) / CLOCKS_PER_SEC * 1000.0;
+        
+        if (res2 != 0) {
+            fprintf(stderr, "Ошибка выполнения оптимизированного kernel\n");
+        } else {
+            printf("    Время kernel: %.3f мс\n", time_optimized);
+            printf("    Общее время: %.3f мс\n\n", total_optimized);
+        }
+
+        // Сравнение
+        printf("============================================================\n");
+        printf("  РЕЗУЛЬТАТЫ БЕНЧМАРКА\n");
+        printf("============================================================\n");
+        
+        // Проверка корректности
+        int matches = 0;
+        for (uint32_t i = 0; i < num_hashes; i++) {
+            int match = 1;
+            for (int j = 0; j < 32; j++) {
+                if (gpu_hashes[i*32 + j] != gpu_hashes_opt[i*32 + j]) {
+                    match = 0;
+                    break;
+                }
+            }
+            if (match) matches++;
+        }
+        printf("  Совпадений: %u / %u (%.1f%%)\n\n", matches, num_hashes, 100.0 * matches / num_hashes);
+
+        printf("  Стандартный kernel:     %10.3f мс (kernel), %10.3f мс (общее)\n", 
+               time_standard, total_standard);
+        printf("  Оптимизированный kernel: %10.3f мс (kernel), %10.3f мс (общее)\n",
+               time_optimized, total_optimized);
+        
+        if (time_standard > 0 && time_optimized > 0) {
+            double improvement = (time_standard - time_optimized) / time_standard * 100.0;
+            printf("\n  Улучшение: %.1f%%\n", improvement);
+        }
+        printf("============================================================\n\n");
+
+        free(gpu_hashes_opt);
+        free(data); free(lens); free(cpu_hashes); free(gpu_hashes);
+        return 0;
+    }
+
     // CPU версия
     printf(">>> Запуск CPU версии (SHA-256)...\n");
     clock_t cpu_start = clock();
