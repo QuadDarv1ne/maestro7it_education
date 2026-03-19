@@ -90,8 +90,6 @@ void test_sha256_long(void) {
 }
 
 /* Тест: SHA-256 очень длинной строки (множественные блоки) */
-/* ВРЕМЕННО ОТКЛЮЧЕН: требуется отладка */
-#if 0
 void test_sha256_very_long(void) {
     TEST_BEGIN("SHA-256 very long string (multiple blocks)");
 
@@ -102,7 +100,7 @@ void test_sha256_very_long(void) {
 
     /* Ожидаемый хэш для 1000 'a' (проверено через Python hashlib) */
     const uint8_t expected[32] = {
-        0x41, 0xed, 0xce, 0xe4, 0x2d, 0x63, 0xe8, 0xd9,
+        0x41, 0xed, 0xec, 0xe4, 0x2d, 0x63, 0xe8, 0xd9,
         0xbf, 0x51, 0x5a, 0x9b, 0xa6, 0x93, 0x2e, 0x1c,
         0x20, 0xcb, 0xc9, 0xf5, 0xa5, 0xd1, 0x34, 0x64,
         0x5a, 0xdb, 0x5d, 0xb1, 0xb9, 0x73, 0x7e, 0xa3
@@ -114,7 +112,6 @@ void test_sha256_very_long(void) {
     TEST_ASSERT(hash_equal(hash, expected), "1000 'a' hash should match");
     TEST_END();
 }
-#endif
 
 /* Тест: SHA-256 детерминированность */
 void test_sha256_deterministic(void) {
@@ -166,9 +163,7 @@ int main(void) {
     test_sha256_empty();
     test_sha256_abc();
     test_sha256_long();
-#if 0
-    test_sha256_very_long();  // ОТКЛЮЧЕН: требуется отладка
-#endif
+    test_sha256_very_long();
     test_sha256_deterministic();
     test_sha256_avalanche();
 
