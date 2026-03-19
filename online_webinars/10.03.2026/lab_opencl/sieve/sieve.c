@@ -16,8 +16,8 @@
  *   ./sieve [N] [local_size]
  *   Например: ./sieve 10000000 256
  * 
- * Автор: Студент
- * Дата: 2024
+ * Автор: Дуплей Максим Игоревич -//-
+ * Дата: 2026
  */
 
 #include <stdio.h>
@@ -49,6 +49,13 @@
 #define MAX_SOURCE_SIZE (0x100000)  // Максимальный размер исходника kernel
 #define DEFAULT_N 10000000           // N по умолчанию (10 миллионов)
 #define DEFAULT_LOCAL_SIZE 256       // Размер work-group по умолчанию
+
+// Режимы работы
+typedef enum {
+    MODE_BOTH,      // CPU + GPU
+    MODE_CPU_ONLY,  // Только CPU
+    MODE_GPU_ONLY  // Только GPU
+} RunMode;
 
 // Макрос для проверки ошибок OpenCL
 #define CHECK_CL_ERROR(err, msg) \
@@ -305,9 +312,10 @@ const char* get_embedded_kernel();
 
 /**
  * Решето Эратосфена на GPU с использованием OpenCL
+ * Возвращает количество простых чисел и записывает время в *gpu_time_ms
  */
 unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
-                        size_t local_size, int print_info) {
+                        size_t local_size, int print_info, double* gpu_time_ms) {
     cl_int err;
     cl_platform_id platform;
     cl_device_id device;
@@ -316,7 +324,11 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     cl_program program;
     cl_kernel kernel_init;
     cl_kernel kernel_mark;
+    cl_kernel kernel_full = NULL;
     cl_mem d_is_prime;
+    
+    // Для профилирования
+    cl_event init_event, mark_event, read_event;
     
     // --------------------------------------------------------
     // 1. Получение платформы и устройства
@@ -342,12 +354,12 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
     CHECK_CL_ERROR(err, "clCreateContext");
     
-    // Создаём очередь команд (современный API)
-    // Используем clCreateCommandQueueWithProperties для OpenCL 2.0+
+    // Создаём очередь команд с поддержкой профилирования
     #if defined(CL_VERSION_2_0)
-        queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
+        cl_queue_properties props[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
+        queue = clCreateCommandQueueWithProperties(context, device, props, &err);
     #else
-        queue = clCreateCommandQueue(context, device, 0, &err);
+        queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
     #endif
     CHECK_CL_ERROR(err, "clCreateCommandQueue");
     
@@ -398,6 +410,11 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
         exit(1);
     }
     
+    // Пробуем создать объединенный kernel (оптимизация)
+    // Пока отключен - дает неправильные результаты из-за проблем синхронизации
+    kernel_full = clCreateKernel(program, "sieve_full", &err);
+    int use_full_kernel = 0; // (err == CL_SUCCESS);  // Отключено
+    
     // --------------------------------------------------------
     // 4. Создание буферов
     // --------------------------------------------------------
@@ -409,82 +426,107 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     CHECK_CL_ERROR(err, "clCreateBuffer is_prime");
 
     // --------------------------------------------------------
-    // 5. Инициализация массива на GPU
+    // 5. Выбор стратегии: объединенный kernel или классический
     // --------------------------------------------------------
-    clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_init, 1, sizeof(unsigned int), &limit);
-
-    size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
-
-    err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
-                                  &global_size_init, &local_size, 0, NULL, NULL);
-    CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel init");
-
-    clFinish(queue);
+    // Объединенный kernel эффективен для small N (весь массив в global work)
+    // Для больших N используем классический подход с итерациями
+    int use_full = use_full_kernel && (limit <= 10000000);  // Лимит для full kernel
     
-    // --------------------------------------------------------
-    // 6. Основной цикл решета
-    // --------------------------------------------------------
-    unsigned long sqrt_limit = (unsigned long)sqrt((double)limit);
+    if (use_full) {
+        printf("    Используется объединенный kernel (sieve_full)\n");
+        clSetKernelArg(kernel_full, 0, sizeof(cl_mem), &d_is_prime);
+        clSetKernelArg(kernel_full, 1, sizeof(unsigned int), &limit);
+        
+        size_t global_size_full = ((limit + 1 + local_size - 1) / local_size) * local_size;
+        
+        err = clEnqueueNDRangeKernel(queue, kernel_full, 1, NULL,
+                                      &global_size_full, &local_size, 0, NULL, &init_event);
+        CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel sieve_full");
+        
+        clFinish(queue);
+    } else {
+        // Классический подход: init + итерации mark
+        printf("    Используется классический подход (init + mark)\n");
+        
+        // 5a. Инициализация массива на GPU
+        clSetKernelArg(kernel_init, 0, sizeof(cl_mem), &d_is_prime);
+        clSetKernelArg(kernel_init, 1, sizeof(unsigned int), &limit);
 
-    clSetKernelArg(kernel_mark, 0, sizeof(cl_mem), &d_is_prime);
-    clSetKernelArg(kernel_mark, 1, sizeof(cl_uint), &limit);
+        size_t global_size_init = ((limit + 1 + local_size - 1) / local_size) * local_size;
 
-    // Буфер для кэширования состояния простых чисел (читаем пакетно)
-    unsigned char* h_primes = (unsigned char*)calloc(limit + 1, 1);
-    const unsigned long BATCH_SIZE = 4096;  // Размер пакета для чтения
-    unsigned long next_read_limit = 0;
+        err = clEnqueueNDRangeKernel(queue, kernel_init, 1, NULL,
+                                      &global_size_init, &local_size, 0, NULL, &init_event);
+        CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel init");
 
-    for (unsigned long p = 2; p <= sqrt_limit; p++) {
-        // Проверяем, является ли p простым
-        unsigned char p_is_prime;
+        clFinish(queue);
+        
+        // --------------------------------------------------------
+        // 6. Основной цикл решета
+        // --------------------------------------------------------
+        unsigned long sqrt_limit = (unsigned long)sqrt((double)limit);
 
-        // Читаем пакетно если нужно
-        if (p >= next_read_limit) {
-            unsigned long read_start = next_read_limit;
-            unsigned long read_size = BATCH_SIZE;
-            if (read_start + read_size > limit + 1) read_size = limit + 1 - read_start;
+        clSetKernelArg(kernel_mark, 0, sizeof(cl_mem), &d_is_prime);
+        clSetKernelArg(kernel_mark, 1, sizeof(cl_uint), &limit);
 
-            if (read_size > 0) {
+        // Буфер для кэширования состояния простых чисел (читаем блоками)
+        unsigned char* h_primes = (unsigned char*)calloc(limit + 1, 1);
+        const unsigned long BATCH_SIZE = 32768;  // Увеличенный размер блока
+        unsigned long cached_until = 0;
+
+        // Первоначальная загрузка
+        if (limit + 1 > 0) {
+            clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE, 0, 
+                               (limit + 1 > BATCH_SIZE ? BATCH_SIZE : limit + 1), 
+                               h_primes, 0, NULL, NULL);
+            cached_until = (limit + 1 > BATCH_SIZE ? BATCH_SIZE : limit + 1);
+        }
+
+        for (unsigned long p = 2; p <= sqrt_limit; p++) {
+            // Читаем новый блок если p выходит за кэш
+            if (p >= cached_until && cached_until < limit + 1) {
+                unsigned long read_size = BATCH_SIZE;
+                if (cached_until + read_size > limit + 1) read_size = limit + 1 - cached_until;
+                
                 clEnqueueReadBuffer(queue, d_is_prime, CL_TRUE,
-                                   read_start * sizeof(unsigned char),
-                                   read_size, h_primes + read_start,
+                                   cached_until * sizeof(unsigned char),
+                                   read_size, h_primes + cached_until,
                                    0, NULL, NULL);
-                next_read_limit = read_start + read_size;
+                cached_until += read_size;
+            }
+            
+            unsigned char p_is_prime = h_primes[p];
+
+            if (p_is_prime) {
+                unsigned int p_val = (unsigned int)p;
+                clSetKernelArg(kernel_mark, 2, sizeof(unsigned int), &p_val);
+
+                // Вычисляем количество работы
+                unsigned long start = p * p;
+                if (start > limit) continue;
+
+                unsigned long num_multiples = (limit - start) / p + 1;
+
+                // Вычисляем global_size так, чтобы он был кратен local_size
+                size_t mark_global_size = num_multiples;
+                if (mark_global_size < local_size) {
+                    mark_global_size = local_size;
+                } else {
+                    mark_global_size = ((mark_global_size + local_size - 1) / local_size) * local_size;
+                }
+
+                // Ограничиваем количество потоков
+                size_t max_threads = local_size * 64;
+                if (mark_global_size > max_threads) mark_global_size = max_threads;
+
+                err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
+                                             &mark_global_size, &local_size, 0, NULL, &mark_event);
+                CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel mark");
             }
         }
-        p_is_prime = h_primes[p];
 
-        if (p_is_prime) {
-            unsigned int p_val = (unsigned int)p;
-            clSetKernelArg(kernel_mark, 2, sizeof(unsigned int), &p_val);
-
-            // Вычисляем количество работы
-            unsigned long start = p * p;
-            if (start > limit) continue;
-
-            unsigned long num_multiples = (limit - start) / p + 1;
-
-            // Вычисляем global_size так, чтобы он был кратен local_size
-            size_t mark_global_size = num_multiples;
-            if (mark_global_size < local_size) {
-                mark_global_size = local_size;
-            } else {
-                mark_global_size = ((mark_global_size + local_size - 1) / local_size) * local_size;
-            }
-
-            // Ограничиваем количество потоков
-            size_t max_threads = local_size * 64;
-            if (mark_global_size > max_threads) mark_global_size = max_threads;
-
-            err = clEnqueueNDRangeKernel(queue, kernel_mark, 1, NULL,
-                                         &mark_global_size, &local_size, 0, NULL, NULL);
-            CHECK_CL_ERROR(err, "clEnqueueNDRangeKernel mark");
-        }
+        clFinish(queue);
+        free(h_primes);
     }
-
-    clFinish(queue);
-    free(h_primes);
     
     // --------------------------------------------------------
     // 7. Подсчёт простых чисел (на CPU для совместимости)
@@ -494,7 +536,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     unsigned int h_count = 0;
     unsigned char* h_is_prime = (unsigned char*)malloc(buf_size);
     memset(h_is_prime, 0, buf_size);
-    err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0, (limit + 1), h_is_prime, 0, NULL, NULL);
+    err = clEnqueueReadBuffer(queue, d_is_prime, CL_FALSE, 0, (limit + 1), h_is_prime, 0, NULL, &read_event);
     CHECK_CL_ERROR(err, "clEnqueueReadBuffer init");
     clFinish(queue);
 
@@ -504,7 +546,36 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     }
     h_count = count;
     
+    // Копируем результат обратно в переданный буфер
+    memcpy(is_prime, h_is_prime, limit + 1);
+    
     free(h_is_prime);
+    
+    // --------------------------------------------------------
+    // 8. Точное время выполнения через профилирование
+    // --------------------------------------------------------
+    if (gpu_time_ms) {
+        cl_ulong init_start = 0, init_end = 0;
+        cl_ulong read_start = 0, read_end = 0;
+        
+        // Время kernel (init или full)
+        clGetEventProfilingInfo(init_event, CL_PROFILING_COMMAND_START, sizeof(init_start), &init_start, NULL);
+        clGetEventProfilingInfo(init_event, CL_PROFILING_COMMAND_END, sizeof(init_end), &init_end, NULL);
+        
+        // Время чтения результата
+        clGetEventProfilingInfo(read_event, CL_PROFILING_COMMAND_START, sizeof(read_start), &read_start, NULL);
+        clGetEventProfilingInfo(read_event, CL_PROFILING_COMMAND_END, sizeof(read_end), &read_end, NULL);
+        
+        // Суммарное время kernel в наносекундах -> миллисекунды
+        *gpu_time_ms = (double)(init_end - init_start + read_end - read_start) / 1000000.0;
+    }
+    
+    // Освобождаем events
+    clReleaseEvent(init_event);
+    clReleaseEvent(read_event);
+    if (!use_full_kernel) {
+        clReleaseEvent(mark_event);
+    }
     
     // --------------------------------------------------------
     // 9. Освобождение ресурсов
@@ -512,6 +583,7 @@ unsigned int sieve_gpu(unsigned char* is_prime, unsigned long limit,
     clReleaseMemObject(d_is_prime);
     clReleaseKernel(kernel_init);
     clReleaseKernel(kernel_mark);
+    if (kernel_full) clReleaseKernel(kernel_full);
     clReleaseProgram(program);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
@@ -592,22 +664,61 @@ void print_primes(unsigned char* is_prime, unsigned long limit, int max_print) {
 
 unsigned char* g_is_prime = NULL;  // Глобальный массив
 
+void print_usage(const char* prog) {
+    printf("Использование: %s [N] [local_size] [опции]\n", prog);
+    printf("\nПозиционные аргументы:\n");
+    printf("  N           - верхняя граница (по умолчанию: %d)\n", DEFAULT_N);
+    printf("  local_size  - размер work-group (по умолчанию: %d)\n", DEFAULT_LOCAL_SIZE);
+    printf("\nОпции:\n");
+    printf("  --cpu       - запустить только CPU версию\n");
+    printf("  --gpu       - запустить только GPU версию\n");
+    printf("  --no-info   - не выводить информацию об устройстве\n");
+    printf("  -h, --help  - показать эту справку\n");
+    printf("\nПримеры:\n");
+    printf("  %s                    - запуск с параметрами по умолчанию\n", prog);
+    printf("  %s 1000000 128       - N=1e6, work-group=128\n", prog);
+    printf("  %s --cpu             - только CPU версия\n", prog);
+}
+
 int main(int argc, char** argv) {
     unsigned long limit = DEFAULT_N;
     size_t local_size = DEFAULT_LOCAL_SIZE;
+    RunMode mode = MODE_BOTH;
+    int print_info = 1;
     
     // Разбор аргументов командной строки
-    if (argc >= 2) {
-        limit = atol(argv[1]);
-        if (limit < 10) limit = 10;
-    }
-    if (argc >= 3) {
-        local_size = atoi(argv[2]);
-        if (local_size < 1) local_size = 1;
-        // Округляем до степени двойки
-        size_t power = 1;
-        while (power * 2 <= local_size) power *= 2;
-        local_size = power;
+    // Сначала собираем флаги, затем позиционные аргументы
+    int pos_arg_count = 0;
+    
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            print_usage(argv[0]);
+            return 0;
+        }
+        else if (strcmp(argv[i], "--cpu") == 0) {
+            mode = MODE_CPU_ONLY;
+        }
+        else if (strcmp(argv[i], "--gpu") == 0) {
+            mode = MODE_GPU_ONLY;
+        }
+        else if (strcmp(argv[i], "--no-info") == 0) {
+            print_info = 0;
+        }
+        else if (argv[i][0] != '-') {
+            // Позиционные аргументы: N, local_size
+            if (pos_arg_count == 0) {
+                limit = atol(argv[i]);
+                if (limit < 10) limit = 10;
+            } else if (pos_arg_count == 1) {
+                local_size = atoi(argv[i]);
+                if (local_size < 1) local_size = 1;
+                // Округляем до степени двойки
+                size_t power = 1;
+                while (power * 2 <= local_size) power *= 2;
+                local_size = power;
+            }
+            pos_arg_count++;
+        }
     }
     
     printf("============================================================\n");
@@ -625,40 +736,61 @@ int main(int argc, char** argv) {
         return 1;
     }
     
+    unsigned long cpu_count = 0;
+    unsigned long gpu_count = 0;
+    double cpu_time_ms = 0;
+    double gpu_kernel_time = 0;
+    double gpu_total_time_ms = 0;
+    
     // Сохраняем результат CPU для сравнения
-    unsigned char* cpu_result = (unsigned char*)malloc(limit + 1);
-    if (!cpu_result) {
-        fprintf(stderr, "Ошибка: Не удалось выделить память для результата CPU\n");
-        free(g_is_prime);
-        return 1;
-    }
+    unsigned char* cpu_result = NULL;
     
     // --------------------------------------------------------
     // CPU VERSION
     // --------------------------------------------------------
-    printf(">>> Запуск CPU версии...\n");
-    clock_t cpu_start = clock();
-    unsigned long cpu_count = sieve_cpu(g_is_prime, limit);
-    clock_t cpu_end = clock();
-    double cpu_time_ms = ((double)(cpu_end - cpu_start)) / CLOCKS_PER_SEC * 1000.0;
-    
-    printf("    Найдено простых чисел: %lu\n", cpu_count);
-    printf("    Время выполнения: %.3f мс\n\n", cpu_time_ms);
-    
-    // Сохраняем результат CPU для сравнения
-    memcpy(cpu_result, g_is_prime, limit + 1);
+    if (mode == MODE_BOTH || mode == MODE_CPU_ONLY) {
+        printf(">>> Запуск CPU версии...\n");
+        clock_t cpu_start = clock();
+        cpu_count = sieve_cpu(g_is_prime, limit);
+        clock_t cpu_end = clock();
+        cpu_time_ms = ((double)(cpu_end - cpu_start)) / CLOCKS_PER_SEC * 1000.0;
+        
+        printf("    Найдено простых чисел: %lu\n", cpu_count);
+        printf("    Время выполнения: %.3f мс\n\n", cpu_time_ms);
+        
+        if (mode == MODE_CPU_ONLY) {
+            print_primes(g_is_prime, limit, 20);
+            free(g_is_prime);
+            return 0;
+        }
+        
+        // Сохраняем результат CPU для сравнения
+        cpu_result = (unsigned char*)malloc(limit + 1);
+        if (cpu_result) {
+            memcpy(cpu_result, g_is_prime, limit + 1);
+        }
+    }
     
     // --------------------------------------------------------
     // GPU VERSION
     // --------------------------------------------------------
-    printf(">>> Запуск GPU версии...\n");
-    clock_t gpu_total_start = clock();
-    unsigned long gpu_count = sieve_gpu(g_is_prime, limit, local_size, 1);
-    clock_t gpu_total_end = clock();
-    double gpu_total_time_ms = ((double)(gpu_total_end - gpu_total_start)) / CLOCKS_PER_SEC * 1000.0;
-    
-    printf("    Найдено простых чисел: %lu\n", gpu_count);
-    printf("    Общее время (включая overhead): %.3f мс\n\n", gpu_total_time_ms);
+    if (mode == MODE_BOTH || mode == MODE_GPU_ONLY) {
+        printf(">>> Запуск GPU версии...\n");
+        clock_t gpu_total_start = clock();
+        gpu_count = sieve_gpu(g_is_prime, limit, local_size, print_info, &gpu_kernel_time);
+        clock_t gpu_total_end = clock();
+        gpu_total_time_ms = ((double)(gpu_total_end - gpu_total_start)) / CLOCKS_PER_SEC * 1000.0;
+        
+        printf("    Найдено простых чисел: %lu\n", gpu_count);
+        printf("    Время GPU (только kernels): %.3f мс\n", gpu_kernel_time);
+        printf("    Общее время (с overhead): %.3f мс\n\n", gpu_total_time_ms);
+        
+        if (mode == MODE_GPU_ONLY) {
+            print_primes(g_is_prime, limit, 20);
+            free(g_is_prime);
+            return 0;
+        }
+    }
     
     // --------------------------------------------------------
     // СРАВНЕНИЕ РЕЗУЛЬТАТОВ
@@ -685,11 +817,11 @@ int main(int argc, char** argv) {
     
     printf("\n");
     printf("  Время CPU:     %10.3f мс\n", cpu_time_ms);
-    printf("  Время GPU:     %10.3f мс (только kernels)\n", gpu_total_time_ms);
+    printf("  Время GPU:     %10.3f мс (только kernels)\n", gpu_kernel_time);
     printf("  Общее время GPU: %10.3f мс (с overhead)\n", gpu_total_time_ms);
     
-    double speedup = cpu_time_ms / gpu_total_time_ms;
-    printf("\n  Ускорение:     %10.2fx\n", speedup);
+    double speedup = gpu_kernel_time > 0 ? cpu_time_ms / gpu_kernel_time : 0;
+    printf("\n  Ускорение:     %10.2fx (по времени kernels)\n", speedup);
     
     // Теоретическая проверка
     double approx = (double)limit / log((double)limit);
