@@ -26,18 +26,6 @@ static const uint64_t keccak_rndc[24] = {
     0x8000000000008080ULL, 0x0000000080000001ULL, 0x8000000080008008ULL
 };
 
-/** Таблица для перестановки Pi */
-static const int keccak_pi[25] = {
-    0, 14, 10, 2, 12,
-    1, 15, 11, 3, 13,
-    7, 21, 17, 9, 23,
-    8, 22, 18, 4, 14,  // Note: corrected from spec
-    6, 20, 16, 5, 19
-};
-
-/** Таблица для перестановки Chi */
-static const int keccak_chi[5] = {0, 1, 2, 3, 4};
-
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ МАКРОСЫ
 // ============================================================
@@ -174,26 +162,26 @@ void sha3_update(sha3_ctx_t* ctx, const void* data, size_t len) {
         // Буфер заполнен — обрабатываем
         for (size_t j = 0; j < ctx->block_size; j += 8) {
             uint64_t word = 0;
-            for (int k = 0; k < 8; k++) {
+            for (size_t k = 0; k < 8; k++) {
                 word |= (uint64_t)ctx->buffer[j + k] << (k * 8);
             }
             ctx->state[j / 8] ^= word;
         }
-        
+
         keccak_f1600(ctx->state);
         ctx->buffer_len = 0;
     }
-    
+
     // Обработка полных блоков
     while (i + ctx->block_size <= len) {
         for (size_t j = 0; j < ctx->block_size; j += 8) {
             uint64_t word = 0;
-            for (int k = 0; k < 8; k++) {
+            for (size_t k = 0; k < 8; k++) {
                 word |= (uint64_t)input[i + j + k] << (k * 8);
             }
             ctx->state[j / 8] ^= word;
         }
-        
+
         keccak_f1600(ctx->state);
         i += ctx->block_size;
     }
@@ -221,21 +209,21 @@ void sha3_final(sha3_ctx_t* ctx, void* hash) {
     // Обработка последнего блока
     for (size_t j = 0; j < ctx->block_size; j += 8) {
         uint64_t word = 0;
-        for (int k = 0; k < 8; k++) {
+        for (size_t k = 0; k < 8; k++) {
             word |= (uint64_t)ctx->buffer[j + k] << (k * 8);
         }
         ctx->state[j / 8] ^= word;
     }
-    
+
     keccak_f1600(ctx->state);
-    
+
     // Извлечение результата (little-endian)
     size_t output_len = (ctx->hash_len > 0) ? ctx->hash_len : ctx->block_size;
     uint8_t* output = (uint8_t*)hash;
-    
+
     for (size_t j = 0; j < output_len; j += 8) {
         size_t to_copy = MIN(8, output_len - j);
-        for (int k = 0; k < (int)to_copy; k++) {
+        for (size_t k = 0; k < to_copy; k++) {
             output[j + k] = (ctx->state[j / 8] >> (k * 8)) & 0xFF;
         }
     }
