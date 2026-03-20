@@ -296,6 +296,30 @@ target_compile_definitions(sha3 PRIVATE
     $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
 )
 
+# -----------------------------------------------------------------------------
+# Криптография: BLAKE3 — самый быстрый хэш
+# -----------------------------------------------------------------------------
+add_executable(blake3
+    ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.c
+    ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3_main.c
+    ${COMMON_SOURCES}
+)
+
+target_include_directories(blake3 PRIVATE ${PROJECT_SOURCE_DIR}/crypto/blake3)
+
+target_link_libraries(blake3
+    ${OpenCL_LIBRARIES}
+    ${MATH_LIBRARY}
+)
+
+if(WIN32)
+    target_link_libraries(blake3 shlwapi)
+endif()
+
+target_compile_definitions(blake3 PRIVATE
+    $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
+)
+
 # =============================================================================
 # Тесты
 # =============================================================================
@@ -343,11 +367,22 @@ if(BUILD_TESTS)
     )
     target_include_directories(test_sha3 PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 
+    # Unit-тест BLAKE3
+    add_executable(test_blake3
+        ${PROJECT_SOURCE_DIR}/tests/test_blake3.c
+        ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.c
+    )
+    target_link_libraries(test_blake3
+        ${MATH_LIBRARY}
+    )
+    target_include_directories(test_blake3 PRIVATE ${PROJECT_SOURCE_DIR}/tests)
+
     # Регистрация тестов в CTest
     add_test(NAME SHA256_Unit_Test COMMAND test_sha256)
     add_test(NAME Sieve_Unit_Test COMMAND test_sieve)
     add_test(NAME Argon2_Unit_Test COMMAND test_argon2)
     add_test(NAME SHA3_Unit_Test COMMAND test_sha3)
+    add_test(NAME BLAKE3_Unit_Test COMMAND test_blake3)
 
     # Интеграционные тесты через запуск основных программ
     # Примечание: unit-тесты требуют рефакторинга для разделения main() и функций
@@ -401,6 +436,7 @@ install(FILES
     ${PROJECT_SOURCE_DIR}/hashing/hash.cl
     ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.cl
     ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.cl
+    ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.cl
     DESTINATION share/gpu_lab/kernels
 )
 
@@ -409,6 +445,7 @@ install(FILES
     ${PROJECT_SOURCE_DIR}/include/cl_common.h
     ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.h
     ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.h
+    ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.h
     DESTINATION include/gpu_lab
 )
 
@@ -424,6 +461,8 @@ file(COPY ${PROJECT_SOURCE_DIR}/hashing/hash.cl
 file(COPY ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.cl
+     DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # =============================================================================
