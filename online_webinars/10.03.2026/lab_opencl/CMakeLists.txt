@@ -22,8 +22,8 @@
 
 cmake_minimum_required(VERSION 3.16)
 project(GPU_Lab
-    VERSION 1.3.0
-    DESCRIPTION "Лабораторная работа: Вычисления на GPU с OpenCL"
+    VERSION 1.5.0
+    DESCRIPTION "GPU Lab: OpenCL parallel computing laboratory"
     LANGUAGES C
 )
 
@@ -35,7 +35,9 @@ option(BUILD_BENCHMARKS "Сборка бенчмарков" ON)
 option(ENABLE_PROFILING "Включить профилирование" ON)
 option(USE_STATIC_ANALYSIS "Включить статический анализ" OFF)
 option(ENABLE_COVERAGE "Включить покрытие кода" OFF)
+option(ENABLE_LTO "Включить Link Time Optimization для Release сборок" ON)
 option(BUILD_SHARED_LIBS "Построить общие библиотеки" OFF)
+option(ENABLE_WERROR "Трактировать предупреждения как ошибки" OFF)
 
 # =============================================================================
 # Поиск зависимостей
@@ -116,6 +118,25 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wformat -Wformat-security -Wconversion -Wshadow")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wnull-dereference -Wstack-protector")
+    # Улучшенная генерация кода для современных CPU
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native -mtune=native")
+endif()
+
+# Link Time Optimization для Release сборок
+if(ENABLE_LTO AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        message(STATUS "LTO включено для Release сборки")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto")
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
+    endif()
+endif()
+
+# -Werror для строгой компиляции
+if(ENABLE_WERROR)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
+        message(STATUS "Предупреждения включены как ошибки (-Werror)")
+    endif()
 endif()
 
 # Для Windows: дополнительные флаги
