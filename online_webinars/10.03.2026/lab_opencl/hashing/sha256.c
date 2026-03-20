@@ -120,14 +120,14 @@ void sha256_cpu(const uint8_t* data, size_t len, uint8_t* hash) {
 
     // Длина в битах в последних 8 байтах (big-endian)
     uint64_t bit_len = (uint64_t)len * 8;
-    padded[padded_len - 8] = (uint8_t)((bit_len >> 56) & 0xFF);
-    padded[padded_len - 7] = (uint8_t)((bit_len >> 48) & 0xFF);
-    padded[padded_len - 6] = (uint8_t)((bit_len >> 40) & 0xFF);
-    padded[padded_len - 5] = (uint8_t)((bit_len >> 32) & 0xFF);
-    padded[padded_len - 4] = (uint8_t)((bit_len >> 24) & 0xFF);
-    padded[padded_len - 3] = (uint8_t)((bit_len >> 16) & 0xFF);
-    padded[padded_len - 2] = (uint8_t)((bit_len >> 8) & 0xFF);
-    padded[padded_len - 1] = (uint8_t)(bit_len & 0xFF);
+    padded[padded_len - 8] = (uint8_t)((bit_len >> 56) & 0xFFu);
+    padded[padded_len - 7] = (uint8_t)((bit_len >> 48) & 0xFFu);
+    padded[padded_len - 6] = (uint8_t)((bit_len >> 40) & 0xFFu);
+    padded[padded_len - 5] = (uint8_t)((bit_len >> 32) & 0xFFu);
+    padded[padded_len - 4] = (uint8_t)((bit_len >> 24) & 0xFFu);
+    padded[padded_len - 3] = (uint8_t)((bit_len >> 16) & 0xFFu);
+    padded[padded_len - 2] = (uint8_t)((bit_len >> 8) & 0xFFu);
+    padded[padded_len - 1] = (uint8_t)(bit_len & 0xFFu);
 
     // Обрабатываем каждый блок
     size_t num_blocks = padded_len / 64;
@@ -139,10 +139,11 @@ void sha256_cpu(const uint8_t* data, size_t len, uint8_t* hash) {
 
     // Запись результата (big-endian)
     for (int i = 0; i < 8; i++) {
-        hash[i*4 + 0] = (uint8_t)((h[i] >> 24) & 0xFF);
-        hash[i*4 + 1] = (uint8_t)((h[i] >> 16) & 0xFF);
-        hash[i*4 + 2] = (uint8_t)((h[i] >> 8) & 0xFF);
-        hash[i*4 + 3] = (uint8_t)(h[i] & 0xFF);
+        uint32_t hi = h[i];
+        hash[i*4 + 0] = (uint8_t)((hi >> 24) & 0xFFu);
+        hash[i*4 + 1] = (uint8_t)((hi >> 16) & 0xFFu);
+        hash[i*4 + 2] = (uint8_t)((hi >> 8) & 0xFFu);
+        hash[i*4 + 3] = (uint8_t)(hi & 0xFFu);
     }
 }
 

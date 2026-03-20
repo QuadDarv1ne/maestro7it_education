@@ -246,11 +246,11 @@ void generate_test_data(uint8_t* data, uint32_t* lens,
 
     for (uint32_t i = 0; i < num_hashes; i++) {
         // Случайная длина от 8 до max_len
-        lens[i] = 8u + (uint32_t)(rand() % (int)(max_len - 7u));
+        lens[i] = 8u + (uint32_t)((unsigned)rand() % (max_len - 7u));
 
         // Генерируем данные
         for (uint32_t j = 0; j < lens[i]; j++) {
-            data[i * max_len + j] = (uint8_t)(rand() % 256);
+            data[i * max_len + j] = (uint8_t)((unsigned)rand() % 256u);
         }
     }
 }
@@ -854,11 +854,11 @@ void print_hash(const uint8_t* hash, const char* label) {
 }
 
 void compare_hashes(const uint8_t* cpu, const uint8_t* gpu, uint32_t num_hashes) {
-    int matches = 0;
+    uint32_t matches = 0;
     for (uint32_t i = 0; i < num_hashes; i++) {
         int match = 1;
-        for (int j = 0; j < 32; j++) {
-            if (cpu[i*32u + (uint32_t)j] != gpu[i*32u + (uint32_t)j]) {
+        for (uint32_t j = 0; j < 32u; j++) {
+            if (cpu[i * 32u + j] != gpu[i * 32u + j]) {
                 match = 0;
                 break;
             }
@@ -1375,13 +1375,13 @@ int main(int argc, char** argv) {
         printf("============================================================\n");
         printf("  РЕЗУЛЬТАТЫ БЕНЧМАРКА\n");
         printf("============================================================\n");
-        
+
         // Проверка корректности
-        int matches = 0;
+        uint32_t matches = 0;
         for (uint32_t i = 0; i < num_hashes; i++) {
             int match = 1;
-            for (int j = 0; j < 32; j++) {
-                if (gpu_hashes[i*32u + (uint32_t)j] != gpu_hashes_opt[i*32u + (uint32_t)j]) {
+            for (uint32_t j = 0; j < 32u; j++) {
+                if (gpu_hashes[i * 32u + j] != gpu_hashes_opt[i * 32u + j]) {
                     match = 0;
                     break;
                 }
