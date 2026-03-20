@@ -248,6 +248,30 @@ target_compile_definitions(hash PRIVATE
     $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
 )
 
+# -----------------------------------------------------------------------------
+# Криптография: Argon2 (memory-hard хэширование)
+# -----------------------------------------------------------------------------
+add_executable(argon2
+    ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.c
+    ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2_main.c
+    ${COMMON_SOURCES}
+)
+
+target_include_directories(argon2 PRIVATE ${PROJECT_SOURCE_DIR}/crypto/argon2)
+
+target_link_libraries(argon2
+    ${OpenCL_LIBRARIES}
+    ${MATH_LIBRARY}
+)
+
+if(WIN32)
+    target_link_libraries(argon2 shlwapi)
+endif()
+
+target_compile_definitions(argon2 PRIVATE
+    $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
+)
+
 # =============================================================================
 # Тесты
 # =============================================================================
@@ -275,18 +299,32 @@ if(BUILD_TESTS)
     )
     target_include_directories(test_sieve PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 
+    # Unit-тест Argon2
+    add_executable(test_argon2
+        ${PROJECT_SOURCE_DIR}/tests/test_argon2.c
+        ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.c
+    )
+    target_link_libraries(test_argon2
+        ${MATH_LIBRARY}
+    )
+    target_include_directories(test_argon2 PRIVATE ${PROJECT_SOURCE_DIR}/tests)
+
     # Регистрация тестов в CTest
     add_test(NAME SHA256_Unit_Test COMMAND test_sha256)
     add_test(NAME Sieve_Unit_Test COMMAND test_sieve)
+    add_test(NAME Argon2_Unit_Test COMMAND test_argon2)
 
     # Интеграционные тесты через запуск основных программ
     # Примечание: unit-тесты требуют рефакторинга для разделения main() и функций
-    
+
     # Интеграционный тест: проверка работы hashing
     add_test(NAME Hash_Integration_Test COMMAND hash 10000 64 256)
 
     # Интеграционный тест: проверка работы sieve
     add_test(NAME Sieve_Integration_Test COMMAND sieve 1000000 256)
+
+    # Интеграционный тест: проверка работы argon2
+    add_test(NAME Argon2_Integration_Test COMMAND argon2)
 endif()
 
 # =============================================================================
@@ -326,12 +364,14 @@ install(TARGETS sieve hash
 install(FILES
     ${PROJECT_SOURCE_DIR}/sieve/sieve.cl
     ${PROJECT_SOURCE_DIR}/hashing/hash.cl
+    ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.cl
     DESTINATION share/gpu_lab/kernels
 )
 
 install(FILES
     ${PROJECT_SOURCE_DIR}/hashing/sha256.h
     ${PROJECT_SOURCE_DIR}/include/cl_common.h
+    ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.h
     DESTINATION include/gpu_lab
 )
 
@@ -340,10 +380,11 @@ install(FILES ${PROJECT_SOURCE_DIR}/README.md
 )
 
 # Копирование kernel файлов в директорию сборки для отладки
-# Это нужно для того, чтобы программы могли найти .cl файлы при запуске из build/
 file(COPY ${PROJECT_SOURCE_DIR}/sieve/sieve.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${PROJECT_SOURCE_DIR}/hashing/hash.cl
+     DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # =============================================================================
@@ -360,6 +401,7 @@ if(DOXYGEN_AVAILABLE)
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/hashing
         ${PROJECT_SOURCE_DIR}/sieve
+        ${PROJECT_SOURCE_DIR}/crypto
         COMMENT "Генерация документации Doxygen"
     )
 endif()
