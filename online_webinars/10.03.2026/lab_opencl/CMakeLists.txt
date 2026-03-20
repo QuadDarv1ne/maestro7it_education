@@ -320,6 +320,30 @@ target_compile_definitions(blake3 PRIVATE
     $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
 )
 
+# -----------------------------------------------------------------------------
+# Криптография: AES-256-GCM — стандарт шифрования
+# -----------------------------------------------------------------------------
+add_executable(aes
+    ${PROJECT_SOURCE_DIR}/crypto/aes/aes.c
+    ${PROJECT_SOURCE_DIR}/crypto/aes/aes_main.c
+    ${COMMON_SOURCES}
+)
+
+target_include_directories(aes PRIVATE ${PROJECT_SOURCE_DIR}/crypto/aes)
+
+target_link_libraries(aes
+    ${OpenCL_LIBRARIES}
+    ${MATH_LIBRARY}
+)
+
+if(WIN32)
+    target_link_libraries(aes shlwapi)
+endif()
+
+target_compile_definitions(aes PRIVATE
+    $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
+)
+
 # =============================================================================
 # Тесты
 # =============================================================================
@@ -377,12 +401,23 @@ if(BUILD_TESTS)
     )
     target_include_directories(test_blake3 PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 
+    # Unit-тест AES-256-GCM
+    add_executable(test_aes
+        ${PROJECT_SOURCE_DIR}/tests/test_aes.c
+        ${PROJECT_SOURCE_DIR}/crypto/aes/aes.c
+    )
+    target_link_libraries(test_aes
+        ${MATH_LIBRARY}
+    )
+    target_include_directories(test_aes PRIVATE ${PROJECT_SOURCE_DIR}/tests)
+
     # Регистрация тестов в CTest
     add_test(NAME SHA256_Unit_Test COMMAND test_sha256)
     add_test(NAME Sieve_Unit_Test COMMAND test_sieve)
     add_test(NAME Argon2_Unit_Test COMMAND test_argon2)
     add_test(NAME SHA3_Unit_Test COMMAND test_sha3)
     add_test(NAME BLAKE3_Unit_Test COMMAND test_blake3)
+    add_test(NAME AES_Unit_Test COMMAND test_aes)
 
     # Интеграционные тесты через запуск основных программ
     # Примечание: unit-тесты требуют рефакторинга для разделения main() и функций
@@ -437,6 +472,7 @@ install(FILES
     ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.cl
     ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.cl
     ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.cl
+    ${PROJECT_SOURCE_DIR}/crypto/aes/aes.cl
     DESTINATION share/gpu_lab/kernels
 )
 
@@ -446,6 +482,7 @@ install(FILES
     ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.h
     ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.h
     ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.h
+    ${PROJECT_SOURCE_DIR}/crypto/aes/aes.h
     DESTINATION include/gpu_lab
 )
 
@@ -463,6 +500,8 @@ file(COPY ${PROJECT_SOURCE_DIR}/crypto/argon2/argon2.cl
 file(COPY ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.cl
+     DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${PROJECT_SOURCE_DIR}/crypto/aes/aes.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # =============================================================================
