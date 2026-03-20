@@ -344,6 +344,30 @@ target_compile_definitions(aes PRIVATE
     $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
 )
 
+# -----------------------------------------------------------------------------
+# Криптография: ChaCha20-Poly1305 — AEAD шифрование
+# -----------------------------------------------------------------------------
+add_executable(chacha20
+    ${PROJECT_SOURCE_DIR}/crypto/chacha20/chacha20.c
+    ${PROJECT_SOURCE_DIR}/crypto/chacha20/chacha20_main.c
+    ${COMMON_SOURCES}
+)
+
+target_include_directories(chacha20 PRIVATE ${PROJECT_SOURCE_DIR}/crypto/chacha20)
+
+target_link_libraries(chacha20
+    ${OpenCL_LIBRARIES}
+    ${MATH_LIBRARY}
+)
+
+if(WIN32)
+    target_link_libraries(chacha20 shlwapi)
+endif()
+
+target_compile_definitions(chacha20 PRIVATE
+    $<$<BOOL:${ENABLE_PROFILING}>:CL_PROFILING_ENABLED>
+)
+
 # =============================================================================
 # Тесты
 # =============================================================================
@@ -411,6 +435,16 @@ if(BUILD_TESTS)
     )
     target_include_directories(test_aes PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 
+    # Unit-тест ChaCha20-Poly1305
+    add_executable(test_chacha20
+        ${PROJECT_SOURCE_DIR}/tests/test_chacha20.c
+        ${PROJECT_SOURCE_DIR}/crypto/chacha20/chacha20.c
+    )
+    target_link_libraries(test_chacha20
+        ${MATH_LIBRARY}
+    )
+    target_include_directories(test_chacha20 PRIVATE ${PROJECT_SOURCE_DIR}/tests)
+
     # Регистрация тестов в CTest
     add_test(NAME SHA256_Unit_Test COMMAND test_sha256)
     add_test(NAME Sieve_Unit_Test COMMAND test_sieve)
@@ -418,6 +452,7 @@ if(BUILD_TESTS)
     add_test(NAME SHA3_Unit_Test COMMAND test_sha3)
     add_test(NAME BLAKE3_Unit_Test COMMAND test_blake3)
     add_test(NAME AES_Unit_Test COMMAND test_aes)
+    add_test(NAME ChaCha20_Unit_Test COMMAND test_chacha20)
 
     # Интеграционные тесты через запуск основных программ
     # Примечание: unit-тесты требуют рефакторинга для разделения main() и функций
@@ -473,6 +508,7 @@ install(FILES
     ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.cl
     ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.cl
     ${PROJECT_SOURCE_DIR}/crypto/aes/aes.cl
+    ${PROJECT_SOURCE_DIR}/crypto/chacha20/chacha20.cl
     DESTINATION share/gpu_lab/kernels
 )
 
@@ -483,6 +519,7 @@ install(FILES
     ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.h
     ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.h
     ${PROJECT_SOURCE_DIR}/crypto/aes/aes.h
+    ${PROJECT_SOURCE_DIR}/crypto/chacha20/chacha20.h
     DESTINATION include/gpu_lab
 )
 
@@ -502,6 +539,8 @@ file(COPY ${PROJECT_SOURCE_DIR}/crypto/sha3/sha3.cl
 file(COPY ${PROJECT_SOURCE_DIR}/crypto/blake3/blake3.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY ${PROJECT_SOURCE_DIR}/crypto/aes/aes.cl
+     DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY ${PROJECT_SOURCE_DIR}/crypto/chacha20/chacha20.cl
      DESTINATION ${CMAKE_BINARY_DIR}/)
 
 # =============================================================================
