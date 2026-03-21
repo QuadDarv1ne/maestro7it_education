@@ -127,10 +127,10 @@ int aes256_init(aes256_ctx_t* ctx, const uint8_t key[AES_256_KEY_LEN]) {
 static void add_round_key(uint8_t state[16], const uint32_t* rk) {
     for (int i = 0; i < 4; i++) {
         uint32_t w = rk[i];
-        state[i*4 + 0] ^= (w >> 24) & 0xFF;
-        state[i*4 + 1] ^= (w >> 16) & 0xFF;
-        state[i*4 + 2] ^= (w >> 8) & 0xFF;
-        state[i*4 + 3] ^= w & 0xFF;
+        state[i*4 + 0] ^= (uint8_t)((w >> 24) & 0xFF);
+        state[i*4 + 1] ^= (uint8_t)((w >> 16) & 0xFF);
+        state[i*4 + 2] ^= (uint8_t)((w >> 8) & 0xFF);
+        state[i*4 + 3] ^= (uint8_t)(w & 0xFF);
     }
 }
 

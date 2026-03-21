@@ -56,10 +56,11 @@ static void chacha20_block(const uint32_t state[16], uint8_t out[64]) {
     
     // Little-endian output
     for (int i = 0; i < 16; i++) {
-        out[i*4 + 0] = x[i] & 0xFF;
-        out[i*4 + 1] = (x[i] >> 8) & 0xFF;
-        out[i*4 + 2] = (x[i] >> 16) & 0xFF;
-        out[i*4 + 3] = (x[i] >> 24) & 0xFF;
+        uint32_t xi = x[i];
+        out[i*4 + 0] = (uint8_t)(xi & 0xFF);
+        out[i*4 + 1] = (uint8_t)((xi >> 8) & 0xFF);
+        out[i*4 + 2] = (uint8_t)((xi >> 16) & 0xFF);
+        out[i*4 + 3] = (uint8_t)((xi >> 24) & 0xFF);
     }
 }
 
