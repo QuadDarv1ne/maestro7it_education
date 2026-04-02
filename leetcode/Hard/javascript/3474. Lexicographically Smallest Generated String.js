@@ -1,10 +1,7 @@
 /**
- * https://leetcode.com/problems/lexicographically-smallest-generated-string/description/
  * Автор: Дуплей Максим Игоревич - AGLA
  * ORCID: https://orcid.org/0009-0007-7605-539X
  * GitHub: https://github.com/QuadDarv1ne/
- * 
- * Решение задачи "3474. Lexicographically Smallest Generated String" на JavaScript
  * 
  * Полезные ссылки:
  * 1. Telegram ❃ Хижина программиста Æ: https://t.me/hut_programmer_07
@@ -14,83 +11,101 @@
  * 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
  * 6. YouTube канал: https://www.youtube.com/@it-coders
  * 7. ВК группа: https://vk.com/science_geeks
- */
-
-/**
+ * 
+ * Строит лексикографически наименьшую строку, удовлетворяющую условиям.
+ * 
  * @param {string} str1
  * @param {string} str2
  * @return {string}
  */
+
 var generateString = function(str1, str2) {
-    const n = str1.length, m = str2.length, L = n + m - 1;
-    const word = new Array(L).fill(-1); // -1 = символ не определен
+    const n = str1.length;
+    const m = str2.length;
+    const len = n + m - 1;
     
-    // Шаг 1: Фиксируем символы из T-условий
+    const s = new Array(len).fill('');
+    
+    // Фиксируем все 'T' позиции
     for (let i = 0; i < n; i++) {
         if (str1[i] === 'T') {
-            for (let k = 0; k < m; k++) {
-                const pos = i + k;
-                if (pos >= L) return "";
-                if (word[pos] !== -1 && word[pos] !== str2.charCodeAt(k)) return "";
-                word[pos] = str2.charCodeAt(k);
+            for (let j = 0; j < m; j++) {
+                const idx = i + j;
+                if (s[idx] === '') {
+                    s[idx] = str2[j];
+                } else if (s[idx] !== str2[j]) {
+                    return "";
+                }
             }
         }
     }
     
-    // Лямбда: совпало бы при заполнении пустот 'a'?
-    const wouldMatchIfA = (i) => {
-        for (let k = 0; k < m; k++) {
-            const pos = i + k;
-            if (pos >= L) return false;
-            if (word[pos] === -1) {
-                if (str2[k] !== 'a') return false;
-            } else {
-                if (word[pos] !== str2.charCodeAt(k)) return false;
-            }
-        }
-        return true;
-    };
-    
-    // Лямбда: крайняя правая пустая позиция в подстроке
-    const getRightmostUndef = (i) => {
-        let r = -1;
-        for (let k = 0; k < m; k++) {
-            const pos = i + k;
-            if (pos < L && word[pos] === -1) r = pos;
-        }
-        return r;
-    };
-    
-    // Шаг 2: Ищем скрытые конфликты
-    const violated = [];
+    // Проверяем 'F' позиции на конфликты
     for (let i = 0; i < n; i++) {
-        if (str1[i] === 'F' && wouldMatchIfA(i)) {
-            const r = getRightmostUndef(i);
-            if (r === -1) return "";
-            violated.push([i, r]);
+        if (str1[i] === 'F') {
+            let match = true;
+            for (let j = 0; j < m; j++) {
+                const idx = i + j;
+                if (s[idx] === '') {
+                    match = false;
+                    break;
+                }
+                if (s[idx] !== str2[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return "";
+            }
         }
     }
     
-    // Сортируем по правой позиции
-    violated.sort((a, b) => a[1] - b[1]);
-    
-    // Шаг 3: Жадное исправление (массив active хранит отсортированные индексы поставленных 'b')
-    const active = [];
-    for (const [i, r] of violated) {
-        // Бинарный поиск первой 'b' >= i
-        let idx = active.findIndex(bPos => bPos >= i);
-        
-        // Если такой 'b' нет, или она стоит правее текущего F-окна
-        if (idx === -1 || active[idx] > i + m - 1) {
-            // Вставляем 'b' в sorted массив
-            let insIdx = active.findIndex(bPos => bPos >= r);
-            if (insIdx === -1) active.push(r);
-            else active.splice(insIdx, 0, r);
-            
-            word[r] = 'b'.charCodeAt(0);
+    // Заполняем пустые позиции 'a'
+    for (let i = 0; i < len; i++) {
+        if (s[i] === '') {
+            s[i] = 'a';
         }
     }
     
-    // Шаг 4: Финальная сборка
-    return word.map(c => String.fromCharCode(c === -1 ? 'a'.charCodeAt(0) : c)).join('');
+    // Обрабатываем 'F' позиции, где подстрока стала равна str2
+    for (let i = 0; i < n; i++) {
+        if (str1[i] === 'F') {
+            let equal = true;
+            for (let j = 0; j < m; j++) {
+                if (s[i + j] !== str2[j]) {
+                    equal = false;
+                    break;
+                }
+            }
+            if (equal) {
+                let changed = false;
+                for (let j = m - 1; j >= 0; j--) {
+                    const idx = i + j;
+                    if (s[idx] < 'z') {
+                        s[idx] = String.fromCharCode(s[idx].charCodeAt(0) + 1);
+                        changed = true;
+                        break;
+                    }
+                }
+                if (!changed) {
+                    return "";
+                }
+            }
+        }
+    }
+    
+    // Финальная проверка
+    const result = s.join('');
+    for (let i = 0; i < n; i++) {
+        const sub = result.substring(i, i + m);
+        if (str1[i] === 'T' && sub !== str2) {
+            return "";
+        }
+        if (str1[i] === 'F' && sub === str2) {
+            return "";
+        }
+    }
+    
+    return result;
 };

@@ -1,10 +1,7 @@
 /**
- * https://leetcode.com/problems/lexicographically-smallest-generated-string/description/
  * Автор: Дуплей Максим Игоревич - AGLA
  * ORCID: https://orcid.org/0009-0007-7605-539X
  * GitHub: https://github.com/QuadDarv1ne/
- * 
- * Решение задачи "3474. Lexicographically Smallest Generated String" на C++
  * 
  * Полезные ссылки:
  * 1. Telegram ❃ Хижина программиста Æ: https://t.me/hut_programmer_07
@@ -14,88 +11,99 @@
  * 5. Plvideo канал: https://plvideo.ru/channel/AUPv_p1r5AQJ
  * 6. YouTube канал: https://www.youtube.com/@it-coders
  * 7. ВК группа: https://vk.com/science_geeks
+ * 
+ * Строит лексикографически наименьшую строку, удовлетворяющую условиям.
  */
-
-#include <vector>
-#include <string>
-#include <set>
-#include <algorithm>
-
-using namespace std;
 
 class Solution {
 public:
     string generateString(string str1, string str2) {
-        int n = str1.size(), m = str2.size(), L = n + m - 1;
-        vector<int> word(L, -1); // -1 = символ не определен
+        int n = str1.size();
+        int m = str2.size();
+        int len = n + m - 1;
         
-        // Шаг 1: Фиксируем символы из T-условий
+        vector<char> s(len, '\0');
+        
+        // Фиксируем все 'T' позиции
         for (int i = 0; i < n; ++i) {
             if (str1[i] == 'T') {
-                for (int k = 0; k < m; ++k) {
-                    int pos = i + k;
-                    if (pos >= L) return "";
-                    if (word[pos] != -1 && word[pos] != str2[k]) return "";
-                    word[pos] = str2[k];
+                for (int j = 0; j < m; ++j) {
+                    int idx = i + j;
+                    if (s[idx] == '\0') {
+                        s[idx] = str2[j];
+                    } else if (s[idx] != str2[j]) {
+                        return "";
+                    }
                 }
             }
         }
         
-        // Лямбда: совпало бы со str2, если заполнить пустые места 'a'?
-        auto wouldMatchIfFilledWithA = [&](int i) {
-            for (int k = 0; k < m; ++k) {
-                int pos = i + k;
-                if (pos >= L) return false;
-                if (word[pos] == -1) {
-                    if (str2[k] != 'a') return false;
-                } else {
-                    if (word[pos] != str2[k]) return false;
-                }
-            }
-            return true;
-        };
-        
-        // Лямбда: найти самую правую пустую позицию в подстроке
-        auto getRightmostUndef = [&](int i) {
-            int r = -1;
-            for (int k = 0; k < m; ++k) {
-                int pos = i + k;
-                if (pos < L && word[pos] == -1) r = pos;
-            }
-            return r;
-        };
-        
-        // Шаг 2: Собираем F-условия, которые нарушатся при заполнении 'a'
-        vector<pair<int, int>> violated;
+        // Проверяем 'F' позиции на конфликты
         for (int i = 0; i < n; ++i) {
-            if (str1[i] == 'F' && wouldMatchIfFilledWithA(i)) {
-                int r = getRightmostUndef(i);
-                if (r == -1) return ""; // Нет пустых мест для исправления
-                violated.push_back({i, r});
+            if (str1[i] == 'F') {
+                bool match = true;
+                for (int j = 0; j < m; ++j) {
+                    int idx = i + j;
+                    if (s[idx] == '\0') {
+                        match = false;
+                        break;
+                    }
+                    if (s[idx] != str2[j]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    return "";
+                }
             }
         }
         
-        // Сортируем конфликты по самой правой позиции
-        sort(violated.begin(), violated.end(), [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
-        
-        // Шаг 3: Жадно исправляем конфликты (ставим 'b' как можно правее)
-        set<int> active;
-        for (auto& p : violated) {
-            int i = p.first, r = p.second;
-            auto it = active.lower_bound(i);
-            // Если уже стоящая 'b' не перекрывает текущее F-условие
-            if (it == active.end() || *it > i + m - 1) {
-                active.insert(r);
-                word[r] = 'b';
+        // Заполняем пустые позиции 'a'
+        for (int i = 0; i < len; ++i) {
+            if (s[i] == '\0') {
+                s[i] = 'a';
             }
         }
         
-        // Шаг 4: Заполняем оставшиеся неопределенные позиции 'a'
-        string result = "";
-        for (int pos = 0; pos < L; ++pos) {
-            result += (char)(word[pos] == -1 ? 'a' : word[pos]);
+        // Обрабатываем 'F' позиции, где подстрока стала равна str2
+        for (int i = 0; i < n; ++i) {
+            if (str1[i] == 'F') {
+                bool equal = true;
+                for (int j = 0; j < m; ++j) {
+                    if (s[i + j] != str2[j]) {
+                        equal = false;
+                        break;
+                    }
+                }
+                if (equal) {
+                    bool changed = false;
+                    // Идём справа налево, увеличиваем символ
+                    for (int j = m - 1; j >= 0; --j) {
+                        int idx = i + j;
+                        if (s[idx] < 'z') {
+                            s[idx]++;
+                            changed = true;
+                            break;
+                        }
+                    }
+                    if (!changed) {
+                        return "";
+                    }
+                }
+            }
+        }
+        
+        // Финальная проверка
+        string result(s.begin(), s.end());
+        for (int i = 0; i < n; ++i) {
+            string sub = result.substr(i, m);
+            if (str1[i] == 'T' && sub != str2) {
+                return "";
+            }
+            if (str1[i] == 'F' && sub == str2) {
+                return "";
+            }
         }
         
         return result;
