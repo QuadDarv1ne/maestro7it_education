@@ -16,15 +16,31 @@
 using System;
 using System.Text;
 
-public class Solution {
-    public string MapWordWeights(string[] words, int[] weights) {
+public class Solution
+{
+    /// <summary>
+    /// Преобразует массив слов в строку символов на основе весов букв.
+    /// 
+    /// Алгоритм работы:
+    /// 1. Вычисляет вес каждого слова как сумму весов составляющих его букв.
+    ///    Буква 'a' соответствует индексу 0 в массиве weights, 'b' - 1 и т.д.
+    /// 2. Вычисляет остаток от деления веса слова на 26.
+    /// 3. Преобразует остаток в символ: 0 -> 'z', 1 -> 'y', ..., 25 -> 'a'.
+    /// </summary>
+    /// <param name="words">Массив строк для обработки.</param>
+    /// <param name="weights">Массив целых чисел, представляющих веса букв от 'a' до 'z'.</param>
+    /// <returns>Строка, состоящая из вычисленных символов для каждого входного слова.</returns>
+    public string MapWordWeights(string[] words, int[] weights)
+    {
         StringBuilder result = new StringBuilder();
         
-        foreach (string word in words) {
+        foreach (string word in words)
+        {
             int sum = 0;
             
             // Вычисляем вес слова
-            foreach (char c in word) {
+            foreach (char c in word)
+            {
                 int index = c - 'a';
                 sum += weights[index];
             }
