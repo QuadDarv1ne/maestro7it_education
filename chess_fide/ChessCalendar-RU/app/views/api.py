@@ -1566,3 +1566,397 @@ def get_tournament_reaction_stats(tournament_id):
         from app.utils.logger import logger
         logger.error(f"Reaction stats error: {str(e)}")
         return jsonify({'error': 'Failed to get reaction stats'}), 500
+
+
+# ==================== TAGS API ====================
+
+@api_bp.route('/tags', methods=['GET'])
+def get_tags():
+    """Get all tags with usage statistics"""
+    try:
+        from app.models.tag import Tag
+        
+        limit = request.args.get('limit', 50, type=int)
+        search = request.args.get('search', '').strip()
+        
+        query = Tag.query
+        
+        if search:
+            query = query.filter(Tag.name.ilike(f'%{search}%'))
+        
+        tags = query.order_by(Tag.usage_count.desc()).limit(limit).all()
+        
+        return jsonify({
+            'tags': [tag.to_dict() for tag in tags],
+            'total': len(tags)
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Get tags error: {str(e)}")
+        return jsonify({'error': 'Failed to get tags'}), 500
+
+
+@api_bp.route('/tags/popular', methods=['GET'])
+def get_popular_tags():
+    """Get most popular tags"""
+    try:
+        from app.models.tag import Tag
+        
+        limit = request.args.get('limit', 20, type=int)
+        tags = Tag.query.order_by(Tag.usage_count.desc()).limit(limit).all()
+        
+        return jsonify({
+            'tags': [tag.to_dict() for tag in tags]
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Get popular tags error: {str(e)}")
+        return jsonify({'error': 'Failed to get popular tags'}), 500
+
+
+@api_bp.route('/tournaments/<int:tournament_id>/tags', methods=['GET'])
+def get_tournament_tags(tournament_id):
+    """Get tags for a specific tournament"""
+    try:
+        from app.models.tag import TagTournament, Tag
+        
+        # Check if tournament exists
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        assignments = TagTournament.query.filter_by(tournament_id=tournament_id).all()
+        tags = [assignment.tag for assignment in assignments]
+        
+        return jsonify({
+            'tournament_id': tournament_id,
+            'tags': [tag.to_dict() for tag in tags]
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Get tournament tags error: {str(e)}")
+        return jsonify({'error': 'Failed to get tournament tags'}), 500
+
+
+@api_bp.route('/tournaments/<int:tournament_id>/tags', methods=['POST'])
+@csrf.exempt
+def add_tag_to_tournament(tournament_id):
+    """Add a tag to a tournament"""
+    try:
+        from app.models.tag import Tag, TagTournament, TagService
+        
+        # Check if tournament exists
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        data = request.get_json()
+        tag_name = data.get('tag_name')
+        
+        if not tag_name:
+            return jsonify({'error': 'tag_name is required'}), 400
+        
+        # Add tag to tournament
+        tag, error = TagService.add_tag_to_tournament(tournament_id, tag_name)
+        
+        if error:
+            return jsonify({'error': error}), 409
+        
+        return jsonify({
+            'message': 'Tag added successfully',
+            'tag': tag.to_dict()
+        }), 201
+    
+    except Exception as e:
+        logger.error(f"Add tag to tournament error: {str(e)}")
+        return jsonify({'error': 'Failed to add tag'}), 500
+
+
+@api_bp.route('/tags/by-slug/<slug>', methods=['GET'])
+def get_tournaments_by_tag(slug):
+    """Get tournaments by tag slug"""
+    try:
+        from app.models.tag import Tag, TagTournament
+        
+        tag = Tag.query.filter_by(slug=slug).first()
+        if not tag:
+            return jsonify({'error': 'Tag not found'}), 404
+        
+        assignments = TagTournament.query.filter_by(tag_id=tag.id).all()
+        tournaments = [assignment.tournament for assignment in assignments]
+        
+        return jsonify({
+            'tag': tag.to_dict(),
+            'tournaments': [t.to_dict() for t in tournaments],
+            'total': len(tournaments)
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Get tournaments by tag error: {str(e)}")
+        return jsonify({'error': 'Failed to get tournaments by tag'}), 500
+
+
+@api_bp.route('/tournaments', methods=['GET'])
+def search_tournaments_by_tag():
+    """Search tournaments by tag (alternative endpoint)"""
+    try:
+        from app.models.tag import Tag, TagTournament
+        
+        tag_slug = request.args.get('tag')
+        
+        if not tag_slug:
+            return jsonify({'error': 'tag parameter is required'}), 400
+        
+        tag = Tag.query.filter_by(slug=tag_slug).first()
+        if not tag:
+            return jsonify({'error': 'Tag not found'}), 404
+        
+        assignments = TagTournament.query.filter_by(tag_id=tag.id).all()
+        tournaments = [assignment.tournament for assignment in assignments]
+        
+        return jsonify({
+            'tag': tag.to_dict(),
+            'tournaments': [t.to_dict() for t in tournaments],
+            'total': len(tournaments)
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Search tournaments by tag error: {str(e)}")
+        return jsonify({'error': 'Failed to search tournaments by tag'}), 500
+
+
+# ==================== COMMENTS API ====================
+
+@api_bp.route('/tournaments/<int:tournament_id>/comments', methods=['GET'])
+def get_tournament_comments(tournament_id):
+    """Get comments for a tournament"""
+    try:
+        from app.models.comment import TournamentComment
+        
+        # Check if tournament exists
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 20, type=int), 50)
+        
+        comments = TournamentComment.query.filter_by(
+            tournament_id=tournament_id,
+            parent_id=None,
+            is_deleted=False
+        ).order_by(TournamentComment.created_at.asc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'tournament_id': tournament_id,
+            'comments': [c.to_dict() for c in comments.items],
+            'total': comments.total,
+            'pages': comments.pages,
+            'current_page': page
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Get tournament comments error: {str(e)}")
+        return jsonify({'error': 'Failed to get comments'}), 500
+
+
+@api_bp.route('/tournaments/<int:tournament_id>/comments', methods=['POST'])
+def create_tournament_comment(tournament_id):
+    """Create a comment on a tournament"""
+    try:
+        from app.models.comment import TournamentComment, CommentService
+        from flask import session
+        
+        # Check if tournament exists
+        tournament = Tournament.query.get(tournament_id)
+        if not tournament:
+            return jsonify({'error': 'Tournament not found'}), 404
+        
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({'error': 'content is required'}), 400
+        
+        content = data['content']
+        parent_id = data.get('parent_id')  # For replies
+        
+        # Get user from session or token (simplified for now)
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        comment, error = CommentService.create_comment(tournament_id, user_id, content, parent_id)
+        
+        if error:
+            return jsonify({'error': error}), 400
+        
+        return jsonify({
+            'message': 'Comment created successfully',
+            'comment': comment.to_dict()
+        }), 201
+    
+    except Exception as e:
+        logger.error(f"Create comment error: {str(e)}")
+        return jsonify({'error': 'Failed to create comment'}), 500
+
+
+@api_bp.route('/comments/<int:comment_id>', methods=['PUT'])
+def update_comment(comment_id):
+    """Update a comment"""
+    try:
+        from app.models.comment import CommentService
+        from flask import session
+        
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({'error': 'content is required'}), 400
+        
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        comment, error = CommentService.update_comment(comment_id, user_id, data['content'])
+        
+        if error:
+            return jsonify({'error': error}), 403
+        
+        return jsonify({
+            'message': 'Comment updated successfully',
+            'comment': comment.to_dict()
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Update comment error: {str(e)}")
+        return jsonify({'error': 'Failed to update comment'}), 500
+
+
+@api_bp.route('/comments/<int:comment_id>', methods=['DELETE'])
+def delete_comment(comment_id):
+    """Delete a comment"""
+    try:
+        from app.models.comment import CommentService
+        from flask import session
+        
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        comment, error = CommentService.delete_comment(comment_id, user_id)
+        
+        if error:
+            return jsonify({'error': error}), 403
+        
+        return jsonify({
+            'message': 'Comment deleted successfully'
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Delete comment error: {str(e)}")
+        return jsonify({'error': 'Failed to delete comment'}), 500
+
+
+@api_bp.route('/comments/<int:comment_id>/replies', methods=['GET'])
+def get_comment_replies(comment_id):
+    """Get replies to a comment"""
+    try:
+        from app.models.comment import TournamentComment
+        
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 10, type=int), 50)
+        
+        replies = TournamentComment.query.filter_by(
+            parent_id=comment_id,
+            is_deleted=False
+        ).order_by(TournamentComment.created_at.asc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'comment_id': comment_id,
+            'replies': [r.to_dict() for r in replies.items],
+            'total': replies.total,
+            'pages': replies.pages,
+            'current_page': page
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Get replies error: {str(e)}")
+        return jsonify({'error': 'Failed to get replies'}), 500
+
+
+# ==================== ANALYTICS API ====================
+
+@api_bp.route('/analytics/overview', methods=['GET'])
+@track_performance()
+def get_analytics_overview():
+    """Get analytics overview"""
+    try:
+        from app.utils.enhanced_analytics import AnalyticsService
+        
+        overview = AnalyticsService.get_overview()
+        return jsonify(overview), 200
+    
+    except Exception as e:
+        logger.error(f"Get analytics overview error: {str(e)}")
+        return jsonify({'error': 'Failed to get analytics'}), 500
+
+
+@api_bp.route('/analytics/trends', methods=['GET'])
+def get_analytics_trends():
+    """Get tournament trends"""
+    try:
+        from app.utils.enhanced_analytics import AnalyticsService
+        
+        period_days = request.args.get('period_days', 30, type=int)
+        trends = AnalyticsService.get_trends(period_days)
+        return jsonify(trends), 200
+    
+    except Exception as e:
+        logger.error(f"Get analytics trends error: {str(e)}")
+        return jsonify({'error': 'Failed to get trends'}), 500
+
+
+@api_bp.route('/analytics/popular', methods=['GET'])
+def get_popular_analytics():
+    """Get popular tournaments analytics"""
+    try:
+        from app.utils.enhanced_analytics import AnalyticsService
+        
+        limit = request.args.get('limit', 10, type=int)
+        period_days = request.args.get('period_days', 30, type=int)
+        popular = AnalyticsService.get_popular_tournaments(limit, period_days)
+        return jsonify(popular), 200
+    
+    except Exception as e:
+        logger.error(f"Get popular analytics error: {str(e)}")
+        return jsonify({'error': 'Failed to get popular tournaments'}), 500
+
+
+@api_bp.route('/analytics/tags', methods=['GET'])
+def get_tag_analytics():
+    """Get tag statistics"""
+    try:
+        from app.utils.enhanced_analytics import AnalyticsService
+        
+        tags = AnalyticsService.get_tag_statistics()
+        return jsonify({'tags': tags}), 200
+    
+    except Exception as e:
+        logger.error(f"Get tag analytics error: {str(e)}")
+        return jsonify({'error': 'Failed to get tag statistics'}), 500
+
+
+@api_bp.route('/analytics/monthly', methods=['GET'])
+def get_monthly_report():
+    """Get monthly report"""
+    try:
+        from app.utils.enhanced_analytics import AnalyticsService
+        
+        year = request.args.get('year', type=int)
+        report = AnalyticsService.get_monthly_report(year)
+        return jsonify(report), 200
+    
+    except Exception as e:
+        logger.error(f"Get monthly report error: {str(e)}")
+        return jsonify({'error': 'Failed to get monthly report'}), 500

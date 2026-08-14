@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, date
 from app import db
 from app.models.tournament import Tournament
-from app.utils.fide_parser import FIDEParses
+from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 from app.utils.notifications import notification_service
 import requests
@@ -28,7 +28,7 @@ except ImportError:
 
 class TournamentUpdater:
     def __init__(self):
-        self.fide_parser = FIDEParses()
+        self.fide_parser = FIDEParser()
         self.cfr_parser = CFRParser()
         
         # Add retry configuration

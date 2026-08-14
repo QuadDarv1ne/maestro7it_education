@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app import create_app
 from app.models.tournament import Tournament
 from app.utils.updater import TournamentUpdater
-from app.utils.fide_parser import FIDEParses
+from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 from app import db
 
@@ -122,7 +122,7 @@ class TestTournamentUpdater(unittest.TestCase):
         self.assertEqual(result, "Success")
         self.assertEqual(call_count, 3)
     
-    @patch('app.utils.fide_parser.FIDEParses.get_tournaments_russia')
+    @patch('app.utils.fide_parser.FIDEParser.get_tournaments_russia')
     def test_update_from_fide_with_error(self, mock_get_tournaments):
         """Test FIDE update with error handling"""
         mock_get_tournaments.side_effect = Exception("Network error")
@@ -147,7 +147,7 @@ class TestTournamentUpdater(unittest.TestCase):
 
 class TestFIDEParsers(unittest.TestCase):
     def setUp(self):
-        self.parser = FIDEParses()
+        self.parser = FIDEParser()
     
     def test_parse_date_flexible(self):
         """Test the flexible date parsing"""

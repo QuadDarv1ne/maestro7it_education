@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app
 from app.models.tournament import Tournament
-from app.utils.fide_parser import FIDEParses
+from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 from app.utils.updater import updater
 from datetime import datetime
@@ -17,7 +17,7 @@ from datetime import datetime
 def test_parsers():
     """Test the updated parsers"""
     print("Testing FIDE Parser...")
-    fide_parser = FIDEParses()
+    fide_parser = FIDEParser()
     try:
         fide_tournaments = fide_parser.get_tournaments_russia(2026)
         print(f"FIDE parser returned {len(fide_tournaments)} tournaments")

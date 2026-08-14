@@ -5,7 +5,7 @@ from datetime import datetime, date
 from app import create_app, db
 from app.models.tournament import Tournament
 from app.models.user import User
-from app.utils.fide_parser import FIDEParses
+from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 from app.utils.updater import updater
 
@@ -27,12 +27,12 @@ class TestComprehensive(unittest.TestCase):
             # Create a sample tournament for testing
             sample_tournament = Tournament(
                 name="Test Tournament",
-                start_date=date(2026, 3, 15),
-                end_date=date(2026, 3, 20),
+                start_date=date(2026, 9, 15),
+                end_date=date(2026, 9, 20),
                 location="Moscow, Russia",
                 category="FIDE",
                 status="Scheduled",
-                fide_id="TEST123",
+                fide_id="12345",
                 source_url="https://test.com"
             )
             db.session.add(sample_tournament)
@@ -61,8 +61,8 @@ class TestComprehensive(unittest.TestCase):
             # Test creating new tournament
             new_tournament = Tournament(
                 name="New Test Tournament",
-                start_date=date(2026, 4, 1),
-                end_date=date(2026, 4, 5),
+                start_date=date(2026, 10, 1),
+                end_date=date(2026, 10, 5),
                 location="St. Petersburg, Russia",
                 category="National",
                 status="Scheduled"
@@ -80,8 +80,8 @@ class TestComprehensive(unittest.TestCase):
             # Test valid tournament
             valid_tournament = Tournament(
                 name="Valid Tournament",
-                start_date=date(2026, 5, 1),
-                end_date=date(2026, 5, 5),
+                start_date=date(2026, 9, 1),
+                end_date=date(2026, 9, 5),
                 location="Test Location",
                 category="National",
                 status="Scheduled"
@@ -93,8 +93,8 @@ class TestComprehensive(unittest.TestCase):
             # Test invalid tournament (end date before start date)
             invalid_tournament = Tournament(
                 name="Invalid Tournament",
-                start_date=date(2026, 5, 10),
-                end_date=date(2026, 5, 5),  # End date before start date
+                start_date=date(2026, 9, 10),
+                end_date=date(2026, 9, 5),  # End date before start date
                 location="Test Location",
                 category="National",
                 status="Scheduled"
@@ -147,7 +147,7 @@ class TestComprehensive(unittest.TestCase):
     
     def test_parser_initialization(self):
         """Test parser initialization"""
-        fide_parser = FIDEParses()
+        fide_parser = FIDEParser()
         cfr_parser = CFRParser()
         
         self.assertIsNotNone(fide_parser)
@@ -184,12 +184,12 @@ class TestModelMethods(unittest.TestCase):
         with self.app.app_context():
             tournament = Tournament(
                 name="Test Tournament",
-                start_date=date(2026, 3, 15),
-                end_date=date(2026, 3, 20),
+                start_date=date(2026, 9, 15),
+                end_date=date(2026, 9, 20),
                 location="Moscow, Russia",
                 category="FIDE",
                 status="Scheduled",
-                fide_id="TEST123",
+                fide_id="12345",
                 source_url="https://test.com"
             )
             

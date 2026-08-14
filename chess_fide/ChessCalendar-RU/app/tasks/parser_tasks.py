@@ -4,7 +4,7 @@ Celery задачи для парсинга турниров
 from app.celery_app import celery_app
 from app import create_app, db
 from app.models.tournament import Tournament
-from app.utils.fide_parser import FIDEParses as FIDEParser
+from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 from app.utils.unified_cache import TournamentCache
 from app.utils.metrics import track_celery_task

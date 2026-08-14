@@ -9,10 +9,13 @@ from .report import Report
 from .tournament_subscription import TournamentSubscription
 from .audit_log import AuditLog
 from .ab_test_event import ABTestEvent
+from .tag import Tag, TagTournament
+from .comment import TournamentComment
 
 __all__ = [
     'Tournament', 'User', 'Notification', 'Subscription', 
     'FavoriteTournament', 'UserPreference', 'UserInteraction', 
     'TournamentRating', 'ForumThread', 'ForumPost', 'Report', 
-    'TournamentSubscription', 'AuditLog', 'ABTestEvent'
+    'TournamentSubscription', 'AuditLog', 'ABTestEvent',
+    'Tag', 'TagTournament', 'TournamentComment'
 ]

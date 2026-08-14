@@ -431,6 +431,11 @@ class TournamentCache:
         return Tournament.query.get(tournament_id)
     
     @staticmethod
+    def get_tournament_by_id(tournament_id: int):
+        """Получить турнир по ID с кэшированием (alias для get_by_id)"""
+        return TournamentCache.get_by_id(tournament_id)
+    
+    @staticmethod
     @cached(timeout=3600, tags=['tournaments', 'stats'], key_prefix='tournaments_stats')
     def get_stats():
         """Получить статистику турниров"""

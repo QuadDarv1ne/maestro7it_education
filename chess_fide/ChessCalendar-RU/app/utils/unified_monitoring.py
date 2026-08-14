@@ -461,10 +461,9 @@ def check_cache_connection():
 def check_parser_status():
     """Проверка работоспособности парсеров"""
     try:
-        from app.utils.fide_parser import FIDEParses
+        from app.utils.fide_parser import FIDEParser
         from app.utils.cfr_parser import CFRParser
-        
-        fide_parser = FIDEParses()
+        fide_parser = FIDEParser()
         cfr_parser = CFRParser()
         
         return fide_parser is not None and cfr_parser is not None

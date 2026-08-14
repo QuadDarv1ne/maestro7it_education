@@ -35,8 +35,16 @@ def app():
         db.session.remove()
         db.drop_all()
     
-    os.close(db_fd)
-    os.unlink(db_path)
+    # Закрываем файл перед удалением
+    try:
+        os.close(db_fd)
+    except OSError:
+        pass  # Файл уже закрыт
+    
+    try:
+        os.unlink(db_path)
+    except (PermissionError, OSError):
+        pass  # Файл может быть заблокирован Windows
 
 
 @pytest.fixture(scope='function')
@@ -74,10 +82,9 @@ def admin_user(db_session):
     user = User(
         username='admin',
         email='admin@test.com',
-        is_admin=True,
-        is_active=True
+        password='Admin123!test',
+        is_admin=True
     )
-    user.set_password('admin123')
     db_session.add(user)
     db_session.commit()
     return user
@@ -89,10 +96,8 @@ def regular_user(db_session):
     user = User(
         username='user',
         email='user@test.com',
-        is_admin=False,
-        is_active=True
+        password='User123!test'
     )
-    user.set_password('user123')
     db_session.add(user)
     db_session.commit()
     return user
@@ -144,7 +149,7 @@ def auth_headers(client, admin_user):
     """JWT токен для аутентифицированных запросов"""
     response = client.post('/auth/login', json={
         'username': 'admin',
-        'password': 'admin123'
+        'password': 'Admin123!test'
     })
     token = response.json.get('access_token')
     return {'Authorization': f'Bearer {token}'}

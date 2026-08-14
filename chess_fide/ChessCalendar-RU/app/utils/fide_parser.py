@@ -18,7 +18,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 
 logger = logging.getLogger('app.parsers')
 
-class FIDEParses:
+class FIDEParser:
     def __init__(self):
         self.base_url = "https://calendar.fide.com"
         self.session = requests.Session()
@@ -51,6 +51,15 @@ class FIDEParses:
         
         # Initialize Selenium for JavaScript-heavy pages
         self.driver = None
+        
+        # User agents for Selenium
+        self.user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1'
+        ]
         
     def __del__(self):
         if self.driver:
@@ -304,8 +313,6 @@ class FIDEParses:
     def _parse_json_dates(self, start_date_str, end_date_str):
         """Парсинг дат из JSON"""
         try:
-            from dateutil import parser
-            
             if not start_date_str:
                 return None, None
             
@@ -502,9 +509,8 @@ class FIDEParses:
                     return start_date, end_date
                 else:
                     # If flexible parsing fails, try original method
-                    import dateutil.parser
-                    start_date = dateutil.parser.parse(dates[0].strip())
-                    end_date = dateutil.parser.parse(dates[1].strip())
+                    start_date = date_parser.parse(dates[0].strip())
+                    end_date = date_parser.parse(dates[1].strip())
                     return start_date.date(), end_date.date()
             else:
                 start_date = self._parse_date_flexible(date_string.strip())
@@ -512,8 +518,7 @@ class FIDEParses:
                     return start_date, start_date
                 else:
                     # If flexible parsing fails, try original method
-                    import dateutil.parser
-                    start_date = dateutil.parser.parse(date_string.strip())
+                    start_date = date_parser.parse(date_string.strip())
                     return start_date.date(), start_date.date()
         except (ValueError, AttributeError, TypeError):
             return None, None
@@ -611,6 +616,9 @@ class FIDEParses:
         """Get page content using Selenium for JavaScript-heavy sites"""
         try:
             self._init_driver()
+            if self.driver is None:
+                logger.error("WebDriver failed to initialize")
+                return None
             self.driver.get(url)
             
             # Wait for the main content to load
@@ -632,14 +640,6 @@ class FIDEParses:
         except Exception as e:
             logger.error(f"Unexpected error getting page with Selenium {url}: {e}")
             return None
-    
-    user_agents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1'
-    ]
     
     def _try_with_selenium(self, year):
         """Try to get tournaments using Selenium for JavaScript-heavy pages"""

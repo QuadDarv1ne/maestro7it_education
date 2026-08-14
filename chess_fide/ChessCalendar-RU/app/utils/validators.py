@@ -252,3 +252,66 @@ def validate_data(schema: Schema, data: Dict[str, Any]) -> Tuple[bool, List[str]
 def validate_or_raise(schema: Schema, data: Dict[str, Any]):
     """Вспомогательная функция для валидации с выбросом исключения"""
     schema.validate_or_raise(data)
+
+
+def slugify(text: str) -> str:
+    """
+    Создать URL-friendly slug из текста
+    
+    Args:
+        text: Исходный текст
+        
+    Returns:
+        URL-friendly slug (например: 'Мой турнир' -> 'moy-turir')
+    """
+    import re
+    import unicodedata
+    
+    if not text:
+        return ''
+    
+    # Приводим к нижнему регистру
+    text = text.lower()
+    
+    # Транслитерация кириллицы
+    cyrillic_to_latin = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
+        'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i',
+        'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n',
+        'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't',
+        'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch',
+        'ш': 'sh', 'щ': 'shch', 'ъ': '', 'ы': 'y', 'ь': '',
+        'э': 'e', 'ю': 'yu', 'я': 'ya',
+        ' ': '-',
+    }
+    
+    # Транслитерация
+    result = []
+    for char in text:
+        result.append(cyrillic_to_latin.get(char, char))
+    text = ''.join(result)
+    
+    # Удаляем все кроме букв, цифр и дефиса
+    text = re.sub(r'[^a-z0-9\-]', '', text)
+    
+    # Заменяем несколько дефисов на один
+    text = re.sub(r'-+', '-', text)
+    
+    # Удаляем дефисы в начале и конце
+    text = text.strip('-')
+    
+    return text
+
+
+__all__ = [
+    'ValidationError',
+    'Validator',
+    'StringValidator',
+    'EmailValidator',
+    'DateValidator',
+    'PasswordValidator',
+    'URLValidator',
+    'validate_data',
+    'validate_or_raise',
+    'slugify'
+]
