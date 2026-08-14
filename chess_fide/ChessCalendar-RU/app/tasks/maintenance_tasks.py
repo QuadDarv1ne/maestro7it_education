@@ -52,10 +52,7 @@ def backup_database():
     Резервное копирование базы данных
     """
     try:
-        db_path = os.environ.get('DATABASE_PATH', 'instance/chess_calendar.db')
-        backup_manager = DatabaseBackupManager(db_path)
-        
-        backup_path = backup_manager.create_compressed_backup()
+        backup_path = backup_manager.create_backup()
         
         logger.info(f"Database backup created: {backup_path}")
         
@@ -146,7 +143,7 @@ def check_system_health():
                 logger.error(f"Database health check failed: {e}")
             
             # Проверка кэша
-            cache_stats = cache_manager.get_stats()
+            cache_stats = cache.get_stats()
             
             # Проверка дискового пространства
             import shutil

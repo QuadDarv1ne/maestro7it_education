@@ -47,7 +47,6 @@ class FIDEParser:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
-        self.logger = logger  # Use centralized logger
         
         # Initialize Selenium for JavaScript-heavy pages
         self.driver = None

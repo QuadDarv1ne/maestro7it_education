@@ -239,8 +239,11 @@ class TwoFactorSecret(db.Model):
         
         for i, hashed_code in enumerate(self.backup_codes):
             if PasswordManager.verify_password(hashed_code, code):
-                # Удаляем использованный код
-                self.backup_codes.pop(i)
+                # Удаляем использованный код (пересоздаём список, чтобы SQLAlchemy
+                # зафиксировал изменение JSON-колонки)
+                remaining_codes = list(self.backup_codes)
+                remaining_codes.pop(i)
+                self.backup_codes = remaining_codes
                 db.session.commit()
                 return True
         

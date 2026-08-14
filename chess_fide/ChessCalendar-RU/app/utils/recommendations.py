@@ -8,6 +8,12 @@ from collections import defaultdict, Counter
 import math
 
 
+def get_recommendations(user_id, limit=5):
+    """Получение персональных рекомендаций в виде словарей"""
+    tournaments = RecommendationEngine.get_user_recommendations(user_id)
+    return [t.to_dict() for t in tournaments[:limit]]
+
+
 class RecommendationEngine:
     """Engine for generating tournament recommendations based on user preferences and interactions"""
     

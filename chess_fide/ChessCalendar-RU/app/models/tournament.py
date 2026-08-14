@@ -32,6 +32,7 @@ class Tournament(db.Model):
     
     # Composite indexes for common query patterns
     __table_args__ = (
+        db.CheckConstraint('end_date >= start_date', name='ck_tournament_dates'),
         db.Index('idx_location_category', 'location', 'category'),
         db.Index('idx_category_status', 'category', 'status'),
         db.Index('idx_start_date_status', 'start_date', 'status'),

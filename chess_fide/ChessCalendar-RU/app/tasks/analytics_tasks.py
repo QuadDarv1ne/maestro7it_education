@@ -7,6 +7,7 @@ from app.models.tournament import Tournament
 from app.models.user import User
 from app.utils.unified_cache import cache
 from app.utils.metrics import track_celery_task
+from app.utils.recommendations import RecommendationEngine
 from datetime import datetime, timedelta
 import logging
 
@@ -51,7 +52,7 @@ def generate_daily_report():
             }
             
             # Кэшируем отчет
-            cache_manager.set(f'daily_report:{yesterday}', report, timeout=86400 * 7)
+            cache.set(f'daily_report:{yesterday}', report, timeout=86400 * 7)
             
             logger.info(f"Daily report generated for {yesterday}")
             
@@ -71,8 +72,6 @@ def update_recommendations_cache():
     
     with app.app_context():
         try:
-            from app.utils.recommendations import RecommendationEngine
-            
             active_users = User.query.filter_by(is_active=True).all()
             updated_count = 0
             
@@ -83,7 +82,7 @@ def update_recommendations_cache():
                     
                     # Кэшируем
                     cache_key = f'recommendations:user:{user.id}'
-                    cache_manager.set(cache_key, recommendations, timeout=7200)
+                    cache.set(cache_key, recommendations, timeout=7200)
                     
                     updated_count += 1
                 except Exception as e:
@@ -137,7 +136,7 @@ def calculate_tournament_statistics(tournament_id):
             
             # Кэшируем статистику
             cache_key = f'tournament_stats:{tournament_id}'
-            cache_manager.set(cache_key, stats, timeout=3600)
+            cache.set(cache_key, stats, timeout=3600)
             
             return stats
             
@@ -195,7 +194,7 @@ def cleanup_expired_cache():
         # Redis автоматически удаляет истекшие ключи
         # Но можем принудительно очистить определенные паттерны
         
-        stats = cache_manager.get_stats()
+        stats = cache.get_stats()
         logger.info(f"Cache stats: {stats}")
         
         return {

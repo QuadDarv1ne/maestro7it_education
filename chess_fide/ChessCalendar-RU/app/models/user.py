@@ -57,13 +57,14 @@ class User(db.Model):
         db.Index('idx_failed_login', 'failed_login_attempts', 'locked_until'),
     )
 
-    def __init__(self, username, email, password, is_admin=False, is_regular_user=True):
+    def __init__(self, username, email, password=None, is_admin=False, is_regular_user=True):
         self.username = username
         self.email = email
-        self.set_password(password)
         self.is_admin = is_admin
         self.is_regular_user = is_regular_user
         self.generate_api_key()
+        if password:
+            self.set_password(password)
 
     def set_password(self, password):
         """Установить хэш пароля с использованием Argon2 или werkzeug"""

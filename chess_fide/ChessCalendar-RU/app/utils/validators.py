@@ -79,6 +79,42 @@ class EmailValidator(StringValidator):
         return True, None
 
 
+class URLValidator(Validator):
+    """Валидатор URL"""
+    
+    def _validate_value(self, value: Any, field_name: str) -> Tuple[bool, Optional[str]]:
+        if not isinstance(value, str):
+            return False, f"{field_name} must be a string"
+        
+        from urllib.parse import urlparse
+        parsed = urlparse(value)
+        if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+            return False, f"{field_name} must be a valid http/https URL"
+        
+        return True, None
+
+
+class PasswordValidator(StringValidator):
+    """Валидатор пароля"""
+    
+    def __init__(self, min_length: int = 8, max_length: int = 128, **kwargs):
+        super().__init__(min_length=min_length, max_length=max_length, **kwargs)
+    
+    def _validate_value(self, value: Any, field_name: str) -> Tuple[bool, Optional[str]]:
+        is_valid, error = super()._validate_value(value, field_name)
+        if not is_valid:
+            return False, error
+        
+        has_upper = any(c.isupper() for c in value)
+        has_lower = any(c.islower() for c in value)
+        has_digit = any(c.isdigit() for c in value)
+        
+        if not (has_upper and has_lower and has_digit):
+            return False, f"{field_name} must contain uppercase and lowercase letters and digits"
+        
+        return True, None
+
+
 class IntegerValidator(Validator):
     """Валидатор целых чисел"""
     
@@ -303,14 +339,186 @@ def slugify(text: str) -> str:
     return text
 
 
+# ─── Функциональные валидаторы (обратная совместимость) ───────────────────────
+
+EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+USERNAME_PATTERN = re.compile(r'^[A-Za-z0-9_]{3,50}$')
+PHONE_PATTERN = re.compile(r'^\+?[1-9]\d{9,14}$')
+HEX_COLOR_PATTERN = re.compile(r'^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')
+IPV4_PATTERN = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
+
+ALLOWED_TAGS = [
+    'a', 'abbr', 'acronym', 'b', 'blockquote', 'br', 'code', 'em',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'i', 'img', 'li', 'ol', 'p',
+    'pre', 'strong', 'ul'
+]
+ALLOWED_ATTRIBUTES = {
+    'a': ['href', 'title'],
+    'img': ['src', 'alt', 'title']
+}
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 МБ
+
+
+def validate_email(email: Any) -> bool:
+    """Проверка корректности email"""
+    if not isinstance(email, str):
+        return False
+    return EMAIL_PATTERN.match(email.strip()) is not None
+
+
+def validate_username(username: Any) -> bool:
+    """Проверка корректности username (3-50 символов, буквы/цифры/подчеркивание)"""
+    if not isinstance(username, str):
+        return False
+    return USERNAME_PATTERN.match(username) is not None
+
+
+def validate_url(url: Any) -> bool:
+    """Проверка корректности URL (только http/https)"""
+    if not isinstance(url, str):
+        return False
+    
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+
+
+def sanitize_html(html: Any, allowed_tags: Optional[List[str]] = None,
+                  allowed_attributes: Optional[Dict[str, List[str]]] = None) -> str:
+    """Очистка HTML от опасных тегов и скриптов"""
+    if html is None:
+        return ''
+    
+    import bleach
+    
+    text = str(html)
+    # Удаляем блоки script/style вместе с содержимым
+    text = re.sub(r'<\s*script\b[^>]*>.*?<\s*/\s*script\s*>', '', text,
+                  flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<\s*style\b[^>]*>.*?<\s*/\s*style\s*>', '', text,
+                  flags=re.IGNORECASE | re.DOTALL)
+    
+    tags = allowed_tags if allowed_tags is not None else ALLOWED_TAGS
+    attrs = allowed_attributes if allowed_attributes is not None else ALLOWED_ATTRIBUTES
+    
+    return bleach.clean(text, tags=tags, attributes=attrs, strip=True)
+
+
+def sanitize_input(text: Any, max_length: Optional[int] = None) -> str:
+    """Базовая санитизация строки: удаление HTML и схлопывание пробелов"""
+    if text is None:
+        return ''
+    
+    text = str(text)
+    text = re.sub(r'<[^>]*>', '', text)
+    text = ' '.join(text.split())
+    
+    if max_length and len(text) > max_length:
+        text = text[:max_length]
+    
+    return text
+
+
+def validate_phone(phone: Any) -> bool:
+    """Проверка корректности телефона (E.164: 10-15 цифр, не начинается с 0)"""
+    if not isinstance(phone, str):
+        return False
+    return PHONE_PATTERN.match(phone.strip()) is not None
+
+
+def validate_date_range(start: Any, end: Any) -> Tuple[bool, Optional[str]]:
+    """Проверка диапазона дат: обе даты обязательны, start <= end"""
+    if start is None or end is None:
+        return False, "Both start and end dates are required"
+    
+    try:
+        if start > end:
+            return False, "Start date must be before end date"
+    except TypeError:
+        return False, "Invalid date values"
+    
+    return True, None
+
+
+def validate_file_extension(filename: Any, allowed_extensions: List[str]) -> bool:
+    """Проверка расширения файла"""
+    if not isinstance(filename, str) or '.' not in filename:
+        return False
+    
+    ext = filename.rsplit('.', 1)[1].lower()
+    allowed = {e.strip().lower().lstrip('.') for e in allowed_extensions}
+    
+    return ext in allowed
+
+
+def validate_file_size(size: Any, max_size: Optional[int] = None) -> Tuple[bool, Optional[str]]:
+    """Проверка размера файла"""
+    if size is None:
+        return False, "File size is required"
+    
+    limit = max_size or MAX_FILE_SIZE
+    
+    if size > limit:
+        return False, f"File size exceeds maximum of {limit} bytes"
+    
+    return True, None
+
+
+def validate_json_structure(data: Any, required_fields: List[str]) -> Tuple[bool, Optional[str]]:
+    """Проверка наличия обязательных полей в JSON-структуре"""
+    if not isinstance(data, dict):
+        return False, "Data must be a dictionary"
+    
+    missing = [f for f in required_fields if f not in data or data[f] is None]
+    if missing:
+        return False, f"Missing required field(s): {', '.join(missing)}"
+    
+    return True, None
+
+
+def validate_pattern(value: Any, pattern_type: str) -> bool:
+    """Валидация значения по именованному паттерну"""
+    if pattern_type == 'email':
+        return validate_email(value)
+    elif pattern_type == 'username':
+        return validate_username(value)
+    elif pattern_type == 'url':
+        return validate_url(value)
+    elif pattern_type == 'hex_color':
+        return isinstance(value, str) and HEX_COLOR_PATTERN.match(value.strip()) is not None
+    elif pattern_type == 'ipv4':
+        if not isinstance(value, str) or not IPV4_PATTERN.match(value):
+            return False
+        return all(0 <= int(part) <= 255 for part in value.split('.'))
+    else:
+        raise ValueError(f"Unknown pattern type: {pattern_type}")
+
+
 __all__ = [
     'ValidationError',
     'Validator',
     'StringValidator',
-    'EmailValidator',
+    'IntegerValidator',
+    'BooleanValidator',
     'DateValidator',
-    'PasswordValidator',
+    'ListValidator',
+    'DictValidator',
+    'Schema',
+    'EmailValidator',
     'URLValidator',
+    'PasswordValidator',
+    'validate_email',
+    'validate_username',
+    'validate_url',
+    'validate_phone',
+    'validate_date_range',
+    'validate_file_extension',
+    'validate_file_size',
+    'validate_json_structure',
+    'validate_pattern',
+    'sanitize_html',
+    'sanitize_input',
     'validate_data',
     'validate_or_raise',
     'slugify'

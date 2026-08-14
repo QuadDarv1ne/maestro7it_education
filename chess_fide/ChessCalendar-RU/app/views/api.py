@@ -149,13 +149,13 @@ def get_performance_metrics():
         from app.utils.unified_monitoring import performance_monitor
         
         # Get performance summary
-        summary = perf_monitor.get_performance_summary()
+        summary = performance_monitor.get_performance_summary()
         
         # Get slow endpoints
-        slow_endpoints = perf_monitor.get_slow_endpoints(threshold=0.5)  # Endpoints taking > 0.5s
+        slow_endpoints = performance_monitor.get_slow_endpoints(threshold=0.5)  # Endpoints taking > 0.5s
         
         # Get recent requests
-        recent_requests = perf_monitor.get_recent_requests(minutes=5)
+        recent_requests = performance_monitor.get_recent_requests(minutes=5)
         
         return jsonify({
             'summary': summary,
@@ -1694,35 +1694,6 @@ def get_tournaments_by_tag(slug):
     except Exception as e:
         logger.error(f"Get tournaments by tag error: {str(e)}")
         return jsonify({'error': 'Failed to get tournaments by tag'}), 500
-
-
-@api_bp.route('/tournaments', methods=['GET'])
-def search_tournaments_by_tag():
-    """Search tournaments by tag (alternative endpoint)"""
-    try:
-        from app.models.tag import Tag, TagTournament
-        
-        tag_slug = request.args.get('tag')
-        
-        if not tag_slug:
-            return jsonify({'error': 'tag parameter is required'}), 400
-        
-        tag = Tag.query.filter_by(slug=tag_slug).first()
-        if not tag:
-            return jsonify({'error': 'Tag not found'}), 404
-        
-        assignments = TagTournament.query.filter_by(tag_id=tag.id).all()
-        tournaments = [assignment.tournament for assignment in assignments]
-        
-        return jsonify({
-            'tag': tag.to_dict(),
-            'tournaments': [t.to_dict() for t in tournaments],
-            'total': len(tournaments)
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"Search tournaments by tag error: {str(e)}")
-        return jsonify({'error': 'Failed to search tournaments by tag'}), 500
 
 
 # ==================== COMMENTS API ====================

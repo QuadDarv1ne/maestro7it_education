@@ -5,6 +5,14 @@ from app.models.rating import TournamentRating
 from datetime import datetime
 
 
+def calculate_average_rating(tournament_id):
+    """Расчет среднего рейтинга турнира"""
+    ratings = TournamentRating.query.filter_by(tournament_id=tournament_id).all()
+    if not ratings:
+        return 0.0
+    return round(sum(r.rating for r in ratings) / len(ratings), 2)
+
+
 class RatingService:
     """Service for handling tournament ratings"""
     

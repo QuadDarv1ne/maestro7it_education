@@ -1,7 +1,7 @@
 """
 Pydantic схемы для турниров
 """
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 from pydantic.functional_validators import field_validator
 from pydantic.config import ConfigDict
 from typing import Optional, List
@@ -38,13 +38,12 @@ class TournamentBase(BaseModel):
     source_url: Optional[HttpUrl] = Field(default=None, description="URL источника")
     fide_id: Optional[str] = Field(default=None, max_length=50, description="FIDE ID")
     
-    @field_validator('end_date')
-    @classmethod
-    def validate_dates(cls, v, values):
+    @model_validator(mode='after')
+    def validate_dates(self):
         """Проверка, что end_date >= start_date"""
-        # Note: In Pydantic V2, field validators don't have access to other fields directly
-        # We'll implement this logic elsewhere or use a model validator
-        return v
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError('end_date must be after start_date')
+        return self
     
     @field_validator('name')
     @classmethod
@@ -95,13 +94,12 @@ class TournamentUpdate(BaseModel):
     source_url: Optional[HttpUrl] = None
     fide_id: Optional[str] = Field(default=None, max_length=50)
     
-    @field_validator('end_date')
-    @classmethod
-    def validate_dates(cls, v):
-        """Проверка дат при обновлении"""
-        # Note: In Pydantic V2, field validators don't have access to other fields directly
-        # We'll implement this logic elsewhere
-        return v
+    @model_validator(mode='after')
+    def validate_date_ranges(self):
+        """Проверка диапазонов дат при обновлении"""
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError('end_date must be after start_date')
+        return self
     
     model_config = ConfigDict(
         use_enum_values=True,
@@ -156,19 +154,14 @@ class TournamentFilter(BaseModel):
     end_date_to: Optional[datetime] = Field(default=None, description="Окончание до")
     search: Optional[str] = Field(default=None, max_length=200, description="Поиск по названию")
     
-    @field_validator('start_date_to')
-    @classmethod
-    def validate_start_date_range(cls, v, values):
+    @model_validator(mode='after')
+    def validate_start_date_range(self):
         """Валидация диапазона дат начала"""
-        # Note: In Pydantic V2, field validators don't have access to other fields directly
-        # We'll implement this logic elsewhere
-        return v
-    
-    @field_validator('end_date_to')
-    @classmethod
-    def validate_end_date_range(cls, v):
-        """Валидация диапазона дат окончания"""
-        return v
+        if self.start_date_from and self.start_date_to and self.start_date_to < self.start_date_from:
+            raise ValueError('start_date_to must be after start_date_from')
+        if self.end_date_from and self.end_date_to and self.end_date_to < self.end_date_from:
+            raise ValueError('end_date_to must be after end_date_from')
+        return self
     
     model_config = ConfigDict(
         use_enum_values=True,

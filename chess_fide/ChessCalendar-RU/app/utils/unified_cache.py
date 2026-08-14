@@ -11,6 +11,7 @@ import time
 from functools import wraps
 from typing import Any, Optional, List, Callable, Dict
 from collections import OrderedDict
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class UnifiedCache:
         # L1 Cache (In-memory) с LFU
         self.l1_cache = OrderedDict()
         self.l1_access_count = {}
+        self.l1_tags = {}  # tag -> set of keys
         
         # L2 Cache (Redis)
         self.redis_client = None
@@ -63,14 +65,41 @@ class UnifiedCache:
             logger.warning(f"Redis unavailable, using L1 only: {e}")
             self.redis_available = False
     
+    def _is_expired(self, key: str, entry: Any) -> bool:
+        """Проверка истечения срока жизни L1 записи"""
+        if not isinstance(entry, tuple) or len(entry) != 2:
+            return False
+        return entry[1] is not None and time.time() > entry[1]
+
+    def _purge_expired(self):
+        """Удаление истекших записей из L1"""
+        now = time.time()
+        expired = [k for k, v in self.l1_cache.items()
+                   if isinstance(v, tuple) and len(v) == 2 and v[1] is not None and now > v[1]]
+        for key in expired:
+            self.l1_cache.pop(key, None)
+            self.l1_access_count.pop(key, None)
+            self._remove_from_tags(key)
+
+    def _remove_from_tags(self, key: str):
+        """Удаление ключа из всех L1 тегов"""
+        for tag_keys in self.l1_tags.values():
+            tag_keys.discard(key)
+
     def _evict_l1_if_needed(self):
         """Вытеснение из L1 при превышении размера (LFU)"""
-        if len(self.l1_cache) >= self.l1_max_size:
+        self._purge_expired()
+        while len(self.l1_cache) >= self.l1_max_size and self.l1_cache:
             if self.l1_access_count:
                 # Удаляем наименее часто используемый элемент
                 least_used = min(self.l1_access_count, key=self.l1_access_count.get)
                 self.l1_cache.pop(least_used, None)
                 self.l1_access_count.pop(least_used, None)
+                self._remove_from_tags(least_used)
+                self.stats['evictions'] += 1
+            else:
+                key, _ = self.l1_cache.popitem(last=False)
+                self._remove_from_tags(key)
                 self.stats['evictions'] += 1
     
     def get(self, key: str) -> Optional[Any]:
@@ -79,12 +108,19 @@ class UnifiedCache:
         
         # L1 - In-memory
         if key in self.l1_cache:
-            self.l1_access_count[key] = self.l1_access_count.get(key, 0) + 1
-            self.stats['l1_hits'] += 1
-            elapsed = time.time() - start_time
-            if elapsed > 0.01:
-                logger.debug(f"L1 hit: {key} ({elapsed:.3f}s)")
-            return self.l1_cache[key]
+            entry = self.l1_cache[key]
+            if self._is_expired(key, entry):
+                # Истекший элемент удаляем и продолжаем поиск в L2
+                self.l1_cache.pop(key, None)
+                self.l1_access_count.pop(key, None)
+                self._remove_from_tags(key)
+            else:
+                self.l1_access_count[key] = self.l1_access_count.get(key, 0) + 1
+                self.stats['l1_hits'] += 1
+                elapsed = time.time() - start_time
+                if elapsed > 0.01:
+                    logger.debug(f"L1 hit: {key} ({elapsed:.3f}s)")
+                return entry[0] if isinstance(entry, tuple) and len(entry) == 2 else entry
         
         # L2 - Redis
         if self.redis_available:
@@ -95,7 +131,7 @@ class UnifiedCache:
                         deserialized = pickle.loads(value)
                         # Продвигаем в L1
                         self._evict_l1_if_needed()
-                        self.l1_cache[key] = deserialized
+                        self.l1_cache[key] = (deserialized, None)
                         self.l1_access_count[key] = 1
                         self.stats['l2_hits'] += 1
                         
@@ -122,8 +158,13 @@ class UnifiedCache:
         
         # L1 - In-memory
         self._evict_l1_if_needed()
-        self.l1_cache[key] = value
+        self.l1_cache[key] = (value, time.time() + timeout)
         self.l1_access_count[key] = 0
+        
+        # Регистрируем теги для L1
+        if tags:
+            for tag in tags:
+                self.l1_tags.setdefault(tag, set()).add(key)
         
         # L2 - Redis
         if self.redis_available:
@@ -153,6 +194,7 @@ class UnifiedCache:
         # L1
         self.l1_cache.pop(key, None)
         self.l1_access_count.pop(key, None)
+        self._remove_from_tags(key)
         
         # L2
         if self.redis_available:
@@ -165,10 +207,14 @@ class UnifiedCache:
     
     def invalidate_by_tag(self, tag: str):
         """Инвалидировать все ключи с определенным тегом"""
+        # L1 - удаляем ключи, помеченные тегом
+        tag_keys = self.l1_tags.pop(tag, set())
+        for key in tag_keys:
+            self.l1_cache.pop(key, None)
+            self.l1_access_count.pop(key, None)
+        
         if not self.redis_available:
-            # Для L1 очищаем все (упрощенная версия)
-            self.l1_cache.clear()
-            self.l1_access_count.clear()
+            logger.info(f"Invalidated {len(tag_keys)} keys with tag '{tag}' (L1 only)")
             return
         
         try:
@@ -192,9 +238,16 @@ class UnifiedCache:
     
     def invalidate_by_pattern(self, pattern: str):
         """Инвалидировать ключи по паттерну"""
+        # L1 - удаляем ключи, подходящие под паттерн
+        import fnmatch
+        l1_matches = [k for k in list(self.l1_cache.keys()) if fnmatch.fnmatch(k, pattern)]
+        for key in l1_matches:
+            self.l1_cache.pop(key, None)
+            self.l1_access_count.pop(key, None)
+            self._remove_from_tags(key)
+        
         if not self.redis_available:
-            self.l1_cache.clear()
-            self.l1_access_count.clear()
+            logger.info(f"Invalidated {len(l1_matches)} keys matching '{pattern}' (L1 only)")
             return
         
         try:
@@ -205,6 +258,7 @@ class UnifiedCache:
                     key_str = key.decode() if isinstance(key, bytes) else key
                     self.l1_cache.pop(key_str, None)
                     self.l1_access_count.pop(key_str, None)
+                    self._remove_from_tags(key_str)
                 
                 # Удаляем из L2
                 self.redis_client.delete(*keys)
@@ -216,6 +270,7 @@ class UnifiedCache:
         """Очистить весь кэш"""
         self.l1_cache.clear()
         self.l1_access_count.clear()
+        self.l1_tags.clear()
         
         if self.redis_available:
             try:
@@ -262,8 +317,14 @@ class UnifiedCache:
         # Проверяем L1
         for key in keys:
             if key in self.l1_cache:
+                entry = self.l1_cache[key]
+                if self._is_expired(key, entry):
+                    self.l1_cache.pop(key, None)
+                    self.l1_access_count.pop(key, None)
+                    self._remove_from_tags(key)
+                    continue
                 self.l1_access_count[key] = self.l1_access_count.get(key, 0) + 1
-                results[key] = self.l1_cache[key]
+                results[key] = entry[0] if isinstance(entry, tuple) and len(entry) == 2 else entry
                 self.stats['l1_hits'] += 1
         
         # Для остальных проверяем L2
@@ -283,7 +344,7 @@ class UnifiedCache:
                             try:
                                 deserialized = pickle.loads(value)
                                 self._evict_l1_if_needed()
-                                self.l1_cache[key] = deserialized
+                                self.l1_cache[key] = (deserialized, None)
                                 self.l1_access_count[key] = 1
                                 results[key] = deserialized
                                 self.stats['l2_hits'] += 1
@@ -308,8 +369,14 @@ class UnifiedCache:
         # L1
         for key, value in data.items():
             self._evict_l1_if_needed()
-            self.l1_cache[key] = value
+            self.l1_cache[key] = (value, time.time() + timeout)
             self.l1_access_count[key] = 0
+        
+        # Регистрируем теги для L1
+        if tags:
+            for key in data.keys():
+                for tag in tags:
+                    self.l1_tags.setdefault(tag, set()).add(key)
         
         # L2
         if self.redis_available:
@@ -336,6 +403,9 @@ class UnifiedCache:
 
 # Глобальный экземпляр
 cache = UnifiedCache()
+
+# Обратная совместимость с прежним именем
+cache_service = cache
 
 
 # Декораторы
@@ -410,6 +480,7 @@ class TournamentCache:
     @cached(timeout=600, tags=['tournaments'], key_prefix='tournaments')
     def get_all(filters: Optional[Dict] = None):
         """Получить все турниры с кэшированием"""
+        # Lazy import to avoid circular dependency
         from app.models.tournament import Tournament
         query = Tournament.query
         
@@ -427,6 +498,7 @@ class TournamentCache:
     @cached(timeout=1800, tags=['tournaments'], key_prefix='tournament')
     def get_by_id(tournament_id: int):
         """Получить турнир по ID с кэшированием"""
+        # Lazy import to avoid circular dependency
         from app.models.tournament import Tournament
         return Tournament.query.get(tournament_id)
     
@@ -439,9 +511,9 @@ class TournamentCache:
     @cached(timeout=3600, tags=['tournaments', 'stats'], key_prefix='tournaments_stats')
     def get_stats():
         """Получить статистику турниров"""
+        # Lazy imports to avoid circular dependency
         from app.models.tournament import Tournament
         from sqlalchemy import func
-        from app import db
         
         return {
             'total': Tournament.query.count(),
@@ -462,6 +534,43 @@ class TournamentCache:
         """Инвалидировать кэш конкретного турнира"""
         cache.invalidate_by_pattern(f'tournament:get_by_id:*')
         cache.invalidate_by_tag('tournaments')
+    
+    @staticmethod
+    @cached(timeout=3600, tags=['tournaments', 'upcoming'], key_prefix='upcoming')
+    def get_upcoming_tournaments(limit: int = 10):
+        """Получить предстоящие турниры с кэшированием"""
+        from app.models.tournament import Tournament
+        return Tournament.query.filter(
+            Tournament.start_date >= date.today(),
+            Tournament.status.in_(['Scheduled', 'Registration Open'])
+        ).order_by(Tournament.start_date).limit(limit).all()
+    
+    @staticmethod
+    @cached(timeout=3600, tags=['tournaments', 'categories'], key_prefix='categories')
+    def get_categories_list():
+        """Получить список категорий турниров"""
+        from app.models.tournament import Tournament
+        from sqlalchemy import func
+        categories = db.session.query(Tournament.category).distinct().all()
+        return [c[0] for c in categories if c[0]]
+    
+    @staticmethod
+    @cached(timeout=3600, tags=['tournaments', 'locations'], key_prefix='locations')
+    def get_locations_list():
+        """Получить список локаций турниров"""
+        from app.models.tournament import Tournament
+        from sqlalchemy import func
+        locations = db.session.query(Tournament.location).distinct().all()
+        return [loc[0] for loc in locations if loc[0]]
+    
+    @staticmethod
+    @cached(timeout=3600, tags=['tournaments', 'statuses'], key_prefix='statuses')
+    def get_statuses_list():
+        """Получить список статусов турниров"""
+        from app.models.tournament import Tournament
+        from sqlalchemy import func
+        statuses = db.session.query(Tournament.status).distinct().all()
+        return [s[0] for s in statuses if s[0]]
 
 
 class UserCache:

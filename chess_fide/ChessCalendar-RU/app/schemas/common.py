@@ -1,7 +1,7 @@
 """
 Общие Pydantic схемы
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pydantic.functional_validators import field_validator
 from pydantic.config import ConfigDict
 from typing import Optional, Any, Dict, List
@@ -64,13 +64,12 @@ class DateRangeFilter(BaseModel):
     start_date: Optional[datetime] = Field(default=None, description="Начальная дата")
     end_date: Optional[datetime] = Field(default=None, description="Конечная дата")
     
-    @field_validator('end_date')
-    @classmethod
-    def validate_date_range(cls, v):
+    @model_validator(mode='after')
+    def validate_date_range(self):
         """Проверка, что end_date >= start_date"""
-        # Note: In Pydantic V2, field validators don't have access to other fields directly
-        # We'll implement this logic elsewhere
-        return v
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError('end_date must be after start_date')
+        return self
 
 
 class SearchParams(BaseModel):

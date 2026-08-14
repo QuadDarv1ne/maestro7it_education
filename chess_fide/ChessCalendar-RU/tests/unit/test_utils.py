@@ -52,16 +52,23 @@ class TestRatingUtils:
     def test_calculate_average_rating(self, db_session, sample_tournament, regular_user):
         """Тест расчета среднего рейтинга"""
         from app.models.rating import Rating
+        from app.models.user import User
         
-        # Добавляем несколько рейтингов
+        # Каждый пользователь может оценить турнир только один раз
         ratings = [5, 4, 3, 5, 4]
-        for rating_value in ratings:
-            rating = Rating(
-                user_id=regular_user.id,
+        for i, rating_value in enumerate(ratings):
+            user = User(
+                username=f'rater{i}',
+                email=f'rater{i}@test.com',
+                password='User123!test'
+            )
+            db_session.add(user)
+            db_session.commit()
+            db_session.add(Rating(
+                user_id=user.id,
                 tournament_id=sample_tournament.id,
                 rating=rating_value
-            )
-            db_session.add(rating)
+            ))
         db_session.commit()
         
         avg = calculate_average_rating(sample_tournament.id)

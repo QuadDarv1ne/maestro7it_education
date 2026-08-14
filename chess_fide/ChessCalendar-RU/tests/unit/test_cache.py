@@ -146,4 +146,4 @@ class TestCacheDecorators:
         assert result == 'updated'
         
         # Cache should be invalidated
-        assert cache_manager.get('test:data') is None
+        assert cache_service.get('test:data') is None
