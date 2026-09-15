@@ -4,7 +4,7 @@ Celery задачи для парсинга турниров
 from app.celery_app import celery_app
 from app import create_app, db
 from app.models.tournament import Tournament
-from app.utils.fide_parser import FIDEParses as FIDEParser
+from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 from app.utils.unified_cache import TournamentCache
 from app.utils.metrics import track_celery_task
@@ -53,7 +53,7 @@ def parse_fide_tournaments(self):
             db.session.commit()
             
             # Инвалидируем кэш
-            TournamentCacheManager.invalidate_all()
+            TournamentCache.invalidate_all()
             
             logger.info(f"FIDE parsing completed: {added_count} added, {updated_count} updated")
             
@@ -109,7 +109,7 @@ def parse_cfr_tournaments(self):
             db.session.commit()
             
             # Инвалидируем кэш
-            TournamentCacheManager.invalidate_all()
+            TournamentCache.invalidate_all()
             
             logger.info(f"CFR parsing completed: {added_count} added, {updated_count} updated")
             
@@ -145,7 +145,7 @@ def parse_tournament_details(tournament_id):
                 logger.info(f"Parsing details for tournament {tournament_id}")
                 
                 # Инвалидируем кэш конкретного турнира
-                TournamentCacheManager.invalidate_tournament(tournament_id)
+                TournamentCache.invalidate_tournament(tournament_id)
             
             return {'status': 'success', 'tournament_id': tournament_id}
             

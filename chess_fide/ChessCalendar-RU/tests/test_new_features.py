@@ -8,7 +8,7 @@ from app.models.user import User
 from app.models.preference import UserPreference, UserInteraction
 from app.models.favorite import FavoriteTournament
 from app.utils.recommendations import RecommendationEngine
-from app.utils.fide_parser import FIDEParses
+from app.utils.fide_parser import FIDEParser
 from app.utils.cfr_parser import CFRParser
 
 

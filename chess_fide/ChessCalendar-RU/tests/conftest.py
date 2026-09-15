@@ -10,13 +10,23 @@ from app.models.tournament import Tournament
 from datetime import datetime, timedelta
 
 
+# In-memory SQLite для изоляции тестов: переопределяем конфигурацию пула соединений
+# до инициализации приложения, чтобы StaticPool применялся с самого начала.
+def _test_engine_options(app, pool_size=10, max_overflow=20):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'poolclass': 'sqlalchemy.pool.StaticPool',
+        'connect_args': {'check_same_thread': False}
+    }
+
+
+from app.utils.db_optimization import QueryOptimizer
+QueryOptimizer.enable_connection_pooling = staticmethod(_test_engine_options)
+
+
 @pytest.fixture(scope='session')
 def app():
     """Создание тестового приложения"""
-    # Создаем временную БД
-    db_fd, db_path = tempfile.mkstemp()
-    
-    os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
     os.environ['TESTING'] = 'True'
     os.environ['SECRET_KEY'] = 'test-secret-key'
     os.environ['WTF_CSRF_ENABLED'] = 'False'
@@ -24,7 +34,7 @@ def app():
     app = create_app('testing')
     app.config.update({
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
         'WTF_CSRF_ENABLED': False,
         'SERVER_NAME': 'localhost.localdomain'
     })
@@ -34,9 +44,6 @@ def app():
         yield app
         db.session.remove()
         db.drop_all()
-    
-    os.close(db_fd)
-    os.unlink(db_path)
 
 
 @pytest.fixture(scope='function')
@@ -53,19 +60,14 @@ def runner(app):
 
 @pytest.fixture(scope='function')
 def db_session(app):
-    """Сессия БД с автоматическим rollback"""
+    """Сессия БД с полной изоляцией между тестами"""
     with app.app_context():
-        connection = db.engine.connect()
-        transaction = connection.begin()
-        
-        session = db.session
-        session.begin_nested()
-        
-        yield session
-        
-        session.close()
-        transaction.rollback()
-        connection.close()
+        db.session.remove()
+        db.drop_all()
+        db.create_all()
+        yield db.session
+        db.session.remove()
+        db.drop_all()
 
 
 @pytest.fixture
@@ -74,10 +76,9 @@ def admin_user(db_session):
     user = User(
         username='admin',
         email='admin@test.com',
-        is_admin=True,
-        is_active=True
+        password='Admin123!test',
+        is_admin=True
     )
-    user.set_password('admin123')
     db_session.add(user)
     db_session.commit()
     return user
@@ -89,10 +90,8 @@ def regular_user(db_session):
     user = User(
         username='user',
         email='user@test.com',
-        is_admin=False,
-        is_active=True
+        password='User123!test'
     )
-    user.set_password('user123')
     db_session.add(user)
     db_session.commit()
     return user
@@ -144,7 +143,7 @@ def auth_headers(client, admin_user):
     """JWT токен для аутентифицированных запросов"""
     response = client.post('/auth/login', json={
         'username': 'admin',
-        'password': 'admin123'
+        'password': 'Admin123!test'
     })
     token = response.json.get('access_token')
     return {'Authorization': f'Bearer {token}'}

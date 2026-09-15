@@ -16,32 +16,33 @@ class TestUserModel:
         """Тест создания пользователя"""
         user = User(
             username='testuser',
-            email='test@example.com'
+            email='test@example.com',
+            password='Password123!'
         )
-        user.set_password('password123')
+        user.set_password('Password123!')
         db_session.add(user)
         db_session.commit()
         
         assert user.id is not None
         assert user.username == 'testuser'
         assert user.email == 'test@example.com'
-        assert user.check_password('password123')
+        assert user.check_password('Password123!')
         assert not user.check_password('wrongpassword')
     
     def test_user_password_hashing(self, db_session):
         """Тест хеширования пароля"""
-        user = User(username='test', email='test@test.com')
-        user.set_password('secret')
+        user = User(username='test', email='test@test.com', password='Secret123!')
         
-        assert user.password_hash != 'secret'
-        assert user.check_password('secret')
+        assert user.password_hash != 'Secret123!'
+        assert user.check_password('Secret123!')
         assert not user.check_password('wrong')
     
     def test_user_unique_username(self, db_session, regular_user):
         """Тест уникальности username"""
         duplicate_user = User(
             username='user',  # Уже существует
-            email='another@test.com'
+            email='another@test.com',
+            password='Password123!'
         )
         db_session.add(duplicate_user)
         
@@ -52,7 +53,8 @@ class TestUserModel:
         """Тест уникальности email"""
         duplicate_user = User(
             username='another',
-            email='user@test.com'  # Уже существует
+            email='user@test.com',  # Уже существует
+            password='Password123!'
         )
         db_session.add(duplicate_user)
         

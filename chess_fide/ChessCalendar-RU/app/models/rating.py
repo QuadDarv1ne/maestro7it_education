@@ -21,6 +21,7 @@ class TournamentRating(db.Model):
     # Ensure uniqueness: one user can rate the same tournament only once
     __table_args__ = (
         db.UniqueConstraint('user_id', 'tournament_id'),
+        db.CheckConstraint('rating >= 1 AND rating <= 5', name='ck_rating_range'),
         # Additional indexes for common query patterns
         db.Index('idx_user_rating', 'user_id', 'rating'),
         db.Index('idx_tournament_rating', 'tournament_id', 'rating'),
@@ -83,3 +84,7 @@ class TournamentRating(db.Model):
                                    tags=['p', 'br', 'strong', 'em'], 
                                    attributes={}, 
                                    strip=True)
+
+
+# Псевдоним для обратной совместимости
+Rating = TournamentRating
