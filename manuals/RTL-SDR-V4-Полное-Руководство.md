@@ -2,6 +2,8 @@
 
 <img width="750" height="1000" alt="image" src="https://github.com/user-attachments/assets/fbfc80e3-4302-448b-9bbc-6547e2a06c25" />
 
+<img width="960" height="1280" alt="image" src="https://github.com/user-attachments/assets/fccb2a3c-8bf1-495f-ada4-20dc42b4b370" />
+
 ---
 
 ## Содержание
@@ -959,6 +961,10 @@ Gain (усиление) — критический параметр. Слишк�
 > Удачи в исследованиях.
 
 ---
+
+<img width="780" height="440" alt="image" src="https://github.com/user-attachments/assets/c1bd783e-3622-4e36-ab28-69ccb5e8fa58" />
+
+[Антенны для вашего приёмника SDR](https://habr.com/ru/companies/first/articles/944904/)
 
 *Документ создан в образовательных целях. Автор не несёт ответственности за использование информации в нарушение законодательства.*
 
