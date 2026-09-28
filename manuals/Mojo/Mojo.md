@@ -1,12 +1,12 @@
-# Руководство по установке, настройке и запуску программы `sysinfo` на Mojo
+<a id="top"></a>
+
+# Руководство по установке, настройке и запуску программ на Mojo
 
 ![Mojo](https://github.com/QuadDarv1ne/maestro7it_education/blob/cb7668e3765afb585151dfe56b7f056acdce0046/manuals/Mojo/img/Mojo.png)
 
 **Полное пошаговое руководство.** Рассчитано в первую очередь на **Windows** (через `WSL 2`), но также подходит для `Linux` и `macOS`
 
-[Официальная ссылка на Mojo](https://mojolang.org/)
-
-[Extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=modular-mojotools.vscode-mojo)
+[Официальная ссылка на Mojo](https://mojolang.org/) · [Extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=modular-mojotools.vscode-mojo)
 
 ---
 
@@ -21,10 +21,11 @@
 7. [Установка Mojo через uv](#7-установка-mojo-через-uv)
 8. [Настройка окружения](#8-настройка-окружения)
 9. [Код программы sysinfo.mojo](#9-код-программы-sysinfomojoo)
-10. [Запуск программы](#10-запуск-программы)
+10. [Запуск программы sysinfo](#10-запуск-программы-sysinfo)
 11. [Ожидаемый результат](#11-ожидаемый-результат)
-12. [Устранение неполадок](#12-устранение-неполадок)
-13. [Полезные ссылки](#13-полезные-ссылки)
+12. [Дополнительные программы](#12-дополнительные-программы)
+13. [Устранение неполадок](#13-устранение-неполадок)
+14. [Полезные ссылки](#14-полезные-ссылки)
 
 ---
 
@@ -36,9 +37,11 @@
 
 - Синтаксис, вдохновлённый `Python` (отступы, `def`, `if`, `for`).
 - Статическая типизация и полный контроль над памятью.
-- Компиляция в нативный код через `MLIR`.
+- Компиляция в нативный код через `MLIR`
 - Поддержка `CPU`, `GPU` (`NVIDIA`, `AMD`, `Apple Silicon`).
 - Полностью открытый исходный код (Apache 2.0 с исключениями).
+
+[⬆ К содержанию](#содержание)
 
 ---
 
@@ -54,7 +57,9 @@
 | **GPU** | Опционально: NVIDIA (драйвер 580+), AMD, Apple Silicon |
 | **Дополнительно** | Компилятор C (`gcc`, `clang`) на Linux; Xcode CLI Tools 16+ на macOS |
 
-> ⚠️ **Важно для Windows:** нативная поддержка Windows **отсутствует**. Официальный путь — WSL 2 с Ubuntu.
+> ⚠️ **Важно для Windows:** нативная поддержка Windows **отсутствует**. Официальный путь — WSL 2 с Ubuntu
+
+[⬆ К содержанию](#содержание)
 
 ---
 
@@ -120,6 +125,8 @@ explorer.exe .
 
 Откроется проводник с текущей папкой.
 
+[⬆ К содержанию](#содержание)
+
 ---
 
 ## 4. Установка на Linux
@@ -145,6 +152,8 @@ sudo dnf install -y gcc gcc-c++ curl git
 sudo pacman -S base-devel curl git
 ```
 
+[⬆ К содержанию](#содержание)
+
 ---
 
 ## 5. Установка на macOS
@@ -166,6 +175,8 @@ sudo pacman -S base-devel curl git
    ```bash
    clang --version
    ```
+
+[⬆ К содержанию](#содержание)
 
 ---
 
@@ -195,7 +206,7 @@ source ~/.bashrc
 pixi --version
 ```
 
-Должна отобразиться версия, например: `pixi 0.40.0`.
+Должна отобразиться версия, например `pixi 0.40.0`
 
 ### 6.2. Настройка автодополнения (опционально)
 
@@ -235,7 +246,7 @@ pixi add mojo
 pixi shell
 ```
 
-Теперь в этом терминале доступна команда `mojo`. Проверьте:
+Теперь в этом терминале доступна команда `mojo` — проверьте:
 
 ```bash
 mojo --version
@@ -246,6 +257,8 @@ mojo --version
 ```bash
 exit
 ```
+
+[⬆ К содержанию](#содержание)
 
 ---
 
@@ -290,6 +303,8 @@ source .venv/bin/activate
 mojo --version
 ```
 
+[⬆ К содержанию](#содержание)
+
 ---
 
 ## 8. Настройка окружения
@@ -298,14 +313,14 @@ mojo --version
 
 Для подсветки синтаксиса, автодополнения и отладки установите официальное расширение **Mojo** из:
 
-- Visual Studio Code Marketplace
+- [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=modular-mojotools.vscode-mojo)
 - Open VSX Registry
 
 После установки откройте любой `.mojo` файл — расширение автоматически найдёт SDK в активированном окружении.
 
 ### 8.2. Настройка GPU (опционально)
 
-**NVIDIA с драйвером 580+** или **AMD** или **Apple Silicon** — дополнительная настройка не требуется.
+**NVIDIA с драйвером 580+**, **AMD** или **Apple Silicon** — дополнительная настройка не требуется.
 
 **NVIDIA с драйвером старше 580** — укажите путь к компилятору `ptxas`:
 
@@ -319,6 +334,8 @@ export MODULAR_NVPTX_COMPILER_PATH=/usr/local/cuda/bin/ptxas
 echo 'export MODULAR_NVPTX_COMPILER_PATH=/usr/local/cuda/bin/ptxas' >> ~/.bashrc
 source ~/.bashrc
 ```
+
+[⬆ К содержанию](#содержание)
 
 ---
 
@@ -502,9 +519,11 @@ if __name__ == "__main__":
     main()
 ```
 
+[⬆ К содержанию](#содержание)
+
 ---
 
-## 10. Запуск программы
+## 10. Запуск программы `sysinfo`
 
 Из директории проекта (где лежит `sysinfo.mojo`):
 
@@ -532,6 +551,10 @@ pixi run mojo sysinfo.mojo
 mojo build sysinfo.mojo -o sysinfo
 ./sysinfo
 ```
+
+Готовый бинарник `sysinfo` появится в той же папке, где лежит `sysinfo.mojo`
+
+[⬆ К содержанию](#содержание)
 
 ---
 
@@ -578,27 +601,52 @@ mojo build sysinfo.mojo -o sysinfo
 ==================================================
 ```
 
-> ℹ️ В WSL 2 информация о GPU может отображаться иначе, чем в нативном Linux — это связано с пробросом устройств из Windows. Секция RAM будет работать корректно.
+> ℹ️ В `WSL 2` информация о `GPU` может отображаться иначе, чем в нативном Linux — это связано с пробросом устройств из Windows. Секция RAM будет работать корректно.
+
+[⬆ К содержанию](#содержание)
 
 ---
 
+## 12. Дополнительные программы
+
+Помимо `sysinfo.mojo`, в проекте могут лежать ещё четыре программы. Каждая — отдельный файл, запускается независимо.
+
+| Файл | Что делает |
+|---|---|
+| `mandelbrot.mojo` | Визуализация множества Мандельброта в ASCII |
+| `benchmark.mojo` | Бенчмарк вычислительной производительности |
+| `game_of_life.mojo` | Игра «Жизнь» Конвея с анимацией |
+| `tictactoe.mojo` | Крестики-нолики с непобедимым ИИ (минимакс) |
+
+### Запуск
+
+**Убедитесь, что окружение активировано:**
+
 ```bash
-# Убедитесь, что окружение активировано
 pixi shell
+```
 
-# Запуск считывателя системной информации, FFI, GPU
-mojo sysinfo.mojo
+Затем запускайте нужную программу:
 
-# Запуск игры «Жизнь»
+```bash
+# Визуализация фрактала Мандельброта
+mojo mandelbrot.mojo
+
+# Бенчмарк производительности
 mojo benchmark.mojo
 
-# Запуск крестиков-ноликов
+# Игра «Жизнь» Конвея
+mojo game_of_life.mojo
+
+# Крестики-нолики против ИИ
 mojo tictactoe.mojo
 ```
 
+[⬆ К содержанию](#содержание)
+
 ---
 
-## 12. Устранение неполадок
+## 13. Устранение неполадок
 
 | Проблема | Причина | Решение |
 |---|---|---|
@@ -632,14 +680,19 @@ mojo --version
 grep -o avx2 /proc/cpuinfo | head -1
 ```
 
+[⬆ К содержанию](#содержание)
+
 ---
 
-## 13. Полезные ссылки
+## 14. Полезные ссылки
 
 - 🌐 Официальный сайт: [https://mojolang.org/](https://mojolang.org/)
 - 📥 Установка: [https://mojolang.org/install/](https://mojolang.org/install/)
 - 📚 Документация: [https://mojolang.org/docs/](https://mojolang.org/docs/)
 - 💻 GitHub: [https://github.com/modular/mojo](https://github.com/modular/mojo)
+- 🧩 VS Code Extension: [modular-mojotools.vscode-mojo](https://marketplace.visualstudio.com/items?itemName=modular-mojotools.vscode-mojo)
 - 🐍 pixi: [https://pixi.sh/](https://pixi.sh/)
 - ⚡ uv: [https://docs.astral.sh/uv/](https://docs.astral.sh/uv/)
 - 🐧 WSL 2: [https://learn.microsoft.com/windows/wsl/](https://learn.microsoft.com/windows/wsl/)
+
+[⬆ К содержанию](#содержание)
