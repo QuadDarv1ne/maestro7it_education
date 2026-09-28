@@ -1,6 +1,6 @@
 # Руководство по установке, настройке и запуску программы `sysinfo` на Mojo
 
-![Uploading image.png…]()
+![Mojo](https://github.com/QuadDarv1ne/maestro7it_education/blob/cb7668e3765afb585151dfe56b7f056acdce0046/manuals/Mojo/img/Mojo.png)
 
 Полное пошаговое руководство. Рассчитано в первую очередь на **Windows** (через WSL 2), но также подходит для Linux и macOS.
 
