@@ -1,0 +1,10 @@
+#!/bin/sh
+# Auto-push the current branch to every configured remote after each commit.
+# Enabled via: git config core.hooksPath hooks
+branch=$(git rev-parse --abbrev-ref HEAD)
+for remote in $(git remote); do
+  echo "post-commit: pushing $branch -> $remote"
+  if ! git push "$remote" "$branch"; then
+    echo "post-commit: push to $remote failed (push manually later with: git push-all)" >&2
+  fi
+done
